@@ -1,26 +1,149 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #E6E6E6;
+  --foreground: #000000;
+  --primary: #B38C4A;
+  --primary-dark: #96703A;
+  --primary-light: rgba(179, 140, 74, 0.12);
+  --accent: #B38C4A;
+  --accent-light: rgba(179, 140, 74, 0.08);
+  --surface: #FFFFFF;
+  --border: #CCCCCC;
+  --muted: #666666;
+  --success: #4A7C59;
+  --danger: #B33A3A;
+  --warning: #B38C4A;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-light: var(--primary-light);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --font-sans: var(--font-jost);
+  --font-heading: var(--font-cabin);
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+}
+
+.avatar-round {
+  border-radius: 9999px !important;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-jost), system-ui, sans-serif;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) var(--background);
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) var(--background);
+}
+
+.scrollbar-natus {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) var(--background);
+}
+
+.scrollbar-natus::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.scrollbar-natus::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+.scrollbar-natus::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border: 2px solid var(--background);
+  border-radius: 9999px !important;
+}
+
+.scrollbar-natus::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border: 2px solid var(--background);
+  border-radius: 9999px !important;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-cabin), system-ui, sans-serif;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: var(--primary);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #receipt-print,
+  #receipt-print * {
+    visibility: visible;
+  }
+
+  #receipt-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
 }
