@@ -3,6 +3,8 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { SelectMenu } from "@/components/ui/select-menu";
+import { storeOptions } from "@/lib/select-options";
 import type { Store } from "@/lib/types";
 
 export function StoreFilterBar({
@@ -50,18 +52,17 @@ export function StoreFilterBar({
           ) : null}
         </div>
       </div>
-      <select
+      <SelectMenu
         value={selectedStoreId}
-        onChange={(e) => handleChange(e.target.value)}
-        className="w-full sm:w-64 border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-      >
-        {allowAll && <option value="">Tous les magasins</option>}
-        {stores.map((store) => (
-          <option key={store.id} value={store.id}>
-            {store.name} ({store.city})
-          </option>
-        ))}
-      </select>
+        onChange={handleChange}
+        options={storeOptions(stores, {
+          allLabel: "Tous les magasins",
+          includeAll: allowAll,
+        })}
+        placeholder="Sélectionner un magasin"
+        defaultIcon={MapPin}
+        className="w-full sm:w-72"
+      />
     </Card>
   );
 }

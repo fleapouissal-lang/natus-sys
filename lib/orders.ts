@@ -1,6 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, ShopifyOrder } from "@/lib/types";
+import type { CartItem, Product, Profile, ShopifyOrder } from "@/lib/types";
 import { getCityFilter, isDirector } from "@/lib/permissions";
+import { canAccessShopifyOrder } from "@/lib/shopify/order-access";
+import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
+
+export interface ShopifyOrderPosContext {
+  id: string;
+  orderNumber: string;
+  paymentType: ShopifyOrder["payment_type"];
+  customerName: string | null;
+  defaultPayment: "cash" | "card";
+}
+
+export interface ShopifyOrderPosLoad {
+  cart: CartItem[];
+  context: ShopifyOrderPosContext;
+  missingProducts: string[];
+}
 
 export interface OrdersQuery {
   city?: string | null;
@@ -41,6 +57,58 @@ export async function getShopifyOrders(
   }
 
   return (data || []) as ShopifyOrder[];
+}
+
+export async function loadShopifyOrderForPos(
+  profile: Profile,
+  orderId: string,
+  products: Product[]
+): Promise<{ data: ShopifyOrderPosLoad } | { error: string }> {
+  const supabase = await createClient();
+  const { data: order, error } = await supabase
+    .from("shopify_orders")
+    .select("*")
+    .eq("id", orderId)
+    .single();
+
+  if (error || !order) return { error: "Commande introuvable" };
+
+  if (!(await canAccessShopifyOrder(profile, order))) {
+    return { error: "Accès refusé" };
+  }
+
+  if (order.sale_id) {
+    return { error: "Cette commande a déjà été encaissée en caisse" };
+  }
+
+  if (order.workflow_status === "cancelled") {
+    return { error: "Commande annulée" };
+  }
+
+  const { cart, missing } = mapShopifyLineItemsToCart(order.line_items, products);
+
+  if (cart.length === 0) {
+    return {
+      error:
+        missing.length > 0
+          ? `Produits non trouvés : ${missing.join(", ")}`
+          : "Aucun produit dans la commande",
+    };
+  }
+
+  return {
+    data: {
+      cart,
+      missingProducts: missing,
+      context: {
+        id: order.id,
+        orderNumber: order.order_number,
+        paymentType: order.payment_type,
+        customerName: order.customer_name,
+        defaultPayment: order.payment_type === "cod" ? "cash" : "card",
+      },
+    },
+  };
 }
 
 export function resolveOrdersStoreIds(

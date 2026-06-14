@@ -1,3 +1,8 @@
+"use client";
+
+import { useState } from "react";
+import { SelectMenu } from "@/components/ui/select-menu";
+import { storeOptions } from "@/lib/select-options";
 import type { Store } from "@/lib/types";
 
 export function StoreSelect({
@@ -17,23 +22,26 @@ export function StoreSelect({
   required?: boolean;
   className?: string;
 }) {
+  const [internal, setInternal] = useState(value || "");
+  const current = value ?? internal;
+
   return (
-    <div className={className}>
-      <label className="mb-1.5 block text-sm font-medium">{label}</label>
-      <select
-        name={name}
-        value={value}
-        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-        className="w-full border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-        required={required}
-      >
-        <option value="">Sélectionner un magasin</option>
-        {stores.map((store) => (
-          <option key={store.id} value={store.id}>
-            {store.name} — {store.city}
-          </option>
-        ))}
-      </select>
-    </div>
+    <SelectMenu
+      name={name}
+      label={label}
+      required={required}
+      value={current}
+      onChange={(next) => {
+        setInternal(next);
+        onChange?.(next);
+      }}
+      options={storeOptions(stores, {
+        allLabel: "Sélectionner un magasin",
+        includeAll: true,
+        showCity: true,
+      })}
+      placeholder="Sélectionner un magasin"
+      className={className}
+    />
   );
 }

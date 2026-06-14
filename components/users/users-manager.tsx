@@ -9,6 +9,8 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { StoreSelect } from "@/components/stores/store-select";
+import { SelectMenu } from "@/components/ui/select-menu";
+import { cityOptions, roleOptions, storeOptions } from "@/lib/select-options";
 import {
   createUser,
   toggleUserActive,
@@ -66,7 +68,7 @@ function CreateUserForm({
     onClose();
   }
 
-  const roleOptions: { value: "manager" | "cashier"; label: string }[] =
+  const roleOptionsList: { value: "manager" | "cashier"; label: string }[] =
     isDirector(viewer)
       ? [
           { value: "cashier", label: "Caissier" },
@@ -87,44 +89,30 @@ function CreateUserForm({
             minLength={6}
             required
           />
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Rôle</label>
-            <select
-              className="w-full border border-border bg-surface px-3 py-2 text-sm"
-              value={role}
-              onChange={(e) => setRole(e.target.value as "manager" | "cashier")}
-            >
-              {roleOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SelectMenu
+            label="Rôle"
+            value={role}
+            onChange={(v) => setRole(v as "manager" | "cashier")}
+            options={roleOptions(roleOptionsList)}
+          />
 
           {(role === "manager" || role === "cashier") && (
-            <div>
-              <label className="mb-1.5 block text-sm font-medium">Ville</label>
-              <select
+            <>
+              <SelectMenu
                 name="city"
+                label="Ville"
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="w-full border border-border bg-surface px-3 py-2 text-sm"
+                onChange={setCity}
+                options={cityOptions(cities, { includeAll: false })}
                 required
                 disabled={isManager(viewer)}
-              >
-                {cities.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              />
               {role === "manager" && (
-                <p className="mt-1 text-xs text-muted">
+                <p className="-mt-2 text-xs text-muted">
                   Le gérant gérera tous les magasins de cette ville
                 </p>
               )}
-            </div>
+            </>
           )}
 
           {role === "cashier" && storesForCity.length > 0 && (
@@ -262,25 +250,19 @@ export function UsersManager({
                   </td>
                   <td className="px-6 py-4">
                     {user.role === "cashier" ? (
-                      <select
+                      <SelectMenu
                         value={user.store_id || ""}
-                        onChange={(e) => handleStoreChange(user.id, e.target.value)}
+                        onChange={(storeId) => handleStoreChange(user.id, storeId)}
+                        options={storeOptions(
+                          stores.filter(
+                            (s) => isDirector(viewer) || s.city === viewer.city
+                          ),
+                          { allLabel: "—", includeAll: true, showCity: false }
+                        )}
                         disabled={loading === user.id || user.id === viewer.id}
-                        className="rounded-lg border border-border bg-surface px-2 py-1 text-xs"
-                      >
-                        <option value="">—</option>
-                        {stores
-                          .filter(
-                            (s) =>
-                              isDirector(viewer) ||
-                              s.city === viewer.city
-                          )
-                          .map((store) => (
-                            <option key={store.id} value={store.id}>
-                              {store.name}
-                            </option>
-                          ))}
-                      </select>
+                        size="sm"
+                        className="min-w-[140px]"
+                      />
                     ) : user.role === "manager" ? (
                       <span className="text-xs text-muted">
                         Tous les magasins — {user.city}

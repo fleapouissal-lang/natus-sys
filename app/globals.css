@@ -116,6 +116,56 @@ textarea:focus {
   ring-color: var(--primary);
 }
 
+.select-menu-rounded,
+.select-menu-rounded .select-menu-trigger,
+.select-menu-rounded .select-menu-panel,
+.select-menu-rounded .select-menu-icon-box {
+  border-radius: 14px !important;
+}
+
+.select-menu .select-menu-trigger,
+.select-menu .select-menu-panel,
+.select-menu .select-menu-icon-box {
+  border-radius: 14px !important;
+}
+
+.select-menu-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+
+.select-menu-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.select-menu-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+.select-menu-scroll::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 9999px !important;
+}
+
+.select-menu-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+.order-action-icon {
+  border-radius: 6px !important;
+}
+
+.order-status-ui .select-menu-trigger,
+.order-status-ui .select-menu-panel,
+.order-status-display {
+  border-radius: 6px !important;
+}
+
+.order-status-ui .select-menu-panel button {
+  border-radius: 4px !important;
+}
+
 .month-calendar-panel {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(179, 140, 74, 0.2);
 }

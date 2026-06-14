@@ -5,7 +5,7 @@ import { getCityFilter } from "@/lib/permissions";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getSelectedStore } from "@/lib/management-store";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
-import { ShopifyOrdersList } from "@/components/orders/shopify-orders-list";
+import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
 
 export default async function ManagerOrdersPage({
   searchParams,
@@ -44,7 +44,7 @@ export default async function ManagerOrdersPage({
         <StoreFilterBar stores={stores} selectedStoreId={storeId} allowAll />
       </Suspense>
 
-      <ShopifyOrdersList orders={orders} scopeLabel={scopeLabel} />
+      <ShopifyOrdersManager orders={orders} scopeLabel={scopeLabel} editable />
     </div>
   );
 }

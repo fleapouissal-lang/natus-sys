@@ -452,6 +452,56 @@ export async function completeSale(
   return { success: true, saleId: data as string };
 }
 
+export async function completeShopifyOrderSale(
+  shopifyOrderId: string,
+  items: { product_id: string; quantity: number }[],
+  paymentMethod: "cash" | "card" = "cash",
+  storeId?: string
+) {
+  const profile = await requireRole(["directeur", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+  const order = await getShopifyOrderById(shopifyOrderId);
+  if (!order) return { error: "Commande introuvable" };
+
+  if (!(await canAccessShopifyOrder(profile, order))) {
+    return { error: "Accès refusé" };
+  }
+
+  if (order.sale_id) return { error: "Commande déjà encaissée" };
+
+  const saleResult = await completeSale(items, paymentMethod, storeId);
+  if (saleResult.error || !saleResult.saleId) {
+    return { error: saleResult.error || "Erreur vente" };
+  }
+
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+  const updates: Record<string, unknown> = {
+    sale_id: saleResult.saleId,
+    workflow_status: "preparing",
+    updated_at: now,
+  };
+
+  const { error: updateError } = await supabase
+    .from("shopify_orders")
+    .update(updates)
+    .eq("id", shopifyOrderId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  revalidatePath("/cashier/orders");
+  revalidatePath("/manager/orders");
+  revalidatePath("/director/orders");
+
+  return { success: true, saleId: saleResult.saleId };
+}
+
 export async function updateUserStore(userId: string, storeId: string | null) {
   const profile = await requireRole([...MANAGEMENT]);
   if (!profile) return { error: "Non autorisé" };
@@ -577,4 +627,145 @@ export async function syncShopifyOrders(): Promise<
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Erreur sync Shopify" };
   }
+}
+
+export async function updateShopifyOrderStatus(
+  orderId: string,
+  workflowStatus: import("@/lib/types").ShopifyWorkflowStatus
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+  const order = await getShopifyOrderById(orderId);
+  if (!order) return { error: "Commande introuvable" };
+
+  if (!(await canAccessShopifyOrder(profile, order))) {
+    return { error: "Accès refusé" };
+  }
+
+  if (
+    order.workflow_status === "cancelled" ||
+    order.workflow_status === "delivered" ||
+    order.workflow_status === "returned"
+  ) {
+    return { error: "Commande déjà clôturée" };
+  }
+
+  const allowed = [
+    "pending",
+    "preparing",
+    "ready",
+    "shipping",
+    "delivered",
+    "returned",
+  ] as const;
+  if (!(allowed as readonly string[]).includes(workflowStatus)) {
+    return { error: "Statut invalide" };
+  }
+
+  const supabase = await createClient();
+  const updates: Record<string, unknown> = {
+    workflow_status: workflowStatus,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (workflowStatus === "paid") {
+    updates.financial_status = "paid";
+    updates.paid_at = new Date().toISOString();
+    updates.paid_by = profile.id;
+  }
+
+  const { error } = await supabase.from("shopify_orders").update(updates).eq("id", orderId);
+
+  if (error) return { error: error.message };
+
+  try {
+    const { syncShopifyWorkflowStatus, markShopifyOrderPaid } = await import(
+      "@/lib/shopify/update-order"
+    );
+
+    if (workflowStatus === "paid" && order.payment_type === "cod") {
+      await markShopifyOrderPaid(
+        order.shopify_order_id,
+        Number(order.total),
+        order.currency || "MAD"
+      );
+    } else if (process.env.SHOPIFY_SHOP_DOMAIN) {
+      await syncShopifyWorkflowStatus(order.shopify_order_id, workflowStatus);
+    }
+  } catch (err) {
+    console.error("Shopify sync:", err);
+  }
+
+  revalidatePath("/director/orders");
+  revalidatePath("/manager/orders");
+  revalidatePath("/cashier/orders");
+
+  return { success: true };
+}
+
+export async function markShopifyCodPaid(
+  orderId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+  const order = await getShopifyOrderById(orderId);
+  if (!order) return { error: "Commande introuvable" };
+
+  if (!(await canAccessShopifyOrder(profile, order))) {
+    return { error: "Accès refusé" };
+  }
+
+  if (order.payment_type !== "cod") {
+    return { error: "Cette commande n'est pas en COD" };
+  }
+
+  if (order.financial_status === "paid") {
+    return { error: "Commande déjà payée" };
+  }
+
+  if (!order.sale_id) {
+    return { error: "Préparez la commande avant d'encaisser le COD" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("shopify_orders")
+    .update({
+      workflow_status: "paid",
+      financial_status: "paid",
+      paid_at: new Date().toISOString(),
+      paid_by: profile.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", orderId);
+
+  if (error) return { error: error.message };
+
+  try {
+    const { markShopifyOrderPaid, syncShopifyWorkflowStatus } = await import(
+      "@/lib/shopify/update-order"
+    );
+    await markShopifyOrderPaid(
+      order.shopify_order_id,
+      Number(order.total),
+      order.currency || "MAD"
+    );
+    await syncShopifyWorkflowStatus(order.shopify_order_id, "paid");
+  } catch (err) {
+    console.error("Shopify COD payé:", err);
+  }
+
+  revalidatePath("/director/orders");
+  revalidatePath("/manager/orders");
+  revalidatePath("/cashier/orders");
+
+  return { success: true };
 }

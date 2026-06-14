@@ -2,6 +2,18 @@ export type PaymentMethod = "cash" | "card";
 
 export type UserRole = "directeur" | "manager" | "cashier";
 
+export type ShopifyPaymentType = "online" | "cod";
+
+export type ShopifyWorkflowStatus =
+  | "pending"
+  | "preparing"
+  | "ready"
+  | "shipping"
+  | "delivered"
+  | "returned"
+  | "paid"
+  | "cancelled";
+
 export interface Store {
   id: string;
   name: string;
@@ -150,6 +162,12 @@ export interface ShopifyOrder {
   financial_status: string | null;
   fulfillment_status: string | null;
   order_status: string;
+  payment_type: ShopifyPaymentType;
+  workflow_status: ShopifyWorkflowStatus;
+  payment_gateway: string | null;
+  paid_at: string | null;
+  paid_by: string | null;
+  sale_id: string | null;
   total: number;
   currency: string;
   line_items: ShopifyLineItemRow[];

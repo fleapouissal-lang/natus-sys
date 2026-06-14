@@ -15,6 +15,9 @@ export interface ReceiptData {
     unitPrice: number;
   }[];
   createdAt: string;
+  shopifyOrderNumber?: string;
+  customerName?: string;
+  paymentLabel?: string;
 }
 
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
@@ -35,9 +38,13 @@ export function Receipt({ data }: { data: ReceiptData }) {
 
       <div className="space-y-1 text-xs">
         <p>Ticket : #{data.saleId.slice(0, 8).toUpperCase()}</p>
+        {data.shopifyOrderNumber && (
+          <p>Commande web : {data.shopifyOrderNumber}</p>
+        )}
+        {data.customerName && <p>Client : {data.customerName}</p>}
         <p>Date : {formatDate(data.createdAt)}</p>
         <p>Caissier : {data.cashierName}</p>
-        <p>Paiement : {PAYMENT_LABELS[data.paymentMethod]}</p>
+        <p>Paiement : {data.paymentLabel ?? PAYMENT_LABELS[data.paymentMethod]}</p>
       </div>
 
       <div className="my-3 border-t border-dashed border-gray-400" />

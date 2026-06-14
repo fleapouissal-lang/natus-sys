@@ -33,6 +33,9 @@ export interface ShopifyOrderPayload {
   total_price: string;
   currency: string;
   created_at: string;
+  gateway?: string | null;
+  payment_gateway_names?: string[] | null;
+  tags?: string | null;
   shipping_address?: ShopifyAddress | null;
   customer?: {
     first_name?: string | null;

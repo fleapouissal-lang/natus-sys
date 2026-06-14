@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StoreSelect } from "@/components/stores/store-select";
+import { SelectMenu } from "@/components/ui/select-menu";
+import { productPickOptions } from "@/lib/select-options";
 import { ProductImage } from "@/components/pos/product-image";
 import {
   StockAdjustmentFields,
@@ -208,19 +210,12 @@ export function StockManager({
             </div>
 
             {pickMode === "select" ? (
-              <select
+              <SelectMenu
                 value={selectedId}
-                onChange={(e) => handleProductChange(e.target.value)}
-                className="w-full border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-                required={!selectedId}
-              >
-                <option value="">Sélectionner un produit</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} (stock actuel : {p.stock})
-                  </option>
-                ))}
-              </select>
+                onChange={handleProductChange}
+                options={productPickOptions(products)}
+                placeholder="Sélectionner un produit"
+              />
             ) : (
               <div>
                 <div className="relative">

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getStoreById } from "@/lib/inventory";
-import { ShopifyOrdersList } from "@/components/orders/shopify-orders-list";
+import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
 
 export default async function CashierOrdersPage() {
   const profile = await getCurrentProfile();
@@ -31,7 +31,13 @@ export default async function CashierOrdersPage() {
         </p>
       </div>
 
-      <ShopifyOrdersList orders={orders} scopeLabel={scopeLabel} showStore={false} />
+      <ShopifyOrdersManager
+        orders={orders}
+        scopeLabel={scopeLabel}
+        showStore={false}
+        editable
+        enablePosCheckout
+      />
     </div>
   );
 }

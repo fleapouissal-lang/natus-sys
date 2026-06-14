@@ -13,7 +13,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, selectClassName } from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
+import { SelectMenu } from "@/components/ui/select-menu";
+import { categoryOptions } from "@/lib/select-options";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarcodeInput } from "@/components/products/barcode-input";
@@ -371,19 +373,12 @@ export function ProductsManager({
             />
           </div>
           <div className="w-full lg:w-48">
-            <label className="mb-1.5 block text-sm font-medium">Catégorie</label>
-            <select
+            <SelectMenu
+              label="Catégorie"
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className={selectClassName}
-            >
-              <option value="">Toutes</option>
-              {PRODUCT_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+              onChange={setCategoryFilter}
+              options={categoryOptions(PRODUCT_CATEGORIES)}
+            />
           </div>
         </div>
         {scanHint && (

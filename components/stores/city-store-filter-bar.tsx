@@ -3,6 +3,8 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { SelectMenu } from "@/components/ui/select-menu";
+import { cityOptions, storeOptions } from "@/lib/select-options";
 import type { Store } from "@/lib/types";
 
 export function CityStoreFilterBar({
@@ -54,39 +56,25 @@ export function CityStoreFilterBar({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="w-full sm:w-48">
-          <label className="mb-1.5 block text-sm font-medium">Ville</label>
-          <select
-            value={selectedCity}
-            onChange={(e) => updateParams({ city: e.target.value })}
-            className="w-full border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="">Toutes les villes</option>
-            {cities.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SelectMenu
+          label="Ville"
+          value={selectedCity}
+          onChange={(city) => updateParams({ city })}
+          options={cityOptions(cities)}
+          className="w-full sm:w-52"
+        />
 
-        <div className="w-full sm:w-64">
-          <label className="mb-1.5 block text-sm font-medium">Magasin</label>
-          <select
-            value={selectedStoreId}
-            onChange={(e) => updateParams({ store: e.target.value })}
-            className="w-full border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="">
-              {selectedCity ? `Tous — ${selectedCity}` : "Tous les magasins"}
-            </option>
-            {storesInCity.map((store) => (
-              <option key={store.id} value={store.id}>
-                {store.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SelectMenu
+          label="Magasin"
+          value={selectedStoreId}
+          onChange={(store) => updateParams({ store })}
+          options={storeOptions(storesInCity, {
+            allLabel: selectedCity ? `Tous — ${selectedCity}` : "Tous les magasins",
+            includeAll: true,
+            showCity: false,
+          })}
+          className="w-full sm:w-64"
+        />
       </div>
     </Card>
   );

@@ -6,6 +6,11 @@ import {
   matchNatusCity,
 } from "@/lib/shopify/geocode";
 import type { ShopifyOrderPayload } from "@/lib/shopify/types";
+import {
+  detectPaymentType,
+  resolvePaymentGateway,
+  resolveWorkflowStatus,
+} from "@/lib/shopify/payment-type";
 
 function resolveOrderStatus(order: ShopifyOrderPayload): string {
   if (order.cancelled_at) return "cancelled";
@@ -82,6 +87,9 @@ export async function processShopifyOrder(
     variant_id: item.variant_id,
   }));
 
+  const paymentType = detectPaymentType(order);
+  const workflowStatus = resolveWorkflowStatus(order);
+
   const row = {
     shopify_order_id: order.id,
     order_number: order.name || `#${order.order_number}`,
@@ -96,6 +104,12 @@ export async function processShopifyOrder(
     financial_status: order.financial_status,
     fulfillment_status: order.fulfillment_status,
     order_status: resolveOrderStatus(order),
+    payment_type: paymentType,
+    workflow_status:
+      paymentType === "online" && order.financial_status === "paid"
+        ? "preparing"
+        : workflowStatus,
+    payment_gateway: resolvePaymentGateway(order),
     total: parseFloat(order.total_price) || 0,
     currency: order.currency || "MAD",
     line_items: lineItems,

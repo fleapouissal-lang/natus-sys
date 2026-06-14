@@ -5,7 +5,7 @@ import { getActiveStores } from "@/lib/inventory";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getSelectedStore } from "@/lib/management-store";
 import { CityStoreFilterBar } from "@/components/stores/city-store-filter-bar";
-import { ShopifyOrdersList } from "@/components/orders/shopify-orders-list";
+import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
 import { ShopifySyncButton } from "@/components/orders/shopify-sync-button";
 
 export default async function DirectorOrdersPage({
@@ -55,7 +55,7 @@ export default async function DirectorOrdersPage({
         />
       </Suspense>
 
-      <ShopifyOrdersList orders={orders} scopeLabel={scopeLabel} />
+      <ShopifyOrdersManager orders={orders} scopeLabel={scopeLabel} editable />
     </div>
   );
 }

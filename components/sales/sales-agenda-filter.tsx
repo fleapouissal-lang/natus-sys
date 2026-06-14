@@ -3,28 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Banknote,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
-  LayoutGrid,
   X,
 } from "lucide-react";
+import { SelectMenu } from "@/components/ui/select-menu";
+import { paymentFilterOptions } from "@/lib/select-options";
 import { cn, toLocalDateKey } from "@/lib/utils";
 import type { PaymentMethod } from "@/lib/types";
 
 const WEEKDAYS = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
-
-const PAYMENT_OPTIONS: {
-  value: "" | PaymentMethod;
-  selectLabel: string;
-  icon: typeof Banknote;
-}[] = [
-  { value: "", selectLabel: "Tous les paiements", icon: LayoutGrid },
-  { value: "cash", selectLabel: "Espèces", icon: Banknote },
-  { value: "card", selectLabel: "Carte bancaire", icon: CreditCard },
-];
 
 function formatDisplayDate(iso: string): string {
   if (!iso) return "";
@@ -265,31 +254,14 @@ function PaymentSelectField({
   value: "" | PaymentMethod;
   onChange: (v: "" | PaymentMethod) => void;
 }) {
-  const selected =
-    PAYMENT_OPTIONS.find((o) => o.value === value) ?? PAYMENT_OPTIONS[0];
-  const SelectedIcon = selected.icon;
-
   return (
-    <div>
-      <label htmlFor="payment-filter-select" className="mb-1.5 block text-sm font-medium">
-        Mode de paiement
-      </label>
-      <div className="relative">
-        <SelectedIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-        <select
-          id="payment-filter-select"
-          value={value}
-          onChange={(e) => onChange(e.target.value as "" | PaymentMethod)}
-          className="w-full cursor-pointer appearance-none border border-border bg-surface py-2.5 pl-10 pr-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-        >
-          {PAYMENT_OPTIONS.map((opt) => (
-            <option key={opt.value || "all"} value={opt.value}>
-              {opt.selectLabel}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
+    <SelectMenu
+      id="payment-filter-select"
+      label="Mode de paiement"
+      value={value}
+      onChange={(v) => onChange(v as "" | PaymentMethod)}
+      options={paymentFilterOptions()}
+    />
   );
 }
 

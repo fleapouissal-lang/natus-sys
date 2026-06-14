@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { Search, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
-import { selectClassName } from "@/components/ui/select";
+import { SelectMenu } from "@/components/ui/select-menu";
+import { activityRoleOptions, activityTypeOptions } from "@/lib/select-options";
 import {
   getActivityKindLabel,
   getActorRoleLabel,
@@ -96,28 +97,16 @@ export function ActivityLog({
                 className="w-full border border-border bg-surface py-2 pl-10 pr-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
-            <select
+            <SelectMenu
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as "" | ActivityKind)}
-              className={selectClassName}
-            >
-              {TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value || "all"} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <select
+              onChange={(v) => setTypeFilter(v as "" | ActivityKind)}
+              options={activityTypeOptions(TYPE_OPTIONS)}
+            />
+            <SelectMenu
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as "" | UserRole)}
-              className={selectClassName}
-            >
-              {ROLE_OPTIONS.map((opt) => (
-                <option key={opt.value || "all"} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setRoleFilter(v as "" | UserRole)}
+              options={activityRoleOptions(ROLE_OPTIONS)}
+            />
           </div>
         </div>
       </div>

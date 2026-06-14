@@ -11,11 +11,13 @@ export function PaymentModal({
   loading,
   onPay,
   onClose,
+  hint,
 }: {
   total: number;
   loading: boolean;
   onPay: (method: PaymentMethod) => void;
   onClose: () => void;
+  hint?: string;
 }) {
   return (
     <Modal onClose={onClose} size="sm" scrollable={false}>
@@ -29,6 +31,10 @@ export function PaymentModal({
         <p className="mb-6 text-center text-3xl font-bold text-primary">
           {formatCurrency(total)}
         </p>
+
+        {hint && (
+          <p className="mb-4 text-center text-sm text-muted">{hint}</p>
+        )}
 
         <div className="grid gap-3">
           <Button

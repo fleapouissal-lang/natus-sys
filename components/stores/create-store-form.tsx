@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { Card, CardHeader } from "@/components/ui/card";
+import { cityOptions } from "@/lib/select-options";
 import { createStore } from "@/lib/actions";
 import { NATUS_CITIES } from "@/lib/constants/cities";
 import { cn } from "@/lib/utils";
@@ -22,6 +24,7 @@ export function CreateStoreForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [city, setCity] = useState(defaultCity || allowedCities[0] || "");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,6 +39,7 @@ export function CreateStoreForm({
     } else {
       setSuccess("Magasin créé avec succès");
       (e.target as HTMLFormElement).reset();
+      setCity(defaultCity || allowedCities[0] || "");
       router.refresh();
       setOpen(false);
     }
@@ -48,7 +52,7 @@ export function CreateStoreForm({
         <CardHeader title="Nouveau magasin" description="Ajouter un point de vente" />
         <Button
           type="button"
-          variant={open ? "secondary" : "default"}
+          variant={open ? "secondary" : "primary"}
           onClick={() => setOpen((v) => !v)}
         >
           <Plus className="h-4 w-4" />
@@ -62,26 +66,19 @@ export function CreateStoreForm({
       {open && (
         <form onSubmit={handleSubmit} className="space-y-4 border-t border-border pt-4">
           <Input label="Nom du magasin" name="name" required placeholder="Natus ..." />
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Ville</label>
-            <select
-              name="city"
-              defaultValue={defaultCity || allowedCities[0] || ""}
-              className="w-full border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-              required
-            >
-              {allowedCities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-            {allowedCities.length === 1 && (
-              <p className="mt-1 text-xs text-muted">
-                Magasin limité à votre ville : {allowedCities[0]}
-              </p>
-            )}
-          </div>
+          <SelectMenu
+            name="city"
+            label="Ville"
+            required
+            value={city}
+            onChange={setCity}
+            options={cityOptions(allowedCities, { includeAll: false })}
+          />
+          {allowedCities.length === 1 && (
+            <p className="-mt-2 text-xs text-muted">
+              Magasin limité à votre ville : {allowedCities[0]}
+            </p>
+          )}
           <Input label="Adresse" name="address" placeholder="Rue, quartier..." />
 
           {error && <p className="text-sm text-danger">{error}</p>}
