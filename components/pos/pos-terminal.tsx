@@ -52,6 +52,7 @@ export function PosTerminal({
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(null);
 
   const isManagementUser = role === "manager" || role === "directeur";
   const isStockScan = isManagementUser && managerMode === "stock";
@@ -71,7 +72,7 @@ export function PosTerminal({
 
   const { inputRef, handleKeyDown, handleChange } = useBarcodeScanner({
     onScan: handleScan,
-    enabled: !showPayment && !receipt && !scannedProduct,
+    enabled: isStockScan && !showPayment && !receipt && !scannedProduct,
   });
 
   function addToCart(product: Product, qty: number) {
@@ -88,6 +89,7 @@ export function PosTerminal({
           setError(`Stock insuffisant pour ${product.name}`);
           return prev;
         }
+        setLastAddedProduct(product);
         return prev.map((item) =>
           item.product.id === product.id ? { ...item, quantity: newQty } : item
         );
@@ -96,6 +98,7 @@ export function PosTerminal({
         setError(`Stock insuffisant pour ${product.name}`);
         return prev;
       }
+      setLastAddedProduct(product);
       return [...prev, { product, quantity: qty }];
     });
   }
@@ -165,6 +168,7 @@ export function PosTerminal({
     setCart([]);
     setShowPayment(false);
     setLoading(false);
+    setLastAddedProduct(null);
     router.refresh();
 
     setTimeout(() => printReceipt(), 300);
@@ -225,21 +229,23 @@ export function PosTerminal({
           )}
         </div>
 
-        <Card className="mb-6">
-          <div className="flex items-center gap-3">
-            <ScanBarcode className="h-5 w-5 shrink-0 text-primary" />
-            <input
-              ref={inputRef}
-              type="text"
-              onKeyDown={handleKeyDown}
-              onChange={handleChange}
-              placeholder="Prêt au scan — passez le code-barres devant le lecteur..."
-              className="w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted"
-              autoComplete="off"
-            />
-            <Badge variant="accent">Scanner actif</Badge>
-          </div>
-        </Card>
+        {isStockScan && (
+          <Card className="mb-6">
+            <div className="flex items-center gap-3">
+              <ScanBarcode className="h-5 w-5 shrink-0 text-primary" />
+              <input
+                ref={inputRef}
+                type="text"
+                onKeyDown={handleKeyDown}
+                onChange={handleChange}
+                placeholder="Prêt au scan — passez le code-barres devant le lecteur..."
+                className="w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted"
+                autoComplete="off"
+              />
+              <Badge variant="accent">Scanner actif</Badge>
+            </div>
+          </Card>
+        )}
 
         {error && (
           <p className="mb-4 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -250,16 +256,14 @@ export function PosTerminal({
         {!isStockScan && (
           <div className="grid gap-6 lg:grid-cols-5">
             <div className="lg:col-span-3 space-y-4">
-              <div>
-                <h2 className="mb-3 text-sm font-medium text-muted">
-                  Catalogue — {products.length} produit(s)
-                </h2>
-                <div className="max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
-                  <ProductCatalog
-                    products={products}
-                    onSelect={(p) => setScannedProduct(p)}
-                  />
-                </div>
+              <div className="max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
+                <ProductCatalog
+                  products={products}
+                  onSelect={(p) => setScannedProduct(p)}
+                  onBarcodeScan={handleScan}
+                  lastAddedProduct={lastAddedProduct}
+                  scannerEnabled={!showPayment && !receipt && !scannedProduct}
+                />
               </div>
 
               {cart.length > 0 && (

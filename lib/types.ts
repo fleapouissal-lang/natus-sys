@@ -7,6 +7,8 @@ export interface Store {
   name: string;
   city: string;
   address: string | null;
+  lat?: number | null;
+  lng?: number | null;
   is_active: boolean;
   created_at: string;
 }
@@ -122,4 +124,38 @@ export interface DashboardStats {
   lowStockCount: number;
   todaySales: number;
   todayRevenue: number;
+}
+
+export interface ShopifyLineItemRow {
+  id: number;
+  title: string;
+  quantity: number;
+  price: string;
+  sku?: string | null;
+  variant_id?: number | null;
+}
+
+export interface ShopifyOrder {
+  id: string;
+  shopify_order_id: number;
+  order_number: string;
+  store_id: string | null;
+  city: string;
+  customer_name: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
+  shipping_address: string | null;
+  shipping_lat: number | null;
+  shipping_lng: number | null;
+  financial_status: string | null;
+  fulfillment_status: string | null;
+  order_status: string;
+  total: number;
+  currency: string;
+  line_items: ShopifyLineItemRow[];
+  shopify_created_at: string | null;
+  assigned_at: string;
+  created_at: string;
+  updated_at: string;
+  stores?: Pick<Store, "name" | "city"> | null;
 }

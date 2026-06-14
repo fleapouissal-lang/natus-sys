@@ -542,3 +542,39 @@ export async function createUser(formData: FormData) {
   revalidateManagement();
   return { success: true };
 }
+
+export async function syncShopifyOrders(): Promise<
+  { success: true; synced: number; failed: number } | { error: string }
+> {
+  const profile = await requireRole(["directeur"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  try {
+    const { fetchShopifyOrders, isShopifyConfigured } = await import(
+      "@/lib/shopify/client"
+    );
+    const { processShopifyOrder } = await import("@/lib/shopify/process-order");
+
+    if (!isShopifyConfigured()) {
+      return { error: "Shopify non configuré (variables d'environnement)" };
+    }
+
+    const orders = await fetchShopifyOrders(100);
+    let synced = 0;
+    let failed = 0;
+
+    for (const order of orders) {
+      const result = await processShopifyOrder(order);
+      if (result.ok) synced++;
+      else failed++;
+    }
+
+    revalidatePath("/director/orders");
+    revalidatePath("/manager/orders");
+    revalidatePath("/cashier/orders");
+
+    return { success: true, synced, failed };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Erreur sync Shopify" };
+  }
+}

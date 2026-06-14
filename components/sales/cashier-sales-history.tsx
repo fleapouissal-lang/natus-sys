@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Filter, Banknote, CreditCard } from "lucide-react";
+import { Banknote, CreditCard } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { selectClassName } from "@/components/ui/select";
+import { SalesAgendaFilter } from "@/components/sales/sales-agenda-filter";
 import {
   formatCurrency,
   formatDate,
@@ -16,12 +16,6 @@ import type { PaymentMethod, Sale } from "@/lib/types";
 type CashierSale = Sale & {
   stores?: { name: string; city: string } | null;
 };
-
-const PAYMENT_OPTIONS: { value: "" | PaymentMethod; label: string }[] = [
-  { value: "", label: "Tous les paiements" },
-  { value: "cash", label: "Espèces" },
-  { value: "card", label: "Carte bancaire" },
-];
 
 function paymentVariant(method: string): "default" | "success" | "accent" {
   return method === "card" ? "accent" : "success";
@@ -89,61 +83,22 @@ export function CashierSalesHistory({ sales }: { sales: CashierSale[] }) {
       </div>
 
       <Card padding={false}>
-        <div className="space-y-4 p-6">
+        <div className="space-y-4 p-6 overflow-visible">
           <CardHeader
             title="Historique des ventes"
             description={`${filtered.length} transaction(s) — vos ventes en caisse`}
           />
 
-          <div className="rounded-lg border border-border bg-background p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-medium text-primary">
-              <Filter className="h-4 w-4" />
-              Filtrer
-            </div>
-            <div className="grid gap-3 lg:grid-cols-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">Date début</label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">Date fin</label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full border border-border bg-surface px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">Mode de paiement</label>
-                <select
-                  value={paymentFilter}
-                  onChange={(e) => setPaymentFilter(e.target.value as "" | PaymentMethod)}
-                  className={selectClassName}
-                >
-                  {PAYMENT_OPTIONS.map((opt) => (
-                    <option key={opt.value || "all"} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="w-full border border-border bg-surface px-3 py-2 text-sm text-muted transition-colors hover:border-primary hover:text-foreground cursor-pointer"
-                >
-                  Réinitialiser
-                </button>
-              </div>
-            </div>
-          </div>
+          <SalesAgendaFilter
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            paymentFilter={paymentFilter}
+            onDateFromChange={setDateFrom}
+            onDateToChange={setDateTo}
+            onPaymentChange={setPaymentFilter}
+            onReset={resetFilters}
+            resultCount={filtered.length}
+          />
         </div>
 
         <div className="overflow-x-auto scrollbar-natus max-h-[560px] overflow-y-auto">

@@ -22,6 +22,22 @@ export function formatPaymentMethod(method: string): string {
   return method === "card" ? "Carte bancaire" : "Espèces";
 }
 
+export function formatShopifyStatus(status: string | null | undefined): string {
+  if (!status) return "—";
+  const map: Record<string, string> = {
+    open: "Ouverte",
+    closed: "Clôturée",
+    cancelled: "Annulée",
+    paid: "Payée",
+    pending: "En attente",
+    refunded: "Remboursée",
+    fulfilled: "Expédiée",
+    partial: "Partielle",
+    unfulfilled: "Non expédiée",
+  };
+  return map[status.toLowerCase()] || status;
+}
+
 export function toLocalDateKey(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleDateString("fr-CA");

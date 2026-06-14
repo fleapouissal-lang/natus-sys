@@ -13,6 +13,7 @@ import {
   History,
   ClipboardList,
   LogOut,
+  ShoppingBag,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/ui/logo";
@@ -27,6 +28,7 @@ function buildManagementLinks(basePath: "/director" | "/manager") {
     { href: `${basePath}/stores`, label: "Magasins", icon: Store },
     { href: `${basePath}/stock`, label: "Stock", icon: Warehouse },
     { href: `${basePath}/activity`, label: "Activité", icon: ClipboardList },
+    { href: `${basePath}/orders`, label: "Commandes", icon: ShoppingBag },
     { href: `${basePath}/sales`, label: "Ventes", icon: Receipt },
     { href: `${basePath}/users`, label: "Utilisateurs", icon: Users },
     { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
@@ -35,6 +37,7 @@ function buildManagementLinks(basePath: "/director" | "/manager") {
 
 const cashierLinks = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
+  { href: "/cashier/orders", label: "Commandes", icon: ShoppingBag },
   { href: "/cashier/sales", label: "Mes ventes", icon: History },
 ];
 
