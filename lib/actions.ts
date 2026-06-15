@@ -175,13 +175,28 @@ export async function updateProduct(id: string, formData: FormData) {
   const profile = await requireRole([...MANAGEMENT]);
   if (!profile) return { error: "Non autorisé" };
 
-  const barcode = ((formData.get("barcode") as string) || "").trim();
+  const supabase = await createClient();
+
+  const { data: existingProduct, error: existingError } = await supabase
+    .from("products")
+    .select("barcode")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (existingError || !existingProduct) {
+    return { error: "Produit introuvable" };
+  }
+
+  const submittedBarcode = ((formData.get("barcode") as string) || "").trim();
+  const barcode =
+    profile.role === "directeur"
+      ? submittedBarcode
+      : existingProduct.barcode;
+
   if (!barcode) return { error: "Code-barres requis" };
 
   const category = parseCategory(formData.get("category"));
   if (!category) return { error: "Catégorie invalide" };
-
-  const supabase = await createClient();
 
   const { data: duplicate } = await supabase
     .from("products")

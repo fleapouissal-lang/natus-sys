@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -41,6 +41,7 @@ function ProductForm({
   stores,
   existingProducts,
   initialBarcode = "",
+  canEditBarcode = false,
   onClose,
   onExistingProduct,
 }: {
@@ -48,6 +49,7 @@ function ProductForm({
   stores: Store[];
   existingProducts: Product[];
   initialBarcode?: string;
+  canEditBarcode?: boolean;
   onClose: () => void;
   onExistingProduct?: (product: Product) => void;
 }) {
@@ -57,6 +59,9 @@ function ProductForm({
   const [barcode, setBarcode] = useState(product?.barcode || initialBarcode);
   const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url || null);
 
+  const isEdit = !!product;
+  const barcodeEditable = !isEdit || canEditBarcode;
+
   const duplicateProduct = useMemo(() => {
     if (product) return null;
     const code = barcode.trim();
@@ -64,14 +69,24 @@ function ProductForm({
     return existingProducts.find((p) => p.barcode === code) ?? null;
   }, [barcode, existingProducts, product]);
 
-  function handleBarcodeScan(code: string) {
-    const trimmed = code.trim();
-    setBarcode(trimmed);
-    if (!product) {
-      const found = existingProducts.find((p) => p.barcode === trimmed);
-      if (found) onExistingProduct?.(found);
+  const handleBarcodeScan = useCallback(
+    (code: string) => {
+      const trimmed = code.trim();
+      if (!trimmed || !barcodeEditable) return;
+      setBarcode(trimmed);
+      if (!product) {
+        const found = existingProducts.find((p) => p.barcode === trimmed);
+        if (found) onExistingProduct?.(found);
+      }
+    },
+    [barcodeEditable, existingProducts, onExistingProduct, product]
+  );
+
+  useEffect(() => {
+    if (isEdit && !canEditBarcode && product) {
+      setBarcode(product.barcode);
     }
-  }
+  }, [isEdit, canEditBarcode, product]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -85,7 +100,10 @@ function ProductForm({
     }
 
     const formData = new FormData(e.currentTarget);
-    formData.set("barcode", barcode.trim());
+    formData.set(
+      "barcode",
+      isEdit && !canEditBarcode ? product!.barcode : barcode.trim()
+    );
 
     if (!product) {
       const imageFile = formData.get("image") as File | null;
@@ -129,8 +147,17 @@ function ProductForm({
             value={barcode}
             onChange={setBarcode}
             onScan={handleBarcodeScan}
-            autoFocus={!product}
+            autoFocus={barcodeEditable}
             required
+            disabled={isEdit && !canEditBarcode}
+            replaceOnScan={isEdit && canEditBarcode}
+            helperText={
+              isEdit && !canEditBarcode
+                ? "Modification du code-barres réservée au directeur"
+                : isEdit && canEditBarcode
+                  ? "Scannez un nouveau code-barres ou saisissez-le, puis enregistrez ou annulez"
+                  : "Passez le code-barres devant le lecteur pour remplissage auto"
+            }
           />
 
           {duplicateProduct && (
@@ -261,6 +288,7 @@ export function ProductsManager({
   defaultStoreId,
   selectedStoreName,
   canEditStockTotal,
+  canEditBarcode = false,
 }: {
   products: Product[];
   stores: Store[];
@@ -268,6 +296,7 @@ export function ProductsManager({
   defaultStoreId: string;
   selectedStoreName?: string;
   canEditStockTotal: boolean;
+  canEditBarcode?: boolean;
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -277,6 +306,7 @@ export function ProductsManager({
   const [stockProduct, setStockProduct] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [scanQuery, setScanQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [scannedPreview, setScannedPreview] = useState<Product | null>(null);
   const [duplicatePreview, setDuplicatePreview] = useState<Product | null>(null);
@@ -287,17 +317,23 @@ export function ProductsManager({
 
   const handleSearchScan = useCallback(
     (code: string) => {
-      const found = products.find((p) => p.barcode === code.trim());
+      const trimmed = code.trim();
+      if (!trimmed) return;
+
+      setScanQuery(trimmed);
+      const found = products.find((p) => p.barcode === trimmed);
       if (found) {
         setScannedPreview(found);
         setSelectedProduct(null);
-        setSearch("");
         setScanHint("");
+        setScanQuery("");
       } else {
         setScannedPreview(null);
-        setSearch(code.trim());
-        setScanHint(`Aucun produit pour le code ${code}`);
-        setTimeout(() => setScanHint(""), 3000);
+        setScanHint(`Aucun produit pour le code ${trimmed}`);
+        setTimeout(() => {
+          setScanHint("");
+          setScanQuery("");
+        }, 3000);
       }
     },
     [products]
@@ -333,7 +369,7 @@ export function ProductsManager({
     setDuplicatePreview(found);
     setShowForm(false);
     setScannedPreview(found);
-    setSearch("");
+    setScanQuery("");
     setScanHint("");
   }
 
@@ -350,17 +386,24 @@ export function ProductsManager({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
           <div className="flex-1">
             <label className="mb-1.5 block text-sm font-medium">Scanner un produit</label>
-            <div className="relative">
+            <div className="relative flex items-center gap-2">
               <ScanBarcode className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
               <input
                 ref={inputRef}
                 type="text"
+                value={scanQuery}
+                readOnly
                 onKeyDown={handleKeyDown}
                 onChange={handleChange}
                 placeholder="Scan code-barres pour rechercher..."
-                className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm font-mono"
+                className="natus-field natus-filter-inline-input w-full cursor-default bg-surface py-0 pl-10 pr-24 text-sm font-mono"
                 autoComplete="off"
               />
+              {!modalOpen && (
+                <Badge variant="accent" className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0">
+                  Scanner actif
+                </Badge>
+              )}
             </div>
           </div>
           <div className="flex-1">
@@ -371,8 +414,20 @@ export function ProductsManager({
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  const val = search.trim();
+                  if (!val) return;
+                  if (products.some((p) => p.barcode === val)) {
+                    e.preventDefault();
+                    handleSearchScan(val);
+                    setSearch("");
+                  }
+                }}
                 placeholder="Nom du produit..."
                 className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
+                autoComplete="off"
+                data-field="product-name-search"
               />
             </div>
           </div>
@@ -546,6 +601,7 @@ export function ProductsManager({
           stores={allStores}
           existingProducts={products}
           initialBarcode={formBarcode}
+          canEditBarcode={canEditBarcode}
           onClose={() => setShowForm(false)}
           onExistingProduct={handleExistingProductFound}
         />
@@ -555,6 +611,7 @@ export function ProductsManager({
           product={editingProduct}
           stores={allStores}
           existingProducts={products}
+          canEditBarcode={canEditBarcode}
           onClose={() => setEditingProduct(null)}
         />
       )}

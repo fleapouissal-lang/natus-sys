@@ -34,6 +34,7 @@ export default async function ProductsPage({
           defaultStoreId={storeId}
           selectedStoreName={selectedStore.name}
           canEditStockTotal={profile?.role === "directeur"}
+          canEditBarcode={profile?.role === "directeur"}
         />
       ) : (
         <p className="text-center text-muted py-12">

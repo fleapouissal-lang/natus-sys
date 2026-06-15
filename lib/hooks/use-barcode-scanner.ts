@@ -48,11 +48,11 @@ export function useBarcodeScanner({ onScan, enabled = true }: UseBarcodeScannerO
 
     if (e.key === "Enter") {
       e.preventDefault();
-      const code = bufferRef.current.trim() || (e.target as HTMLInputElement).value.trim();
+      const inputValue = (e.target as HTMLInputElement).value.trim();
+      const code = inputValue || bufferRef.current.trim();
       if (code) {
         onScan(code);
         bufferRef.current = "";
-        if (inputRef.current) inputRef.current.value = "";
       }
       return;
     }
