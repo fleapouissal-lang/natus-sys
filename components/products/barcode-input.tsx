@@ -52,23 +52,47 @@ export function BarcodeInput({
     }
 
     const now = Date.now();
-    const isScanner = now - lastKeyRef.current < 50;
+    const gap = now - lastKeyRef.current;
+    const isContinuation = gap <= 50;
     lastKeyRef.current = now;
 
     if (e.key === "Enter") {
       e.preventDefault();
       const inputVal = (e.target as HTMLInputElement).value.trim();
-      const code = inputVal || (bufferRef.current || value).trim();
+      const code = replaceOnScan
+        ? inputVal || bufferRef.current.trim()
+        : inputVal || (bufferRef.current || value).trim();
       if (code) {
         onChange(code);
         onScan?.(code);
-        bufferRef.current = "";
+        if (replaceOnScan) {
+          requestAnimationFrame(() => {
+            inputRef.current?.focus();
+            inputRef.current?.select();
+          });
+        }
       }
+      bufferRef.current = "";
       return;
     }
 
-    if (isScanner && e.key.length === 1) {
-      bufferRef.current += e.key;
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (replaceOnScan) {
+        if (isContinuation) {
+          bufferRef.current += e.key;
+          onChange(bufferRef.current);
+          e.preventDefault();
+        } else {
+          bufferRef.current = e.key;
+        }
+        return;
+      }
+
+      if (isContinuation) {
+        bufferRef.current += e.key;
+      } else {
+        bufferRef.current = "";
+      }
     }
   }
 

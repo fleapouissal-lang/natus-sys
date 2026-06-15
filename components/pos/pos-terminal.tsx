@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   ScanBarcode,
@@ -13,22 +13,26 @@ import {
   Loader2,
   Banknote,
   CreditCard,
+  ClipboardList,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProductImage } from "@/components/pos/product-image";
 import { ManagerScanPanel } from "@/components/pos/manager-scan-panel";
-import { CashierScanPanel } from "@/components/pos/cashier-scan-panel";
+import { PosOrdersPanel } from "@/components/pos/pos-orders-panel";
 import { Modal } from "@/components/ui/modal";
 import { Receipt, printReceipt, type ReceiptData } from "@/components/pos/receipt";
 import { ProductCatalog } from "@/components/pos/product-catalog";
 import { completeSale, completeShopifyOrderSale } from "@/lib/actions";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
+import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
+import { shopifyOrderToPosContext } from "@/lib/shopify/order-pos";
 import { formatCurrency } from "@/lib/utils";
 import { computeTvaBreakdown, TVA_RATE } from "@/lib/constants/sales";
 import { cn } from "@/lib/utils";
-import type { Product, CartItem, UserRole, PaymentMethod, Store } from "@/lib/types";
+import type { Product, CartItem, UserRole, PaymentMethod, Store, ShopifyOrder } from "@/lib/types";
 import type { ShopifyOrderPosContext } from "@/lib/orders";
 
 type ManagerMode = "stock" | "sale";
@@ -50,8 +54,9 @@ export function PosTerminal({
   defaultStoreId = "",
   storeName,
   initialCart,
-  shopifyOrder,
-  missingShopifyProducts = [],
+  shopifyOrder: initialShopifyOrder,
+  missingShopifyProducts: initialMissingProducts = [],
+  shopifyOrders = [],
 }: {
   products: Product[];
   role: UserRole;
@@ -62,9 +67,18 @@ export function PosTerminal({
   initialCart?: CartItem[];
   shopifyOrder?: ShopifyOrderPosContext;
   missingShopifyProducts?: string[];
+  shopifyOrders?: ShopifyOrder[];
 }) {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
+  const [activeShopifyOrder, setActiveShopifyOrder] = useState<ShopifyOrderPosContext | null>(
+    initialShopifyOrder ?? null
+  );
+  const [missingShopifyProducts, setMissingShopifyProducts] = useState<string[]>(
+    initialMissingProducts
+  );
+  const [validatedQty, setValidatedQty] = useState<Record<string, number>>({});
+  const [showOrdersPanel, setShowOrdersPanel] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
   const [managerMode, setManagerMode] = useState<ManagerMode>("sale");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
@@ -78,30 +92,103 @@ export function PosTerminal({
 
   const isManagementUser = role === "manager" || role === "directeur";
   const isStockScan = isManagementUser && managerMode === "stock";
-  const isOnlineShopifyOrder = shopifyOrder?.paymentType === "online";
-  const isCodShopifyOrder = shopifyOrder?.paymentType === "cod";
-  const autoPrepareShopifyOrder = isOnlineShopifyOrder || isCodShopifyOrder;
+  const isOrderMode = !!activeShopifyOrder && !isStockScan;
+  const isCodShopifyOrder = activeShopifyOrder?.paymentType === "cod";
 
   useEffect(() => {
-    if (shopifyOrder?.defaultPayment) {
-      setPaymentMethod(shopifyOrder.defaultPayment);
+    if (activeShopifyOrder?.defaultPayment) {
+      setPaymentMethod(activeShopifyOrder.defaultPayment);
     } else if (isCodShopifyOrder) {
       setPaymentMethod("cash");
     }
-  }, [shopifyOrder, isCodShopifyOrder]);
+  }, [activeShopifyOrder, isCodShopifyOrder]);
+
+  const addToCart = useCallback((product: Product, qty: number) => {
+    if (activeShopifyOrder) return;
+    if (product.stock <= 0) {
+      setError(`${product.name} — rupture de stock`);
+      return;
+    }
+    setError("");
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === product.id);
+      if (existing) {
+        const newQty = existing.quantity + qty;
+        if (newQty > product.stock) {
+          setError(`Stock insuffisant pour ${product.name}`);
+          return prev;
+        }
+        setLastAddedProduct(product);
+        return prev.map((item) =>
+          item.product.id === product.id ? { ...item, quantity: newQty } : item
+        );
+      }
+      if (qty > product.stock) {
+        setError(`Stock insuffisant pour ${product.name}`);
+        return prev;
+      }
+      setLastAddedProduct(product);
+      return [...prev, { product, quantity: qty }];
+    });
+  }, [activeShopifyOrder]);
 
   const handleScan = useCallback(
     (code: string) => {
-      const product = products.find((p) => p.barcode === code.trim());
+      const trimmed = code.trim();
+      if (!trimmed) return;
+      const product = products.find((p) => p.barcode === trimmed);
       if (!product) {
-        setError(`Produit non trouvé : ${code}`);
+        setError(`Produit non trouvé : ${trimmed}`);
+        return;
+      }
+      if (isStockScan) {
+        setError("");
+        setScannedProduct(product);
+        return;
+      }
+      if (activeShopifyOrder) {
+        const cartItem = cart.find((item) => item.product.id === product.id);
+        if (!cartItem) {
+          setError(`${product.name} — absent de la commande`);
+          return;
+        }
+        const validated = validatedQty[product.id] ?? 0;
+        if (validated >= cartItem.quantity) {
+          setError(`${product.name} — quantité déjà validée (${cartItem.quantity})`);
+          return;
+        }
+        setValidatedQty((prev) => ({ ...prev, [product.id]: validated + 1 }));
+        setLastAddedProduct(product);
+        setError("");
         return;
       }
       setError("");
-      setScannedProduct(product);
+      addToCart(product, 1);
     },
-    [products]
+    [products, isStockScan, addToCart, activeShopifyOrder, cart, validatedQty]
   );
+
+  function loadShopifyOrder(order: ShopifyOrder) {
+    const { cart: orderCart, missing } = mapShopifyLineItemsToCart(order.line_items, products);
+    if (orderCart.length === 0) {
+      setError(
+        missing.length > 0
+          ? `Produits non trouvés : ${missing.join(", ")}`
+          : "Aucun produit dans la commande"
+      );
+      return;
+    }
+    const context = shopifyOrderToPosContext(order);
+    setCart(orderCart);
+    setActiveShopifyOrder(context);
+    setMissingShopifyProducts(missing);
+    setValidatedQty({});
+    setError("");
+    setLastAddedProduct(null);
+    setShowOrdersPanel(false);
+    autoCheckoutRef.current = false;
+    setPaymentMethod(context.defaultPayment);
+  }
 
   const { inputRef, handleKeyDown, handleChange, focusInput } = useBarcodeScanner({
     onScan: handleScan,
@@ -143,35 +230,8 @@ export function PosTerminal({
     []
   );
 
-  function addToCart(product: Product, qty: number) {
-    if (product.stock <= 0) {
-      setError(`${product.name} — rupture de stock`);
-      return;
-    }
-    setError("");
-    setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        const newQty = existing.quantity + qty;
-        if (newQty > product.stock) {
-          setError(`Stock insuffisant pour ${product.name}`);
-          return prev;
-        }
-        setLastAddedProduct(product);
-        return prev.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: newQty } : item
-        );
-      }
-      if (qty > product.stock) {
-        setError(`Stock insuffisant pour ${product.name}`);
-        return prev;
-      }
-      setLastAddedProduct(product);
-      return [...prev, { product, quantity: qty }];
-    });
-  }
-
   function updateQuantity(productId: string, delta: number) {
+    if (isOrderMode) return;
     setCart((prev) =>
       prev
         .map((item) => {
@@ -189,11 +249,43 @@ export function PosTerminal({
   }
 
   function removeFromCart(productId: string) {
+    if (isOrderMode) return;
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
   }
 
+  function clearCart() {
+    if (cart.length === 0 && !activeShopifyOrder) return;
+    setCart([]);
+    setActiveShopifyOrder(null);
+    setMissingShopifyProducts([]);
+    setValidatedQty({});
+    setError("");
+    setLastAddedProduct(null);
+  }
+
+  const orderFullyValidated = useMemo(() => {
+    if (!activeShopifyOrder) return true;
+    return cart.every(
+      (item) => (validatedQty[item.product.id] ?? 0) >= item.quantity
+    );
+  }, [activeShopifyOrder, cart, validatedQty]);
+
+  const orderValidationTotal = useMemo(() => {
+    if (!activeShopifyOrder) return 0;
+    return cart.reduce((sum, item) => sum + item.quantity, 0);
+  }, [activeShopifyOrder, cart]);
+
+  const orderValidationDone = useMemo(
+    () => Object.values(validatedQty).reduce((sum, n) => sum + n, 0),
+    [validatedQty]
+  );
+
   async function handlePay(paymentMethod: PaymentMethod) {
     if (cart.length === 0) return;
+    if (isOrderMode && !orderFullyValidated) {
+      setError("Scannez tous les produits de la commande avant de valider");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -203,9 +295,9 @@ export function PosTerminal({
       quantity: item.quantity,
     }));
 
-    const result = shopifyOrder
+    const result = activeShopifyOrder
       ? await completeShopifyOrderSale(
-          shopifyOrder.id,
+          activeShopifyOrder.id,
           items,
           paymentMethod,
           isManagementUser ? defaultStoreId : undefined
@@ -232,9 +324,9 @@ export function PosTerminal({
       total,
       paymentMethod,
       paymentLabel:
-        shopifyOrder?.paymentType === "cod"
+        activeShopifyOrder?.paymentType === "cod"
           ? "COD — à la livraison"
-          : shopifyOrder?.paymentType === "online"
+          : activeShopifyOrder?.paymentType === "online"
             ? "E.L — payé en ligne"
             : undefined,
       cashierName,
@@ -244,16 +336,19 @@ export function PosTerminal({
         unitPrice: item.product.price,
       })),
       createdAt: new Date().toISOString(),
-      shopifyOrderNumber: shopifyOrder?.orderNumber,
-      customerName: shopifyOrder?.customerName || undefined,
+      shopifyOrderNumber: activeShopifyOrder?.orderNumber,
+      customerName: activeShopifyOrder?.customerName || undefined,
     });
 
     setCart([]);
-    setShowPayment(false);
+    const wasShopifyOrder = !!activeShopifyOrder;
+    setActiveShopifyOrder(null);
+    setValidatedQty({});
+    setMissingShopifyProducts([]);
     setLoading(false);
     setLastAddedProduct(null);
 
-    if (!shopifyOrder) {
+    if (!wasShopifyOrder) {
       router.refresh();
     }
 
@@ -265,42 +360,22 @@ export function PosTerminal({
       void handlePay(paymentMethod);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- handlePay stable enough for checkout trigger
-    [cart, shopifyOrder, cashierName, defaultStoreId, isManagementUser]
+    [cart, activeShopifyOrder, cashierName, defaultStoreId, isManagementUser]
   );
-
-  useEffect(() => {
-    if (
-      autoCheckoutRef.current ||
-      !autoPrepareShopifyOrder ||
-      !shopifyOrder ||
-      cart.length === 0 ||
-      receipt ||
-      loading
-    ) {
-      return;
-    }
-    autoCheckoutRef.current = true;
-    checkout(
-      shopifyOrder.defaultPayment ?? (isCodShopifyOrder ? "cash" : "card")
-    );
-  }, [
-    autoPrepareShopifyOrder,
-    isCodShopifyOrder,
-    shopifyOrder,
-    cart.length,
-    receipt,
-    loading,
-    checkout,
-  ]);
 
   function closeReceipt() {
     setReceipt(null);
-    if (shopifyOrder) {
+    if (initialShopifyOrder || shopifyOrders.length > 0) {
       router.replace("/cashier/orders");
     } else {
       inputRef.current?.focus();
     }
   }
+
+  const cartQuantities = useMemo(
+    () => Object.fromEntries(cart.map((item) => [item.product.id, item.quantity])),
+    [cart]
+  );
 
   const total = cart.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
@@ -312,17 +387,10 @@ export function PosTerminal({
   return (
     <>
       <div className="animate-fade-in relative flex h-full min-h-0 flex-col">
-        {autoPrepareShopifyOrder && !receipt && loading && (
+        {loading && !receipt && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/90">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="text-lg font-medium">Préparation du ticket...</p>
-            {shopifyOrder && (
-              <p className="text-sm text-muted">
-                Commande {shopifyOrder.orderNumber}
-                {shopifyOrder.customerName ? ` — ${shopifyOrder.customerName}` : ""}
-                {isCodShopifyOrder ? " — COD" : " — E.L"}
-              </p>
-            )}
+            <p className="text-lg font-medium">Traitement en cours...</p>
           </div>
         )}
 
@@ -431,51 +499,76 @@ export function PosTerminal({
                       <p className="mt-0.5 text-sm text-muted">{storeName}</p>
                     )}
                   </div>
-                  {isManagementUser && (
-                    <div className="flex rounded-md border border-border bg-surface p-1">
-                      <button
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {shopifyOrders.length > 0 && (
+                      <Button
                         type="button"
-                        onClick={() => setManagerMode("stock")}
-                        className={cn(
-                          "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-                          managerMode === "stock"
-                            ? "bg-champagne text-black"
-                            : "text-muted hover:text-foreground"
-                        )}
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowOrdersPanel(true)}
                       >
-                        <Warehouse className="h-4 w-4" />
-                        Stock
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setManagerMode("sale")}
-                        className={cn(
-                          "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-                          managerMode === "sale"
-                            ? "bg-champagne text-black"
-                            : "text-muted hover:text-foreground"
-                        )}
-                      >
-                        <ShoppingCart className="h-4 w-4" />
-                        Vente
-                      </button>
-                    </div>
-                  )}
+                        <ClipboardList className="h-4 w-4" />
+                        Commandes
+                      </Button>
+                    )}
+                    {isManagementUser && (
+                      <div className="flex rounded-md border border-border bg-surface p-1">
+                        <button
+                          type="button"
+                          onClick={() => setManagerMode("stock")}
+                          className={cn(
+                            "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
+                            managerMode === "stock"
+                              ? "bg-champagne text-black"
+                              : "text-muted hover:text-foreground"
+                          )}
+                        >
+                          <Warehouse className="h-4 w-4" />
+                          Stock
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setManagerMode("sale")}
+                          className={cn(
+                            "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
+                            managerMode === "sale"
+                              ? "bg-champagne text-black"
+                              : "text-muted hover:text-foreground"
+                          )}
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                          Vente
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {shopifyOrder && (
+                {activeShopifyOrder && (
                   <Card className="mt-3 border-primary/40 bg-primary/10 !p-3">
-                    <p className="text-sm font-semibold text-foreground">
-                      Commande Shopify {shopifyOrder.orderNumber}
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          Commande Shopify {activeShopifyOrder.orderNumber}
+                        </p>
+                        {activeShopifyOrder.customerName && (
+                          <p className="text-xs text-muted">
+                            Client : {activeShopifyOrder.customerName}
+                          </p>
+                        )}
+                        {missingShopifyProducts.length > 0 && (
+                          <p className="mt-1 text-xs text-danger">
+                            Produits non chargés : {missingShopifyProducts.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant={orderFullyValidated ? "success" : "warning"}>
+                        {orderValidationDone}/{orderValidationTotal} scannés
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-xs text-muted">
+                      Scannez chaque produit pour valider les quantités avant d&apos;imprimer
                     </p>
-                    {shopifyOrder.customerName && (
-                      <p className="text-xs text-muted">Client : {shopifyOrder.customerName}</p>
-                    )}
-                    {missingShopifyProducts.length > 0 && (
-                      <p className="mt-1 text-xs text-danger">
-                        Produits non chargés : {missingShopifyProducts.join(", ")}
-                      </p>
-                    )}
                   </Card>
                 )}
 
@@ -490,9 +583,12 @@ export function PosTerminal({
                 <ProductCatalog
                   products={products}
                   onAddToCart={addToCart}
+                  onUpdateQuantity={updateQuantity}
+                  cartQuantities={cartQuantities}
                   onBarcodeScan={handleScan}
                   lastAddedProduct={lastAddedProduct}
-                  scannerEnabled={!receipt && !scannedProduct}
+                  scannerEnabled={!receipt && (!isStockScan || !scannedProduct)}
+                  orderMode={isOrderMode}
                   compact
                 />
               </div>
@@ -502,10 +598,26 @@ export function PosTerminal({
             <div className="flex h-full min-h-0 w-full flex-col bg-page lg:w-[40%] lg:border-l lg:border-border">
               <div className="flex h-full min-h-0 flex-col">
                 <div className="shrink-0 px-4 py-4">
-                  <h2 className="text-lg font-bold text-primary">Facture</h2>
-                  <p className="text-xs text-muted">
-                    {cart.length} article{cart.length !== 1 ? "s" : ""}
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-bold text-primary">Facture</h2>
+                      <p className="text-xs text-muted">
+                        {cart.length} article{cart.length !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center justify-end">
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="sm"
+                        onClick={clearCart}
+                        disabled={cart.length === 0 || !!receipt}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Vider le panier
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-natus">
@@ -513,18 +625,31 @@ export function PosTerminal({
                     <p className="py-12 text-center text-sm text-muted">Panier vide</p>
                   ) : (
                     <div className="space-y-4">
-                      {cart.map((item) => (
-                        <div key={item.product.id} className="relative pt-2.5 pr-2.5">
-                          <button
-                            type="button"
-                            onClick={() => removeFromCart(item.product.id)}
-                            className="avatar-round absolute right-0 top-0 z-10 flex h-9 w-9 rotate-12 items-center justify-center bg-danger text-white shadow-md ring-2 ring-surface transition-transform hover:scale-110 hover:rotate-0 cursor-pointer"
-                            aria-label="Supprimer"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                      {cart.map((item) => {
+                        const validated = validatedQty[item.product.id] ?? 0;
+                        const isItemValidated = validated >= item.quantity;
 
-                          <div className="relative flex min-h-[7.5rem] items-stretch overflow-hidden border border-border bg-surface">
+                        return (
+                        <div key={item.product.id} className="relative pt-2.5 pr-2.5">
+                          {!isOrderMode && (
+                            <button
+                              type="button"
+                              onClick={() => removeFromCart(item.product.id)}
+                              className="avatar-round absolute right-0 top-0 z-10 flex h-9 w-9 rotate-12 items-center justify-center bg-danger text-white shadow-md ring-2 ring-surface transition-transform hover:scale-110 hover:rotate-0 cursor-pointer"
+                              aria-label="Supprimer"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+
+                          <div
+                            className={cn(
+                              "relative flex min-h-[7.5rem] items-stretch overflow-hidden border bg-surface",
+                              isOrderMode && isItemValidated
+                                ? "border-success/50 ring-1 ring-success/30"
+                                : "border-border"
+                            )}
+                          >
                             <ProductImage product={item.product} strip />
 
                             <div className="flex min-w-0 flex-1 items-center gap-4 py-3 pl-4 pr-4">
@@ -537,6 +662,20 @@ export function PosTerminal({
                                 {item.quantity} x {formatCurrency(item.product.price)}
                               </p>
 
+                              {isOrderMode ? (
+                                <div className="mt-1 flex items-center gap-2">
+                                  <Badge variant={isItemValidated ? "success" : "warning"}>
+                                    {isItemValidated ? (
+                                      <span className="inline-flex items-center gap-1">
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        Validé {validated}/{item.quantity}
+                                      </span>
+                                    ) : (
+                                      `${validated}/${item.quantity} scanné${validated !== 1 ? "s" : ""}`
+                                    )}
+                                  </Badge>
+                                </div>
+                              ) : (
                               <div className="avatar-round mt-1 flex w-fit items-center gap-0.5 border border-border bg-page px-1 py-0.5">
                                 <button
                                   type="button"
@@ -558,6 +697,7 @@ export function PosTerminal({
                                   <Plus className="h-4 w-4" />
                                 </button>
                               </div>
+                              )}
                             </div>
 
                             <p className="shrink-0 text-lg font-bold text-primary">
@@ -566,7 +706,8 @@ export function PosTerminal({
                           </div>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -590,57 +731,57 @@ export function PosTerminal({
                     </div>
                   </div>
 
-                  {!autoPrepareShopifyOrder && (
-                    <div className="mt-4">
-                      <p className="mb-2 text-sm font-semibold text-foreground">
-                        Mode de paiement
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {PAYMENT_OPTIONS.map(({ id, label, icon: Icon }) => {
-                          const selected = paymentMethod === id;
-                          return (
-                            <button
-                              key={id}
-                              type="button"
-                              onClick={() => setPaymentMethod(id)}
-                              disabled={cart.length === 0}
-                              className={cn(
-                                "flex flex-col items-center gap-1.5 border bg-page px-3 py-3 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
-                                selected
-                                  ? "border-primary bg-champagne/30"
-                                  : "border-border hover:border-primary/60"
-                              )}
-                            >
-                              <Icon className="h-5 w-5 text-primary" />
-                              <span className="text-xs font-semibold">{label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {shopifyOrder?.paymentType === "cod" && (
-                        <p className="mt-2 text-xs text-muted">
-                          Commande COD — espèces recommandées
-                        </p>
-                      )}
+                  <div className="mt-4">
+                    <p className="mb-2 text-sm font-semibold text-foreground">
+                      Mode de paiement
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {PAYMENT_OPTIONS.map(({ id, label, icon: Icon }) => {
+                        const selected = paymentMethod === id;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => setPaymentMethod(id)}
+                            disabled={cart.length === 0}
+                            className={cn(
+                              "flex flex-col items-center gap-1.5 border bg-page px-3 py-3 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
+                              selected
+                                ? "border-primary bg-champagne/30"
+                                : "border-border hover:border-primary/60"
+                            )}
+                          >
+                            <Icon className="h-5 w-5 text-primary" />
+                            <span className="text-xs font-semibold">{label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
+                    {activeShopifyOrder?.paymentType === "cod" && (
+                      <p className="mt-2 text-xs text-muted">
+                        Commande COD — espèces recommandées
+                      </p>
+                    )}
+                    {isOrderMode && !orderFullyValidated && (
+                      <p className="mt-2 text-xs text-warning">
+                        Scannez tous les produits ({orderValidationDone}/{orderValidationTotal}) pour valider
+                      </p>
+                    )}
+                  </div>
 
                   <Button
                     className="mt-4 w-full"
                     size="lg"
-                    onClick={() =>
-                      autoPrepareShopifyOrder
-                        ? checkout(
-                            shopifyOrder?.defaultPayment ??
-                              (isCodShopifyOrder ? "cash" : "card")
-                          )
-                        : checkout(paymentMethod)
+                    onClick={() => checkout(paymentMethod)}
+                    disabled={
+                      cart.length === 0 ||
+                      loading ||
+                      (isOrderMode && !orderFullyValidated)
                     }
-                    disabled={cart.length === 0 || loading}
                     loading={loading}
                   >
                     <Printer className="h-4 w-4" />
-                    {autoPrepareShopifyOrder ? "Imprimer le ticket" : "Imprimer la facture"}
+                    {activeShopifyOrder ? "Valider la commande" : "Imprimer la facture"}
                   </Button>
                 </div>
               </div>
@@ -671,17 +812,6 @@ export function PosTerminal({
         />
       )}
 
-      {scannedProduct && !isStockScan && (
-        <CashierScanPanel
-          product={scannedProduct}
-          onAdd={addToCart}
-          onClose={() => {
-            setScannedProduct(null);
-            inputRef.current?.focus();
-          }}
-        />
-      )}
-
       {receipt && (
         <Modal onClose={closeReceipt} size="md" scrollable={false}>
           <Receipt data={receipt} />
@@ -691,11 +821,20 @@ export function PosTerminal({
               Imprimer
             </Button>
             <Button variant="secondary" onClick={closeReceipt}>
-              {shopifyOrder ? "Retour aux commandes" : "Nouvelle vente"}
+              {initialShopifyOrder || shopifyOrders.length > 0
+                ? "Retour aux commandes"
+                : "Nouvelle vente"}
             </Button>
           </div>
         </Modal>
       )}
+
+      <PosOrdersPanel
+        orders={shopifyOrders}
+        open={showOrdersPanel}
+        onClose={() => setShowOrdersPanel(false)}
+        onSelectOrder={loadShopifyOrder}
+      />
     </>
   );
 }

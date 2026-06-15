@@ -3,7 +3,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { getCityFilter } from "@/lib/permissions";
 import { getActiveStores, getProductsWithStoreStock } from "@/lib/inventory";
 import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store";
-import { loadShopifyOrderForPos } from "@/lib/orders";
+import { loadShopifyOrderForPos, getShopifyOrders } from "@/lib/orders";
 import { PosTerminal } from "@/components/pos/pos-terminal";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 
@@ -29,6 +29,7 @@ export default async function PosPage({
 
   let shopifyLoad = null;
   let shopifyError: string | null = null;
+  const shopifyOrders = profile ? await getShopifyOrders(profile) : [];
 
   if (shopifyOrderId && profile) {
     const result = await loadShopifyOrderForPos(profile, shopifyOrderId, products);
@@ -66,6 +67,7 @@ export default async function PosPage({
           initialCart={shopifyLoad?.cart}
           shopifyOrder={shopifyLoad?.context}
           missingShopifyProducts={shopifyLoad?.missingProducts}
+          shopifyOrders={shopifyOrders}
         />
       </div>
     </div>

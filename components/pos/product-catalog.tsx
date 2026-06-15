@@ -105,23 +105,20 @@ function CategoryStrip({
 
 function ProductCard({
   product,
-  draftQty,
-  onDraftQtyChange,
+  cartQty,
   onAddToCart,
+  onUpdateQuantity,
   highlighted,
+  orderMode = false,
 }: {
   product: Product;
-  draftQty: number;
-  onDraftQtyChange: (qty: number) => void;
+  cartQty: number;
   onAddToCart: (product: Product, qty: number) => void;
+  onUpdateQuantity: (productId: string, delta: number) => void;
   highlighted?: boolean;
+  orderMode?: boolean;
 }) {
   const outOfStock = product.stock <= 0;
-
-  function adjustDraft(delta: number) {
-    const next = Math.max(1, Math.min(product.stock, draftQty + delta));
-    onDraftQtyChange(next);
-  }
 
   return (
     <div
@@ -157,38 +154,37 @@ function ProductCard({
           </p>
         </div>
 
-        <div className="mt-auto flex items-center gap-2">
-          <div className="flex shrink-0 items-center rounded-full bg-page px-1 py-0.5">
+        {orderMode ? (
+          <p className="mt-auto text-center text-xs text-muted">
+            {cartQty > 0 ? `${cartQty} dans la commande — scannez pour valider` : "—"}
+          </p>
+        ) : (
+        <div className="mt-auto flex items-center justify-center">
+          <div className="flex items-center rounded-full bg-page px-1 py-0.5">
             <button
               type="button"
-              onClick={() => adjustDraft(-1)}
-              disabled={outOfStock || draftQty <= 1}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-foreground transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-              aria-label="Diminuer la quantité"
+              onClick={() => onUpdateQuantity(product.id, -1)}
+              disabled={outOfStock || cartQty <= 0}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-foreground transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+              aria-label="Retirer du panier"
             >
-              <Minus className="h-3.5 w-3.5" />
+              <Minus className="h-4 w-4" />
             </button>
-            <span className="w-7 text-center text-sm font-semibold">{draftQty}</span>
+            <span className="min-w-[2rem] text-center text-sm font-semibold">
+              {cartQty}
+            </span>
             <button
               type="button"
-              onClick={() => adjustDraft(1)}
-              disabled={outOfStock || draftQty >= product.stock}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-foreground transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-              aria-label="Augmenter la quantité"
+              onClick={() => onAddToCart(product, 1)}
+              disabled={outOfStock || cartQty >= product.stock}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-foreground transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+              aria-label="Ajouter au panier"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-4 w-4" />
             </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => onAddToCart(product, draftQty)}
-            disabled={outOfStock}
-            className="min-w-0 flex-1 rounded-full bg-champagne px-3 py-2 text-xs font-semibold text-black transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-          >
-            Ajouter au panier
-          </button>
         </div>
+        )}
       </div>
     </div>
   );
@@ -197,22 +193,27 @@ function ProductCard({
 export function ProductCatalog({
   products,
   onAddToCart,
+  onUpdateQuantity,
+  cartQuantities,
   onBarcodeScan,
   lastAddedProduct = null,
   scannerEnabled = true,
+  orderMode = false,
   compact = false,
 }: {
   products: Product[];
   onAddToCart: (product: Product, qty: number) => void;
+  onUpdateQuantity: (productId: string, delta: number) => void;
+  cartQuantities: Record<string, number>;
   onBarcodeScan?: (code: string) => void;
   lastAddedProduct?: Product | null;
   scannerEnabled?: boolean;
+  orderMode?: boolean;
   compact?: boolean;
 }) {
   const [barcodeQuery, setBarcodeQuery] = useState("");
   const [nameQuery, setNameQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [draftQty, setDraftQty] = useState<Record<string, number>>({});
 
   const categories = useMemo(() => {
     const fromProducts = new Set<string>();
@@ -226,8 +227,8 @@ export function ProductCatalog({
     (code: string) => {
       const trimmed = code.trim();
       if (!trimmed) return;
-      setBarcodeQuery(trimmed);
       onBarcodeScan?.(trimmed);
+      setBarcodeQuery("");
     },
     [onBarcodeScan]
   );
@@ -271,19 +272,6 @@ export function ProductCatalog({
     }
     return list;
   }, [products, barcodeQuery, nameQuery, selectedCategory]);
-
-  function getDraftQty(productId: string) {
-    return draftQty[productId] ?? 1;
-  }
-
-  function setDraftQtyFor(productId: string, qty: number) {
-    setDraftQty((prev) => ({ ...prev, [productId]: qty }));
-  }
-
-  function handleAddToCart(product: Product, qty: number) {
-    onAddToCart(product, qty);
-    setDraftQtyFor(product.id, 1);
-  }
 
   if (products.length === 0) {
     return (
@@ -382,10 +370,11 @@ export function ProductCatalog({
             <ProductCard
               key={product.id}
               product={product}
-              draftQty={getDraftQty(product.id)}
-              onDraftQtyChange={(qty) => setDraftQtyFor(product.id, qty)}
-              onAddToCart={handleAddToCart}
+              cartQty={cartQuantities[product.id] ?? 0}
+              onAddToCart={onAddToCart}
+              onUpdateQuantity={onUpdateQuantity}
               highlighted={lastAddedProduct?.id === product.id}
+              orderMode={orderMode}
             />
           ))}
         </div>

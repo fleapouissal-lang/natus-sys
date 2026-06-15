@@ -155,7 +155,7 @@ function ProductForm({
               isEdit && !canEditBarcode
                 ? "Modification du code-barres réservée au directeur"
                 : isEdit && canEditBarcode
-                  ? "Scannez un nouveau code-barres ou saisissez-le, puis enregistrez ou annulez"
+                  ? "Chaque scan remplace le code-barres — scannez à nouveau pour le modifier"
                   : "Passez le code-barres devant le lecteur pour remplissage auto"
             }
           />
