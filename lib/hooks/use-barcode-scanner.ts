@@ -5,9 +5,15 @@ import { useCallback, useEffect, useRef } from "react";
 interface UseBarcodeScannerOptions {
   onScan: (barcode: string) => void;
   enabled?: boolean;
+  /** Refocus automatique (caisse). Désactivé sur la page produits. */
+  autoRefocus?: boolean;
 }
 
-export function useBarcodeScanner({ onScan, enabled = true }: UseBarcodeScannerOptions) {
+export function useBarcodeScanner({
+  onScan,
+  enabled = true,
+  autoRefocus = true,
+}: UseBarcodeScannerOptions) {
   const inputRef = useRef<HTMLInputElement>(null);
   const bufferRef = useRef("");
   const lastKeyTimeRef = useRef(0);
@@ -28,7 +34,7 @@ export function useBarcodeScanner({ onScan, enabled = true }: UseBarcodeScannerO
   }, [enabled]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !autoRefocus) return;
 
     focusInput();
     const interval = setInterval(focusInput, 2000);
@@ -39,7 +45,7 @@ export function useBarcodeScanner({ onScan, enabled = true }: UseBarcodeScannerO
       clearInterval(interval);
       window.removeEventListener("click", onClick);
     };
-  }, [enabled, focusInput]);
+  }, [enabled, autoRefocus, focusInput]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     const now = Date.now();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,8 +37,11 @@ export function StockManager({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [pickMode, setPickMode] = useState<ProductPickMode>("select");
+  const [pickMode, setPickMode] = useState<ProductPickMode>("scan");
   const [scanHint, setScanHint] = useState("");
+  const [scanQuery, setScanQuery] = useState("");
+  const [scanListening, setScanListening] = useState(true);
+  const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedStore = stores.find((s) => s.id === storeId);
   const selectedProduct = products.find((p) => p.id === selectedId);
@@ -57,22 +60,72 @@ export function StockManager({
 
   const handleBarcodeScan = useCallback(
     (code: string) => {
-      const found = products.find((p) => p.barcode === code.trim());
+      const trimmed = code.trim();
+      if (!trimmed) return;
+      setScanQuery(trimmed);
+      const found = products.find((p) => p.barcode === trimmed);
       if (found) {
         handleProductChange(found.id);
         setScanHint("");
+        setScanQuery("");
       } else {
-        setScanHint(`Aucun produit pour le code ${code}`);
-        setTimeout(() => setScanHint(""), 3000);
+        setScanHint(`Aucun produit pour le code ${trimmed}`);
+        setTimeout(() => {
+          setScanHint("");
+          setScanQuery("");
+        }, 3000);
       }
     },
     [products]
   );
 
-  const { inputRef, handleKeyDown, handleChange } = useBarcodeScanner({
+  const { inputRef, handleKeyDown, handleChange, focusInput } = useBarcodeScanner({
     onScan: handleBarcodeScan,
     enabled: pickMode === "scan",
+    autoRefocus: pickMode === "scan",
   });
+
+  const handleScanChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      handleChange(e);
+      setScanQuery(e.target.value);
+    },
+    [handleChange]
+  );
+
+  const scannerActive = pickMode === "scan" && scanListening;
+
+  useEffect(() => {
+    if (pickMode === "scan") {
+      setScanListening(true);
+      focusInput();
+    } else {
+      setScanListening(false);
+    }
+  }, [pickMode, focusInput]);
+
+  useEffect(
+    () => () => {
+      if (scanBlurTimerRef.current) clearTimeout(scanBlurTimerRef.current);
+    },
+    []
+  );
+
+  function armScanner() {
+    if (scanBlurTimerRef.current) {
+      clearTimeout(scanBlurTimerRef.current);
+      scanBlurTimerRef.current = null;
+    }
+    setScanListening(true);
+    focusInput();
+  }
+
+  function disarmScanner() {
+    scanBlurTimerRef.current = setTimeout(() => {
+      setScanListening(false);
+      scanBlurTimerRef.current = null;
+    }, 200);
+  }
 
   function handleAddQtyChange(value: string) {
     setAddQty(value);
@@ -177,19 +230,23 @@ export function StockManager({
         error={error}
         success={success}
         scanHint={scanHint}
+        scanQuery={scanQuery}
+        scannerActive={scannerActive}
         inputRef={inputRef}
         onPickModeChange={(mode) => {
           setPickMode(mode);
           if (mode === "scan") {
-            setTimeout(() => inputRef.current?.focus(), 0);
+            setTimeout(() => focusInput(), 0);
           }
         }}
+        onArmScanner={armScanner}
+        onDisarmScanner={disarmScanner}
         onProductChange={handleProductChange}
         onAddQtyChange={handleAddQtyChange}
         onNewTotalChange={handleNewTotalChange}
         onNotesChange={setNotes}
         onScanKeyDown={handleKeyDown}
-        onScanChange={handleChange}
+        onScanChange={handleScanChange}
         onSubmit={handleAddStock}
       />
 

@@ -33,8 +33,12 @@ export function AddStockCard({
   error,
   success,
   scanHint,
+  scanQuery,
+  scannerActive = false,
   inputRef,
   onPickModeChange,
+  onArmScanner,
+  onDisarmScanner,
   onProductChange,
   onAddQtyChange,
   onNewTotalChange,
@@ -59,8 +63,12 @@ export function AddStockCard({
   error: string;
   success: string;
   scanHint: string;
+  scanQuery: string;
+  scannerActive?: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
   onPickModeChange: (mode: ProductPickMode) => void;
+  onArmScanner?: () => void;
+  onDisarmScanner?: () => void;
   onProductChange: (id: string) => void;
   onAddQtyChange: (value: string) => void;
   onNewTotalChange: (value: string) => void;
@@ -144,17 +152,43 @@ export function AddStockCard({
               />
             ) : (
               <div>
-                <div className="relative">
-                  <ScanBarcode className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                <div
+                  role="button"
+                  tabIndex={-1}
+                  onClick={onArmScanner}
+                  className={cn(
+                    "flex cursor-text items-center gap-2 rounded-full border bg-page px-4 py-2",
+                    scannerActive ? "border-primary" : "border-border"
+                  )}
+                >
+                  <ScanBarcode
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      scannerActive ? "text-primary" : "text-muted"
+                    )}
+                  />
                   <input
                     ref={inputRef}
                     type="text"
+                    value={scanQuery ?? ""}
                     onKeyDown={onScanKeyDown}
                     onChange={onScanChange}
-                    placeholder="Code-barres..."
-                    className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm font-mono"
+                    onFocus={onArmScanner}
+                    onBlur={onDisarmScanner}
+                    placeholder={
+                      scannerActive
+                        ? "Passez le code-barres devant le lecteur…"
+                        : "Cliquez pour activer le scanner…"
+                    }
+                    className="natus-filter-inline-input w-full min-w-0 cursor-default border-0 bg-transparent py-0 text-sm font-mono outline-none placeholder:text-muted"
                     autoComplete="off"
                   />
+                  <Badge
+                    variant={scannerActive ? "accent" : "default"}
+                    className={cn("shrink-0", !scannerActive && "bg-page text-muted")}
+                  >
+                    {scannerActive ? "Actif" : "Inactif"}
+                  </Badge>
                 </div>
                 <p className="mt-1.5 text-xs text-muted">
                   Scan automatique — le produit se sélectionne seul

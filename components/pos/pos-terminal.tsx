@@ -72,7 +72,9 @@ export function PosTerminal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(null);
+  const [scanListening, setScanListening] = useState(true);
   const autoCheckoutRef = useRef(false);
+  const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isManagementUser = role === "manager" || role === "directeur";
   const isStockScan = isManagementUser && managerMode === "stock";
@@ -101,10 +103,45 @@ export function PosTerminal({
     [products]
   );
 
-  const { inputRef, handleKeyDown, handleChange } = useBarcodeScanner({
+  const { inputRef, handleKeyDown, handleChange, focusInput } = useBarcodeScanner({
     onScan: handleScan,
     enabled: isStockScan && !receipt && !scannedProduct,
   });
+
+  const stockScannerActive =
+    isStockScan && !receipt && !scannedProduct && scanListening;
+
+  function armStockScanner() {
+    if (scanBlurTimerRef.current) {
+      clearTimeout(scanBlurTimerRef.current);
+      scanBlurTimerRef.current = null;
+    }
+    setScanListening(true);
+    focusInput();
+  }
+
+  function disarmStockScanner() {
+    scanBlurTimerRef.current = setTimeout(() => {
+      setScanListening(false);
+      scanBlurTimerRef.current = null;
+    }, 200);
+  }
+
+  useEffect(() => {
+    if (isStockScan && !receipt && !scannedProduct) {
+      setScanListening(true);
+      focusInput();
+    } else {
+      setScanListening(false);
+    }
+  }, [isStockScan, receipt, scannedProduct, focusInput]);
+
+  useEffect(
+    () => () => {
+      if (scanBlurTimerRef.current) clearTimeout(scanBlurTimerRef.current);
+    },
+    []
+  );
 
   function addToCart(product: Product, qty: number) {
     if (product.stock <= 0) {
@@ -335,18 +372,42 @@ export function PosTerminal({
             </div>
 
             <Card className="mx-4 mb-6">
-              <div className="flex items-center gap-3">
-                <ScanBarcode className="h-5 w-5 shrink-0 text-primary" />
+              <div
+                role="button"
+                tabIndex={-1}
+                onClick={armStockScanner}
+                className={cn(
+                  "flex cursor-text items-center gap-3 rounded-full border bg-page px-4 py-2",
+                  stockScannerActive ? "border-primary" : "border-border"
+                )}
+              >
+                <ScanBarcode
+                  className={cn(
+                    "h-5 w-5 shrink-0",
+                    stockScannerActive ? "text-primary" : "text-muted"
+                  )}
+                />
                 <input
                   ref={inputRef}
                   type="text"
                   onKeyDown={handleKeyDown}
                   onChange={handleChange}
-                  placeholder="Prêt au scan — passez le code-barres devant le lecteur..."
+                  onFocus={armStockScanner}
+                  onBlur={disarmStockScanner}
+                  placeholder={
+                    stockScannerActive
+                      ? "Passez le code-barres devant le lecteur…"
+                      : "Cliquez pour activer le scanner…"
+                  }
                   className="w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted"
                   autoComplete="off"
                 />
-                <Badge variant="accent">Scanner actif</Badge>
+                <Badge
+                  variant={stockScannerActive ? "accent" : "default"}
+                  className={cn("shrink-0", !stockScannerActive && "bg-page text-muted")}
+                >
+                  {stockScannerActive ? "Actif" : "Inactif"}
+                </Badge>
               </div>
             </Card>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import {
   Barcode,
@@ -213,6 +213,8 @@ export function ProductCatalog({
   const [nameQuery, setNameQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [draftQty, setDraftQty] = useState<Record<string, number>>({});
+  const [scanListening, setScanListening] = useState(false);
+  const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const categories = useMemo(() => {
     const fromProducts = new Set<string>();
@@ -233,13 +235,47 @@ export function ProductCatalog({
   const { inputRef, handleKeyDown, handleChange, focusInput } = useBarcodeScanner({
     onScan: handleScan,
     enabled: scannerEnabled,
+    autoRefocus: false,
   });
 
-  useEffect(() => {
-    if (scannerEnabled) {
-      focusInput();
+  const scannerActive = scannerEnabled && scanListening;
+
+  const handleBarcodeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      handleChange(e);
+      setBarcodeQuery(e.target.value);
+    },
+    [handleChange]
+  );
+
+  function armScanner() {
+    if (scanBlurTimerRef.current) {
+      clearTimeout(scanBlurTimerRef.current);
+      scanBlurTimerRef.current = null;
     }
-  }, [scannerEnabled, focusInput]);
+    setScanListening(true);
+    focusInput();
+  }
+
+  function disarmScanner() {
+    scanBlurTimerRef.current = setTimeout(() => {
+      setScanListening(false);
+      scanBlurTimerRef.current = null;
+    }, 200);
+  }
+
+  useEffect(() => {
+    if (!scannerEnabled) {
+      setScanListening(false);
+    }
+  }, [scannerEnabled]);
+
+  useEffect(
+    () => () => {
+      if (scanBlurTimerRef.current) clearTimeout(scanBlurTimerRef.current);
+    },
+    []
+  );
 
   const filtered = useMemo(() => {
     let list = products;
@@ -287,24 +323,43 @@ export function ProductCatalog({
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-primary bg-page px-4 py-2">
-            <Barcode className="h-4 w-4 shrink-0 text-primary" />
+          <div
+            role="button"
+            tabIndex={-1}
+            onClick={armScanner}
+            className={cn(
+              "flex min-w-0 flex-1 cursor-text items-center gap-2 rounded-full border bg-page px-4 py-2",
+              scannerActive ? "border-primary" : "border-border"
+            )}
+          >
+            <Barcode
+              className={cn(
+                "h-4 w-4 shrink-0",
+                scannerActive ? "text-primary" : "text-muted"
+              )}
+            />
             <input
               ref={inputRef}
               type="text"
-              value={barcodeQuery}
-              readOnly
+              value={barcodeQuery ?? ""}
               onKeyDown={handleKeyDown}
-              onChange={handleChange}
-              placeholder="Code-barres…"
+              onChange={handleBarcodeChange}
+              onFocus={armScanner}
+              onBlur={disarmScanner}
+              placeholder={
+                scannerActive
+                  ? "Passez le code-barres devant le lecteur…"
+                  : "Cliquez pour activer le scanner…"
+              }
               autoComplete="off"
               className="natus-filter-inline-input w-full cursor-default border-0 bg-transparent py-0 text-sm outline-none placeholder:text-muted"
             />
-            {scannerEnabled && (
-              <Badge variant="accent" className="shrink-0">
-                Scanner
-              </Badge>
-            )}
+            <Badge
+              variant={scannerActive ? "accent" : "default"}
+              className={cn("shrink-0", !scannerActive && "bg-page text-muted")}
+            >
+              {scannerActive ? "Actif" : "Inactif"}
+            </Badge>
           </div>
 
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-primary bg-page px-4 py-2">
@@ -319,6 +374,12 @@ export function ProductCatalog({
             />
           </div>
         </div>
+
+        {!scannerActive && scannerEnabled && (
+          <p className="text-xs text-muted">
+            Cliquez dans le champ code-barres pour activer le scanner
+          </p>
+        )}
 
         <p className="text-xs text-muted">
           {filtered.length} produit{filtered.length > 1 ? "s" : ""}

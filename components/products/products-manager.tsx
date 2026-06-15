@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -311,6 +311,8 @@ export function ProductsManager({
   const [scannedPreview, setScannedPreview] = useState<Product | null>(null);
   const [duplicatePreview, setDuplicatePreview] = useState<Product | null>(null);
   const [scanHint, setScanHint] = useState("");
+  const [scanListening, setScanListening] = useState(false);
+  const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const modalOpen =
     showForm || !!editingProduct || (!!selectedProduct && !scannedPreview) || !!stockProduct;
@@ -339,10 +341,42 @@ export function ProductsManager({
     [products]
   );
 
-  const { inputRef, handleKeyDown, handleChange } = useBarcodeScanner({
+  const { inputRef, handleKeyDown, handleChange, focusInput } = useBarcodeScanner({
     onScan: handleSearchScan,
     enabled: !modalOpen,
+    autoRefocus: false,
   });
+
+  const scannerActive = !modalOpen && scanListening;
+
+  useEffect(() => {
+    if (modalOpen) {
+      setScanListening(false);
+    }
+  }, [modalOpen]);
+
+  useEffect(
+    () => () => {
+      if (scanBlurTimerRef.current) clearTimeout(scanBlurTimerRef.current);
+    },
+    []
+  );
+
+  function armScanner() {
+    if (scanBlurTimerRef.current) {
+      clearTimeout(scanBlurTimerRef.current);
+      scanBlurTimerRef.current = null;
+    }
+    setScanListening(true);
+    focusInput();
+  }
+
+  function disarmScanner() {
+    scanBlurTimerRef.current = setTimeout(() => {
+      setScanListening(false);
+      scanBlurTimerRef.current = null;
+    }, 200);
+  }
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -386,8 +420,21 @@ export function ProductsManager({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
           <div className="flex-1">
             <label className="mb-1.5 block text-sm font-medium">Scanner un produit</label>
-            <div className="relative flex items-center gap-2">
-              <ScanBarcode className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+            <div
+              role="button"
+              tabIndex={-1}
+              onClick={armScanner}
+              className={cn(
+                "flex cursor-text items-center gap-2 rounded-full border bg-page px-4 py-2",
+                scannerActive ? "border-primary" : "border-border"
+              )}
+            >
+              <ScanBarcode
+                className={cn(
+                  "h-4 w-4 shrink-0",
+                  scannerActive ? "text-primary" : "text-muted"
+                )}
+              />
               <input
                 ref={inputRef}
                 type="text"
@@ -395,16 +442,28 @@ export function ProductsManager({
                 readOnly
                 onKeyDown={handleKeyDown}
                 onChange={handleChange}
-                placeholder="Scan code-barres pour rechercher..."
-                className="natus-field natus-filter-inline-input w-full cursor-default bg-surface py-0 pl-10 pr-24 text-sm font-mono"
+                onFocus={armScanner}
+                onBlur={disarmScanner}
+                placeholder={
+                  scannerActive
+                    ? "Passez le code-barres devant le lecteur…"
+                    : "Cliquez pour activer le scanner…"
+                }
+                className="natus-filter-inline-input w-full min-w-0 cursor-default border-0 bg-transparent py-0 text-sm font-mono outline-none placeholder:text-muted"
                 autoComplete="off"
               />
-              {!modalOpen && (
-                <Badge variant="accent" className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0">
-                  Scanner actif
-                </Badge>
-              )}
+              <Badge
+                variant={scannerActive ? "accent" : "default"}
+                className={cn("shrink-0", !scannerActive && "bg-page text-muted")}
+              >
+                {scannerActive ? "Actif" : "Inactif"}
+              </Badge>
             </div>
+            {!scannerActive && !modalOpen && (
+              <p className="mt-1.5 text-xs text-muted">
+                Cliquez dans le champ pour activer le scanner
+              </p>
+            )}
           </div>
           <div className="flex-1">
             <label className="mb-1.5 block text-sm font-medium">Rechercher par nom</label>
