@@ -40,30 +40,34 @@ export default async function PosPage({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full min-h-0 flex-col">
       {showStoreFilter && stores.length > 0 && (
-        <Suspense fallback={null}>
-          <StoreFilterBar stores={stores} selectedStoreId={storeId} />
-        </Suspense>
+        <div className="shrink-0 border-b border-border px-4 py-3">
+          <Suspense fallback={null}>
+            <StoreFilterBar stores={stores} selectedStoreId={storeId} />
+          </Suspense>
+        </div>
       )}
 
       {shopifyError && (
-        <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+        <p className="shrink-0 mx-4 mt-3 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
           {shopifyError}
         </p>
       )}
 
-      <PosTerminal
-        products={products}
-        role={profile?.role || "cashier"}
-        cashierName={profile?.full_name || profile?.email || "Caissier"}
-        stores={stores}
-        defaultStoreId={storeId}
-        storeName={selectedStore?.name}
-        initialCart={shopifyLoad?.cart}
-        shopifyOrder={shopifyLoad?.context}
-        missingShopifyProducts={shopifyLoad?.missingProducts}
-      />
+      <div className="min-h-0 flex-1">
+        <PosTerminal
+          products={products}
+          role={profile?.role || "cashier"}
+          cashierName={profile?.full_name || profile?.email || "Caissier"}
+          stores={stores}
+          defaultStoreId={storeId}
+          storeName={selectedStore?.name}
+          initialCart={shopifyLoad?.cart}
+          shopifyOrder={shopifyLoad?.context}
+          missingShopifyProducts={shopifyLoad?.missingProducts}
+        />
+      </div>
     </div>
   );
 }

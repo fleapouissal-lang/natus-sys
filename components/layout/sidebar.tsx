@@ -100,11 +100,16 @@ export function Sidebar({
   const roleLabel = getRoleLabel(role);
 
   useEffect(() => {
+    if (pathname.startsWith("/cashier/pos")) {
+      setCollapsed(true);
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "true");
+      return;
+    }
     const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
     if (stored === "true") {
       setCollapsed(true);
     }
-  }, []);
+  }, [pathname]);
 
   function toggleCollapsed() {
     setCollapsed((prev) => {

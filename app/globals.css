@@ -65,7 +65,7 @@
 
 /* Champs formulaire — bordure dorée Natus */
 .natus-field,
-input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not(.natus-filter-inline-input),
 select,
 textarea,
 .select-menu-trigger {
@@ -73,7 +73,7 @@ textarea,
 }
 
 .natus-field:focus,
-input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not(.natus-filter-inline-input):focus,
 select:focus,
 textarea:focus,
 .select-menu-trigger:focus,
@@ -118,6 +118,26 @@ textarea.border-danger {
 .natus-filter-bar .select-menu-icon-box svg {
   height: 0.875rem !important;
   width: 0.875rem !important;
+}
+
+/* Inputs intégrés (ex. caisse) — sans bordure interne */
+input.natus-filter-inline-input {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+input.natus-filter-inline-input:focus {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none;
+}
+
+/* Image panier caisse — plein bord gauche/haut/bas */
+.natus-cart-strip {
+  border-radius: 0 !important;
+  border: none !important;
+  border-right: 1px solid var(--border) !important;
+  min-height: 7.5rem;
 }
 
 body {
