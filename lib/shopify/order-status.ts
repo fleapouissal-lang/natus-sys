@@ -56,11 +56,18 @@ export function isFulfillmentLocked(status: ShopifyWorkflowStatus): boolean {
   );
 }
 
-/** Bien livré → payée automatiquement */
+/** Livraison confirmée — n'impacte pas la caisse physique. */
 export function resolveWorkflowStatusUpdate(
   status: ShopifyWorkflowStatus
 ): ShopifyWorkflowStatus {
-  return status === "delivered" ? "paid" : status;
+  return status;
+}
+
+export function isShopifyOrderFulfilled(order: {
+  fulfilled_at?: string | null;
+  sale_id?: string | null;
+}): boolean {
+  return Boolean(order.fulfilled_at || order.sale_id);
 }
 
 export function isOrderPaymentSettled(order: {
@@ -89,7 +96,7 @@ export function livreurWorkflowStatuses(): ShopifyWorkflowStatus[] {
 
 /** Statuts visibles par le livreur (du jour : en attente, en route, clôturées). */
 export function livreurActiveOrderStatuses(): ShopifyWorkflowStatus[] {
-  return ["ready", "shipping", "paid", "returned"];
+  return ["ready", "shipping", "delivered", "paid", "returned"];
 }
 
 export function editableWorkflowStatuses(order: {

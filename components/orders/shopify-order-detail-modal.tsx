@@ -20,6 +20,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   workflowStatusLabel,
   paymentTypeLabel,
+  isShopifyOrderFulfilled,
 } from "@/lib/shopify/order-status";
 import {
   resolveProductForLineItem,
@@ -63,7 +64,7 @@ export function ShopifyOrderDetailModal({
   const storeName = (order.stores as { name: string } | null)?.name;
   const canSendToPos =
     enablePosCheckout &&
-    !order.sale_id &&
+    !isShopifyOrderFulfilled(order) &&
     order.workflow_status !== "cancelled" &&
     order.workflow_status !== "returned";
 
@@ -101,6 +102,9 @@ export function ShopifyOrderDetailModal({
         <Badge variant={statusVariant(order.workflow_status)}>
           {workflowStatusLabel(order.workflow_status)}
         </Badge>
+        {order.fulfilled_at && !order.sale_id && (
+          <Badge variant="warning">Préparée — non encaissée</Badge>
+        )}
         {order.sale_id && <Badge variant="success">Encaissée en caisse</Badge>}
         {canSendToPos && (
           <Button type="button" size="sm" onClick={sendOrderToPos} className="ml-auto">

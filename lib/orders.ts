@@ -86,8 +86,8 @@ export async function loadShopifyOrderForPos(
     return { error: "Accès refusé" };
   }
 
-  if (order.sale_id) {
-    return { error: "Cette commande a déjà été encaissée en caisse" };
+  if (order.fulfilled_at || order.sale_id) {
+    return { error: "Cette commande a déjà été préparée en caisse" };
   }
 
   if (order.workflow_status === "cancelled") {

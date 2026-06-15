@@ -215,6 +215,8 @@ export interface ShopifyOrder {
   paid_at: string | null;
   paid_by: string | null;
   sale_id: string | null;
+  fulfilled_at: string | null;
+  fulfilled_by: string | null;
   assigned_livreur_id: string | null;
   total: number;
   currency: string;

@@ -346,7 +346,7 @@ export function PosTerminal({
     );
 
     setReceipt({
-      saleId: result.saleId!,
+      saleId: result.saleId ?? activeShopifyOrder?.id ?? "web",
       total,
       paymentMethod: effectivePaymentMethod,
       paymentLabel: shopifyPaymentLabel ?? undefined,

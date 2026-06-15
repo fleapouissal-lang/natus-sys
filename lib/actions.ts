@@ -470,7 +470,7 @@ export async function completeSale(
 export async function completeShopifyOrderSale(
   shopifyOrderId: string,
   items: { product_id: string; quantity: number }[],
-  paymentMethod: "cash" | "card" = "cash",
+  _paymentMethod: "cash" | "card" = "cash",
   storeId?: string
 ) {
   const profile = await requireRole(["directeur", "manager", "cashier"]);
@@ -486,14 +486,18 @@ export async function completeShopifyOrderSale(
     return { error: "Accès refusé" };
   }
 
-  if (order.sale_id) return { error: "Commande déjà encaissée" };
-
-  const saleResult = await completeSale(items, paymentMethod, storeId);
-  if (saleResult.error || !saleResult.saleId) {
-    return { error: saleResult.error || "Erreur vente" };
+  if (order.fulfilled_at || order.sale_id) {
+    return { error: "Commande déjà préparée en caisse" };
   }
 
   const supabase = await createClient();
+  const { error: fulfillError } = await supabase.rpc("fulfill_shopify_order", {
+    p_items: items,
+    p_store_id: storeId || order.store_id || null,
+  });
+
+  if (fulfillError) return { error: fulfillError.message };
+
   const now = new Date().toISOString();
 
   const { resolveLivreurForReadyOrder } = await import("@/lib/shopify/assign-livreur");
@@ -502,7 +506,8 @@ export async function completeShopifyOrderSale(
     : null;
 
   const updates: Record<string, unknown> = {
-    sale_id: saleResult.saleId,
+    fulfilled_at: now,
+    fulfilled_by: profile.id,
     workflow_status: "ready",
     updated_at: now,
   };
@@ -523,11 +528,12 @@ export async function completeShopifyOrderSale(
   await syncShopifyWorkflowStatus(order.shopify_order_id, "ready");
 
   revalidatePath("/cashier/orders");
+  revalidatePath("/cashier/sales");
   revalidatePath("/manager/orders");
   revalidatePath("/director/orders");
   revalidatePath("/livreur/orders");
 
-  return { success: true, saleId: saleResult.saleId };
+  return { success: true, saleId: null };
 }
 
 export async function prepareShopifyOrderForPos(
@@ -539,7 +545,9 @@ export async function prepareShopifyOrderForPos(
   const { getShopifyOrderById } = await import("@/lib/shopify/order-access");
   const order = await getShopifyOrderById(orderId);
   if (!order) return { error: "Commande introuvable" };
-  if (order.sale_id) return { error: "Commande déjà encaissée" };
+  if (order.fulfilled_at || order.sale_id) {
+    return { error: "Commande déjà préparée en caisse" };
+  }
 
   const { applyShopifyOrderWorkflowStatus } = await import(
     "@/lib/shopify/set-workflow-status"
@@ -777,17 +785,7 @@ export async function updateShopifyOrderStatus(
 
   if (error) return { error: error.message };
 
-  const { syncShopifyWorkflowStatus, markShopifyOrderPaid } = await import(
-    "@/lib/shopify/update-order"
-  );
-
-  if (effectiveStatus === "paid" && order.payment_type === "cod") {
-    await markShopifyOrderPaid(
-      order.shopify_order_id,
-      Number(order.total),
-      order.currency || "MAD"
-    );
-  }
+  const { syncShopifyWorkflowStatus } = await import("@/lib/shopify/update-order");
   await syncShopifyWorkflowStatus(order.shopify_order_id, effectiveStatus);
 
   revalidatePath("/director/orders");
@@ -818,7 +816,7 @@ export async function handOrderToLivreur(
     return { error: "Seules les commandes prêtes peuvent être remises au livreur" };
   }
 
-  if (!order.sale_id) {
+  if (!order.fulfilled_at) {
     return { error: "Préparez la commande en caisse avant la remise au livreur" };
   }
 
@@ -863,6 +861,8 @@ export async function markShopifyCodPaid(
   const { getShopifyOrderById, canAccessShopifyOrder } = await import(
     "@/lib/shopify/order-access"
   );
+  const { shopifyOrderToSaleItems } = await import("@/lib/shopify/order-sale-items");
+  const { getProductCatalog } = await import("@/lib/inventory");
   const order = await getShopifyOrderById(orderId);
   if (!order) return { error: "Commande introuvable" };
 
@@ -874,23 +874,37 @@ export async function markShopifyCodPaid(
     return { error: "Cette commande n'est pas en COD" };
   }
 
-  if (order.financial_status === "paid") {
-    return { error: "Commande déjà payée" };
+  if (order.financial_status === "paid" || order.sale_id) {
+    return { error: "Commande déjà payée en caisse" };
   }
 
-  if (!order.sale_id) {
-    return { error: "Préparez la commande avant d'encaisser le COD" };
+  if (!order.fulfilled_at) {
+    return { error: "Préparez la commande en caisse avant d'encaisser le COD" };
   }
+
+  const products = await getProductCatalog();
+  const mapped = shopifyOrderToSaleItems(order, products);
+  if ("error" in mapped) return { error: mapped.error };
 
   const supabase = await createClient();
+  const { data: saleId, error: saleError } = await supabase.rpc("record_cod_payment", {
+    p_items: mapped.items,
+    p_store_id: order.store_id || null,
+  });
+
+  if (saleError) return { error: saleError.message };
+  if (!saleId) return { error: "Erreur enregistrement caisse" };
+
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from("shopify_orders")
     .update({
+      sale_id: saleId,
       workflow_status: "paid",
       financial_status: "paid",
-      paid_at: new Date().toISOString(),
+      paid_at: now,
       paid_by: profile.id,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     })
     .eq("id", orderId);
 
@@ -909,6 +923,9 @@ export async function markShopifyCodPaid(
   revalidatePath("/director/orders");
   revalidatePath("/manager/orders");
   revalidatePath("/cashier/orders");
+  revalidatePath("/cashier/sales");
+  revalidatePath("/manager/sales");
+  revalidatePath("/director/sales");
 
   return { success: true };
 }

@@ -47,17 +47,7 @@ export async function applyShopifyOrderWorkflowStatus(
     await assignOrderToStoreLivreur(orderId, order.store_id);
   }
 
-  const { syncShopifyWorkflowStatus, markShopifyOrderPaid } = await import(
-    "@/lib/shopify/update-order"
-  );
-
-  if (effectiveStatus === "paid" && order.payment_type === "cod") {
-    await markShopifyOrderPaid(
-      order.shopify_order_id,
-      Number(order.total),
-      order.currency || "MAD"
-    );
-  }
+  const { syncShopifyWorkflowStatus } = await import("@/lib/shopify/update-order");
   await syncShopifyWorkflowStatus(order.shopify_order_id, effectiveStatus);
 
   return { success: true, status: effectiveStatus };

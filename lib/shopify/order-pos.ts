@@ -1,9 +1,10 @@
 import type { ShopifyOrder } from "@/lib/types";
 import type { ShopifyOrderPosContext } from "@/lib/orders";
+import { isShopifyOrderFulfilled } from "@/lib/shopify/order-status";
 
 export function canPrepareOrderForPos(order: ShopifyOrder): boolean {
   return (
-    !order.sale_id &&
+    !isShopifyOrderFulfilled(order) &&
     order.workflow_status !== "cancelled" &&
     order.workflow_status !== "returned"
   );

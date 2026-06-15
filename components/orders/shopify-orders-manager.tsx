@@ -24,6 +24,7 @@ import {
   orderStatusSelectValue,
   editableWorkflowStatuses,
   resolveWorkflowStatusUpdate,
+  isShopifyOrderFulfilled,
 } from "@/lib/shopify/order-status";
 import { updateShopifyOrderStatus, markShopifyCodPaid, handOrderToLivreur } from "@/lib/actions";
 import type { ShopifyOrder, ShopifyPaymentType, ShopifyWorkflowStatus } from "@/lib/types";
@@ -372,19 +373,22 @@ export function ShopifyOrdersManager({
                 const canHandoffToLivreur =
                   enableLivreurHandoff &&
                   order.workflow_status === "ready" &&
-                  Boolean(order.sale_id) &&
+                  isShopifyOrderFulfilled(order) &&
                   !isCancelled &&
                   !isReturned;
                 const canLivreurClose =
                   livreurMode && order.workflow_status === "shipping";
                 const statusValue = orderStatusSelectValue(order);
-                const canPosCheckout = !order.sale_id && !isCancelled && !isReturned;
+                const canPosCheckout =
+                  !isShopifyOrderFulfilled(order) && !isCancelled && !isReturned;
                 const canMarkCodPaid =
                   !livreurMode &&
                   isCod &&
-                  Boolean(order.sale_id) &&
+                  Boolean(order.fulfilled_at) &&
+                  !order.sale_id &&
                   order.financial_status !== "paid" &&
-                  order.workflow_status !== "paid";
+                  (order.workflow_status === "delivered" ||
+                    order.workflow_status === "shipping");
                 const loading = pending && activeId === order.id;
 
                 return (
@@ -508,9 +512,17 @@ export function ShopifyOrdersManager({
                         {order.sale_id && (
                           <span
                             className="flex h-8 w-8 items-center justify-center text-xs text-success"
-                            title="Déjà encaissée"
+                            title="Encaissée en caisse"
                           >
                             ✓
+                          </span>
+                        )}
+                        {order.fulfilled_at && !order.sale_id && (
+                          <span
+                            className="flex h-8 w-8 items-center justify-center text-xs text-muted"
+                            title="Préparée — non encaissée"
+                          >
+                            ○
                           </span>
                         )}
                       </div>
