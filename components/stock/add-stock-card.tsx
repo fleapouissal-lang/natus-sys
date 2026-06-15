@@ -37,8 +37,7 @@ export function AddStockCard({
   scannerActive = false,
   inputRef,
   onPickModeChange,
-  onArmScanner,
-  onDisarmScanner,
+  onFocusScanner,
   onProductChange,
   onAddQtyChange,
   onNewTotalChange,
@@ -67,8 +66,7 @@ export function AddStockCard({
   scannerActive?: boolean;
   inputRef: RefObject<HTMLInputElement | null>;
   onPickModeChange: (mode: ProductPickMode) => void;
-  onArmScanner?: () => void;
-  onDisarmScanner?: () => void;
+  onFocusScanner?: () => void;
   onProductChange: (id: string) => void;
   onAddQtyChange: (value: string) => void;
   onNewTotalChange: (value: string) => void;
@@ -155,7 +153,7 @@ export function AddStockCard({
                 <div
                   role="button"
                   tabIndex={-1}
-                  onClick={onArmScanner}
+                  onClick={() => onFocusScanner?.()}
                   className={cn(
                     "flex cursor-text items-center gap-2 rounded-full border bg-page px-4 py-2",
                     scannerActive ? "border-primary" : "border-border"
@@ -173,13 +171,8 @@ export function AddStockCard({
                     value={scanQuery ?? ""}
                     onKeyDown={onScanKeyDown}
                     onChange={onScanChange}
-                    onFocus={onArmScanner}
-                    onBlur={onDisarmScanner}
-                    placeholder={
-                      scannerActive
-                        ? "Passez le code-barres devant le lecteur…"
-                        : "Cliquez pour activer le scanner…"
-                    }
+                    onFocus={() => onFocusScanner?.()}
+                    placeholder="Passez le code-barres devant le lecteur…"
                     className="natus-filter-inline-input w-full min-w-0 cursor-default border-0 bg-transparent py-0 text-sm font-mono outline-none placeholder:text-muted"
                     autoComplete="off"
                   />

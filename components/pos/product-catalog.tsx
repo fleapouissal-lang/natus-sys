@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import {
   Barcode,
@@ -213,8 +213,6 @@ export function ProductCatalog({
   const [nameQuery, setNameQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [draftQty, setDraftQty] = useState<Record<string, number>>({});
-  const [scanListening, setScanListening] = useState(false);
-  const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const categories = useMemo(() => {
     const fromProducts = new Set<string>();
@@ -226,8 +224,10 @@ export function ProductCatalog({
 
   const handleScan = useCallback(
     (code: string) => {
-      setBarcodeQuery(code);
-      onBarcodeScan?.(code);
+      const trimmed = code.trim();
+      if (!trimmed) return;
+      setBarcodeQuery(trimmed);
+      onBarcodeScan?.(trimmed);
     },
     [onBarcodeScan]
   );
@@ -235,10 +235,10 @@ export function ProductCatalog({
   const { inputRef, handleKeyDown, handleChange, focusInput } = useBarcodeScanner({
     onScan: handleScan,
     enabled: scannerEnabled,
-    autoRefocus: false,
+    autoRefocus: true,
   });
 
-  const scannerActive = scannerEnabled && scanListening;
+  const scannerActive = scannerEnabled;
 
   const handleBarcodeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -248,34 +248,12 @@ export function ProductCatalog({
     [handleChange]
   );
 
-  function armScanner() {
-    if (scanBlurTimerRef.current) {
-      clearTimeout(scanBlurTimerRef.current);
-      scanBlurTimerRef.current = null;
-    }
-    setScanListening(true);
-    focusInput();
-  }
-
-  function disarmScanner() {
-    scanBlurTimerRef.current = setTimeout(() => {
-      setScanListening(false);
-      scanBlurTimerRef.current = null;
-    }, 200);
-  }
-
   useEffect(() => {
-    if (!scannerEnabled) {
-      setScanListening(false);
+    if (scannerEnabled) {
+      setBarcodeQuery("");
+      focusInput();
     }
-  }, [scannerEnabled]);
-
-  useEffect(
-    () => () => {
-      if (scanBlurTimerRef.current) clearTimeout(scanBlurTimerRef.current);
-    },
-    []
-  );
+  }, [scannerEnabled, focusInput]);
 
   const filtered = useMemo(() => {
     let list = products;
@@ -326,7 +304,7 @@ export function ProductCatalog({
           <div
             role="button"
             tabIndex={-1}
-            onClick={armScanner}
+            onClick={() => focusInput()}
             className={cn(
               "flex min-w-0 flex-1 cursor-text items-center gap-2 rounded-full border bg-page px-4 py-2",
               scannerActive ? "border-primary" : "border-border"
@@ -344,12 +322,11 @@ export function ProductCatalog({
               value={barcodeQuery ?? ""}
               onKeyDown={handleKeyDown}
               onChange={handleBarcodeChange}
-              onFocus={armScanner}
-              onBlur={disarmScanner}
+              onFocus={() => focusInput()}
               placeholder={
                 scannerActive
                   ? "Passez le code-barres devant le lecteur…"
-                  : "Cliquez pour activer le scanner…"
+                  : "Scanner indisponible"
               }
               autoComplete="off"
               className="natus-filter-inline-input w-full cursor-default border-0 bg-transparent py-0 text-sm outline-none placeholder:text-muted"
@@ -374,12 +351,6 @@ export function ProductCatalog({
             />
           </div>
         </div>
-
-        {!scannerActive && scannerEnabled && (
-          <p className="text-xs text-muted">
-            Cliquez dans le champ code-barres pour activer le scanner
-          </p>
-        )}
 
         <p className="text-xs text-muted">
           {filtered.length} produit{filtered.length > 1 ? "s" : ""}

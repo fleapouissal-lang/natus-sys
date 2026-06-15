@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,8 +40,6 @@ export function StockManager({
   const [pickMode, setPickMode] = useState<ProductPickMode>("scan");
   const [scanHint, setScanHint] = useState("");
   const [scanQuery, setScanQuery] = useState("");
-  const [scanListening, setScanListening] = useState(true);
-  const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedStore = stores.find((s) => s.id === storeId);
   const selectedProduct = products.find((p) => p.id === selectedId);
@@ -93,39 +91,14 @@ export function StockManager({
     [handleChange]
   );
 
-  const scannerActive = pickMode === "scan" && scanListening;
+  const scannerActive = pickMode === "scan";
 
   useEffect(() => {
     if (pickMode === "scan") {
-      setScanListening(true);
+      setScanQuery("");
       focusInput();
-    } else {
-      setScanListening(false);
     }
   }, [pickMode, focusInput]);
-
-  useEffect(
-    () => () => {
-      if (scanBlurTimerRef.current) clearTimeout(scanBlurTimerRef.current);
-    },
-    []
-  );
-
-  function armScanner() {
-    if (scanBlurTimerRef.current) {
-      clearTimeout(scanBlurTimerRef.current);
-      scanBlurTimerRef.current = null;
-    }
-    setScanListening(true);
-    focusInput();
-  }
-
-  function disarmScanner() {
-    scanBlurTimerRef.current = setTimeout(() => {
-      setScanListening(false);
-      scanBlurTimerRef.current = null;
-    }, 200);
-  }
 
   function handleAddQtyChange(value: string) {
     setAddQty(value);
@@ -170,8 +143,12 @@ export function StockManager({
       setSuccess(canEditTotal ? "Stock mis à jour" : "Stock ajouté avec succès");
       setAddQty("");
       setNotes("");
+      setScanQuery("");
       if (!canEditTotal) {
         setSelectedId("");
+      }
+      if (pickMode === "scan") {
+        focusInput();
       }
       router.refresh();
     }
@@ -235,12 +212,8 @@ export function StockManager({
         inputRef={inputRef}
         onPickModeChange={(mode) => {
           setPickMode(mode);
-          if (mode === "scan") {
-            setTimeout(() => focusInput(), 0);
-          }
         }}
-        onArmScanner={armScanner}
-        onDisarmScanner={disarmScanner}
+        onFocusScanner={() => focusInput()}
         onProductChange={handleProductChange}
         onAddQtyChange={handleAddQtyChange}
         onNewTotalChange={handleNewTotalChange}

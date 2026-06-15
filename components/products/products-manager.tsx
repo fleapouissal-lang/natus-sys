@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -311,8 +311,6 @@ export function ProductsManager({
   const [scannedPreview, setScannedPreview] = useState<Product | null>(null);
   const [duplicatePreview, setDuplicatePreview] = useState<Product | null>(null);
   const [scanHint, setScanHint] = useState("");
-  const [scanListening, setScanListening] = useState(false);
-  const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const modalOpen =
     showForm || !!editingProduct || (!!selectedProduct && !scannedPreview) || !!stockProduct;
@@ -344,39 +342,25 @@ export function ProductsManager({
   const { inputRef, handleKeyDown, handleChange, focusInput } = useBarcodeScanner({
     onScan: handleSearchScan,
     enabled: !modalOpen,
-    autoRefocus: false,
+    autoRefocus: true,
   });
 
-  const scannerActive = !modalOpen && scanListening;
+  const scannerActive = !modalOpen;
 
-  useEffect(() => {
-    if (modalOpen) {
-      setScanListening(false);
-    }
-  }, [modalOpen]);
-
-  useEffect(
-    () => () => {
-      if (scanBlurTimerRef.current) clearTimeout(scanBlurTimerRef.current);
+  const handleScanChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      handleChange(e);
+      setScanQuery(e.target.value);
     },
-    []
+    [handleChange]
   );
 
-  function armScanner() {
-    if (scanBlurTimerRef.current) {
-      clearTimeout(scanBlurTimerRef.current);
-      scanBlurTimerRef.current = null;
+  useEffect(() => {
+    if (!modalOpen) {
+      setScanQuery("");
+      focusInput();
     }
-    setScanListening(true);
-    focusInput();
-  }
-
-  function disarmScanner() {
-    scanBlurTimerRef.current = setTimeout(() => {
-      setScanListening(false);
-      scanBlurTimerRef.current = null;
-    }, 200);
-  }
+  }, [modalOpen, focusInput]);
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -423,7 +407,7 @@ export function ProductsManager({
             <div
               role="button"
               tabIndex={-1}
-              onClick={armScanner}
+              onClick={() => focusInput()}
               className={cn(
                 "flex cursor-text items-center gap-2 rounded-full border bg-page px-4 py-2",
                 scannerActive ? "border-primary" : "border-border"
@@ -438,16 +422,14 @@ export function ProductsManager({
               <input
                 ref={inputRef}
                 type="text"
-                value={scanQuery}
-                readOnly
+                value={scanQuery ?? ""}
                 onKeyDown={handleKeyDown}
-                onChange={handleChange}
-                onFocus={armScanner}
-                onBlur={disarmScanner}
+                onChange={handleScanChange}
+                onFocus={() => focusInput()}
                 placeholder={
                   scannerActive
                     ? "Passez le code-barres devant le lecteur…"
-                    : "Cliquez pour activer le scanner…"
+                    : "Scanner indisponible"
                 }
                 className="natus-filter-inline-input w-full min-w-0 cursor-default border-0 bg-transparent py-0 text-sm font-mono outline-none placeholder:text-muted"
                 autoComplete="off"
@@ -459,11 +441,6 @@ export function ProductsManager({
                 {scannerActive ? "Actif" : "Inactif"}
               </Badge>
             </div>
-            {!scannerActive && !modalOpen && (
-              <p className="mt-1.5 text-xs text-muted">
-                Cliquez dans le champ pour activer le scanner
-              </p>
-            )}
           </div>
           <div className="flex-1">
             <label className="mb-1.5 block text-sm font-medium">Rechercher par nom</label>
