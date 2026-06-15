@@ -2,9 +2,9 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MapPin } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { storeOptions } from "@/lib/select-options";
+import { cn } from "@/lib/utils";
 import type { Store } from "@/lib/types";
 
 export function StoreFilterBar({
@@ -12,11 +12,15 @@ export function StoreFilterBar({
   selectedStoreId,
   className = "",
   allowAll = false,
+  title = "Filtrer par magasin",
+  showHeader = true,
 }: {
   stores: Store[];
   selectedStoreId: string;
   className?: string;
   allowAll?: boolean;
+  title?: string;
+  showHeader?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -38,31 +42,40 @@ export function StoreFilterBar({
   const selected = stores.find((s) => s.id === selectedStoreId);
 
   return (
-    <Card className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${className}`}>
-      <div className="flex items-center gap-2 text-sm">
-        <MapPin className="h-4 w-4 text-primary shrink-0" />
-        <div>
-          <p className="font-medium">Magasin</p>
-          {selected ? (
-            <p className="text-xs text-muted">
-              {selected.name} — {selected.city}
-            </p>
-          ) : allowAll ? (
-            <p className="text-xs text-muted">Tous les magasins</p>
-          ) : null}
+    <div className={cn("natus-filter-bar overflow-visible p-4", className)}>
+      {showHeader && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-medium text-primary">{title}</p>
+          <p className="text-sm text-muted">
+            {selected ? (
+              <>
+                <span className="font-semibold text-foreground">{selected.name}</span>
+                {" — "}
+                {selected.city}
+              </>
+            ) : allowAll ? (
+              "Tous les magasins"
+            ) : (
+              "Aucun magasin sélectionné"
+            )}
+          </p>
         </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-end">
+        <SelectMenu
+          label="Magasin"
+          value={selectedStoreId}
+          onChange={handleChange}
+          options={storeOptions(stores, {
+            allLabel: "Tous les magasins",
+            includeAll: allowAll,
+          })}
+          placeholder="Sélectionner un magasin"
+          defaultIcon={MapPin}
+          size="sm"
+        />
       </div>
-      <SelectMenu
-        value={selectedStoreId}
-        onChange={handleChange}
-        options={storeOptions(stores, {
-          allLabel: "Tous les magasins",
-          includeAll: allowAll,
-        })}
-        placeholder="Sélectionner un magasin"
-        defaultIcon={MapPin}
-        className="w-full sm:w-72"
-      />
-    </Card>
+    </div>
   );
 }

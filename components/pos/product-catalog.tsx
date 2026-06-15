@@ -116,7 +116,7 @@ export function ProductCatalog({
 
   return (
     <div className="space-y-4">
-      <Card className="space-y-3 !p-4">
+      <Card className="natus-filter-bar space-y-3 !p-4">
         <div className="flex flex-wrap gap-2">
           {FILTER_MODES.map(({ id, label, icon: Icon }) => (
             <button
@@ -126,8 +126,8 @@ export function ProductCatalog({
               className={cn(
                 "flex items-center gap-2 border px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
                 filterMode === id
-                  ? "border-primary bg-primary text-black"
-                  : "border-border bg-surface text-muted hover:border-primary/40 hover:text-foreground"
+                  ? "border-primary bg-champagne text-black"
+                  : "border-primary/60 bg-surface text-muted hover:border-primary hover:text-foreground"
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
@@ -136,7 +136,7 @@ export function ProductCatalog({
           ))}
         </div>
 
-        <div className="flex items-center gap-3 border border-border bg-background px-3 py-1">
+        <div className="flex items-center gap-3 border border-primary bg-background px-3 py-1">
           <InputIcon className="h-5 w-5 shrink-0 text-primary" />
           <input
             ref={filterMode === "barcode" ? inputRef : undefined}
@@ -155,7 +155,7 @@ export function ProductCatalog({
             list={filterMode === "category" ? "catalog-categories" : undefined}
             autoComplete="off"
             className={cn(
-              "w-full bg-transparent py-2.5 text-sm outline-none placeholder:text-muted",
+              "natus-filter-inline-input w-full bg-transparent py-0 text-sm outline-none placeholder:text-muted",
               filterMode === "barcode" && "cursor-default"
             )}
           />

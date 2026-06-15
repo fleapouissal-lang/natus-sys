@@ -3,6 +3,7 @@ import {
   Box,
   Clock,
   CreditCard,
+  Globe,
   LayoutGrid,
   MapPin,
   Package,
@@ -15,11 +16,12 @@ import {
   Truck,
   User,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { SelectMenuOption } from "@/components/ui/select-menu";
 import { workflowStatusLabel } from "@/lib/shopify/order-status";
-import type { PaymentMethod, ShopifyWorkflowStatus } from "@/lib/types";
+import type { PaymentMethod, ShopifyPaymentType, ShopifyWorkflowStatus } from "@/lib/types";
 import type { Store as StoreType } from "@/lib/types";
 
 const WORKFLOW_ICONS: Record<ShopifyWorkflowStatus, LucideIcon> = {
@@ -49,6 +51,27 @@ export function paymentFilterOptions(): SelectMenuOption[] {
     { value: "", label: "Tous les paiements", icon: LayoutGrid },
     { value: "cash", label: "Espèces", icon: Banknote },
     { value: "card", label: "Carte bancaire", icon: CreditCard },
+  ];
+}
+
+export function shopifyPaymentTypeFilterOptions(): SelectMenuOption[] {
+  return [
+    { value: "", label: "Tous les types", icon: Wallet },
+    { value: "online", label: "E.L", icon: Globe },
+    { value: "cod", label: "COD", icon: Truck },
+  ];
+}
+
+export function shopifyOrderStatusFilterOptions(
+  statuses: readonly ShopifyWorkflowStatus[]
+): SelectMenuOption[] {
+  return [
+    { value: "", label: "Tous les statuts", icon: LayoutGrid },
+    ...statuses.map((status) => ({
+      value: status,
+      label: workflowStatusLabel(status),
+      icon: WORKFLOW_ICONS[status],
+    })),
   ];
 }
 

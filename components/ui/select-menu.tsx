@@ -51,7 +51,7 @@ function OptionIcon({
     <span
       className={cn(
         "select-menu-icon-box flex shrink-0 items-center justify-center",
-        compact ? "h-7 w-7" : "h-9 w-9",
+        compact ? "h-6 w-6" : "h-9 w-9",
         active ? "bg-primary/15 text-primary" : "bg-primary-light text-primary"
       )}
     >
@@ -198,7 +198,7 @@ export function SelectMenu({
       ? createPortal(
           <div
             ref={panelRef}
-            className="select-menu-panel fixed z-[100] overflow-hidden border border-primary/25 bg-surface shadow-[0_12px_40px_rgba(0,0,0,0.12),0_0_0_1px_rgba(179,140,74,0.08)]"
+            className="select-menu-panel fixed z-[100] overflow-hidden border border-primary bg-surface shadow-[0_12px_40px_rgba(0,0,0,0.12),0_0_0_1px_rgba(179,140,74,0.12)]"
             style={{
               left: panelStyle.left,
               top: panelStyle.top,
@@ -276,14 +276,14 @@ export function SelectMenu({
         onClick={() => !disabled && setOpen((v) => !v)}
         onKeyDown={onTriggerKeyDown}
         className={cn(
-          "select-menu-trigger flex w-full items-center border border-primary/30 bg-surface text-left transition-all",
-          "hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/15 focus:outline-none",
+          "select-menu-trigger natus-field flex w-full items-center bg-surface text-left transition-all",
+          "hover:border-primary focus:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-50",
-          !showIcons && size === "xs" && "h-7 gap-1.5 px-2 text-xs",
-          showIcons && size === "xs" && "h-9 gap-2 px-2 text-xs",
-          size === "sm" && "h-9 gap-2 px-2 text-sm",
+          !showIcons && size === "xs" && "h-8 gap-1.5 px-2 text-xs",
+          showIcons && size === "xs" && "h-8 gap-1.5 px-2 text-xs",
+          size === "sm" && "h-8 gap-1.5 px-2 text-sm",
           size === "md" && "gap-3 px-3 py-2.5 text-sm",
-          open && "border-primary ring-2 ring-primary/15",
+          open && "ring-2 ring-primary/15",
           error && "border-danger focus:border-danger focus:ring-danger/15",
           triggerClassName
         )}

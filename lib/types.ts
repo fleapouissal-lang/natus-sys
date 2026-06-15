@@ -83,6 +83,7 @@ export interface Sale {
   created_at: string;
   profiles?: Pick<Profile, "full_name" | "email">;
   stores?: Pick<Store, "name" | "city"> | null;
+  sale_items?: SaleItem[];
 }
 
 export interface SaleItem {
@@ -136,6 +137,52 @@ export interface DashboardStats {
   lowStockCount: number;
   todaySales: number;
   todayRevenue: number;
+}
+
+export interface StoreOverviewRow {
+  storeId: string;
+  storeName: string;
+  todayRevenue: number;
+  todaySales: number;
+  weekRevenue: number;
+  totalRevenue: number;
+  totalSales: number;
+  lowStockCount: number;
+  totalUnits: number;
+}
+
+export interface StoreRecentSale {
+  id: string;
+  total: number;
+  payment_method: PaymentMethod;
+  created_at: string;
+  cashier_name: string | null;
+}
+
+export interface StoreRecentOrder {
+  id: string;
+  order_number: string;
+  total: number;
+  payment_type: ShopifyPaymentType;
+  workflow_status: ShopifyWorkflowStatus;
+  customer_name: string | null;
+  created_at: string;
+}
+
+export interface StoreRecentStock {
+  id: string;
+  product_name: string;
+  quantity: number;
+  created_at: string;
+  actor_name: string | null;
+}
+
+export interface StoreSnapshot {
+  storeId: string;
+  storeName: string;
+  recentSales: StoreRecentSale[];
+  recentOrders: StoreRecentOrder[];
+  recentStockAdds: StoreRecentStock[];
 }
 
 export interface ShopifyLineItemRow {

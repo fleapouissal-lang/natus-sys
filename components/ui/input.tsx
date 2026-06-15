@@ -22,8 +22,8 @@ export function Input({ label, error, className, id, ...props }: InputProps) {
       <input
         id={inputId}
         className={cn(
-          "border border-border bg-surface px-3 py-2 text-sm transition-colors",
-          "placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20",
+          "natus-field bg-surface px-3 py-2 text-sm transition-colors",
+          "placeholder:text-muted",
           error && "border-danger focus:border-danger focus:ring-danger/20",
           className
         )}
@@ -56,8 +56,8 @@ export function PasswordInput({
           id={inputId}
           type={visible ? "text" : "password"}
           className={cn(
-            "w-full border border-border bg-surface py-2 pl-3 pr-10 text-sm transition-colors",
-            "placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20",
+            "natus-field w-full bg-surface py-2 pl-3 pr-10 text-sm transition-colors",
+            "placeholder:text-muted",
             error && "border-danger focus:border-danger focus:ring-danger/20",
             className
           )}

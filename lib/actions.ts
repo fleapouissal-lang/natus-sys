@@ -639,6 +639,7 @@ export async function updateShopifyOrderStatus(
   const { getShopifyOrderById, canAccessShopifyOrder } = await import(
     "@/lib/shopify/order-access"
   );
+  const { resolveWorkflowStatusUpdate } = await import("@/lib/shopify/order-status");
   const order = await getShopifyOrderById(orderId);
   if (!order) return { error: "Commande introuvable" };
 
@@ -648,8 +649,8 @@ export async function updateShopifyOrderStatus(
 
   if (
     order.workflow_status === "cancelled" ||
-    order.workflow_status === "delivered" ||
-    order.workflow_status === "returned"
+    order.workflow_status === "returned" ||
+    order.workflow_status === "paid"
   ) {
     return { error: "Commande déjà clôturée" };
   }
@@ -666,15 +667,18 @@ export async function updateShopifyOrderStatus(
     return { error: "Statut invalide" };
   }
 
+  const effectiveStatus = resolveWorkflowStatusUpdate(workflowStatus);
+  const now = new Date().toISOString();
+
   const supabase = await createClient();
   const updates: Record<string, unknown> = {
-    workflow_status: workflowStatus,
-    updated_at: new Date().toISOString(),
+    workflow_status: effectiveStatus,
+    updated_at: now,
   };
 
-  if (workflowStatus === "paid") {
+  if (effectiveStatus === "paid") {
     updates.financial_status = "paid";
-    updates.paid_at = new Date().toISOString();
+    updates.paid_at = now;
     updates.paid_by = profile.id;
   }
 
@@ -687,14 +691,15 @@ export async function updateShopifyOrderStatus(
       "@/lib/shopify/update-order"
     );
 
-    if (workflowStatus === "paid" && order.payment_type === "cod") {
+    if (effectiveStatus === "paid" && order.payment_type === "cod") {
       await markShopifyOrderPaid(
         order.shopify_order_id,
         Number(order.total),
         order.currency || "MAD"
       );
-    } else if (process.env.SHOPIFY_SHOP_DOMAIN) {
-      await syncShopifyWorkflowStatus(order.shopify_order_id, workflowStatus);
+    }
+    if (process.env.SHOPIFY_SHOP_DOMAIN) {
+      await syncShopifyWorkflowStatus(order.shopify_order_id, effectiveStatus);
     }
   } catch (err) {
     console.error("Shopify sync:", err);

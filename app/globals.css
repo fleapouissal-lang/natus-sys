@@ -1,7 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #E6E6E6;
+  --cream: #FFF6EC;
+  --champagne: #FAEAA1;
+  --page: #FFFDF9;
+  --sidebar: #EBD4BA;
+  --background: #FFFDF9;
   --foreground: #000000;
   --primary: #B38C4A;
   --primary-dark: #96703A;
@@ -14,9 +18,14 @@
   --success: #4A7C59;
   --danger: #B33A3A;
   --warning: #B38C4A;
+  --radius-natus: 8px;
 }
 
 @theme inline {
+  --color-cream: var(--cream);
+  --color-champagne: var(--champagne);
+  --color-page: var(--page);
+  --color-sidebar: var(--sidebar);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
@@ -32,38 +41,101 @@
   --color-warning: var(--warning);
   --font-sans: var(--font-jost);
   --font-heading: var(--font-cabin);
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
 }
 
 *,
 *::before,
 *::after {
-  border-radius: 0 !important;
+  border-radius: var(--radius-natus) !important;
 }
 
 .avatar-round {
   border-radius: 9999px !important;
 }
 
+.natus-nav-link:not(.natus-nav-link-active),
+.natus-nav-link-active::before,
+.natus-nav-link-active::after {
+  border-radius: 0 !important;
+}
+
+/* Champs formulaire — bordure dorée Natus */
+.natus-field,
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+select,
+textarea,
+.select-menu-trigger {
+  border: 1px solid var(--primary) !important;
+}
+
+.natus-field:focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):focus,
+select:focus,
+textarea:focus,
+.select-menu-trigger:focus,
+.select-menu-trigger[aria-expanded="true"] {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(179, 140, 74, 0.18);
+  outline: none;
+}
+
+.natus-field.border-danger,
+input.border-danger,
+select.border-danger,
+textarea.border-danger {
+  border-color: var(--danger) !important;
+}
+
+/* Barres de filtrage — sans bordure conteneur */
+.natus-filter-bar {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Champs barres de filtrage — hauteur uniforme input / select */
+.natus-filter-bar input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not(.natus-filter-inline-input),
+.natus-filter-bar .select-menu-trigger {
+  height: 2rem !important;
+  min-height: 2rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.natus-filter-bar .select-menu-trigger {
+  gap: 0.5rem !important;
+}
+
+.natus-filter-bar .select-menu-icon-box {
+  height: 1.5rem !important;
+  width: 1.5rem !important;
+}
+
+.natus-filter-bar .select-menu-icon-box svg {
+  height: 0.875rem !important;
+  width: 0.875rem !important;
+}
+
 body {
-  background: var(--background);
+  background: var(--page);
   color: var(--foreground);
   font-family: var(--font-jost), system-ui, sans-serif;
   scrollbar-width: thin;
-  scrollbar-color: var(--primary) var(--background);
+  scrollbar-color: var(--primary) var(--page);
 }
 
 html {
   scrollbar-width: thin;
-  scrollbar-color: var(--primary) var(--background);
+  scrollbar-color: var(--primary) var(--page);
 }
 
 .scrollbar-natus {
   scrollbar-width: thin;
-  scrollbar-color: var(--primary) var(--background);
+  scrollbar-color: var(--primary) var(--page);
 }
 
 .scrollbar-natus::-webkit-scrollbar {
@@ -72,12 +144,12 @@ html {
 }
 
 .scrollbar-natus::-webkit-scrollbar-track {
-  background: var(--background);
+  background: var(--page);
 }
 
 .scrollbar-natus::-webkit-scrollbar-thumb {
   background: var(--primary);
-  border: 2px solid var(--background);
+  border: 2px solid var(--page);
   border-radius: 9999px !important;
 }
 
@@ -91,12 +163,12 @@ html {
 }
 
 *::-webkit-scrollbar-track {
-  background: var(--background);
+  background: var(--page);
 }
 
 *::-webkit-scrollbar-thumb {
   background: var(--primary);
-  border: 2px solid var(--background);
+  border: 2px solid var(--page);
   border-radius: 9999px !important;
 }
 
@@ -108,6 +180,146 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-cabin), system-ui, sans-serif;
 }
 
+.natus-content h1,
+.natus-content h2,
+.natus-content h3,
+.natus-content h4,
+.natus-content h5,
+.natus-content h6 {
+  color: var(--primary);
+}
+
+.natus-card {
+  border: 1px solid var(--primary) !important;
+  background: var(--surface) !important;
+  box-shadow: 0 2px 12px rgba(179, 140, 74, 0.08);
+  transition: box-shadow 0.25s ease;
+}
+
+.natus-card:hover:not(.natus-filter-bar) {
+  box-shadow: 0 4px 16px rgba(250, 234, 161, 0.55);
+}
+
+.natus-content .natus-filter-bar p.text-sm {
+  color: var(--primary);
+}
+
+/* Sidebar — actif comme référence (pilule gauche + coins inversés droite) */
+.natus-sidebar {
+  z-index: 20;
+  transition: width 0.3s ease;
+}
+
+.natus-sidebar:not(.natus-sidebar--collapsed) {
+  overflow: visible !important;
+}
+
+.natus-sidebar--collapsed {
+  overflow: visible !important;
+}
+
+.natus-sidebar-toggle {
+  border: none !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 3px 12px rgba(250, 234, 161, 0.7);
+}
+
+.natus-sidebar-nav {
+  overflow: visible !important;
+  margin: 0;
+  list-style: none;
+  padding: 0.75rem 0 0.75rem 0.75rem;
+}
+
+.natus-sidebar-nav ul {
+  overflow: visible !important;
+  margin: 0;
+  padding: 0;
+}
+
+.natus-nav-item {
+  position: relative;
+  overflow: visible !important;
+}
+
+.natus-nav-item-active {
+  margin: 0.75rem 0;
+  z-index: 5;
+  overflow: visible !important;
+}
+
+.natus-nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 48px;
+  padding: 0.7rem 1rem 0.7rem 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #000000;
+  text-decoration: none;
+  transition:
+    opacity 0.2s ease,
+    transform 0.25s ease,
+    padding-right 0.25s ease;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+.natus-nav-link:hover:not(.natus-nav-link-active) {
+  opacity: 0.65;
+}
+
+.natus-nav-link-active {
+  margin-left: -0.75rem;
+  padding-left: 1.9rem;
+  padding-right: 1.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary) !important;
+  background: var(--page) !important;
+  border-radius: 24px 0 0 24px !important;
+  z-index: 4;
+  transform: translateX(4px);
+  transition:
+    transform 0.25s ease,
+    padding-right 0.25s ease,
+    color 0.2s ease,
+    font-size 0.2s ease;
+}
+
+.natus-nav-link-active svg {
+  color: var(--primary) !important;
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+/* Technique référence : box-shadow couleur page = courbes concaves sidebar */
+.natus-nav-link-active::before,
+.natus-nav-link-active::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.natus-nav-link-active::before {
+  top: -20px;
+  border-bottom-right-radius: 20px !important;
+  box-shadow: 10px 10px 0 10px var(--page);
+}
+
+.natus-nav-link-active::after {
+  bottom: -20px;
+  border-top-right-radius: 20px !important;
+  box-shadow: 10px -10px 0 10px var(--page);
+}
+
 input:focus,
 select:focus,
 textarea:focus {
@@ -116,17 +328,11 @@ textarea:focus {
   ring-color: var(--primary);
 }
 
-.select-menu-rounded,
-.select-menu-rounded .select-menu-trigger,
-.select-menu-rounded .select-menu-panel,
-.select-menu-rounded .select-menu-icon-box {
-  border-radius: 14px !important;
-}
-
 .select-menu .select-menu-trigger,
 .select-menu .select-menu-panel,
-.select-menu .select-menu-icon-box {
-  border-radius: 14px !important;
+.select-menu .select-menu-icon-box,
+.select-menu-panel {
+  border-radius: var(--radius-natus) !important;
 }
 
 .select-menu-scroll {
@@ -153,17 +359,13 @@ textarea:focus {
 }
 
 .order-action-icon {
-  border-radius: 6px !important;
+  border-radius: var(--radius-natus) !important;
 }
 
 .order-status-ui .select-menu-trigger,
 .order-status-ui .select-menu-panel,
 .order-status-display {
-  border-radius: 6px !important;
-}
-
-.order-status-ui .select-menu-panel button {
-  border-radius: 4px !important;
+  border-radius: var(--radius-natus) !important;
 }
 
 .month-calendar-panel {

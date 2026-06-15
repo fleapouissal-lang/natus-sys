@@ -2,22 +2,13 @@
 
 import { useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Plus, ScanBarcode, List } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StoreSelect } from "@/components/stores/store-select";
-import { SelectMenu } from "@/components/ui/select-menu";
-import { productPickOptions } from "@/lib/select-options";
-import { ProductImage } from "@/components/pos/product-image";
-import {
-  StockAdjustmentFields,
-  useStockAdjustment,
-} from "@/components/stock/stock-adjustment-fields";
+import { AddStockCard } from "@/components/stock/add-stock-card";
+import { useStockAdjustment } from "@/components/stock/stock-adjustment-fields";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { addStock, setProductStock } from "@/lib/actions";
-import { cn } from "@/lib/utils";
 import type { Product, Store } from "@/lib/types";
 
 type ProductPickMode = "select" | "scan";
@@ -165,123 +156,42 @@ export function StockManager({
         )}
       </Card>
 
-      <Card>
-        <CardHeader
-          title={canEditTotal ? "Ajouter ou modifier le stock" : "Ajouter du stock"}
-          description={`${selectedStore?.name || "Magasin"} — ${
-            canEditTotal
-              ? "Ajustement direct réservé au directeur"
-              : "Saisissez uniquement la quantité à ajouter"
-          }`}
-        />
-        <form onSubmit={handleAddStock} className="space-y-4">
-          <div>
-            <label className="mb-2 block text-sm font-medium">Produit</label>
-            <div className="mb-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPickMode("select")}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 border px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
-                  pickMode === "select"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-surface text-muted hover:border-primary/40"
-                )}
-              >
-                <List className="h-4 w-4" />
-                Liste
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPickMode("scan");
-                  setTimeout(() => inputRef.current?.focus(), 0);
-                }}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 border px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
-                  pickMode === "scan"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-surface text-muted hover:border-primary/40"
-                )}
-              >
-                <ScanBarcode className="h-4 w-4" />
-                Scanner
-              </button>
-            </div>
-
-            {pickMode === "select" ? (
-              <SelectMenu
-                value={selectedId}
-                onChange={handleProductChange}
-                options={productPickOptions(products)}
-                placeholder="Sélectionner un produit"
-              />
-            ) : (
-              <div>
-                <div className="relative">
-                  <ScanBarcode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    onKeyDown={handleKeyDown}
-                    onChange={handleChange}
-                    placeholder="Scannez ou saisissez le code-barres..."
-                    className="w-full border border-border bg-surface py-2 pl-10 pr-3 text-sm font-mono focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    autoComplete="off"
-                  />
-                </div>
-                <p className="mt-1.5 text-xs text-muted">
-                  Passez le code-barres devant le lecteur — sélection automatique
-                </p>
-                {scanHint && (
-                  <p className="mt-2 text-sm text-danger">{scanHint}</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {selectedProduct && (
-            <>
-              <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                <ProductImage product={selectedProduct} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate">{selectedProduct.name}</p>
-                  <p className="font-mono text-xs text-muted">{selectedProduct.barcode}</p>
-                </div>
-                <Badge variant={selectedProduct.stock < 10 ? "warning" : "success"}>
-                  {selectedProduct.stock} en stock
-                </Badge>
-              </div>
-              <StockAdjustmentFields
-                currentStock={currentStock}
-                addQty={addQty}
-                newTotal={newTotal}
-                onAddQtyChange={handleAddQtyChange}
-                onNewTotalChange={handleNewTotalChange}
-                storeName={selectedStore?.name}
-                canEditTotal={canEditTotal}
-              />
-            </>
-          )}
-
-          {!canEditTotal && (
-            <Input
-              label="Notes (optionnel)"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ex: Livraison fournisseur"
-            />
-          )}
-
-          {error && <p className="text-sm text-danger">{error}</p>}
-          {success && <p className="text-sm text-success">{success}</p>}
-
-          <Button type="submit" loading={loading} disabled={!selectedProduct}>
-            <Plus className="h-4 w-4" />
-            {canEditTotal ? "Enregistrer le stock" : "Ajouter au stock"}
-          </Button>
-        </form>
-      </Card>
+      <AddStockCard
+        title={canEditTotal ? "Ajouter ou modifier le stock" : "Ajouter du stock"}
+        description={
+          canEditTotal
+            ? "Ajustement direct réservé au directeur"
+            : "Réapprovisionnez le magasin en quelques étapes"
+        }
+        storeName={selectedStore?.name}
+        canEditTotal={canEditTotal}
+        products={products}
+        selectedId={selectedId}
+        selectedProduct={selectedProduct}
+        pickMode={pickMode}
+        addQty={addQty}
+        newTotal={newTotal}
+        notes={notes}
+        currentStock={currentStock}
+        loading={loading}
+        error={error}
+        success={success}
+        scanHint={scanHint}
+        inputRef={inputRef}
+        onPickModeChange={(mode) => {
+          setPickMode(mode);
+          if (mode === "scan") {
+            setTimeout(() => inputRef.current?.focus(), 0);
+          }
+        }}
+        onProductChange={handleProductChange}
+        onAddQtyChange={handleAddQtyChange}
+        onNewTotalChange={handleNewTotalChange}
+        onNotesChange={setNotes}
+        onScanKeyDown={handleKeyDown}
+        onScanChange={handleChange}
+        onSubmit={handleAddStock}
+      />
 
       {lowStockProducts.length > 0 && (
         <Card>

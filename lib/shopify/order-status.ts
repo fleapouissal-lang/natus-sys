@@ -51,9 +51,16 @@ export const COD_FULFILLMENT_STATUSES: ShopifyWorkflowStatus[] = [
 export function isFulfillmentLocked(status: ShopifyWorkflowStatus): boolean {
   return (
     status === "cancelled" ||
-    status === "delivered" ||
-    status === "returned"
+    status === "returned" ||
+    status === "paid"
   );
+}
+
+/** Bien livré → payée automatiquement */
+export function resolveWorkflowStatusUpdate(
+  status: ShopifyWorkflowStatus
+): ShopifyWorkflowStatus {
+  return status === "delivered" ? "paid" : status;
 }
 
 export function isOrderPaymentSettled(order: {
@@ -69,11 +76,10 @@ export function isOrderPaymentSettled(order: {
   return false;
 }
 
-/** Valeur affichée dans le select (paid = déjà payé en ligne → en préparation) */
+/** Valeur affichée dans le select */
 export function orderStatusSelectValue(order: {
   workflow_status: ShopifyWorkflowStatus;
 }): ShopifyWorkflowStatus {
-  if (order.workflow_status === "paid") return "preparing";
   return order.workflow_status;
 }
 

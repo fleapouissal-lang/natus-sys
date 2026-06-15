@@ -44,7 +44,7 @@ export function CityStoreFilterBar({
   }
 
   return (
-    <Card className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <Card className="natus-filter-bar flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="flex items-center gap-2 text-sm">
         <MapPin className="h-4 w-4 shrink-0 text-primary" />
         <div>
@@ -62,6 +62,7 @@ export function CityStoreFilterBar({
           onChange={(city) => updateParams({ city })}
           options={cityOptions(cities)}
           className="w-full sm:w-52"
+          size="sm"
         />
 
         <SelectMenu
@@ -74,6 +75,7 @@ export function CityStoreFilterBar({
             showCity: false,
           })}
           className="w-full sm:w-64"
+          size="sm"
         />
       </div>
     </Card>

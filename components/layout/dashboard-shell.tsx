@@ -15,9 +15,9 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-page">
       <Sidebar role={role} userName={userName} cityLabel={cityLabel} />
-      <main className="flex-1 overflow-y-auto bg-background p-8">{children}</main>
+      <main className="natus-content min-w-0 flex-1 overflow-y-auto bg-page p-8">{children}</main>
     </div>
   );
 }

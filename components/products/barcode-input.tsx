@@ -76,7 +76,7 @@ export function BarcodeInput({
           placeholder={placeholder}
           autoComplete="off"
           className={cn(
-            "w-full border border-border bg-surface py-2 pl-10 pr-3 text-sm font-mono transition-colors",
+            "natus-field w-full bg-surface py-2 pl-10 pr-3 text-sm font-mono transition-colors",
             "placeholder:font-sans placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
           )}
         />

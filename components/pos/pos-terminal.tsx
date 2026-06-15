@@ -291,7 +291,7 @@ export function PosTerminal({
                 className={cn(
                   "flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors cursor-pointer",
                   managerMode === "stock"
-                    ? "bg-primary text-black"
+                    ? "bg-champagne text-black"
                     : "text-muted hover:text-foreground"
                 )}
               >
@@ -304,7 +304,7 @@ export function PosTerminal({
                 className={cn(
                   "flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors cursor-pointer",
                   managerMode === "sale"
-                    ? "bg-primary text-black"
+                    ? "bg-champagne text-black"
                     : "text-muted hover:text-foreground"
                 )}
               >

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, PasswordInput } from "@/components/ui/input";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
@@ -82,10 +82,9 @@ function CreateUserForm({
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Nom complet" name="full_name" required />
           <Input label="Email" name="email" type="email" required />
-          <Input
+          <PasswordInput
             label="Mot de passe"
             name="password"
-            type="password"
             minLength={6}
             required
           />

@@ -346,31 +346,35 @@ export function ProductsManager({
   return (
     <>
       {/* Barre recherche + scan */}
-      <Card className="mb-4">
+      <Card className="natus-filter-bar mb-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-          <div className="relative flex-1">
+          <div className="flex-1">
             <label className="mb-1.5 block text-sm font-medium">Scanner un produit</label>
-            <ScanBarcode className="absolute left-3 bottom-2.5 h-4 w-4 text-primary" />
-            <input
-              ref={inputRef}
-              type="text"
-              onKeyDown={handleKeyDown}
-              onChange={handleChange}
-              placeholder="Scan code-barres pour rechercher..."
-              className="w-full border border-border bg-surface py-2 pl-10 pr-3 text-sm font-mono focus:border-primary focus:ring-2 focus:ring-primary/20"
-              autoComplete="off"
-            />
+            <div className="relative">
+              <ScanBarcode className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+              <input
+                ref={inputRef}
+                type="text"
+                onKeyDown={handleKeyDown}
+                onChange={handleChange}
+                placeholder="Scan code-barres pour rechercher..."
+                className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm font-mono"
+                autoComplete="off"
+              />
+            </div>
           </div>
-          <div className="relative flex-1">
+          <div className="flex-1">
             <label className="mb-1.5 block text-sm font-medium">Rechercher par nom</label>
-            <Search className="absolute left-3 bottom-2.5 h-4 w-4 text-muted" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nom du produit..."
-              className="w-full border border-border bg-surface py-2 pl-10 pr-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Nom du produit..."
+                className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
+              />
+            </div>
           </div>
           <div className="w-full lg:w-48">
             <SelectMenu
@@ -378,6 +382,7 @@ export function ProductsManager({
               value={categoryFilter}
               onChange={setCategoryFilter}
               options={categoryOptions(PRODUCT_CATEGORIES)}
+              size="sm"
             />
           </div>
         </div>

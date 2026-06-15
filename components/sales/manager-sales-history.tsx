@@ -1,15 +1,29 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Banknote, CreditCard } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SalesAgendaFilter } from "@/components/sales/sales-agenda-filter";
 import { SaleDetailModal } from "@/components/sales/sale-detail-modal";
 import { SalesHistoryTable } from "@/components/sales/sales-history-table";
 import { formatCurrency, toLocalDateKey } from "@/lib/utils";
-import type { PaymentMethod, Sale } from "@/lib/types";
+import type { PaymentMethod, Sale, Store } from "@/lib/types";
 
-export function CashierSalesHistory({ sales }: { sales: Sale[] }) {
+export function ManagerSalesHistory({
+  sales,
+  storeLabel,
+  stores,
+  selectedStoreId,
+}: {
+  sales: Sale[];
+  storeLabel: string;
+  stores: Store[];
+  selectedStoreId: string;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<"" | PaymentMethod>("");
@@ -42,6 +56,17 @@ export function CashierSalesHistory({ sales }: { sales: Sale[] }) {
     setDateFrom("");
     setDateTo("");
     setPaymentFilter("");
+  }
+
+  function handleStoreChange(storeId: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (storeId) {
+      params.set("store", storeId);
+    } else {
+      params.delete("store");
+    }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
   }
 
   return (
@@ -80,19 +105,23 @@ export function CashierSalesHistory({ sales }: { sales: Sale[] }) {
         onPaymentChange={setPaymentFilter}
         onReset={resetFilters}
         resultCount={filtered.length}
+        stores={stores}
+        selectedStoreId={selectedStoreId}
+        onStoreChange={handleStoreChange}
       />
 
       <Card padding={false}>
         <div className="p-6">
           <CardHeader
             title="Historique des ventes"
-            description={`${filtered.length} transaction(s) — vos ventes en caisse`}
+            description={storeLabel}
           />
         </div>
 
         <SalesHistoryTable
           sales={filtered}
-          showStore
+          showStore={false}
+          showCashier
           onViewSale={setDetailSale}
         />
       </Card>

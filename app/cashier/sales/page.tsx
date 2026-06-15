@@ -10,7 +10,9 @@ export default async function CashierSalesPage() {
   const { data } = profile
     ? await supabase
         .from("sales")
-        .select("*, stores(name, city)")
+        .select(
+          "*, profiles(full_name, email), stores(name, city), sale_items(id, quantity, unit_price, products(name, barcode))"
+        )
         .eq("cashier_id", profile.id)
         .order("created_at", { ascending: false })
         .limit(300)

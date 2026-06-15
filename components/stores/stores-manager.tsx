@@ -1,11 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { MapPin, Package, AlertTriangle, ChevronDown, ChevronUp, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  MapPin,
+  Package,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Users,
+  Search,
+} from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { ProductImage } from "@/components/pos/product-image";
 import { CreateStoreForm } from "@/components/stores/create-store-form";
+import { categoryOptions } from "@/lib/select-options";
+import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { formatCurrency } from "@/lib/utils";
 import type { Product, StoreWithStats } from "@/lib/types";
 
@@ -16,11 +27,11 @@ function StoreInventoryTable({
   storeId: string;
   products: Product[];
 }) {
-  const storeProducts = products.filter((p) => p.stock >= 0);
-
-  if (storeProducts.length === 0) {
+  if (products.length === 0) {
     return (
-      <p className="py-6 text-center text-sm text-muted">Aucun produit en stock</p>
+      <p className="px-4 py-6 text-center text-sm text-muted">
+        Aucun produit ne correspond à votre recherche
+      </p>
     );
   }
 
@@ -36,7 +47,7 @@ function StoreInventoryTable({
           </tr>
         </thead>
         <tbody>
-          {storeProducts.map((product) => (
+          {products.map((product) => (
             <tr key={`${storeId}-${product.id}`} className="border-b border-border">
               <td className="px-4 py-3">
                 <div className="flex items-center gap-3">
@@ -70,6 +81,70 @@ function StoreInventoryTable({
   );
 }
 
+function StoreProductFilter({
+  search,
+  category,
+  resultCount,
+  onSearchChange,
+  onCategoryChange,
+  onReset,
+}: {
+  search: string;
+  category: string;
+  resultCount: number;
+  onSearchChange: (v: string) => void;
+  onCategoryChange: (v: string) => void;
+  onReset: () => void;
+}) {
+  const hasFilters = Boolean(search || category);
+
+  return (
+    <div className="natus-filter-bar overflow-visible border-b border-border p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm font-medium text-primary">Rechercher un produit</p>
+        <div className="flex items-center gap-3">
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="text-xs font-medium text-primary underline-offset-2 hover:underline cursor-pointer"
+            >
+              Tout effacer
+            </button>
+          )}
+          <p className="text-sm text-muted">
+            <span className="font-semibold text-foreground">{resultCount}</span>{" "}
+            produit{resultCount !== 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:items-end">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Nom ou code-barres</label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Nom, code-barres..."
+              className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
+            />
+          </div>
+        </div>
+        <SelectMenu
+          label="Catégorie"
+          value={category}
+          onChange={onCategoryChange}
+          options={categoryOptions(PRODUCT_CATEGORIES)}
+          size="sm"
+          showIcons={false}
+        />
+      </div>
+    </div>
+  );
+}
+
 function StoreCard({
   store,
   products,
@@ -78,14 +153,44 @@ function StoreCard({
   products: Product[];
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
   const activeCashiers = store.cashiers.filter((c) => c.is_active);
   const hasCashier = activeCashiers.length > 0;
+
+  const filteredProducts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return products.filter((product) => {
+      if (category && product.category !== category) return false;
+      if (!q) return true;
+      return (
+        product.name.toLowerCase().includes(q) ||
+        product.barcode.toLowerCase().includes(q) ||
+        (product.category?.toLowerCase().includes(q) ?? false)
+      );
+    });
+  }, [products, search, category]);
+
+  function toggleExpanded() {
+    setExpanded((v) => {
+      if (v) {
+        setSearch("");
+        setCategory("");
+      }
+      return !v;
+    });
+  }
+
+  function resetFilters() {
+    setSearch("");
+    setCategory("");
+  }
 
   return (
     <Card padding={false}>
       <button
         type="button"
-        onClick={() => setExpanded(!expanded)}
+        onClick={toggleExpanded}
         className="flex w-full items-start justify-between p-6 text-left cursor-pointer hover:bg-primary/5 transition-colors"
       >
         <div className="space-y-2">
@@ -138,7 +243,15 @@ function StoreCard({
 
       {expanded && (
         <div className="border-t border-border">
-          <StoreInventoryTable storeId={store.id} products={products} />
+          <StoreProductFilter
+            search={search}
+            category={category}
+            resultCount={filteredProducts.length}
+            onSearchChange={setSearch}
+            onCategoryChange={setCategory}
+            onReset={resetFilters}
+          />
+          <StoreInventoryTable storeId={store.id} products={filteredProducts} />
         </div>
       )}
     </Card>
