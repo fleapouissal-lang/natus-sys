@@ -91,7 +91,8 @@ export function PosTerminal({
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isManagementUser = role === "manager" || role === "directeur";
+  const isManagementUser =
+    role === "manager" || role === "directeur" || role === "admin";
   const isStockScan = isManagementUser && managerMode === "stock";
   const isOrderMode = !!activeShopifyOrder && !isStockScan;
   const isShopifyOrderCheckout = !!activeShopifyOrder;

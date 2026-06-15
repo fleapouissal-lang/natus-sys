@@ -15,6 +15,7 @@ import {
   ClipboardList,
   LogOut,
   ShoppingBag,
+  Truck,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -44,6 +45,10 @@ const cashierLinks = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
   { href: "/cashier/orders", label: "Commandes", icon: ShoppingBag },
   { href: "/cashier/sales", label: "Mes ventes", icon: History },
+];
+
+const livreurLinks = [
+  { href: "/livreur/orders", label: "Mes livraisons", icon: Truck },
 ];
 
 function getInitials(name: string) {
@@ -92,11 +97,13 @@ export function Sidebar({
 
   const basePath = getManagementBasePath(role);
   const links =
-    role === "cashier"
-      ? cashierLinks
-      : basePath
-        ? buildManagementLinks(basePath)
-        : cashierLinks;
+    role === "livreur"
+      ? livreurLinks
+      : role === "cashier"
+        ? cashierLinks
+        : basePath
+          ? buildManagementLinks(basePath)
+          : cashierLinks;
   const roleLabel = getRoleLabel(role);
 
   useEffect(() => {

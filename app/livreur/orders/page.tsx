@@ -1,18 +1,18 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
-import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getStoreById, getProductCatalog } from "@/lib/inventory";
+import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
 
-export default async function CashierOrdersPage() {
+export default async function LivreurOrdersPage() {
   const profile = await getCurrentProfile();
-  if (!profile) redirect("/login");
+  if (!profile || profile.role !== "livreur") redirect("/login");
 
   if (!profile.store_id) {
     return (
       <div className="animate-fade-in space-y-6">
-        <h1 className="text-2xl font-bold tracking-tight">Commandes Shopify</h1>
-        <p className="text-muted">Aucun magasin assigné à votre compte.</p>
+        <h1 className="text-2xl font-bold tracking-tight">Mes livraisons</h1>
+        <p className="text-muted">Aucun magasin assigné à votre compte livreur.</p>
       </div>
     );
   }
@@ -25,9 +25,9 @@ export default async function CashierOrdersPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Commandes Shopify</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Mes livraisons</h1>
         <p className="mt-1 text-muted">
-          Commandes en ligne affectées à votre magasin
+          Prêtes : en attente de remise caisse — En livraison : marquez livré ou retour
           {store ? ` — ${store.name}, ${store.city}` : ""}
         </p>
       </div>
@@ -37,10 +37,9 @@ export default async function CashierOrdersPage() {
         scopeLabel={scopeLabel}
         showStore={false}
         editable
-        enablePosCheckout
         products={products}
+        livreurMode
         defaultDateToday
-        enableLivreurHandoff
       />
     </div>
   );

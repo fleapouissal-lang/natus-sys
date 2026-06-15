@@ -83,6 +83,15 @@ export function orderStatusSelectValue(order: {
   return order.workflow_status;
 }
 
+export function livreurWorkflowStatuses(): ShopifyWorkflowStatus[] {
+  return ["delivered", "returned"];
+}
+
+/** Statuts visibles par le livreur (en magasin + en route). */
+export function livreurActiveOrderStatuses(): ShopifyWorkflowStatus[] {
+  return ["ready", "shipping"];
+}
+
 export function editableWorkflowStatuses(order: {
   payment_type: ShopifyPaymentType;
   financial_status: string | null;

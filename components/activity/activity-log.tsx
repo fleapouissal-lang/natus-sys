@@ -40,9 +40,11 @@ const TYPE_OPTIONS: { value: "" | ActivityKind; label: string }[] = [
 
 const ROLE_OPTIONS: { value: "" | UserRole; label: string }[] = [
   { value: "", label: "Tous les rôles" },
+  { value: "admin", label: "Administrateur" },
   { value: "directeur", label: "Directeur" },
   { value: "manager", label: "Gérant" },
   { value: "cashier", label: "Caissier" },
+  { value: "livreur", label: "Livreur" },
 ];
 
 export function ActivityLog({

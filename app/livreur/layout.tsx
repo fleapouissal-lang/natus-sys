@@ -2,19 +2,19 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 
-export default async function DirectorLayout({
+export default async function LivreurLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const profile = await requireRole(["directeur", "admin"]);
+  const profile = await requireRole(["livreur"]);
   if (!profile) redirect("/login");
 
   return (
     <DashboardShell
       role={profile.role}
       userName={profile.full_name || profile.email}
-      cityLabel="Toutes les villes"
+      cityLabel={profile.city || undefined}
     >
       {children}
     </DashboardShell>

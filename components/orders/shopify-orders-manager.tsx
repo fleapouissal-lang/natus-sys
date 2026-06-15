@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, Eye, Loader2, Search, ShoppingCart, Wallet } from "lucide-react";
+import { Banknote, Eye, Loader2, RotateCcw, Search, ShoppingCart, Truck, Wallet, PackageCheck } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ import {
   editableWorkflowStatuses,
   resolveWorkflowStatusUpdate,
 } from "@/lib/shopify/order-status";
-import { updateShopifyOrderStatus, markShopifyCodPaid } from "@/lib/actions";
+import { updateShopifyOrderStatus, markShopifyCodPaid, handOrderToLivreur } from "@/lib/actions";
 import type { ShopifyOrder, ShopifyPaymentType, ShopifyWorkflowStatus } from "@/lib/types";
 
 const STATUS_CELL_WIDTH = "w-[172px]";
@@ -121,6 +121,8 @@ export function ShopifyOrdersManager({
   products = [],
   posCheckoutPath = "/cashier/pos",
   defaultDateToday = false,
+  livreurMode = false,
+  enableLivreurHandoff = false,
 }: {
   orders: ShopifyOrder[];
   scopeLabel: string;
@@ -130,6 +132,8 @@ export function ShopifyOrdersManager({
   products?: import("@/lib/shopify/order-cart").ProductLineLookup[];
   posCheckoutPath?: string;
   defaultDateToday?: boolean;
+  livreurMode?: boolean;
+  enableLivreurHandoff?: boolean;
 }) {
   const router = useRouter();
   const today = toLocalDateKey(new Date());
@@ -196,8 +200,14 @@ export function ShopifyOrdersManager({
         setMessage(result.error);
       } else {
         const nextStatus = resolveWorkflowStatusUpdate(status);
-        setOrders((prev) =>
-          prev.map((o) =>
+        setOrders((prev) => {
+          if (
+            livreurMode &&
+            (nextStatus === "paid" || nextStatus === "returned")
+          ) {
+            return prev.filter((o) => o.id !== orderId);
+          }
+          return prev.map((o) =>
             o.id === orderId
               ? {
                   ...o,
@@ -206,6 +216,25 @@ export function ShopifyOrdersManager({
                     nextStatus === "paid" ? "paid" : o.financial_status,
                 }
               : o
+          );
+        });
+      }
+      setActiveId(null);
+      router.refresh();
+    });
+  }
+
+  function handleHandoffToLivreur(orderId: string) {
+    setMessage(null);
+    setActiveId(orderId);
+    startTransition(async () => {
+      const result = await handOrderToLivreur(orderId);
+      if ("error" in result) {
+        setMessage(result.error);
+      } else {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId ? { ...o, workflow_status: "shipping" } : o
           )
         );
       }
@@ -342,8 +371,18 @@ export function ShopifyOrdersManager({
                 const isCancelled = order.workflow_status === "cancelled";
                 const isReturned = order.workflow_status === "returned";
                 const canEditStatus =
-                  editable && !isFulfillmentLocked(order.workflow_status);
+                  editable &&
+                  !livreurMode &&
+                  !isFulfillmentLocked(order.workflow_status);
                 const statusOptions = editableWorkflowStatuses(order);
+                const canHandoffToLivreur =
+                  enableLivreurHandoff &&
+                  order.workflow_status === "ready" &&
+                  Boolean(order.sale_id) &&
+                  !isCancelled &&
+                  !isReturned;
+                const canLivreurClose =
+                  livreurMode && order.workflow_status === "shipping";
                 const statusValue = orderStatusSelectValue(order);
                 const canPosCheckout = !order.sale_id && !isCancelled && !isReturned;
                 const canMarkCodPaid =
@@ -378,7 +417,29 @@ export function ShopifyOrdersManager({
                       </Badge>
                     </td>
                     <td className="px-6 py-4 align-middle">
-                      {canEditStatus ? (
+                      {canLivreurClose ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={loading}
+                            onClick={() => handleStatusChange(order.id, "delivered")}
+                          >
+                            <PackageCheck className="h-3.5 w-3.5" />
+                            Livré
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            disabled={loading}
+                            onClick={() => handleStatusChange(order.id, "returned")}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Retour
+                          </Button>
+                        </div>
+                      ) : canEditStatus ? (
                         <SelectMenu
                           value={statusValue}
                           onChange={(status) =>
@@ -432,6 +493,15 @@ export function ShopifyOrdersManager({
                             }
                           >
                             <ShoppingCart className="h-3.5 w-3.5" />
+                          </IconAction>
+                        )}
+                        {canHandoffToLivreur && (
+                          <IconAction
+                            label="Remise au livreur — en cours de livraison"
+                            onClick={() => handleHandoffToLivreur(order.id)}
+                            loading={loading}
+                          >
+                            <Truck className="h-3.5 w-3.5" />
                           </IconAction>
                         )}
                         <IconAction

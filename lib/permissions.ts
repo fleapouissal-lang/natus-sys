@@ -1,14 +1,22 @@
 import type { Profile, Store, UserRole } from "@/lib/types";
 
-export const MANAGEMENT_ROLES = ["directeur", "manager"] as const;
+export const MANAGEMENT_ROLES = ["directeur", "admin", "manager"] as const;
 export type ManagementRole = (typeof MANAGEMENT_ROLES)[number];
 
 export function isDirector(profile: Pick<Profile, "role">): boolean {
-  return profile.role === "directeur";
+  return profile.role === "directeur" || profile.role === "admin";
+}
+
+export function isAdmin(profile: Pick<Profile, "role">): boolean {
+  return profile.role === "admin";
 }
 
 export function isManager(profile: Pick<Profile, "role">): boolean {
   return profile.role === "manager";
+}
+
+export function isLivreur(profile: Pick<Profile, "role">): boolean {
+  return profile.role === "livreur";
 }
 
 export function isManagement(profile: Pick<Profile, "role">): boolean {
@@ -19,26 +27,31 @@ export function getRoleLabel(role: UserRole): string {
   switch (role) {
     case "directeur":
       return "Directeur";
+    case "admin":
+      return "Administrateur";
     case "manager":
       return "Gérant";
     case "cashier":
       return "Caissier";
+    case "livreur":
+      return "Livreur";
   }
 }
 
 export function getHomePath(role: UserRole): string {
-  if (role === "directeur") return "/director";
+  if (role === "directeur" || role === "admin") return "/director";
   if (role === "manager") return "/manager";
+  if (role === "livreur") return "/livreur/orders";
   return "/cashier/pos";
 }
 
 export function getManagementBasePath(role: UserRole): "/director" | "/manager" | null {
-  if (role === "directeur") return "/director";
+  if (role === "directeur" || role === "admin") return "/director";
   if (role === "manager") return "/manager";
   return null;
 }
 
-/** Ville accessible : null = toutes (directeur), sinon ville du gérant */
+/** Ville accessible : null = toutes (directeur/admin), sinon ville du gérant */
 export function getCityFilter(profile: Profile): string | null {
   if (isDirector(profile)) return null;
   if (isManager(profile)) return profile.city;
@@ -59,10 +72,14 @@ export function canCreateRole(
   targetRole: UserRole
 ): boolean {
   if (isDirector(creator)) {
-    return targetRole === "manager" || targetRole === "cashier";
+    return (
+      targetRole === "manager" ||
+      targetRole === "cashier" ||
+      targetRole === "livreur"
+    );
   }
   if (isManager(creator)) {
-    return targetRole === "cashier";
+    return targetRole === "cashier" || targetRole === "livreur";
   }
   return false;
 }

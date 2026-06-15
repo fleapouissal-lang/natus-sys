@@ -7,9 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "node scripts/seed-users.mjs && node scripts/seed-shopify-orders.mjs",
-    "seed:users": "node scripts/seed-users.mjs",
-    "seed:orders": "node scripts/seed-shopify-orders.mjs",
+    "setup": "node scripts/setup.mjs",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "seed": "npm run db:migrate && node scripts/seed-users.mjs && node scripts/seed-shopify-orders.mjs",
+    "seed:users": "npm run db:migrate && node scripts/seed-users.mjs && node scripts/backfill-livreur-orders.mjs",
+    "seed:orders": "npm run db:migrate && node scripts/seed-shopify-orders.mjs && node scripts/backfill-livreur-orders.mjs",
+    "backfill:livreur": "node scripts/backfill-livreur-orders.mjs",
     "upload-images": "node scripts/upload-product-images.mjs"
   },
   "dependencies": {

@@ -42,6 +42,12 @@ export async function getShopifyOrders(
   if (profile.role === "cashier") {
     if (!profile.store_id) return [];
     dbQuery = dbQuery.eq("store_id", profile.store_id);
+  } else if (profile.role === "livreur") {
+    if (!profile.store_id) return [];
+    dbQuery = dbQuery
+      .eq("store_id", profile.store_id)
+      .eq("assigned_livreur_id", profile.id)
+      .in("workflow_status", ["ready", "shipping"]);
   } else if (profile.role === "manager") {
     const city = profile.city;
     if (!city) return [];
@@ -136,6 +142,9 @@ export function getOrdersScopeLabel(
 ): string {
   if (profile.role === "cashier") {
     return opts.storeName ? `Magasin — ${opts.storeName}` : "Mon magasin";
+  }
+  if (profile.role === "livreur") {
+    return opts.storeName ? `Livraisons — ${opts.storeName}` : "Mes livraisons";
   }
   if (opts.storeName) return `${opts.storeName}${opts.city ? ` — ${opts.city}` : ""}`;
   if (opts.city) return `Tous les magasins — ${opts.city}`;

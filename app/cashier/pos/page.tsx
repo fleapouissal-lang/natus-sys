@@ -25,7 +25,9 @@ export default async function PosPage({
   const products = storeId ? await getProductsWithStoreStock(storeId) : [];
   const selectedStore = getSelectedStore(stores, storeId);
   const showStoreFilter =
-    profile?.role === "manager" || profile?.role === "directeur";
+    profile?.role === "manager" ||
+    profile?.role === "directeur" ||
+    profile?.role === "admin";
 
   let shopifyLoad = null;
   let shopifyError: string | null = null;

@@ -10,7 +10,7 @@ import { PRODUCT_BRAND, PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { uploadProductImage } from "@/lib/storage";
 import type { Profile } from "@/lib/types";
 
-const MANAGEMENT = ["directeur", "manager"] as const;
+const MANAGEMENT = ["directeur", "admin", "manager"] as const;
 
 type StoreStockRow = { store_id: string; quantity: number };
 
@@ -337,7 +337,7 @@ export async function setProductStock(
   stock: number,
   storeId: string
 ) {
-  const profile = await requireRole(["directeur"]);
+  const profile = await requireRole(["directeur", "admin"]);
   if (!profile) return { error: "Seul le directeur peut modifier le stock actuel" };
 
   if (stock < 0) return { error: "Le stock ne peut pas être négatif" };
@@ -399,7 +399,7 @@ export async function getProductStoreStock(productId: string, storeId: string) {
 }
 
 export async function updateUserRole(userId: string, role: "manager" | "cashier") {
-  const profile = await requireRole(["directeur"]);
+  const profile = await requireRole(["directeur", "admin"]);
   if (!profile) return { error: "Non autorisé" };
 
   if (userId === profile.id) return { error: "Vous ne pouvez pas modifier votre propre rôle" };
@@ -495,11 +495,20 @@ export async function completeShopifyOrderSale(
 
   const supabase = await createClient();
   const now = new Date().toISOString();
+
+  const { resolveLivreurForReadyOrder } = await import("@/lib/shopify/assign-livreur");
+  const livreurId = order.store_id
+    ? await resolveLivreurForReadyOrder(order.store_id)
+    : null;
+
   const updates: Record<string, unknown> = {
     sale_id: saleResult.saleId,
     workflow_status: "ready",
     updated_at: now,
   };
+  if (livreurId) {
+    updates.assigned_livreur_id = livreurId;
+  }
 
   const { error: updateError } = await supabase
     .from("shopify_orders")
@@ -516,6 +525,7 @@ export async function completeShopifyOrderSale(
   revalidatePath("/cashier/orders");
   revalidatePath("/manager/orders");
   revalidatePath("/director/orders");
+  revalidatePath("/livreur/orders");
 
   return { success: true, saleId: saleResult.saleId };
 }
@@ -540,6 +550,7 @@ export async function prepareShopifyOrderForPos(
   revalidatePath("/cashier/orders");
   revalidatePath("/manager/orders");
   revalidatePath("/director/orders");
+  revalidatePath("/livreur/orders");
 
   return { success: true, status: result.status };
 }
@@ -572,7 +583,7 @@ export async function createUser(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const fullName = formData.get("full_name") as string;
-  const role = formData.get("role") as "manager" | "cashier";
+  const role = formData.get("role") as "manager" | "cashier" | "livreur";
   const city = ((formData.get("city") as string) || "").trim() || null;
   const storeId = (formData.get("store_id") as string) || null;
 
@@ -587,12 +598,27 @@ export async function createUser(formData: FormData) {
     }
   }
 
-  if (role === "cashier") {
-    if (!storeId) return { error: "Magasin requis pour le caissier" };
+  if (role === "cashier" || role === "livreur") {
+    if (!storeId) {
+      return { error: role === "livreur" ? "Magasin requis pour le livreur" : "Magasin requis pour le caissier" };
+    }
     const store = await getStoreById(storeId);
     if (!store) return { error: "Magasin introuvable" };
     if (!canManageStore(profile, store)) {
       return { error: "Ce magasin n'est pas dans votre périmètre" };
+    }
+    if (role === "livreur") {
+      const supabaseCheck = await createClient();
+      const { data: existingLivreur } = await supabaseCheck
+        .from("profiles")
+        .select("id")
+        .eq("role", "livreur")
+        .eq("store_id", storeId)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (existingLivreur) {
+        return { error: "Ce magasin a déjà un livreur actif" };
+      }
     }
   }
 
@@ -622,7 +648,7 @@ export async function createUser(formData: FormData) {
       updates.store_id = null;
     }
 
-    if (role === "cashier" && storeId) {
+    if ((role === "cashier" || role === "livreur") && storeId) {
       updates.store_id = storeId;
       const store = await getStoreById(storeId);
       updates.city = store?.city || null;
@@ -638,7 +664,7 @@ export async function createUser(formData: FormData) {
 export async function syncShopifyOrders(): Promise<
   { success: true; synced: number; failed: number } | { error: string }
 > {
-  const profile = await requireRole(["directeur"]);
+  const profile = await requireRole(["directeur", "admin"]);
   if (!profile) return { error: "Non autorisé" };
 
   try {
@@ -675,18 +701,41 @@ export async function updateShopifyOrderStatus(
   orderId: string,
   workflowStatus: import("@/lib/types").ShopifyWorkflowStatus
 ): Promise<{ success: true } | { error: string }> {
-  const profile = await requireRole(["directeur", "manager", "cashier"]);
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier", "livreur"]);
   if (!profile) return { error: "Non autorisé" };
 
   const { getShopifyOrderById, canAccessShopifyOrder } = await import(
     "@/lib/shopify/order-access"
   );
-  const { resolveWorkflowStatusUpdate } = await import("@/lib/shopify/order-status");
+  const { resolveWorkflowStatusUpdate, livreurWorkflowStatuses } = await import(
+    "@/lib/shopify/order-status"
+  );
   const order = await getShopifyOrderById(orderId);
   if (!order) return { error: "Commande introuvable" };
 
   if (!(await canAccessShopifyOrder(profile, order))) {
     return { error: "Accès refusé" };
+  }
+
+  if (profile.role === "livreur") {
+    const allowed = livreurWorkflowStatuses();
+    if (!allowed.includes(workflowStatus)) {
+      return { error: "Statut non autorisé pour le livreur" };
+    }
+    if (order.workflow_status !== "shipping") {
+      return {
+        error:
+          "Remettez-vous la commande en caisse — seules les livraisons en cours peuvent être clôturées",
+      };
+    }
+  }
+
+  if (
+    profile.role === "cashier" &&
+    workflowStatus === "shipping" &&
+    order.workflow_status !== "ready"
+  ) {
+    return { error: "Seules les commandes prêtes peuvent être remises au livreur" };
   }
 
   if (
@@ -744,6 +793,63 @@ export async function updateShopifyOrderStatus(
   revalidatePath("/director/orders");
   revalidatePath("/manager/orders");
   revalidatePath("/cashier/orders");
+  revalidatePath("/livreur/orders");
+
+  return { success: true };
+}
+
+export async function handOrderToLivreur(
+  orderId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+  const order = await getShopifyOrderById(orderId);
+  if (!order) return { error: "Commande introuvable" };
+
+  if (!(await canAccessShopifyOrder(profile, order))) {
+    return { error: "Accès refusé" };
+  }
+
+  if (order.workflow_status !== "ready") {
+    return { error: "Seules les commandes prêtes peuvent être remises au livreur" };
+  }
+
+  if (!order.sale_id) {
+    return { error: "Préparez la commande en caisse avant la remise au livreur" };
+  }
+
+  const supabase = await createClient();
+
+  if (!order.assigned_livreur_id && order.store_id) {
+    const { assignOrderToStoreLivreur } = await import("@/lib/shopify/assign-livreur");
+    await assignOrderToStoreLivreur(orderId, order.store_id);
+  }
+
+  const { error } = await supabase
+    .from("shopify_orders")
+    .update({
+      workflow_status: "shipping",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", orderId);
+
+  if (error) return { error: error.message };
+
+  try {
+    const { syncShopifyWorkflowStatus } = await import("@/lib/shopify/update-order");
+    await syncShopifyWorkflowStatus(order.shopify_order_id, "shipping");
+  } catch (err) {
+    console.error("Shopify sync shipping:", err);
+  }
+
+  revalidatePath("/cashier/orders");
+  revalidatePath("/manager/orders");
+  revalidatePath("/director/orders");
+  revalidatePath("/livreur/orders");
 
   return { success: true };
 }

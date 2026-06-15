@@ -18,7 +18,24 @@ function loadEnv() {
   return env;
 }
 
+function storeEmailSlug(name) {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "");
+}
+
 const users = [
+  {
+    email: "admin@natus.ma",
+    password: "Natus2026!",
+    full_name: "Admin Dashboard",
+    role: "admin",
+    city: null,
+    store: null,
+  },
   {
     email: "directeur@natus.ma",
     password: "Natus2026!",
@@ -69,6 +86,75 @@ async function findUserByEmail(supabase, email) {
   }
 }
 
+async function upsertUser(supabase, user, storeByName) {
+  const storeId = user.store ? storeByName[user.store] : null;
+  const existing = await findUserByEmail(supabase, user.email);
+
+  if (existing) {
+    const { error: updateError } = await supabase.auth.admin.updateUserById(existing.id, {
+      password: user.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: user.full_name,
+        role: user.role,
+        city: user.city || undefined,
+      },
+      app_metadata: { provider: "email", providers: ["email"] },
+    });
+
+    if (updateError) {
+      console.error(`❌ ${user.email} (update) : ${updateError.message}`);
+      return;
+    }
+
+    await supabase
+      .from("profiles")
+      .update({
+        full_name: user.full_name,
+        role: user.role,
+        is_active: true,
+        city: user.city,
+        store_id: storeId,
+      })
+      .eq("id", existing.id);
+
+    console.log(`↻  Mis à jour : ${user.email} (${user.role})`);
+    return;
+  }
+
+  const { data, error } = await supabase.auth.admin.createUser({
+    email: user.email,
+    password: user.password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: user.full_name,
+      role: user.role,
+      city: user.city || undefined,
+    },
+    app_metadata: { provider: "email", providers: ["email"] },
+  });
+
+  if (error) {
+    console.error(`❌ ${user.email} : ${error.message}`);
+    return;
+  }
+
+  if (data.user) {
+    await supabase
+      .from("profiles")
+      .update({
+        full_name: user.full_name,
+        role: user.role,
+        is_active: true,
+        city: user.city,
+        store_id: storeId,
+      })
+      .eq("id", data.user.id);
+  }
+
+  console.log(`✓  Créé : ${user.email} (${user.role})`);
+}
+
 async function main() {
   const env = loadEnv();
   const url = env.NEXT_PUBLIC_SUPABASE_URL;
@@ -87,87 +173,41 @@ async function main() {
 
   const { data: storeRows } = await supabase
     .from("stores")
-    .select("id, name")
+    .select("id, name, city")
     .eq("is_active", true)
     .order("name");
 
   const storeByName = Object.fromEntries((storeRows || []).map((s) => [s.name, s.id]));
 
   for (const user of users) {
-    const storeId = user.store ? storeByName[user.store] : null;
-    const existing = await findUserByEmail(supabase, user.email);
+    await upsertUser(supabase, user, storeByName);
+  }
 
-    if (existing) {
-      const { error: updateError } = await supabase.auth.admin.updateUserById(existing.id, {
-        password: user.password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: user.full_name,
-          role: user.role,
-          city: user.city || undefined,
-        },
-        app_metadata: { provider: "email", providers: ["email"] },
-      });
-
-      if (updateError) {
-        console.error(`❌ ${user.email} (update) : ${updateError.message}`);
-        continue;
-      }
-
-      await supabase
-        .from("profiles")
-        .update({
-          full_name: user.full_name,
-          role: user.role,
-          is_active: true,
-          city: user.city,
-          store_id: storeId,
-        })
-        .eq("id", existing.id);
-
-      console.log(`↻  Mis à jour : ${user.email} (${user.role})`);
-      continue;
-    }
-
-    const { data, error } = await supabase.auth.admin.createUser({
-      email: user.email,
-      password: user.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: user.full_name,
-        role: user.role,
-        city: user.city || undefined,
+  for (const store of storeRows || []) {
+    const slug = storeEmailSlug(store.name);
+    const email = `livreur.${slug}@natus.ma`;
+    await upsertUser(
+      supabase,
+      {
+        email,
+        password: "Natus2026!",
+        full_name: `Livreur ${store.name}`,
+        role: "livreur",
+        city: store.city,
+        store: store.name,
       },
-      app_metadata: { provider: "email", providers: ["email"] },
-    });
-
-    if (error) {
-      console.error(`❌ ${user.email} : ${error.message}`);
-      continue;
-    }
-
-    if (data.user) {
-      await supabase
-        .from("profiles")
-        .update({
-          full_name: user.full_name,
-          role: user.role,
-          is_active: true,
-          city: user.city,
-          store_id: storeId,
-        })
-        .eq("id", data.user.id);
-    }
-
-    console.log(`✓  Créé : ${user.email} (${user.role})`);
+      storeByName
+    );
   }
 
   console.log("\n✅ Terminé — mot de passe : Natus2026!");
   console.log("\nComptes :");
-  console.log("  • directeur@natus.ma  → Directeur (toutes villes)");
-  console.log("  • manager@natus.ma    → Gérant Marrakech");
-  console.log("  • cashier@natus.ma    → Caissier Guéliz");
-  console.log("  • caissier2@natus.ma  → Caissier Médina");
+  console.log("  • admin@natus.ma        → Admin dashboard");
+  console.log("  • directeur@natus.ma    → Directeur");
+  console.log("  • manager@natus.ma      → Gérant Marrakech");
+  console.log("  • cashier@natus.ma      → Caissier Guéliz");
+  console.log("  • caissier2@natus.ma    → Caissier Médina");
+  console.log("  • livreur.<magasin>@natus.ma → 1 livreur par magasin actif");
 }
 
 main().catch((err) => {

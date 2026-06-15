@@ -247,6 +247,28 @@ async function main() {
 
   if (insertError) throw insertError;
 
+  const { data: livreurs } = await supabase
+    .from("profiles")
+    .select("id, store_id")
+    .eq("role", "livreur")
+    .eq("is_active", true);
+
+  const livreurByStore = Object.fromEntries(
+    (livreurs || []).map((l) => [l.store_id, l.id])
+  );
+
+  let assignedCount = 0;
+  for (const order of inserted || []) {
+    if (!["ready", "shipping", "delivered"].includes(order.workflow_status)) continue;
+    const livreurId = livreurByStore[order.store_id];
+    if (!livreurId) continue;
+    const { error: assignError } = await supabase
+      .from("shopify_orders")
+      .update({ assigned_livreur_id: livreurId })
+      .eq("order_number", order.order_number);
+    if (!assignError) assignedCount++;
+  }
+
   const todayKey = new Date().toISOString().slice(0, 10);
   let todayCount = 0;
   let codCount = 0;
@@ -268,6 +290,7 @@ async function main() {
   console.log(`  • ${todayCount} commande(s) datées d'aujourd'hui (filtre caisse par défaut)`);
   console.log(`  • ${codCount} COD / ${(inserted?.length ?? 0) - codCount} en ligne`);
   console.log(`  • ${posReadyCount} préparables en caisse (sans sale_id, non annulées)`);
+  console.log(`  • ${assignedCount} commande(s) prêtes/en livraison affectées au livreur`);
   console.log("\nRelance : npm run seed:orders");
 }
 

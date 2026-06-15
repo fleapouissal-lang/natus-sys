@@ -1,6 +1,6 @@
 export type PaymentMethod = "cash" | "card";
 
-export type UserRole = "directeur" | "manager" | "cashier";
+export type UserRole = "directeur" | "admin" | "manager" | "cashier" | "livreur";
 
 export type ShopifyPaymentType = "online" | "cod";
 
@@ -215,6 +215,7 @@ export interface ShopifyOrder {
   paid_at: string | null;
   paid_by: string | null;
   sale_id: string | null;
+  assigned_livreur_id: string | null;
   total: number;
   currency: string;
   line_items: ShopifyLineItemRow[];

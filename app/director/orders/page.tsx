@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
+import { isDirector } from "@/lib/permissions";
 import { getActiveStores, getProductCatalog } from "@/lib/inventory";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getSelectedStore } from "@/lib/management-store";
@@ -15,7 +16,7 @@ export default async function DirectorOrdersPage({
 }) {
   const { city: cityParam, store: storeParam } = await searchParams;
   const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "directeur") redirect("/login");
+  if (!profile || !isDirector(profile)) redirect("/login");
 
   const stores = await getActiveStores(null);
   const selectedCity = cityParam && stores.some((s) => s.city === cityParam) ? cityParam : "";

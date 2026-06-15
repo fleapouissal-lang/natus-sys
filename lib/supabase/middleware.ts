@@ -37,6 +37,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/manager") ||
     pathname.startsWith("/director") ||
     pathname.startsWith("/cashier") ||
+    pathname.startsWith("/livreur") ||
     pathname.startsWith("/pos");
 
   if (!user && isProtected) {
@@ -61,7 +62,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     if (pathname.startsWith("/director")) {
-      if (role !== "directeur" || !profile?.is_active) {
+      if ((role !== "directeur" && role !== "admin") || !profile?.is_active) {
         const url = request.nextUrl.clone();
         url.pathname = role ? getHomePath(role) : "/login";
         return NextResponse.redirect(url);
@@ -74,6 +75,24 @@ export async function updateSession(request: NextRequest) {
         url.pathname = role ? getHomePath(role) : "/login";
         return NextResponse.redirect(url);
       }
+    }
+
+    if (pathname.startsWith("/livreur")) {
+      if (role !== "livreur" || !profile?.is_active) {
+        const url = request.nextUrl.clone();
+        url.pathname = role ? getHomePath(role) : "/login";
+        return NextResponse.redirect(url);
+      }
+    }
+
+    if (
+      pathname.startsWith("/cashier") &&
+      role === "livreur" &&
+      profile?.is_active
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = getHomePath("livreur");
+      return NextResponse.redirect(url);
     }
 
     if (pathname.startsWith("/cashier") && !profile?.is_active) {

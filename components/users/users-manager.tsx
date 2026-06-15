@@ -35,7 +35,7 @@ function CreateUserForm({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [role, setRole] = useState<"manager" | "cashier">("cashier");
+  const [role, setRole] = useState<"manager" | "cashier" | "livreur">("cashier");
   const [city, setCity] = useState(
     isDirector(viewer) ? cities[0] || "" : viewer.city || ""
   );
@@ -68,13 +68,17 @@ function CreateUserForm({
     onClose();
   }
 
-  const roleOptionsList: { value: "manager" | "cashier"; label: string }[] =
+  const roleOptionsList: { value: "manager" | "cashier" | "livreur"; label: string }[] =
     isDirector(viewer)
       ? [
           { value: "cashier", label: "Caissier" },
+          { value: "livreur", label: "Livreur (magasin)" },
           { value: "manager", label: "Gérant (ville)" },
         ]
-      : [{ value: "cashier", label: "Caissier" }];
+      : [
+          { value: "cashier", label: "Caissier" },
+          { value: "livreur", label: "Livreur (magasin)" },
+        ];
 
   return (
     <Modal onClose={onClose} size="md">
@@ -91,11 +95,11 @@ function CreateUserForm({
           <SelectMenu
             label="Rôle"
             value={role}
-            onChange={(v) => setRole(v as "manager" | "cashier")}
+            onChange={(v) => setRole(v as "manager" | "cashier" | "livreur")}
             options={roleOptions(roleOptionsList)}
           />
 
-          {(role === "manager" || role === "cashier") && (
+          {(role === "manager" || role === "cashier" || role === "livreur") && (
             <>
               <SelectMenu
                 name="city"
@@ -114,14 +118,14 @@ function CreateUserForm({
             </>
           )}
 
-          {role === "cashier" && storesForCity.length > 0 && (
+          {(role === "cashier" || role === "livreur") && storesForCity.length > 0 && (
             <StoreSelect
               stores={storesForCity}
-              label="Magasin assigné"
+              label={role === "livreur" ? "Magasin du livreur" : "Magasin assigné"}
             />
           )}
 
-          {role === "cashier" && storesForCity.length === 0 && (
+          {(role === "cashier" || role === "livreur") && storesForCity.length === 0 && (
             <p className="text-sm text-danger">
               Aucun magasin dans cette ville — créez-en un d&apos;abord
             </p>
@@ -136,7 +140,7 @@ function CreateUserForm({
             <Button
               type="submit"
               loading={loading}
-              disabled={role === "cashier" && storesForCity.length === 0}
+              disabled={(role === "cashier" || role === "livreur") && storesForCity.length === 0}
             >
               Créer
             </Button>
@@ -147,8 +151,9 @@ function CreateUserForm({
 }
 
 function roleBadgeVariant(role: UserRole) {
-  if (role === "directeur") return "accent";
+  if (role === "directeur" || role === "admin") return "accent";
   if (role === "manager") return "default";
+  if (role === "livreur") return "warning";
   return "success";
 }
 
@@ -243,12 +248,12 @@ export function UsersManager({
                     </Badge>
                   </td>
                   <td className="px-6 py-4 text-muted">
-                    {user.role === "directeur"
+                    {user.role === "directeur" || user.role === "admin"
                       ? "Toutes"
                       : user.city || storeMap[user.store_id || ""]?.city || "—"}
                   </td>
                   <td className="px-6 py-4">
-                    {user.role === "cashier" ? (
+                    {user.role === "cashier" || user.role === "livreur" ? (
                       <SelectMenu
                         value={user.store_id || ""}
                         onChange={(storeId) => handleStoreChange(user.id, storeId)}
@@ -279,7 +284,9 @@ export function UsersManager({
                     {formatDate(user.created_at)}
                   </td>
                   <td className="px-6 py-4">
-                    {user.id !== viewer.id && user.role !== "directeur" && (
+                    {user.id !== viewer.id &&
+                      user.role !== "directeur" &&
+                      user.role !== "admin" && (
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="ghost"
