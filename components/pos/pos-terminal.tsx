@@ -25,10 +25,11 @@ import { PosOrdersPanel } from "@/components/pos/pos-orders-panel";
 import { Modal } from "@/components/ui/modal";
 import { Receipt, printReceipt, type ReceiptData } from "@/components/pos/receipt";
 import { ProductCatalog } from "@/components/pos/product-catalog";
-import { completeSale, completeShopifyOrderSale } from "@/lib/actions";
+import { completeSale, completeShopifyOrderSale, prepareShopifyOrderForPos } from "@/lib/actions";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
 import { shopifyOrderToPosContext } from "@/lib/shopify/order-pos";
+import { workflowStatusLabel } from "@/lib/shopify/order-status";
 import { formatCurrency } from "@/lib/utils";
 import { computeTvaBreakdown, TVA_RATE } from "@/lib/constants/sales";
 import { cn } from "@/lib/utils";
@@ -93,15 +94,18 @@ export function PosTerminal({
   const isManagementUser = role === "manager" || role === "directeur";
   const isStockScan = isManagementUser && managerMode === "stock";
   const isOrderMode = !!activeShopifyOrder && !isStockScan;
-  const isCodShopifyOrder = activeShopifyOrder?.paymentType === "cod";
+  const isShopifyOrderCheckout = !!activeShopifyOrder;
+  const shopifyPaymentLabel =
+    activeShopifyOrder?.paymentType === "cod"
+      ? "COD — à la livraison"
+      : activeShopifyOrder?.paymentType === "online"
+        ? "E.L — payé en ligne"
+        : null;
 
   useEffect(() => {
-    if (activeShopifyOrder?.defaultPayment) {
-      setPaymentMethod(activeShopifyOrder.defaultPayment);
-    } else if (isCodShopifyOrder) {
-      setPaymentMethod("cash");
-    }
-  }, [activeShopifyOrder, isCodShopifyOrder]);
+    if (!activeShopifyOrder) return;
+    setPaymentMethod(activeShopifyOrder.defaultPayment);
+  }, [activeShopifyOrder]);
 
   const addToCart = useCallback((product: Product, qty: number) => {
     if (activeShopifyOrder) return;
@@ -168,7 +172,7 @@ export function PosTerminal({
     [products, isStockScan, addToCart, activeShopifyOrder, cart, validatedQty]
   );
 
-  function loadShopifyOrder(order: ShopifyOrder) {
+  async function loadShopifyOrder(order: ShopifyOrder) {
     const { cart: orderCart, missing } = mapShopifyLineItemsToCart(order.line_items, products);
     if (orderCart.length === 0) {
       setError(
@@ -178,7 +182,10 @@ export function PosTerminal({
       );
       return;
     }
-    const context = shopifyOrderToPosContext(order);
+    const context = {
+      ...shopifyOrderToPosContext(order),
+      workflowStatus: "preparing" as const,
+    };
     setCart(orderCart);
     setActiveShopifyOrder(context);
     setMissingShopifyProducts(missing);
@@ -188,6 +195,15 @@ export function PosTerminal({
     setShowOrdersPanel(false);
     autoCheckoutRef.current = false;
     setPaymentMethod(context.defaultPayment);
+
+    const result = await prepareShopifyOrderForPos(order.id);
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+    setActiveShopifyOrder((prev) =>
+      prev ? { ...prev, workflowStatus: result.status } : null
+    );
   }
 
   const { inputRef, handleKeyDown, handleChange, focusInput } = useBarcodeScanner({
@@ -282,9 +298,14 @@ export function PosTerminal({
 
   async function handlePay(paymentMethod: PaymentMethod) {
     if (cart.length === 0) return;
-    if (isOrderMode && !orderFullyValidated) {
-      setError("Scannez tous les produits de la commande avant de valider");
-      return;
+    if (activeShopifyOrder) {
+      const fullyValidated = cart.every(
+        (item) => (validatedQty[item.product.id] ?? 0) >= item.quantity
+      );
+      if (!fullyValidated) {
+        setError("Scannez tous les produits de la commande avant de valider");
+        return;
+      }
     }
 
     setLoading(true);
@@ -295,16 +316,20 @@ export function PosTerminal({
       quantity: item.quantity,
     }));
 
+    const effectivePaymentMethod = activeShopifyOrder
+      ? activeShopifyOrder.defaultPayment
+      : paymentMethod;
+
     const result = activeShopifyOrder
       ? await completeShopifyOrderSale(
           activeShopifyOrder.id,
           items,
-          paymentMethod,
+          effectivePaymentMethod,
           isManagementUser ? defaultStoreId : undefined
         )
       : await completeSale(
           items,
-          paymentMethod,
+          effectivePaymentMethod,
           isManagementUser ? defaultStoreId : undefined
         );
 
@@ -322,13 +347,8 @@ export function PosTerminal({
     setReceipt({
       saleId: result.saleId!,
       total,
-      paymentMethod,
-      paymentLabel:
-        activeShopifyOrder?.paymentType === "cod"
-          ? "COD — à la livraison"
-          : activeShopifyOrder?.paymentType === "online"
-            ? "E.L — payé en ligne"
-            : undefined,
+      paymentMethod: effectivePaymentMethod,
+      paymentLabel: shopifyPaymentLabel ?? undefined,
       cashierName,
       items: cart.map((item) => ({
         name: item.product.name,
@@ -354,14 +374,6 @@ export function PosTerminal({
 
     setTimeout(() => printReceipt(), 300);
   }
-
-  const checkout = useCallback(
-    (paymentMethod: PaymentMethod) => {
-      void handlePay(paymentMethod);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- handlePay stable enough for checkout trigger
-    [cart, activeShopifyOrder, cashierName, defaultStoreId, isManagementUser]
-  );
 
   function closeReceipt() {
     setReceipt(null);
@@ -548,11 +560,16 @@ export function PosTerminal({
                   <Card className="mt-3 border-primary/40 bg-primary/10 !p-3">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-foreground">
-                          Commande Shopify {activeShopifyOrder.orderNumber}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-foreground">
+                            Commande Shopify {activeShopifyOrder.orderNumber}
+                          </p>
+                          <Badge variant="warning">
+                            {workflowStatusLabel(activeShopifyOrder.workflowStatus)}
+                          </Badge>
+                        </div>
                         {activeShopifyOrder.customerName && (
-                          <p className="text-xs text-muted">
+                          <p className="mt-1 text-xs text-muted">
                             Client : {activeShopifyOrder.customerName}
                           </p>
                         )}
@@ -732,35 +749,44 @@ export function PosTerminal({
                   </div>
 
                   <div className="mt-4">
-                    <p className="mb-2 text-sm font-semibold text-foreground">
-                      Mode de paiement
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {PAYMENT_OPTIONS.map(({ id, label, icon: Icon }) => {
-                        const selected = paymentMethod === id;
-                        return (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => setPaymentMethod(id)}
-                            disabled={cart.length === 0}
-                            className={cn(
-                              "flex flex-col items-center gap-1.5 border bg-page px-3 py-3 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
-                              selected
-                                ? "border-primary bg-champagne/30"
-                                : "border-border hover:border-primary/60"
-                            )}
-                          >
-                            <Icon className="h-5 w-5 text-primary" />
-                            <span className="text-xs font-semibold">{label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {activeShopifyOrder?.paymentType === "cod" && (
-                      <p className="mt-2 text-xs text-muted">
-                        Commande COD — espèces recommandées
-                      </p>
+                    {isShopifyOrderCheckout ? (
+                      <div className="rounded-lg border border-primary/30 bg-champagne/20 px-3 py-3">
+                        <p className="text-xs font-medium text-muted">Paiement commande web</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {shopifyPaymentLabel}
+                        </p>
+                        <p className="mt-1 text-xs text-muted">
+                          Le ticket s&apos;imprime directement — pas de choix espèces/carte
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="mb-2 text-sm font-semibold text-foreground">
+                          Mode de paiement
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {PAYMENT_OPTIONS.map(({ id, label, icon: Icon }) => {
+                            const selected = paymentMethod === id;
+                            return (
+                              <button
+                                key={id}
+                                type="button"
+                                onClick={() => setPaymentMethod(id)}
+                                disabled={cart.length === 0}
+                                className={cn(
+                                  "flex flex-col items-center gap-1.5 border bg-page px-3 py-3 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
+                                  selected
+                                    ? "border-primary bg-champagne/30"
+                                    : "border-border hover:border-primary/60"
+                                )}
+                              >
+                                <Icon className="h-5 w-5 text-primary" />
+                                <span className="text-xs font-semibold">{label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
                     )}
                     {isOrderMode && !orderFullyValidated && (
                       <p className="mt-2 text-xs text-warning">
@@ -772,7 +798,13 @@ export function PosTerminal({
                   <Button
                     className="mt-4 w-full"
                     size="lg"
-                    onClick={() => checkout(paymentMethod)}
+                    onClick={() =>
+                      void handlePay(
+                        isShopifyOrderCheckout
+                          ? activeShopifyOrder!.defaultPayment
+                          : paymentMethod
+                      )
+                    }
                     disabled={
                       cart.length === 0 ||
                       loading ||
@@ -781,7 +813,7 @@ export function PosTerminal({
                     loading={loading}
                   >
                     <Printer className="h-4 w-4" />
-                    {activeShopifyOrder ? "Valider la commande" : "Imprimer la facture"}
+                    {isShopifyOrderCheckout ? "Imprimer le ticket" : "Imprimer la facture"}
                   </Button>
                 </div>
               </div>

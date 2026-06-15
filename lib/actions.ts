@@ -497,7 +497,7 @@ export async function completeShopifyOrderSale(
   const now = new Date().toISOString();
   const updates: Record<string, unknown> = {
     sale_id: saleResult.saleId,
-    workflow_status: "preparing",
+    workflow_status: "ready",
     updated_at: now,
   };
 
@@ -510,11 +510,38 @@ export async function completeShopifyOrderSale(
     return { error: updateError.message };
   }
 
+  const { syncShopifyWorkflowStatus } = await import("@/lib/shopify/update-order");
+  await syncShopifyWorkflowStatus(order.shopify_order_id, "ready");
+
   revalidatePath("/cashier/orders");
   revalidatePath("/manager/orders");
   revalidatePath("/director/orders");
 
   return { success: true, saleId: saleResult.saleId };
+}
+
+export async function prepareShopifyOrderForPos(
+  orderId: string
+): Promise<{ success: true; status: import("@/lib/types").ShopifyWorkflowStatus } | { error: string }> {
+  const profile = await requireRole(["directeur", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getShopifyOrderById } = await import("@/lib/shopify/order-access");
+  const order = await getShopifyOrderById(orderId);
+  if (!order) return { error: "Commande introuvable" };
+  if (order.sale_id) return { error: "Commande déjà encaissée" };
+
+  const { applyShopifyOrderWorkflowStatus } = await import(
+    "@/lib/shopify/set-workflow-status"
+  );
+  const result = await applyShopifyOrderWorkflowStatus(orderId, "preparing", profile);
+  if ("error" in result) return result;
+
+  revalidatePath("/cashier/orders");
+  revalidatePath("/manager/orders");
+  revalidatePath("/director/orders");
+
+  return { success: true, status: result.status };
 }
 
 export async function updateUserStore(userId: string, storeId: string | null) {
@@ -701,24 +728,18 @@ export async function updateShopifyOrderStatus(
 
   if (error) return { error: error.message };
 
-  try {
-    const { syncShopifyWorkflowStatus, markShopifyOrderPaid } = await import(
-      "@/lib/shopify/update-order"
-    );
+  const { syncShopifyWorkflowStatus, markShopifyOrderPaid } = await import(
+    "@/lib/shopify/update-order"
+  );
 
-    if (effectiveStatus === "paid" && order.payment_type === "cod") {
-      await markShopifyOrderPaid(
-        order.shopify_order_id,
-        Number(order.total),
-        order.currency || "MAD"
-      );
-    }
-    if (process.env.SHOPIFY_SHOP_DOMAIN) {
-      await syncShopifyWorkflowStatus(order.shopify_order_id, effectiveStatus);
-    }
-  } catch (err) {
-    console.error("Shopify sync:", err);
+  if (effectiveStatus === "paid" && order.payment_type === "cod") {
+    await markShopifyOrderPaid(
+      order.shopify_order_id,
+      Number(order.total),
+      order.currency || "MAD"
+    );
   }
+  await syncShopifyWorkflowStatus(order.shopify_order_id, effectiveStatus);
 
   revalidatePath("/director/orders");
   revalidatePath("/manager/orders");
@@ -769,19 +790,15 @@ export async function markShopifyCodPaid(
 
   if (error) return { error: error.message };
 
-  try {
-    const { markShopifyOrderPaid, syncShopifyWorkflowStatus } = await import(
-      "@/lib/shopify/update-order"
-    );
-    await markShopifyOrderPaid(
-      order.shopify_order_id,
-      Number(order.total),
-      order.currency || "MAD"
-    );
-    await syncShopifyWorkflowStatus(order.shopify_order_id, "paid");
-  } catch (err) {
-    console.error("Shopify COD payé:", err);
-  }
+  const { markShopifyOrderPaid, syncShopifyWorkflowStatus } = await import(
+    "@/lib/shopify/update-order"
+  );
+  await markShopifyOrderPaid(
+    order.shopify_order_id,
+    Number(order.total),
+    order.currency || "MAD"
+  );
+  await syncShopifyWorkflowStatus(order.shopify_order_id, "paid");
 
   revalidatePath("/director/orders");
   revalidatePath("/manager/orders");

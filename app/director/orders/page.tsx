@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
-import { getActiveStores } from "@/lib/inventory";
+import { getActiveStores, getProductCatalog } from "@/lib/inventory";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getSelectedStore } from "@/lib/management-store";
 import { CityStoreFilterBar } from "@/components/stores/city-store-filter-bar";
@@ -29,6 +29,7 @@ export default async function DirectorOrdersPage({
     city: selectedCity || null,
     storeId: selectedStoreId || null,
   });
+  const products = await getProductCatalog();
 
   const scopeLabel = getOrdersScopeLabel(profile, {
     city: selectedCity || selectedStore?.city,
@@ -55,7 +56,7 @@ export default async function DirectorOrdersPage({
         />
       </Suspense>
 
-      <ShopifyOrdersManager orders={orders} scopeLabel={scopeLabel} editable />
+      <ShopifyOrdersManager orders={orders} scopeLabel={scopeLabel} editable products={products} />
     </div>
   );
 }

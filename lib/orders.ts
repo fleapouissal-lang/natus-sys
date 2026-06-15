@@ -3,6 +3,7 @@ import type { CartItem, Product, Profile, ShopifyOrder } from "@/lib/types";
 import { getCityFilter, isDirector } from "@/lib/permissions";
 import { canAccessShopifyOrder } from "@/lib/shopify/order-access";
 import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
+import { applyShopifyOrderWorkflowStatus } from "@/lib/shopify/set-workflow-status";
 
 export interface ShopifyOrderPosContext {
   id: string;
@@ -10,6 +11,7 @@ export interface ShopifyOrderPosContext {
   paymentType: ShopifyOrder["payment_type"];
   customerName: string | null;
   defaultPayment: "cash" | "card";
+  workflowStatus: ShopifyOrder["workflow_status"];
 }
 
 export interface ShopifyOrderPosLoad {
@@ -96,6 +98,10 @@ export async function loadShopifyOrderForPos(
     };
   }
 
+  const prepResult = await applyShopifyOrderWorkflowStatus(orderId, "preparing", profile);
+  const workflowStatus =
+    "success" in prepResult ? prepResult.status : order.workflow_status;
+
   return {
     data: {
       cart,
@@ -106,6 +112,7 @@ export async function loadShopifyOrderForPos(
         paymentType: order.payment_type,
         customerName: order.customer_name,
         defaultPayment: order.payment_type === "cod" ? "cash" : "card",
+        workflowStatus,
       },
     },
   };

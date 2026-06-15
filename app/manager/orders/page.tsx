@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { getCurrentProfile } from "@/lib/auth";
-import { getActiveStores } from "@/lib/inventory";
+import { getActiveStores, getProductCatalog } from "@/lib/inventory";
 import { getCityFilter } from "@/lib/permissions";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getSelectedStore } from "@/lib/management-store";
@@ -25,6 +25,7 @@ export default async function ManagerOrdersPage({
   const orders = await getShopifyOrders(profile, {
     storeId: storeId || null,
   });
+  const products = await getProductCatalog();
 
   const scopeLabel = getOrdersScopeLabel(profile, {
     city: profile.city || selectedStore?.city || undefined,
@@ -44,7 +45,7 @@ export default async function ManagerOrdersPage({
         <StoreFilterBar stores={stores} selectedStoreId={storeId} allowAll />
       </Suspense>
 
-      <ShopifyOrdersManager orders={orders} scopeLabel={scopeLabel} editable />
+      <ShopifyOrdersManager orders={orders} scopeLabel={scopeLabel} editable products={products} />
     </div>
   );
 }

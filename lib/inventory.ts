@@ -58,6 +58,17 @@ export async function getProductsWithStoreStock(storeId: string): Promise<Produc
   }));
 }
 
+export async function getProductCatalog(): Promise<
+  Pick<Product, "id" | "name" | "barcode" | "image_url" | "category" | "price">[]
+> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("products")
+    .select("id, name, barcode, image_url, category, price")
+    .order("name");
+  return data || [];
+}
+
 export async function getStoreInventory(storeId: string) {
   const supabase = await createClient();
   const { data } = await supabase

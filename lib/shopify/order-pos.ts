@@ -16,5 +16,6 @@ export function shopifyOrderToPosContext(order: ShopifyOrder): ShopifyOrderPosCo
     paymentType: order.payment_type,
     customerName: order.customer_name,
     defaultPayment: order.payment_type === "cod" ? "cash" : "card",
+    workflowStatus: order.workflow_status,
   };
 }

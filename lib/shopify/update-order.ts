@@ -5,7 +5,7 @@ function getShopifyConfig() {
   const token = process.env.SHOPIFY_ACCESS_TOKEN;
 
   if (!domain || !token) {
-    throw new Error("SHOPIFY_SHOP_DOMAIN et SHOPIFY_ACCESS_TOKEN requis");
+    return null;
   }
 
   return {
@@ -14,12 +14,20 @@ function getShopifyConfig() {
   };
 }
 
+function isShopifyConfigured(): boolean {
+  return Boolean(getShopifyConfig());
+}
+
 async function shopifyFetch(path: string, options: RequestInit = {}) {
-  const { domain, token } = getShopifyConfig();
-  const res = await fetch(`https://${domain}/admin/api/2024-10${path}`, {
+  const config = getShopifyConfig();
+  if (!config) {
+    throw new Error("Shopify non configuré");
+  }
+
+  const res = await fetch(`https://${config.domain}/admin/api/2024-10${path}`, {
     ...options,
     headers: {
-      "X-Shopify-Access-Token": token,
+      "X-Shopify-Access-Token": config.token,
       "Content-Type": "application/json",
       ...options.headers,
     },
@@ -35,31 +43,46 @@ async function shopifyFetch(path: string, options: RequestInit = {}) {
   return res.json();
 }
 
+function logShopifySyncFailure(action: string, err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
+  console.warn(`[Shopify] ${action} ignorée — ${message}`);
+}
+
 export async function markShopifyOrderPaid(
   shopifyOrderId: number,
   amount: number,
   currency: string
-): Promise<void> {
-  await shopifyFetch(`/orders/${shopifyOrderId}/transactions.json`, {
-    method: "POST",
-    body: JSON.stringify({
-      transaction: {
-        kind: "sale",
-        status: "success",
-        amount: amount.toFixed(2),
-        currency,
-        gateway: "manual",
-        source: "external",
-      },
-    }),
-  });
+): Promise<boolean> {
+  if (!isShopifyConfigured()) return false;
+
+  try {
+    await shopifyFetch(`/orders/${shopifyOrderId}/transactions.json`, {
+      method: "POST",
+      body: JSON.stringify({
+        transaction: {
+          kind: "sale",
+          status: "success",
+          amount: amount.toFixed(2),
+          currency,
+          gateway: "manual",
+          source: "external",
+        },
+      }),
+    });
+    return true;
+  } catch (err) {
+    logShopifySyncFailure("marquage payé", err);
+    return false;
+  }
 }
 
 export async function updateShopifyOrderTags(
   shopifyOrderId: number,
   existingTags: string | null | undefined,
   workflowStatus: ShopifyWorkflowStatus
-): Promise<void> {
+): Promise<boolean> {
+  if (!isShopifyConfigured()) return false;
+
   const tagPrefix = "natus:";
   const baseTags = (existingTags || "")
     .split(",")
@@ -68,24 +91,27 @@ export async function updateShopifyOrderTags(
 
   baseTags.push(`${tagPrefix}${workflowStatus}`);
 
-  await shopifyFetch(`/orders/${shopifyOrderId}.json`, {
-    method: "PUT",
-    body: JSON.stringify({
-      order: {
-        id: shopifyOrderId,
-        tags: baseTags.join(", "),
-      },
-    }),
-  });
+  try {
+    await shopifyFetch(`/orders/${shopifyOrderId}.json`, {
+      method: "PUT",
+      body: JSON.stringify({
+        order: {
+          id: shopifyOrderId,
+          tags: baseTags.join(", "),
+        },
+      }),
+    });
+    return true;
+  } catch (err) {
+    logShopifySyncFailure("mise à jour tags", err);
+    return false;
+  }
 }
 
 export async function syncShopifyWorkflowStatus(
   shopifyOrderId: number,
   workflowStatus: ShopifyWorkflowStatus,
   existingTags?: string | null
-): Promise<void> {
-  if (!process.env.SHOPIFY_SHOP_DOMAIN || !process.env.SHOPIFY_ACCESS_TOKEN) {
-    return;
-  }
-  await updateShopifyOrderTags(shopifyOrderId, existingTags, workflowStatus);
+): Promise<boolean> {
+  return updateShopifyOrderTags(shopifyOrderId, existingTags, workflowStatus);
 }

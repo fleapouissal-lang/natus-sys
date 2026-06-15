@@ -118,22 +118,31 @@ export function ShopifyOrdersManager({
   showStore = true,
   editable = false,
   enablePosCheckout = false,
+  products = [],
+  posCheckoutPath = "/cashier/pos",
+  defaultDateToday = false,
 }: {
   orders: ShopifyOrder[];
   scopeLabel: string;
   showStore?: boolean;
   editable?: boolean;
   enablePosCheckout?: boolean;
+  products?: import("@/lib/shopify/order-cart").ProductLineLookup[];
+  posCheckoutPath?: string;
+  defaultDateToday?: boolean;
 }) {
   const router = useRouter();
+  const today = toLocalDateKey(new Date());
+  const defaultDateFrom = defaultDateToday ? today : "";
+  const defaultDateTo = defaultDateToday ? today : "";
   const [orders, setOrders] = useState(initialOrders);
   const [pending, startTransition] = useTransition();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [detailOrder, setDetailOrder] = useState<ShopifyOrder | null>(null);
   const [search, setSearch] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState(defaultDateFrom);
+  const [dateTo, setDateTo] = useState(defaultDateTo);
   const [paymentFilter, setPaymentFilter] = useState<"" | ShopifyPaymentType>("");
   const [statusFilter, setStatusFilter] = useState<"" | ShopifyWorkflowStatus>("");
 
@@ -158,8 +167,12 @@ export function ShopifyOrdersManager({
     });
   }, [orders, search, dateFrom, dateTo, paymentFilter, statusFilter]);
 
+  const hasDateFilter = defaultDateToday
+    ? dateFrom !== today || dateTo !== today
+    : Boolean(dateFrom || dateTo);
+
   const hasFilters = Boolean(
-    search || dateFrom || dateTo || paymentFilter || statusFilter
+    search || hasDateFilter || paymentFilter || statusFilter
   );
   const filteredRevenue = filteredOrders.reduce(
     (sum, o) => sum + Number(o.total),
@@ -168,8 +181,8 @@ export function ShopifyOrdersManager({
 
   function resetFilters() {
     setSearch("");
-    setDateFrom("");
-    setDateTo("");
+    setDateFrom(defaultDateFrom);
+    setDateTo(defaultDateTo);
     setPaymentFilter("");
     setStatusFilter("");
   }
@@ -262,6 +275,7 @@ export function ShopifyOrdersManager({
                 {filteredOrders.length}
               </span>{" "}
               commande{filteredOrders.length !== 1 ? "s" : ""}
+              {dateFrom === today && dateTo === today ? " — aujourd'hui" : ""}
             </p>
           </div>
         </div>
@@ -456,6 +470,9 @@ export function ShopifyOrdersManager({
       {detailOrder && (
         <ShopifyOrderDetailModal
           order={detailOrder}
+          products={products}
+          enablePosCheckout={enablePosCheckout}
+          posCheckoutPath={posCheckoutPath}
           onClose={() => setDetailOrder(null)}
         />
       )}

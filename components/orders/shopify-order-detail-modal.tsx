@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   X,
   User,
@@ -9,15 +10,21 @@ import {
   Package,
   Store,
   CreditCard,
+  ShoppingCart,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProductImage } from "@/components/pos/product-image";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   workflowStatusLabel,
   paymentTypeLabel,
 } from "@/lib/shopify/order-status";
+import {
+  resolveProductForLineItem,
+  type ProductLineLookup,
+} from "@/lib/shopify/order-cart";
 import type { ShopifyOrder } from "@/lib/types";
 
 function statusVariant(
@@ -40,13 +47,31 @@ function statusVariant(
 
 export function ShopifyOrderDetailModal({
   order,
+  products = [],
+  enablePosCheckout = false,
+  posCheckoutPath = "/cashier/pos",
   onClose,
 }: {
   order: ShopifyOrder;
+  products?: ProductLineLookup[];
+  enablePosCheckout?: boolean;
+  posCheckoutPath?: string;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const isCod = order.payment_type === "cod";
   const storeName = (order.stores as { name: string } | null)?.name;
+  const canSendToPos =
+    enablePosCheckout &&
+    !order.sale_id &&
+    order.workflow_status !== "cancelled" &&
+    order.workflow_status !== "returned";
+
+  function sendOrderToPos() {
+    if (!canSendToPos) return;
+    router.push(`${posCheckoutPath}?shopify_order=${order.id}`);
+    onClose();
+  }
 
   return (
     <Modal onClose={onClose} size="lg">
@@ -69,7 +94,7 @@ export function ShopifyOrderDetailModal({
         </button>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <Badge variant={isCod ? "warning" : "success"}>
           {paymentTypeLabel(order.payment_type)}
         </Badge>
@@ -77,6 +102,12 @@ export function ShopifyOrderDetailModal({
           {workflowStatusLabel(order.workflow_status)}
         </Badge>
         {order.sale_id && <Badge variant="success">Encaissée en caisse</Badge>}
+        {canSendToPos && (
+          <Button type="button" size="sm" onClick={sendOrderToPos} className="ml-auto">
+            <ShoppingCart className="h-4 w-4" />
+            Envoyer en caisse
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -143,47 +174,58 @@ export function ShopifyOrderDetailModal({
           <Package className="h-4 w-4 text-primary" />
           Produits ({order.line_items.length})
         </h4>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-muted">
-                <th className="pb-2 pr-4 font-medium">Produit</th>
-                <th className="pb-2 pr-4 font-medium">SKU</th>
-                <th className="pb-2 pr-4 text-center font-medium">Qté</th>
-                <th className="pb-2 pr-4 text-right font-medium">P.U.</th>
-                <th className="pb-2 text-right font-medium">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {order.line_items.map((item) => {
-                const unit = parseFloat(item.price) || 0;
-                const lineTotal = unit * item.quantity;
-                return (
-                  <tr key={item.id} className="border-b border-border/60 last:border-0">
-                    <td className="py-2.5 pr-4 font-medium">{item.title}</td>
-                    <td className="py-2.5 pr-4 font-mono text-xs text-muted">
-                      {item.sku || "—"}
-                    </td>
-                    <td className="py-2.5 pr-4 text-center">{item.quantity}</td>
-                    <td className="py-2.5 pr-4 text-right">{formatCurrency(unit)}</td>
-                    <td className="py-2.5 text-right font-medium">
+        <div className="space-y-3">
+          {order.line_items.map((item) => {
+            const unit = parseFloat(item.price) || 0;
+            const lineTotal = unit * item.quantity;
+            const product = resolveProductForLineItem(item, products);
+            const displayProduct = product ?? {
+              id: String(item.id),
+              name: item.title,
+              barcode: item.sku || "",
+              image_url: null,
+              category: null,
+              price: unit,
+            };
+
+            return (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 border border-border/70 bg-surface p-3"
+              >
+                <ProductImage product={displayProduct} size="sm" className="shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium leading-snug">{item.title}</p>
+                  <p className="mt-0.5 font-mono text-xs text-muted">
+                    {item.sku || "—"}
+                  </p>
+                  <p className="mt-1 text-sm text-muted">
+                    {item.quantity} × {formatCurrency(unit)} ={" "}
+                    <span className="font-semibold text-foreground">
                       {formatCurrency(lineTotal)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={4} className="pt-3 text-right font-semibold">
-                  Total commande
-                </td>
-                <td className="pt-3 text-right text-lg font-bold text-primary">
-                  {formatCurrency(order.total)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+                    </span>
+                  </p>
+                </div>
+                {canSendToPos && (
+                  <button
+                    type="button"
+                    onClick={sendOrderToPos}
+                    title="Envoyer la commande en caisse"
+                    aria-label={`Envoyer ${item.title} en caisse`}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center border border-primary/30 bg-champagne/30 text-primary transition-colors hover:bg-champagne/60 cursor-pointer"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+          <span className="font-semibold">Total commande</span>
+          <span className="text-lg font-bold text-primary">
+            {formatCurrency(order.total)}
+          </span>
         </div>
       </section>
 
@@ -194,8 +236,14 @@ export function ShopifyOrderDetailModal({
         </p>
       )}
 
-      <div className="mt-6">
-        <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">
+      <div className="mt-6 flex flex-wrap gap-2">
+        {canSendToPos && (
+          <Button type="button" onClick={sendOrderToPos}>
+            <ShoppingCart className="h-4 w-4" />
+            Préparer en caisse
+          </Button>
+        )}
+        <Button variant="secondary" onClick={onClose}>
           Fermer
         </Button>
       </div>

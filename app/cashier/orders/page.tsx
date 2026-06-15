@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
-import { getStoreById } from "@/lib/inventory";
+import { getStoreById, getProductCatalog } from "@/lib/inventory";
 import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
 
 export default async function CashierOrdersPage() {
@@ -19,6 +19,7 @@ export default async function CashierOrdersPage() {
 
   const store = await getStoreById(profile.store_id);
   const orders = await getShopifyOrders(profile);
+  const products = await getProductCatalog();
   const scopeLabel = getOrdersScopeLabel(profile, { storeName: store?.name });
 
   return (
@@ -37,6 +38,8 @@ export default async function CashierOrdersPage() {
         showStore={false}
         editable
         enablePosCheckout
+        products={products}
+        defaultDateToday
       />
     </div>
   );
