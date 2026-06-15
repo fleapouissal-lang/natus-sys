@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { CartItem, Product, Profile, ShopifyOrder } from "@/lib/types";
 import { getCityFilter, isDirector } from "@/lib/permissions";
 import { canAccessShopifyOrder } from "@/lib/shopify/order-access";
+import { livreurActiveOrderStatuses } from "@/lib/shopify/order-status";
 import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
 import { applyShopifyOrderWorkflowStatus } from "@/lib/shopify/set-workflow-status";
 
@@ -47,7 +48,7 @@ export async function getShopifyOrders(
     dbQuery = dbQuery
       .eq("store_id", profile.store_id)
       .eq("assigned_livreur_id", profile.id)
-      .in("workflow_status", ["ready", "shipping"]);
+      .in("workflow_status", livreurActiveOrderStatuses());
   } else if (profile.role === "manager") {
     const city = profile.city;
     if (!city) return [];

@@ -200,14 +200,8 @@ export function ShopifyOrdersManager({
         setMessage(result.error);
       } else {
         const nextStatus = resolveWorkflowStatusUpdate(status);
-        setOrders((prev) => {
-          if (
-            livreurMode &&
-            (nextStatus === "paid" || nextStatus === "returned")
-          ) {
-            return prev.filter((o) => o.id !== orderId);
-          }
-          return prev.map((o) =>
+        setOrders((prev) =>
+          prev.map((o) =>
             o.id === orderId
               ? {
                   ...o,
@@ -216,8 +210,8 @@ export function ShopifyOrdersManager({
                     nextStatus === "paid" ? "paid" : o.financial_status,
                 }
               : o
-          );
-        });
+          )
+        );
       }
       setActiveId(null);
       router.refresh();
@@ -386,6 +380,7 @@ export function ShopifyOrdersManager({
                 const statusValue = orderStatusSelectValue(order);
                 const canPosCheckout = !order.sale_id && !isCancelled && !isReturned;
                 const canMarkCodPaid =
+                  !livreurMode &&
                   isCod &&
                   Boolean(order.sale_id) &&
                   order.financial_status !== "paid" &&
