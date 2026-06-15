@@ -94,6 +94,11 @@ export function livreurWorkflowStatuses(): ShopifyWorkflowStatus[] {
   return ["delivered", "returned"];
 }
 
+/** Statuts livreur — livraisons actives (hors retours). */
+export function livreurDeliveryOrderStatuses(): ShopifyWorkflowStatus[] {
+  return ["ready", "shipping", "delivered", "paid"];
+}
+
 /** Statuts visibles par le livreur (du jour : en attente, en route, clôturées). */
 export function livreurActiveOrderStatuses(): ShopifyWorkflowStatus[] {
   return ["ready", "shipping", "delivered", "paid", "returned"];

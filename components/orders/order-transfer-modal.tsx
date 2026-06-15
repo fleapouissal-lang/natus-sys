@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { ArrowRightLeft, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { StoreSelect } from "@/components/stores/store-select";
-import { transferShopifyOrder } from "@/lib/actions";
+import {
+  autoRouteShopifyOrder,
+  suggestShopifyOrderRoute,
+  transferShopifyOrder,
+} from "@/lib/actions";
 import type { ShopifyOrder, Store } from "@/lib/types";
 
 export function OrderTransferModal({
@@ -21,10 +25,61 @@ export function OrderTransferModal({
 }) {
   const availableTargets = targets.filter((store) => store.id !== order.store_id);
   const [targetStoreId, setTargetStoreId] = useState("");
+  const [routeReason, setRouteReason] = useState<string | null>(null);
+  const [currentStoreCanFulfill, setCurrentStoreCanFulfill] = useState(false);
+  const [loadingSuggestion, setLoadingSuggestion] = useState(true);
+  const [manualMode, setManualMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function handleTransfer() {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSuggestion() {
+      setLoadingSuggestion(true);
+      const result = await suggestShopifyOrderRoute(order.id);
+      if (cancelled) return;
+
+      if ("error" in result) {
+        setError(result.error);
+        setLoadingSuggestion(false);
+        return;
+      }
+
+      setCurrentStoreCanFulfill(result.currentStoreCanFulfill);
+      setRouteReason(result.reason);
+
+      if (
+        !result.currentStoreCanFulfill &&
+        result.targetStoreId &&
+        result.targetStoreId !== order.store_id
+      ) {
+        setTargetStoreId(result.targetStoreId);
+      }
+
+      setLoadingSuggestion(false);
+    }
+
+    loadSuggestion();
+    return () => {
+      cancelled = true;
+    };
+  }, [order.id, order.store_id]);
+
+  function handleAutoRoute() {
+    setError(null);
+    startTransition(async () => {
+      const result = await autoRouteShopifyOrder(order.id);
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      onTransferred();
+      onClose();
+    });
+  }
+
+  function handleManualTransfer() {
     if (!targetStoreId) {
       setError("Choisissez un magasin de destination");
       return;
@@ -50,7 +105,7 @@ export function OrderTransferModal({
         <div>
           <h3 className="text-lg font-semibold">Transférer la commande</h3>
           <p className="mt-1 text-sm text-muted">
-            {order.order_number} — la commande quittera votre magasin
+            {order.order_number} — routage selon le stock disponible
           </p>
         </div>
         <button
@@ -63,27 +118,61 @@ export function OrderTransferModal({
         </button>
       </div>
 
-      <p className="mb-4 text-sm text-muted">
-        Transférez vers un autre magasin de la même ville ou vers le hub stock Casablanca
-        si le stock est insuffisant chez vous.
-      </p>
-
-      {availableTargets.length === 0 ? (
-        <p className="text-sm text-muted">Aucun magasin de destination disponible.</p>
-      ) : (
-        <StoreSelect
-          stores={availableTargets}
-          value={targetStoreId}
-          onChange={setTargetStoreId}
-          label="Magasin de destination"
-          required
-        />
-      )}
-
-      {targetStore?.is_hub && (
-        <p className="mt-2 text-xs text-primary">
-          Hub stock parent — préparation centralisée à Casablanca
+      {loadingSuggestion ? (
+        <p className="text-sm text-muted">Analyse du stock en cours…</p>
+      ) : currentStoreCanFulfill ? (
+        <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">
+          Stock suffisant dans ce magasin — aucun transfert nécessaire.
         </p>
+      ) : (
+        <>
+          {routeReason && (
+            <p className="mb-4 rounded-lg bg-primary/5 px-3 py-2 text-sm text-foreground">
+              {routeReason}
+              {targetStore && !manualMode && (
+                <>
+                  {" "}
+                  → <span className="font-medium">{targetStore.name}</span>
+                </>
+              )}
+            </p>
+          )}
+
+          <p className="mb-4 text-sm text-muted">
+            Un magasin de la même ville avec tout le stock est choisi en priorité.
+            Sinon la commande part au hub stock Casablanca.
+          </p>
+
+          {!manualMode ? (
+            <button
+              type="button"
+              onClick={() => setManualMode(true)}
+              className="text-sm text-primary underline-offset-2 hover:underline cursor-pointer"
+            >
+              Choisir manuellement la destination
+            </button>
+          ) : (
+            <>
+              {availableTargets.length === 0 ? (
+                <p className="text-sm text-muted">Aucun magasin de destination disponible.</p>
+              ) : (
+                <StoreSelect
+                  stores={availableTargets}
+                  value={targetStoreId}
+                  onChange={setTargetStoreId}
+                  label="Magasin de destination"
+                  required
+                />
+              )}
+            </>
+          )}
+
+          {targetStore?.is_hub && (
+            <p className="mt-2 text-xs text-primary">
+              Hub stock parent — préparation centralisée à Casablanca
+            </p>
+          )}
+        </>
       )}
 
       {error && (
@@ -92,17 +181,19 @@ export function OrderTransferModal({
 
       <div className="mt-6 flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
-          Annuler
+          {currentStoreCanFulfill ? "Fermer" : "Annuler"}
         </Button>
-        <Button
-          type="button"
-          onClick={handleTransfer}
-          loading={pending}
-          disabled={availableTargets.length === 0}
-        >
-          <ArrowRightLeft className="h-4 w-4" />
-          Transférer
-        </Button>
+        {!currentStoreCanFulfill && !loadingSuggestion && (
+          <Button
+            type="button"
+            onClick={manualMode ? handleManualTransfer : handleAutoRoute}
+            loading={pending}
+            disabled={manualMode && (availableTargets.length === 0 || !targetStoreId)}
+          >
+            <ArrowRightLeft className="h-4 w-4" />
+            {manualMode ? "Transférer" : "Router automatiquement"}
+          </Button>
+        )}
       </div>
     </Modal>
   );

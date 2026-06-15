@@ -483,12 +483,6 @@ export function PosTerminal({
                   className="w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted"
                   autoComplete="off"
                 />
-                <Badge
-                  variant={stockScannerActive ? "accent" : "default"}
-                  className={cn("shrink-0", !stockScannerActive && "bg-page text-muted")}
-                >
-                  {stockScannerActive ? "Actif" : "Inactif"}
-                </Badge>
               </div>
             </Card>
 

@@ -531,6 +531,7 @@ export async function completeShopifyOrderSale(
   revalidatePath("/cashier/sales");
   revalidatePath("/manager/orders");
   revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
   revalidatePath("/livreur/orders");
 
   return { success: true, saleId: null };
@@ -558,6 +559,7 @@ export async function prepareShopifyOrderForPos(
   revalidatePath("/cashier/orders");
   revalidatePath("/manager/orders");
   revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
   revalidatePath("/livreur/orders");
 
   return { success: true, status: result.status };
@@ -696,6 +698,7 @@ export async function syncShopifyOrders(): Promise<
     }
 
     revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
     revalidatePath("/manager/orders");
     revalidatePath("/cashier/orders");
 
@@ -729,6 +732,9 @@ export async function updateShopifyOrderStatus(
     const allowed = livreurWorkflowStatuses();
     if (!allowed.includes(workflowStatus)) {
       return { error: "Statut non autorisé pour le livreur" };
+    }
+    if (workflowStatus === "returned") {
+      return { error: "Utilisez le bouton Retour pour saisir une note obligatoire" };
     }
     if (order.workflow_status !== "shipping") {
       return {
@@ -789,9 +795,192 @@ export async function updateShopifyOrderStatus(
   await syncShopifyWorkflowStatus(order.shopify_order_id, effectiveStatus);
 
   revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
   revalidatePath("/manager/orders");
   revalidatePath("/cashier/orders");
   revalidatePath("/livreur/orders");
+
+  return { success: true };
+}
+
+export async function markShopifyOrderReturned(
+  orderId: string,
+  note: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["livreur"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { validateReturnNote } = await import("@/lib/shopify/return-note");
+  const noteError = validateReturnNote(note);
+  if (noteError) return { error: noteError };
+
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+  const order = await getShopifyOrderById(orderId);
+  if (!order) return { error: "Commande introuvable" };
+  if (!(await canAccessShopifyOrder(profile, order))) return { error: "Accès refusé" };
+
+  if (order.workflow_status !== "shipping") {
+    return {
+      error:
+        "Seules les livraisons en cours peuvent être marquées en retour",
+    };
+  }
+
+  const now = new Date().toISOString();
+  const trimmedNote = note.trim();
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+
+  const { error } = await admin
+    .from("shopify_orders")
+    .update({
+      workflow_status: "returned",
+      return_note: trimmedNote,
+      return_note_at: now,
+      return_note_by: profile.id,
+      updated_at: now,
+    })
+    .eq("id", orderId);
+
+  if (error) return { error: error.message };
+
+  const { syncShopifyWorkflowStatus } = await import("@/lib/shopify/update-order");
+  await syncShopifyWorkflowStatus(order.shopify_order_id, "returned");
+
+  revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
+  revalidatePath("/manager/orders");
+  revalidatePath("/cashier/orders");
+  revalidatePath("/cashier/returns");
+  revalidatePath("/livreur/orders");
+  revalidatePath("/livreur/returns");
+
+  return { success: true };
+}
+
+export async function updateShopifyOrderReturnNote(
+  orderId: string,
+  note: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["livreur"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { validateReturnNote, canLivreurEditReturnNote } = await import(
+    "@/lib/shopify/return-note"
+  );
+  const noteError = validateReturnNote(note);
+  if (noteError) return { error: noteError };
+
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+  const order = await getShopifyOrderById(orderId);
+  if (!order) return { error: "Commande introuvable" };
+  if (!(await canAccessShopifyOrder(profile, order))) return { error: "Accès refusé" };
+
+  if (!canLivreurEditReturnNote(order, profile.id)) {
+    return { error: "Délai de modification dépassé (2 h)" };
+  }
+
+  const trimmedNote = note.trim();
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+
+  const { error } = await admin
+    .from("shopify_orders")
+    .update({
+      return_note: trimmedNote,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", orderId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/livreur/orders");
+  revalidatePath("/livreur/returns");
+  revalidatePath("/cashier/returns");
+  revalidatePath("/manager/orders");
+  revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
+
+  return { success: true };
+}
+
+export async function confirmShopifyOrderReturn(
+  orderId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+  const { orderLineItemsToRestockPayload } = await import("@/lib/shopify/order-restock");
+  const { getProductCatalog } = await import("@/lib/inventory");
+
+  const order = await getShopifyOrderById(orderId);
+  if (!order) return { error: "Commande introuvable" };
+  if (!(await canAccessShopifyOrder(profile, order))) return { error: "Accès refusé" };
+
+  if (order.workflow_status !== "returned") {
+    return { error: "Cette commande n'est pas en retour" };
+  }
+
+  if (!order.fulfilled_at) {
+    return { error: "Commande non préparée — aucun stock à remettre" };
+  }
+
+  if (order.return_received_at) {
+    return { error: "Retour déjà réceptionné en magasin" };
+  }
+
+  if (!order.store_id) {
+    return { error: "Commande sans magasin assigné" };
+  }
+
+  const products = await getProductCatalog();
+  const { items, missing } = orderLineItemsToRestockPayload(order.line_items, products);
+
+  if (items.length === 0) {
+    return {
+      error:
+        missing.length > 0
+          ? `Produits non trouvés : ${missing.join(", ")}`
+          : "Aucun produit à remettre en stock",
+    };
+  }
+
+  const supabase = await createClient();
+  const { error: restockError } = await supabase.rpc("restore_shopify_return_stock", {
+    p_items: items,
+    p_store_id: order.store_id,
+  });
+
+  if (restockError) return { error: restockError.message };
+
+  const now = new Date().toISOString();
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+
+  const { error } = await admin
+    .from("shopify_orders")
+    .update({
+      return_received_at: now,
+      return_received_by: profile.id,
+      updated_at: now,
+    })
+    .eq("id", orderId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/cashier/returns");
+  revalidatePath("/cashier/orders");
+  revalidatePath("/manager/orders");
+  revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
+  revalidatePath("/livreur/returns");
 
   return { success: true };
 }
@@ -847,6 +1036,7 @@ export async function handOrderToLivreur(
   revalidatePath("/cashier/orders");
   revalidatePath("/manager/orders");
   revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
   revalidatePath("/livreur/orders");
 
   return { success: true };
@@ -921,6 +1111,7 @@ export async function markShopifyCodPaid(
   await syncShopifyWorkflowStatus(order.shopify_order_id, "paid");
 
   revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
   revalidatePath("/manager/orders");
   revalidatePath("/cashier/orders");
   revalidatePath("/cashier/sales");
@@ -1007,9 +1198,107 @@ export async function transferShopifyOrder(
   if (error) return { error: error.message };
 
   revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
   revalidatePath("/manager/orders");
   revalidatePath("/cashier/orders");
   revalidatePath("/livreur/orders");
 
   return { success: true };
+}
+
+export async function suggestShopifyOrderRoute(orderId: string): Promise<
+  | {
+      targetStoreId: string | null;
+      targetStoreName: string | null;
+      routedToHub: boolean;
+      currentStoreCanFulfill: boolean;
+      reason: string;
+    }
+  | { error: string }
+> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+  const { resolveOrderStoreByStock } = await import("@/lib/shopify/assign-order-by-stock");
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+
+  const order = await getShopifyOrderById(orderId);
+  if (!order) return { error: "Commande introuvable" };
+  if (!(await canAccessShopifyOrder(profile, order))) return { error: "Accès refusé" };
+  if (!order.store_id) return { error: "Commande sans magasin assigné" };
+
+  const { data: fromStore } = await admin
+    .from("stores")
+    .select("id, name, city, address, lat, lng, is_hub")
+    .eq("id", order.store_id)
+    .maybeSingle();
+
+  if (!fromStore) return { error: "Magasin introuvable" };
+
+  const { data: cityStores } = await admin
+    .from("stores")
+    .select("id, name, city, address, lat, lng, is_hub")
+    .eq("is_active", true)
+    .eq("city", fromStore.city);
+
+  const { data: hubStore } = await admin
+    .from("stores")
+    .select("id, name, city, is_hub")
+    .eq("is_active", true)
+    .eq("is_hub", true)
+    .maybeSingle();
+
+  const { data: products } = await admin.from("products").select("id, name, barcode");
+
+  async function updateStoreCoords(id: string, lat: number, lng: number) {
+    await admin.from("stores").update({ lat, lng }).eq("id", id);
+  }
+
+  return resolveOrderStoreByStock({
+    supabase: admin,
+    lineItems: order.line_items,
+    products: products || [],
+    retailStores: cityStores || [],
+    hubStore,
+    shippingAddress: order.shipping_address || fromStore.city,
+    shippingLat: order.shipping_lat,
+    shippingLng: order.shipping_lng,
+    updateStoreCoords,
+    currentStoreId: order.store_id,
+  });
+}
+
+export async function autoRouteShopifyOrder(
+  orderId: string
+): Promise<{ success: true; targetStoreName: string } | { error: string }> {
+  const suggestion = await suggestShopifyOrderRoute(orderId);
+  if ("error" in suggestion) return suggestion;
+
+  if (suggestion.currentStoreCanFulfill) {
+    return { error: "Stock suffisant dans ce magasin — transfert inutile" };
+  }
+
+  if (!suggestion.targetStoreId) {
+    return { error: "Aucune destination disponible" };
+  }
+
+  const { getShopifyOrderById } = await import("@/lib/shopify/order-access");
+  const order = await getShopifyOrderById(orderId);
+  if (!order?.store_id) return { error: "Commande introuvable" };
+
+  if (suggestion.targetStoreId === order.store_id) {
+    return { error: "Aucun autre magasin avec stock complet dans la ville" };
+  }
+
+  const result = await transferShopifyOrder(orderId, suggestion.targetStoreId);
+  if ("error" in result) return result;
+
+  return {
+    success: true,
+    targetStoreName: suggestion.targetStoreName || "magasin destination",
+  };
 }

@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { CartItem, Product, Profile, ShopifyOrder } from "@/lib/types";
 import { getCityFilter, isDirector, isManager } from "@/lib/permissions";
 import { canAccessShopifyOrder } from "@/lib/shopify/order-access";
-import { livreurActiveOrderStatuses } from "@/lib/shopify/order-status";
+import { livreurDeliveryOrderStatuses } from "@/lib/shopify/order-status";
 import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
 import { applyShopifyOrderWorkflowStatus } from "@/lib/shopify/set-workflow-status";
 
@@ -24,6 +24,13 @@ export interface ShopifyOrderPosLoad {
 export interface OrdersQuery {
   city?: string | null;
   storeId?: string | null;
+  /** Exclure un magasin (ex. hub sur la liste générale directeur). */
+  excludeStoreId?: string | null;
+  /** Filtrer par statut(s) workflow. */
+  workflowStatus?: ShopifyOrder["workflow_status"] | null;
+  workflowStatuses?: ShopifyOrder["workflow_status"][] | null;
+  /** Retours en attente de réception caisse (returned + fulfilled, pas encore reçu). */
+  returnPendingReceipt?: boolean;
   limit?: number;
 }
 
@@ -31,7 +38,11 @@ async function attachStoreNamesToOrders(
   orders: ShopifyOrder[]
 ): Promise<ShopifyOrder[]> {
   const storeIds = [
-    ...new Set(orders.map((order) => order.store_id).filter(Boolean)),
+    ...new Set(
+      orders.flatMap((order) =>
+        [order.store_id, order.transferred_from_store_id].filter(Boolean)
+      )
+    ),
   ] as string[];
 
   if (storeIds.length === 0) return orders;
@@ -58,6 +69,9 @@ async function attachStoreNamesToOrders(
   return orders.map((order) => ({
     ...order,
     stores: order.store_id ? byId[order.store_id] ?? null : null,
+    transferred_from_store: order.transferred_from_store_id
+      ? byId[order.transferred_from_store_id] ?? null
+      : null,
   }));
 }
 
@@ -77,12 +91,26 @@ export async function getShopifyOrders(
   if (profile.role === "cashier") {
     if (!profile.store_id) return [];
     dbQuery = dbQuery.eq("store_id", profile.store_id);
+    if (query.returnPendingReceipt) {
+      dbQuery = dbQuery
+        .eq("workflow_status", "returned")
+        .not("fulfilled_at", "is", null)
+        .is("return_received_at", null);
+    } else if (query.workflowStatus) {
+      dbQuery = dbQuery.eq("workflow_status", query.workflowStatus);
+    }
   } else if (profile.role === "livreur") {
     if (!profile.store_id) return [];
     dbQuery = dbQuery
       .eq("store_id", profile.store_id)
-      .eq("assigned_livreur_id", profile.id)
-      .in("workflow_status", livreurActiveOrderStatuses());
+      .eq("assigned_livreur_id", profile.id);
+    if (query.workflowStatus === "returned") {
+      dbQuery = dbQuery.eq("workflow_status", "returned");
+    } else if (query.workflowStatuses?.length) {
+      dbQuery = dbQuery.in("workflow_status", query.workflowStatuses);
+    } else {
+      dbQuery = dbQuery.in("workflow_status", livreurDeliveryOrderStatuses());
+    }
   } else if (profile.role === "manager") {
     const city = profile.city;
     if (!city) return [];
@@ -91,6 +119,7 @@ export async function getShopifyOrders(
   } else if (isDirector(profile)) {
     if (query.city) dbQuery = dbQuery.eq("city", query.city);
     if (query.storeId) dbQuery = dbQuery.eq("store_id", query.storeId);
+    if (query.excludeStoreId) dbQuery = dbQuery.neq("store_id", query.excludeStoreId);
   }
 
   const { data, error } = await dbQuery;

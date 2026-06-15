@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { assignClosestStore } from "@/lib/shopify/assign-store";
+import { resolveOrderStoreByStock } from "@/lib/shopify/assign-order-by-stock";
 import {
   formatShippingAddress,
   geocodeAddress,
@@ -62,21 +62,24 @@ export async function processShopifyOrder(
 
   const { data: cityStores } = await supabase
     .from("stores")
-    .select("id, name, city, address, lat, lng")
+    .select("id, name, city, address, lat, lng, is_hub")
     .eq("is_active", true)
     .eq("city", city);
+
+  const { data: hubStore } = await supabase
+    .from("stores")
+    .select("id, name, city, is_hub")
+    .eq("is_active", true)
+    .eq("is_hub", true)
+    .maybeSingle();
+
+  const { data: products } = await supabase
+    .from("products")
+    .select("id, name, barcode");
 
   async function updateStoreCoords(id: string, lat: number, lng: number) {
     await supabase.from("stores").update({ lat, lng }).eq("id", id);
   }
-
-  const storeId = await assignClosestStore(
-    cityStores || [],
-    shippingAddress,
-    shippingLat,
-    shippingLng,
-    updateStoreCoords
-  );
 
   const lineItems = order.line_items.map((item) => ({
     id: item.id,
@@ -86,6 +89,21 @@ export async function processShopifyOrder(
     sku: item.sku,
     variant_id: item.variant_id,
   }));
+
+  const route = await resolveOrderStoreByStock({
+    supabase,
+    lineItems,
+    products: products || [],
+    retailStores: cityStores || [],
+    hubStore,
+    shippingAddress,
+    shippingLat,
+    shippingLng,
+    updateStoreCoords,
+  });
+
+  const storeId = route.targetStoreId;
+  const orderCity = route.routedToHub && hubStore ? hubStore.city : city;
 
   const paymentType = detectPaymentType(order);
   const workflowStatus = resolveWorkflowStatus(order);
@@ -134,7 +152,7 @@ export async function processShopifyOrder(
     shopify_order_id: order.id,
     order_number: order.name || `#${order.order_number}`,
     store_id: storeId,
-    city,
+    city: orderCity,
     customer_name: resolveCustomerName(order),
     customer_email: order.email || order.customer?.email || null,
     customer_phone: order.phone || shipping?.phone || order.customer?.phone || null,

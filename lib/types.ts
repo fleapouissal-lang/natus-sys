@@ -223,6 +223,11 @@ export interface ShopifyOrder {
   transferred_at: string | null;
   transferred_by: string | null;
   assigned_livreur_id: string | null;
+  return_note: string | null;
+  return_note_at: string | null;
+  return_note_by: string | null;
+  return_received_at: string | null;
+  return_received_by: string | null;
   total: number;
   currency: string;
   line_items: ShopifyLineItemRow[];
@@ -231,4 +236,5 @@ export interface ShopifyOrder {
   created_at: string;
   updated_at: string;
   stores?: Pick<Store, "name" | "city"> | null;
+  transferred_from_store?: Pick<Store, "name" | "city"> | null;
 }

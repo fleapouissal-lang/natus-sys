@@ -3,7 +3,6 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import {
-  Barcode,
   Search,
   CheckCircle2,
   LayoutGrid,
@@ -211,8 +210,7 @@ export function ProductCatalog({
   orderMode?: boolean;
   compact?: boolean;
 }) {
-  const [barcodeQuery, setBarcodeQuery] = useState("");
-  const [nameQuery, setNameQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const categories = useMemo(() => {
@@ -227,10 +225,12 @@ export function ProductCatalog({
     (code: string) => {
       const trimmed = code.trim();
       if (!trimmed) return;
+      const exactBarcode = products.some((p) => p.barcode === trimmed);
+      if (!exactBarcode) return;
       onBarcodeScan?.(trimmed);
-      setBarcodeQuery("");
+      setSearchQuery("");
     },
-    [onBarcodeScan]
+    [onBarcodeScan, products]
   );
 
   const { inputRef, handleKeyDown, handleChange, focusInput } = useBarcodeScanner({
@@ -241,17 +241,17 @@ export function ProductCatalog({
 
   const scannerActive = scannerEnabled;
 
-  const handleBarcodeChange = useCallback(
+  const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       handleChange(e);
-      setBarcodeQuery(e.target.value);
+      setSearchQuery(e.target.value);
     },
     [handleChange]
   );
 
   useEffect(() => {
     if (scannerEnabled) {
-      setBarcodeQuery("");
+      setSearchQuery("");
       focusInput();
     }
   }, [scannerEnabled, focusInput]);
@@ -261,17 +261,16 @@ export function ProductCatalog({
     if (selectedCategory) {
       list = list.filter((p) => p.category === selectedCategory);
     }
-    const barcode = barcodeQuery.trim().toLowerCase();
-    const name = nameQuery.trim().toLowerCase();
-
-    if (barcode) {
-      list = list.filter((p) => p.barcode.toLowerCase().includes(barcode));
-    }
-    if (name) {
-      list = list.filter((p) => p.name.toLowerCase().includes(name));
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.barcode.toLowerCase().includes(q)
+      );
     }
     return list;
-  }, [products, barcodeQuery, nameQuery, selectedCategory]);
+  }, [products, searchQuery, selectedCategory]);
 
   if (products.length === 0) {
     return (
@@ -288,56 +287,36 @@ export function ProductCatalog({
       />
 
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <div
-            role="button"
-            tabIndex={-1}
-            onClick={() => focusInput()}
+        <div
+          role="button"
+          tabIndex={-1}
+          onClick={() => focusInput()}
+          className={cn(
+            "flex cursor-text items-center gap-2 rounded-full border bg-page px-4 py-2",
+            scannerActive ? "border-primary" : "border-border"
+          )}
+        >
+          <Search
             className={cn(
-              "flex min-w-0 flex-1 cursor-text items-center gap-2 rounded-full border bg-page px-4 py-2",
-              scannerActive ? "border-primary" : "border-border"
+              "h-4 w-4 shrink-0",
+              scannerActive ? "text-primary" : "text-muted"
             )}
-          >
-            <Barcode
-              className={cn(
-                "h-4 w-4 shrink-0",
-                scannerActive ? "text-primary" : "text-muted"
-              )}
-            />
-            <input
-              ref={inputRef}
-              type="text"
-              value={barcodeQuery ?? ""}
-              onKeyDown={handleKeyDown}
-              onChange={handleBarcodeChange}
-              onFocus={() => focusInput()}
-              placeholder={
-                scannerActive
-                  ? "Passez le code-barres devant le lecteur…"
-                  : "Scanner indisponible"
-              }
-              autoComplete="off"
-              className="natus-filter-inline-input w-full cursor-default border-0 bg-transparent py-0 text-sm outline-none placeholder:text-muted"
-            />
-            <Badge
-              variant={scannerActive ? "accent" : "default"}
-              className={cn("shrink-0", !scannerActive && "bg-page text-muted")}
-            >
-              {scannerActive ? "Actif" : "Inactif"}
-            </Badge>
-          </div>
-
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-primary bg-page px-4 py-2">
-            <Search className="h-4 w-4 shrink-0 text-primary" />
-            <input
-              type="text"
-              value={nameQuery}
-              onChange={(e) => setNameQuery(e.target.value)}
-              placeholder="Nom du produit…"
-              autoComplete="off"
-              className="natus-filter-inline-input w-full border-0 bg-transparent py-0 text-sm outline-none placeholder:text-muted"
-            />
-          </div>
+          />
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchQuery}
+            onKeyDown={handleKeyDown}
+            onChange={handleSearchChange}
+            onFocus={() => focusInput()}
+            placeholder={
+              scannerActive
+                ? "Nom ou code-barres — scannez pour ajouter"
+                : "Nom ou code-barres…"
+            }
+            autoComplete="off"
+            className="natus-filter-inline-input w-full cursor-default border-0 bg-transparent py-0 text-sm outline-none placeholder:text-muted"
+          />
         </div>
 
         <p className="text-xs text-muted">

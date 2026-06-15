@@ -18,9 +18,10 @@ import {
   Truck,
   PanelLeftClose,
   PanelLeftOpen,
+  RotateCcw,
+  Boxes,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
 import { getRoleLabel, getManagementBasePath } from "@/lib/permissions";
 import type { UserRole } from "@/lib/types";
@@ -28,7 +29,7 @@ import type { UserRole } from "@/lib/types";
 const SIDEBAR_COLLAPSED_KEY = "natus-sidebar-collapsed";
 
 function buildManagementLinks(basePath: "/director" | "/manager") {
-  return [
+  const links = [
     { href: basePath, label: "Tableau de bord", icon: LayoutDashboard },
     { href: `${basePath}/products`, label: "Produits", icon: Package },
     { href: `${basePath}/stores`, label: "Magasins", icon: Store },
@@ -39,16 +40,28 @@ function buildManagementLinks(basePath: "/director" | "/manager") {
     { href: `${basePath}/users`, label: "Utilisateurs", icon: Users },
     { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
   ];
+
+  if (basePath === "/director") {
+    links.splice(6, 0, {
+      href: "/director/hub",
+      label: "Hub stock",
+      icon: Boxes,
+    });
+  }
+
+  return links;
 }
 
 const cashierLinks = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
   { href: "/cashier/orders", label: "Commandes", icon: ShoppingBag },
+  { href: "/cashier/returns", label: "Retours magasin", icon: RotateCcw },
   { href: "/cashier/sales", label: "Mes ventes", icon: History },
 ];
 
 const livreurLinks = [
   { href: "/livreur/orders", label: "Mes livraisons", icon: Truck },
+  { href: "/livreur/returns", label: "Mes retours", icon: RotateCcw },
 ];
 
 function getInitials(name: string) {
@@ -79,6 +92,19 @@ function UserAvatar({
     >
       {getInitials(name)}
     </div>
+  );
+}
+
+function SidebarBrand({ collapsed }: { collapsed?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "font-heading font-bold tracking-tight text-primary",
+        collapsed ? "text-lg" : "text-2xl"
+      )}
+    >
+      {collapsed ? "N" : "Natus"}
+    </span>
   );
 }
 
@@ -145,7 +171,7 @@ export function Sidebar({
       {collapsed ? (
         <>
           <div className="flex shrink-0 flex-col items-center gap-3 px-2 py-3">
-            <Logo size="sm" collapsed />
+            <SidebarBrand collapsed />
             <UserAvatar name={userName} title={userName} />
           </div>
 
@@ -165,7 +191,7 @@ export function Sidebar({
       ) : (
         <div className="relative shrink-0 border-b border-black/10">
           <div className="relative flex items-center border-b border-black/10 px-4 py-5">
-            <Logo size="md" />
+            <SidebarBrand />
 
             <button
               type="button"

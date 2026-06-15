@@ -20,19 +20,24 @@ export default async function DirectorOrdersPage({
 
   const stores = await getActiveStores(null);
   const hubStore = await getHubStore();
-  const transferTargets = hubStore
-    ? [...stores.filter((s) => s.id !== hubStore.id), hubStore]
+  const retailStores = hubStore
+    ? stores.filter((s) => s.id !== hubStore.id)
     : stores;
-  const selectedCity = cityParam && stores.some((s) => s.city === cityParam) ? cityParam : "";
+  const transferTargets = hubStore
+    ? [...retailStores.filter((s) => !s.is_hub), hubStore]
+    : stores;
+  const selectedCity =
+    cityParam && retailStores.some((s) => s.city === cityParam) ? cityParam : "";
   const selectedStoreId =
-    storeParam && stores.some((s) => s.id === storeParam) ? storeParam : "";
+    storeParam && retailStores.some((s) => s.id === storeParam) ? storeParam : "";
   const selectedStore = selectedStoreId
-    ? getSelectedStore(stores, selectedStoreId)
+    ? getSelectedStore(retailStores, selectedStoreId)
     : undefined;
 
   const orders = await getShopifyOrders(profile, {
     city: selectedCity || null,
     storeId: selectedStoreId || null,
+    excludeStoreId: hubStore?.id ?? null,
   });
   const products = await getProductCatalog();
 
@@ -47,7 +52,7 @@ export default async function DirectorOrdersPage({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Commandes Shopify</h1>
           <p className="mt-1 text-muted">
-            Toutes les commandes en ligne — affectation auto par ville et proximité
+            Commandes magasins — le hub stock a sa propre page
           </p>
         </div>
         <ShopifySyncButton />
@@ -55,7 +60,7 @@ export default async function DirectorOrdersPage({
 
       <Suspense fallback={null}>
         <CityStoreFilterBar
-          stores={stores}
+          stores={retailStores}
           selectedCity={selectedCity}
           selectedStoreId={selectedStoreId}
         />

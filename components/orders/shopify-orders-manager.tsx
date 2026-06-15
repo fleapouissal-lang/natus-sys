@@ -3,12 +3,13 @@
 import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, Eye, Loader2, RotateCcw, Search, ShoppingCart, Truck, Wallet, PackageCheck, ArrowRightLeft } from "lucide-react";
+import { Banknote, Eye, Loader2, RotateCcw, Search, ShoppingCart, Truck, Wallet, PackageCheck, ArrowRightLeft, Pencil } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShopifyOrderDetailModal } from "@/components/orders/shopify-order-detail-modal";
 import { OrderTransferModal } from "@/components/orders/order-transfer-modal";
+import { ReturnNoteModal } from "@/components/orders/return-note-modal";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { DateInputField } from "@/components/ui/date-input-field";
 import { formatCurrency, formatDate, cn, toLocalDateKey } from "@/lib/utils";
@@ -28,7 +29,8 @@ import {
   isShopifyOrderFulfilled,
 } from "@/lib/shopify/order-status";
 import { canTransferShopifyOrder } from "@/lib/shopify/order-transfer";
-import { updateShopifyOrderStatus, markShopifyCodPaid, handOrderToLivreur } from "@/lib/actions";
+import { canLivreurEditReturnNote } from "@/lib/shopify/return-note";
+import { updateShopifyOrderStatus, markShopifyCodPaid, handOrderToLivreur, confirmShopifyOrderReturn } from "@/lib/actions";
 import type { ShopifyOrder, ShopifyPaymentType, ShopifyWorkflowStatus, Store } from "@/lib/types";
 
 const STATUS_CELL_WIDTH = "w-[172px]";
@@ -81,6 +83,31 @@ function statusVariant(
 
 const COD_ACTION_BORDER = ACTION_COLOR;
 
+function IconStatus({
+  label,
+  tone,
+  children,
+}: {
+  label: string;
+  tone: "prepared" | "paid";
+  children: ReactNode;
+}) {
+  return (
+    <span
+      title={label}
+      aria-label={label}
+      className={cn(
+        "order-action-icon flex h-8 w-8 shrink-0 items-center justify-center border",
+        tone === "paid"
+          ? "border-success/40 bg-success/5 text-success"
+          : "border-primary/30 bg-page text-muted"
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 function IconAction({
   label,
   onClick,
@@ -119,12 +146,16 @@ export function ShopifyOrdersManager({
   orders: initialOrders,
   scopeLabel,
   showStore = true,
+  showTransferOrigin = false,
   editable = false,
   enablePosCheckout = false,
   products = [],
   posCheckoutPath = "/cashier/pos",
   defaultDateToday = false,
   livreurMode = false,
+  returnsPageMode = false,
+  cashierReturnsMode = false,
+  livreurProfileId,
   enableLivreurHandoff = false,
   enableOrderTransfer = false,
   transferTargets = [],
@@ -133,12 +164,16 @@ export function ShopifyOrdersManager({
   orders: ShopifyOrder[];
   scopeLabel: string;
   showStore?: boolean;
+  showTransferOrigin?: boolean;
   editable?: boolean;
   enablePosCheckout?: boolean;
   products?: import("@/lib/shopify/order-cart").ProductLineLookup[];
   posCheckoutPath?: string;
   defaultDateToday?: boolean;
   livreurMode?: boolean;
+  returnsPageMode?: boolean;
+  cashierReturnsMode?: boolean;
+  livreurProfileId?: string;
   enableLivreurHandoff?: boolean;
   enableOrderTransfer?: boolean;
   transferTargets?: Store[];
@@ -154,6 +189,10 @@ export function ShopifyOrdersManager({
   const [message, setMessage] = useState<string | null>(null);
   const [detailOrder, setDetailOrder] = useState<ShopifyOrder | null>(null);
   const [transferOrder, setTransferOrder] = useState<ShopifyOrder | null>(null);
+  const [returnNoteOrder, setReturnNoteOrder] = useState<{
+    order: ShopifyOrder;
+    mode: "create" | "edit";
+  } | null>(null);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState(defaultDateFrom);
   const [dateTo, setDateTo] = useState(defaultDateTo);
@@ -268,7 +307,24 @@ export function ShopifyOrdersManager({
     });
   }
 
-  const colSpan = (showStore ? 1 : 0) + 8;
+  function handleConfirmReturn(orderId: string) {
+    setMessage(null);
+    setActiveId(orderId);
+    startTransition(async () => {
+      const result = await confirmShopifyOrderReturn(orderId);
+      if ("error" in result) {
+        setMessage(result.error);
+      } else {
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      }
+      setActiveId(null);
+      router.refresh();
+    });
+  }
+
+  const showReturnNotes = returnsPageMode || cashierReturnsMode;
+  const colSpan =
+    (showStore ? 1 : 0) + (showTransferOrigin ? 1 : 0) + (showReturnNotes ? 1 : 0) + 8;
 
   return (
     <>
@@ -361,8 +417,16 @@ export function ShopifyOrdersManager({
                 {showStore && (
                   <th className="px-6 py-3 text-left font-medium text-muted">Magasin</th>
                 )}
+                {showTransferOrigin && (
+                  <th className="px-6 py-3 text-left font-medium text-muted">
+                    Transférée depuis
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left font-medium text-muted">Paiement</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
+                {showReturnNotes && (
+                  <th className="px-6 py-3 text-left font-medium text-muted">Note retour</th>
+                )}
                 <th className="px-6 py-3 text-right font-medium text-muted">Montant</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
               </tr>
@@ -377,6 +441,7 @@ export function ShopifyOrdersManager({
                 const canEditStatus =
                   editable &&
                   !livreurMode &&
+                  !cashierReturnsMode &&
                   !isFulfillmentLocked(order.workflow_status);
                 const statusOptions = editableWorkflowStatuses(order);
                 const canHandoffToLivreur =
@@ -386,7 +451,9 @@ export function ShopifyOrdersManager({
                   !isCancelled &&
                   !isReturned;
                 const canLivreurClose =
-                  livreurMode && order.workflow_status === "shipping";
+                  livreurMode &&
+                  !returnsPageMode &&
+                  order.workflow_status === "shipping";
                 const statusValue = orderStatusSelectValue(order);
                 const canPosCheckout =
                   !isShopifyOrderFulfilled(order) && !isCancelled && !isReturned;
@@ -404,6 +471,15 @@ export function ShopifyOrdersManager({
                   (order.workflow_status === "delivered" ||
                     order.workflow_status === "shipping");
                 const loading = pending && activeId === order.id;
+                const canEditReturnNote =
+                  returnsPageMode &&
+                  livreurProfileId &&
+                  canLivreurEditReturnNote(order, livreurProfileId);
+                const canConfirmReturn =
+                  cashierReturnsMode &&
+                  isReturned &&
+                  Boolean(order.fulfilled_at) &&
+                  !order.return_received_at;
 
                 return (
                   <tr key={order.id} className="border-b border-border">
@@ -422,6 +498,17 @@ export function ShopifyOrdersManager({
                     {showStore && (
                       <td className="px-6 py-4">
                         {(order.stores as { name: string } | null)?.name || "—"}
+                      </td>
+                    )}
+                    {showTransferOrigin && (
+                      <td className="px-6 py-4">
+                        {order.transferred_from_store?.name ||
+                          (order.transferred_from_store_id ? "—" : "Affectation auto")}
+                        {order.transferred_at && (
+                          <p className="text-xs text-muted">
+                            {formatDate(order.transferred_at)}
+                          </p>
+                        )}
                       </td>
                     )}
                     <td className="px-6 py-4">
@@ -446,7 +533,9 @@ export function ShopifyOrdersManager({
                             size="sm"
                             variant="secondary"
                             disabled={loading}
-                            onClick={() => handleStatusChange(order.id, "returned")}
+                            onClick={() =>
+                              setReturnNoteOrder({ order, mode: "create" })
+                            }
                           >
                             <RotateCcw className="h-3.5 w-3.5" />
                             Retour
@@ -473,12 +562,51 @@ export function ShopifyOrdersManager({
                         <OrderStatusDisplay status={order.workflow_status} />
                       )}
                     </td>
+                    {showReturnNotes && (
+                      <td className="px-6 py-4 max-w-[220px]">
+                        {order.return_note ? (
+                          <div className="flex items-start gap-1.5">
+                            <p className="line-clamp-3 text-sm text-foreground">
+                              {order.return_note}
+                            </p>
+                            {canEditReturnNote && (
+                              <button
+                                type="button"
+                                title="Modifier la note (2 h max)"
+                                aria-label="Modifier la note de retour"
+                                onClick={() =>
+                                  setReturnNoteOrder({ order, mode: "edit" })
+                                }
+                                className="order-action-icon flex h-8 w-8 shrink-0 items-center justify-center border border-primary/30 bg-page text-primary hover:bg-primary-light cursor-pointer"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ) : isReturned ? (
+                          <span className="text-xs text-muted">—</span>
+                        ) : (
+                          <span className="text-xs text-muted">—</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 text-right font-medium">
                       {formatCurrency(order.total)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1.5">
-                        {isCod && canPosCheckout && enablePosCheckout && (
+                        {canConfirmReturn && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={loading}
+                            onClick={() => handleConfirmReturn(order.id)}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Retour reçu
+                          </Button>
+                        )}
+                        {!cashierReturnsMode && isCod && canPosCheckout && enablePosCheckout && (
                           <IconAction
                             label="Préparer la commande"
                             onClick={() =>
@@ -489,7 +617,7 @@ export function ShopifyOrdersManager({
                             <Banknote className="h-3.5 w-3.5" />
                           </IconAction>
                         )}
-                        {isCod && canMarkCodPaid && (
+                        {!cashierReturnsMode && isCod && canMarkCodPaid && (
                           <IconAction
                             label="Marquer COD payé"
                             onClick={() => handleCodPaid(order.id)}
@@ -498,7 +626,7 @@ export function ShopifyOrdersManager({
                             <Banknote className="h-3.5 w-3.5" />
                           </IconAction>
                         )}
-                        {!isCod && enablePosCheckout && canPosCheckout && (
+                        {!cashierReturnsMode && !isCod && enablePosCheckout && canPosCheckout && (
                           <IconAction
                             label="Préparer la commande"
                             onClick={() =>
@@ -508,7 +636,7 @@ export function ShopifyOrdersManager({
                             <ShoppingCart className="h-3.5 w-3.5" />
                           </IconAction>
                         )}
-                        {canHandoffToLivreur && (
+                        {!cashierReturnsMode && canHandoffToLivreur && (
                           <IconAction
                             label="Remise au livreur — en cours de livraison"
                             onClick={() => handleHandoffToLivreur(order.id)}
@@ -517,7 +645,7 @@ export function ShopifyOrdersManager({
                             <Truck className="h-3.5 w-3.5" />
                           </IconAction>
                         )}
-                        {canTransfer && (
+                        {!cashierReturnsMode && canTransfer && (
                           <IconAction
                             label="Transférer vers un autre magasin"
                             onClick={() => setTransferOrder(order)}
@@ -532,21 +660,15 @@ export function ShopifyOrdersManager({
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </IconAction>
-                        {order.sale_id && (
-                          <span
-                            className="flex h-8 w-8 items-center justify-center text-xs text-success"
-                            title="Encaissée en caisse"
-                          >
-                            ✓
-                          </span>
+                        {!cashierReturnsMode && order.sale_id && (
+                          <IconStatus label="Encaissée en caisse" tone="paid">
+                            <Wallet className="h-3.5 w-3.5" />
+                          </IconStatus>
                         )}
-                        {order.fulfilled_at && !order.sale_id && (
-                          <span
-                            className="flex h-8 w-8 items-center justify-center text-xs text-muted"
-                            title="Préparée — non encaissée"
-                          >
-                            ○
-                          </span>
+                        {!cashierReturnsMode && order.fulfilled_at && !order.sale_id && (
+                          <IconStatus label="Préparée — non encaissée" tone="prepared">
+                            <PackageCheck className="h-3.5 w-3.5" />
+                          </IconStatus>
                         )}
                       </div>
                     </td>
@@ -574,6 +696,35 @@ export function ShopifyOrdersManager({
           enablePosCheckout={enablePosCheckout}
           posCheckoutPath={posCheckoutPath}
           onClose={() => setDetailOrder(null)}
+        />
+      )}
+
+      {returnNoteOrder && (
+        <ReturnNoteModal
+          order={returnNoteOrder.order}
+          mode={returnNoteOrder.mode}
+          onClose={() => setReturnNoteOrder(null)}
+          onSaved={(note) => {
+            const now = new Date().toISOString();
+            setOrders((prev) =>
+              prev.map((o) =>
+                o.id === returnNoteOrder.order.id
+                  ? {
+                      ...o,
+                      return_note: note,
+                      ...(returnNoteOrder.mode === "create"
+                        ? {
+                            workflow_status: "returned" as const,
+                            return_note_at: now,
+                            return_note_by: livreurProfileId ?? null,
+                          }
+                        : {}),
+                    }
+                  : o
+              )
+            );
+            router.refresh();
+          }}
         />
       )}
 

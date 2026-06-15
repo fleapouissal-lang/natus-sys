@@ -114,6 +114,16 @@ export function ShopifyOrderDetailModal({
         )}
       </div>
 
+      {order.return_note && (
+        <section className="mb-4 rounded-lg border border-danger/30 bg-danger/5 p-4">
+          <h4 className="mb-2 text-sm font-semibold">Note de retour livreur</h4>
+          <p className="text-sm whitespace-pre-wrap">{order.return_note}</p>
+          {order.return_note_at && (
+            <p className="mt-2 text-xs text-muted">{formatDate(order.return_note_at)}</p>
+          )}
+        </section>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <section className="rounded-lg border border-border bg-primary-light/30 p-4">
           <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
