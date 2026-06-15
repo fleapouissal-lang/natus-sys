@@ -2,6 +2,7 @@
 
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { PRODUCT_BRAND } from "@/lib/constants/products";
+import { computeTvaBreakdown, TVA_RATE } from "@/lib/constants/sales";
 import type { PaymentMethod } from "@/lib/types";
 
 export interface ReceiptData {
@@ -26,6 +27,9 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
 };
 
 export function Receipt({ data }: { data: ReceiptData }) {
+  const { ht, tva, ttc } = computeTvaBreakdown(data.total);
+  const tvaPercent = Math.round(TVA_RATE * 100);
+
   return (
     <div id="receipt-print" className="receipt mx-auto w-[280px] bg-white p-4 text-black">
       <div className="text-center">
@@ -63,9 +67,20 @@ export function Receipt({ data }: { data: ReceiptData }) {
 
       <div className="my-3 border-t border-dashed border-gray-400" />
 
-      <div className="flex justify-between text-sm font-bold">
-        <span>TOTAL</span>
-        <span>{formatCurrency(data.total)}</span>
+      <div className="space-y-1 text-xs text-gray-600">
+        <div className="flex justify-between">
+          <span>Total HT</span>
+          <span>{formatCurrency(ht)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>TVA ({tvaPercent} %)</span>
+          <span>{formatCurrency(tva)}</span>
+        </div>
+      </div>
+
+      <div className="mt-2 flex justify-between text-sm font-bold">
+        <span>TOTAL TTC</span>
+        <span>{formatCurrency(ttc)}</span>
       </div>
 
       <div className="my-3 border-t border-dashed border-gray-400" />

@@ -26,6 +26,7 @@ import { ProductCatalog } from "@/components/pos/product-catalog";
 import { completeSale, completeShopifyOrderSale } from "@/lib/actions";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { formatCurrency } from "@/lib/utils";
+import { computeTvaBreakdown, TVA_RATE } from "@/lib/constants/sales";
 import { cn } from "@/lib/utils";
 import type { Product, CartItem, UserRole, PaymentMethod, Store } from "@/lib/types";
 import type { ShopifyOrderPosContext } from "@/lib/orders";
@@ -268,6 +269,8 @@ export function PosTerminal({
     (sum, item) => sum + item.product.price * item.quantity,
     0
   );
+  const { ht: totalHt, tva: totalTva, ttc: totalTtc } = computeTvaBreakdown(total);
+  const tvaPercent = Math.round(TVA_RATE * 100);
 
   return (
     <>
@@ -359,7 +362,7 @@ export function PosTerminal({
           <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
             {/* Colonne gauche 60% — scroll catalogue uniquement */}
             <div className="flex min-h-0 w-full flex-col lg:w-[60%]">
-              <div className="shrink-0 border-b border-border px-4 py-3">
+              <div className="shrink-0 px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h1 className="text-xl font-bold tracking-tight text-primary">Caisse</h1>
@@ -435,9 +438,9 @@ export function PosTerminal({
             </div>
 
             {/* Colonne droite 40% — panier fixe pleine hauteur */}
-            <div className="flex h-full min-h-0 w-full flex-col border-t border-border bg-page lg:w-[40%] lg:border-t-0 lg:border-l">
+            <div className="flex h-full min-h-0 w-full flex-col bg-page lg:w-[40%] lg:border-l lg:border-border">
               <div className="flex h-full min-h-0 flex-col">
-                <div className="shrink-0 border-b border-border px-4 py-4">
+                <div className="shrink-0 px-4 py-4">
                   <h2 className="text-lg font-bold text-primary">Facture</h2>
                   <p className="text-xs text-muted">
                     {cart.length} article{cart.length !== 1 ? "s" : ""}
@@ -507,17 +510,21 @@ export function PosTerminal({
                   )}
                 </div>
 
-                <div className="shrink-0 border-t border-border bg-surface px-4 py-4">
+                <div className="shrink-0 bg-surface px-4 py-4">
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center justify-between text-muted">
-                      <span>Sous-total</span>
-                      <span>{formatCurrency(total)}</span>
+                      <span>Total HT</span>
+                      <span>{formatCurrency(totalHt)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-muted">
+                      <span>TVA ({tvaPercent} %)</span>
+                      <span>{formatCurrency(totalTva)}</span>
                     </div>
                     <div className="border-t border-dashed border-border" />
                     <div className="flex items-center justify-between">
-                      <span className="text-base font-semibold">Total</span>
+                      <span className="text-base font-semibold">Total TTC</span>
                       <span className="text-2xl font-bold text-primary">
-                        {formatCurrency(total)}
+                        {formatCurrency(totalTtc)}
                       </span>
                     </div>
                   </div>
