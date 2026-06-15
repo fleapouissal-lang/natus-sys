@@ -18,8 +18,10 @@ export function formatDate(date: string): string {
   }).format(new Date(date));
 }
 
+import { paymentMethodLabel } from "@/lib/constants/sales";
+
 export function formatPaymentMethod(method: string): string {
-  return method === "card" ? "Carte bancaire" : "Espèces";
+  return paymentMethodLabel(method);
 }
 
 export function formatShopifyStatus(status: string | null | undefined): string {

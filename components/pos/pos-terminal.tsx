@@ -44,7 +44,7 @@ const PAYMENT_OPTIONS: {
   icon: typeof Banknote;
 }[] = [
   { id: "cash", label: "Espèces", icon: Banknote },
-  { id: "card", label: "Carte", icon: CreditCard },
+  { id: "card", label: "TPE", icon: CreditCard },
 ];
 
 export function PosTerminal({

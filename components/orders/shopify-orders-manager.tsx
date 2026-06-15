@@ -3,11 +3,12 @@
 import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, Eye, Loader2, RotateCcw, Search, ShoppingCart, Truck, Wallet, PackageCheck } from "lucide-react";
+import { Banknote, Eye, Loader2, RotateCcw, Search, ShoppingCart, Truck, Wallet, PackageCheck, ArrowRightLeft } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShopifyOrderDetailModal } from "@/components/orders/shopify-order-detail-modal";
+import { OrderTransferModal } from "@/components/orders/order-transfer-modal";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { DateInputField } from "@/components/ui/date-input-field";
 import { formatCurrency, formatDate, cn, toLocalDateKey } from "@/lib/utils";
@@ -26,8 +27,9 @@ import {
   resolveWorkflowStatusUpdate,
   isShopifyOrderFulfilled,
 } from "@/lib/shopify/order-status";
+import { canTransferShopifyOrder } from "@/lib/shopify/order-transfer";
 import { updateShopifyOrderStatus, markShopifyCodPaid, handOrderToLivreur } from "@/lib/actions";
-import type { ShopifyOrder, ShopifyPaymentType, ShopifyWorkflowStatus } from "@/lib/types";
+import type { ShopifyOrder, ShopifyPaymentType, ShopifyWorkflowStatus, Store } from "@/lib/types";
 
 const STATUS_CELL_WIDTH = "w-[172px]";
 const ACTION_COLOR = "#B38C4A";
@@ -124,6 +126,9 @@ export function ShopifyOrdersManager({
   defaultDateToday = false,
   livreurMode = false,
   enableLivreurHandoff = false,
+  enableOrderTransfer = false,
+  transferTargets = [],
+  transferProfile,
 }: {
   orders: ShopifyOrder[];
   scopeLabel: string;
@@ -135,6 +140,9 @@ export function ShopifyOrdersManager({
   defaultDateToday?: boolean;
   livreurMode?: boolean;
   enableLivreurHandoff?: boolean;
+  enableOrderTransfer?: boolean;
+  transferTargets?: Store[];
+  transferProfile?: import("@/lib/types").Profile | null;
 }) {
   const router = useRouter();
   const today = toLocalDateKey(new Date());
@@ -145,6 +153,7 @@ export function ShopifyOrdersManager({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [detailOrder, setDetailOrder] = useState<ShopifyOrder | null>(null);
+  const [transferOrder, setTransferOrder] = useState<ShopifyOrder | null>(null);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState(defaultDateFrom);
   const [dateTo, setDateTo] = useState(defaultDateTo);
@@ -381,6 +390,11 @@ export function ShopifyOrdersManager({
                 const statusValue = orderStatusSelectValue(order);
                 const canPosCheckout =
                   !isShopifyOrderFulfilled(order) && !isCancelled && !isReturned;
+                const canTransfer =
+                  enableOrderTransfer &&
+                  transferProfile &&
+                  transferTargets.length > 0 &&
+                  canTransferShopifyOrder(transferProfile, order);
                 const canMarkCodPaid =
                   !livreurMode &&
                   isCod &&
@@ -503,6 +517,15 @@ export function ShopifyOrdersManager({
                             <Truck className="h-3.5 w-3.5" />
                           </IconAction>
                         )}
+                        {canTransfer && (
+                          <IconAction
+                            label="Transférer vers un autre magasin"
+                            onClick={() => setTransferOrder(order)}
+                            loading={loading}
+                          >
+                            <ArrowRightLeft className="h-3.5 w-3.5" />
+                          </IconAction>
+                        )}
                         <IconAction
                           label="Voir la commande"
                           onClick={() => setDetailOrder(order)}
@@ -551,6 +574,18 @@ export function ShopifyOrdersManager({
           enablePosCheckout={enablePosCheckout}
           posCheckoutPath={posCheckoutPath}
           onClose={() => setDetailOrder(null)}
+        />
+      )}
+
+      {transferOrder && (
+        <OrderTransferModal
+          order={transferOrder}
+          targets={transferTargets}
+          onClose={() => setTransferOrder(null)}
+          onTransferred={() => {
+            setOrders((prev) => prev.filter((o) => o.id !== transferOrder.id));
+            router.refresh();
+          }}
         />
       )}
     </>

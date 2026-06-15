@@ -20,6 +20,7 @@ function run(label, command) {
 console.log("🚀 Setup Natus — migrations + seed\n");
 
 run("Migrations Supabase", "supabase db push --linked --yes");
+run("Reset commandes", "node scripts/reset-orders.mjs");
 run("Seed utilisateurs", "node scripts/seed-users.mjs");
 run("Seed commandes Shopify", "node scripts/seed-shopify-orders.mjs");
 run("Affectation livreurs", "node scripts/backfill-livreur-orders.mjs");

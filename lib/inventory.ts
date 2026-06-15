@@ -115,3 +115,54 @@ export async function getStoreById(storeId: string): Promise<Store | null> {
   const { data } = await supabase.from("stores").select("*").eq("id", storeId).maybeSingle();
   return data;
 }
+
+export async function getHubStore(): Promise<Store | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("is_active", true)
+    .eq("is_hub", true)
+    .maybeSingle();
+  return data;
+}
+
+/** Magasins cibles pour transfert : même ville (hors soi) + hub stock parent. */
+export async function getOrderTransferTargets(fromStoreId: string): Promise<Store[]> {
+  const fromStore = await getStoreById(fromStoreId);
+  if (!fromStore) return [];
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const supabase = createAdminClient();
+
+  const { data: cityStores, error: cityError } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("is_active", true)
+    .eq("city", fromStore.city)
+    .neq("id", fromStoreId)
+    .order("name");
+
+  if (cityError) {
+    console.error("getOrderTransferTargets:", cityError.message);
+    return [];
+  }
+
+  const { data: hubStore, error: hubError } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("is_active", true)
+    .eq("is_hub", true)
+    .maybeSingle();
+
+  if (hubError) {
+    console.error("getOrderTransferTargets hub:", hubError.message);
+  }
+
+  const targets = (cityStores || []).filter((store) => !store.is_hub);
+  if (hubStore && hubStore.id !== fromStoreId) {
+    targets.push(hubStore);
+  }
+
+  return targets;
+}

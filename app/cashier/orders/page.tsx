@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
-import { getStoreById, getProductCatalog } from "@/lib/inventory";
+import { getStoreById, getProductCatalog, getOrderTransferTargets } from "@/lib/inventory";
 import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
 
 export default async function CashierOrdersPage() {
@@ -20,6 +20,7 @@ export default async function CashierOrdersPage() {
   const store = await getStoreById(profile.store_id);
   const orders = await getShopifyOrders(profile);
   const products = await getProductCatalog();
+  const transferTargets = await getOrderTransferTargets(profile.store_id);
   const scopeLabel = getOrdersScopeLabel(profile, { storeName: store?.name });
 
   return (
@@ -29,6 +30,9 @@ export default async function CashierOrdersPage() {
         <p className="mt-1 text-muted">
           Commandes en ligne affectées à votre magasin
           {store ? ` — ${store.name}, ${store.city}` : ""}
+          {transferTargets.length > 0
+            ? ` — transfert possible vers ${transferTargets.map((s) => s.name).join(", ")}`
+            : " — aucun magasin de transfert configuré"}
         </p>
       </div>
 
@@ -41,6 +45,9 @@ export default async function CashierOrdersPage() {
         products={products}
         defaultDateToday
         enableLivreurHandoff
+        enableOrderTransfer
+        transferTargets={transferTargets}
+        transferProfile={profile}
       />
     </div>
   );

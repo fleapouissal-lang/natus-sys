@@ -2,7 +2,7 @@
 
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { PRODUCT_BRAND } from "@/lib/constants/products";
-import { computeTvaBreakdown, TVA_RATE } from "@/lib/constants/sales";
+import { computeTvaBreakdown, PAYMENT_METHOD_LABELS, TVA_RATE } from "@/lib/constants/sales";
 import type { PaymentMethod } from "@/lib/types";
 
 export interface ReceiptData {
@@ -21,10 +21,7 @@ export interface ReceiptData {
   paymentLabel?: string;
 }
 
-const PAYMENT_LABELS: Record<PaymentMethod, string> = {
-  cash: "Espèces",
-  card: "Carte bancaire",
-};
+const PAYMENT_LABELS: Record<PaymentMethod, string> = PAYMENT_METHOD_LABELS;
 
 export function Receipt({ data }: { data: ReceiptData }) {
   const { ht, tva, ttc } = computeTvaBreakdown(data.total);

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { getCurrentProfile } from "@/lib/auth";
-import { getActiveStores, getProductCatalog } from "@/lib/inventory";
+import { getActiveStores, getProductCatalog, getHubStore } from "@/lib/inventory";
 import { getCityFilter } from "@/lib/permissions";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getSelectedStore } from "@/lib/management-store";
@@ -18,6 +18,11 @@ export default async function ManagerOrdersPage({
 
   const city = getCityFilter(profile);
   const stores = await getActiveStores(city);
+  const hubStore = await getHubStore();
+  const transferTargets = [
+    ...stores.filter((s) => !s.is_hub),
+    ...(hubStore ? [hubStore] : []),
+  ];
   const storeId =
     storeParam && stores.some((s) => s.id === storeParam) ? storeParam : "";
   const selectedStore = storeId ? getSelectedStore(stores, storeId) : undefined;
@@ -45,7 +50,15 @@ export default async function ManagerOrdersPage({
         <StoreFilterBar stores={stores} selectedStoreId={storeId} allowAll />
       </Suspense>
 
-      <ShopifyOrdersManager orders={orders} scopeLabel={scopeLabel} editable products={products} />
+      <ShopifyOrdersManager
+        orders={orders}
+        scopeLabel={scopeLabel}
+        editable
+        products={products}
+        enableOrderTransfer
+        transferTargets={transferTargets}
+        transferProfile={profile}
+      />
     </div>
   );
 }

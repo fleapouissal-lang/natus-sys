@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CartItem, Product, Profile, ShopifyOrder } from "@/lib/types";
-import { getCityFilter, isDirector } from "@/lib/permissions";
+import { getCityFilter, isDirector, isManager } from "@/lib/permissions";
 import { canAccessShopifyOrder } from "@/lib/shopify/order-access";
 import { livreurActiveOrderStatuses } from "@/lib/shopify/order-status";
 import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
@@ -27,6 +27,40 @@ export interface OrdersQuery {
   limit?: number;
 }
 
+async function attachStoreNamesToOrders(
+  orders: ShopifyOrder[]
+): Promise<ShopifyOrder[]> {
+  const storeIds = [
+    ...new Set(orders.map((order) => order.store_id).filter(Boolean)),
+  ] as string[];
+
+  if (storeIds.length === 0) return orders;
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { data: stores, error } = await admin
+    .from("stores")
+    .select("id, name, city")
+    .in("id", storeIds);
+
+  if (error) {
+    console.error("attachStoreNamesToOrders:", error.message);
+    return orders;
+  }
+
+  const byId = Object.fromEntries(
+    (stores || []).map((store) => [
+      store.id,
+      { name: store.name, city: store.city },
+    ])
+  );
+
+  return orders.map((order) => ({
+    ...order,
+    stores: order.store_id ? byId[order.store_id] ?? null : null,
+  }));
+}
+
 export async function getShopifyOrders(
   profile: Profile,
   query: OrdersQuery = {}
@@ -36,7 +70,7 @@ export async function getShopifyOrders(
 
   let dbQuery = supabase
     .from("shopify_orders")
-    .select("*, stores(name, city)")
+    .select("*")
     .order("shopify_created_at", { ascending: false })
     .limit(limit);
 
@@ -65,7 +99,13 @@ export async function getShopifyOrders(
     return [];
   }
 
-  return (data || []) as ShopifyOrder[];
+  const orders = (data || []) as ShopifyOrder[];
+
+  if (isDirector(profile) || isManager(profile)) {
+    return attachStoreNamesToOrders(orders);
+  }
+
+  return orders;
 }
 
 export async function loadShopifyOrderForPos(

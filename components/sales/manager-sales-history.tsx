@@ -90,7 +90,7 @@ export function ManagerSalesHistory({
         <Card>
           <p className="flex items-center gap-1.5 text-sm text-muted">
             <CreditCard className="h-4 w-4" />
-            Carte
+            TPE
           </p>
           <p className="mt-1 text-2xl font-bold">{formatCurrency(stats.card)}</p>
         </Card>

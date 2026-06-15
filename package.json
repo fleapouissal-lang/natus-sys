@@ -9,9 +9,10 @@
     "lint": "eslint",
     "setup": "node scripts/setup.mjs",
     "db:migrate": "node scripts/db-migrate.mjs",
-    "seed": "npm run db:migrate && node scripts/seed-users.mjs && node scripts/seed-shopify-orders.mjs",
+    "reset:orders": "node scripts/reset-orders.mjs",
+    "seed": "npm run db:migrate && node scripts/seed-users.mjs && npm run seed:orders",
     "seed:users": "npm run db:migrate && node scripts/seed-users.mjs && node scripts/backfill-livreur-orders.mjs",
-    "seed:orders": "npm run db:migrate && node scripts/seed-shopify-orders.mjs && node scripts/backfill-livreur-orders.mjs",
+    "seed:orders": "npm run db:migrate && node scripts/reset-orders.mjs && node scripts/seed-shopify-orders.mjs && node scripts/backfill-livreur-orders.mjs",
     "backfill:livreur": "node scripts/backfill-livreur-orders.mjs",
     "upload-images": "node scripts/upload-product-images.mjs"
   },

@@ -1,19 +1,9 @@
-import { readFileSync } from "fs";
-import { resolve } from "path";
 import { createClient } from "@supabase/supabase-js";
+import { loadEnv } from "./lib/env.mjs";
 
 /** IDs Shopify fictifs — plage réservée au seed (9000000001+) */
 const SEED_ID_START = 9000000001;
 const SEED_ORDER_COUNT = 40;
-
-const PRODUCT_BARCODES = [
-  "340001000001",
-  "340001000002",
-  "340001000003",
-  "340001000004",
-  "340001000005",
-  "340001000006",
-];
 
 const CUSTOMERS = [
   { name: "Fatima El Amrani", email: "fatima.elamrani@example.com", phone: "+212612345678" },
@@ -46,22 +36,6 @@ const MEDINA_ADDRESSES = [
 
 const WORKFLOW_FOR_POS = ["pending", "preparing", "ready", "shipping"];
 const WORKFLOW_CLOSED = ["paid", "cancelled", "returned", "delivered"];
-
-function loadEnv() {
-  const envPath = resolve(process.cwd(), ".env.local");
-  const content = readFileSync(envPath, "utf-8");
-  const env = {};
-
-  for (const line of content.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    env[trimmed.slice(0, eq)] = trimmed.slice(eq + 1);
-  }
-
-  return env;
-}
 
 function lineItem({ id, title, sku, quantity, price }) {
   return {
@@ -124,7 +98,7 @@ function buildSeedOrders(storeByName, products) {
   }
 
   if (products.length === 0) {
-    throw new Error("Aucun produit seed trouvé — vérifiez les codes-barres 340001000001–340001000006");
+    throw new Error("Aucun produit en base — la table products doit contenir des produits.");
   }
 
   const orders = [];
@@ -192,10 +166,6 @@ function buildSeedOrders(storeByName, products) {
   return orders;
 }
 
-function seedIdRange() {
-  return Array.from({ length: SEED_ORDER_COUNT }, (_, i) => SEED_ID_START + i);
-}
-
 async function main() {
   const env = loadEnv();
   const url = env.NEXT_PUBLIC_SUPABASE_URL;
@@ -225,20 +195,11 @@ async function main() {
   const { data: products, error: productsError } = await supabase
     .from("products")
     .select("name, barcode, price")
-    .in("barcode", PRODUCT_BARCODES)
-    .order("barcode");
+    .order("name");
 
   if (productsError) throw productsError;
 
   const orders = buildSeedOrders(storeByName, products || []);
-  const seedIds = seedIdRange();
-
-  const { error: deleteError } = await supabase
-    .from("shopify_orders")
-    .delete()
-    .in("shopify_order_id", seedIds);
-
-  if (deleteError) throw deleteError;
 
   const { data: inserted, error: insertError } = await supabase
     .from("shopify_orders")

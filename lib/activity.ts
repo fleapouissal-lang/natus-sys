@@ -98,7 +98,7 @@ export async function getActivityLog(
     }[] | null);
     const items = (row.sale_items as { quantity: number }[]) || [];
     const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-    const payment = row.payment_method === "card" ? "Carte" : "Espèces";
+    const payment = row.payment_method === "card" ? "TPE" : "Espèces";
 
     entries.push({
       id: `sale-${row.id}`,

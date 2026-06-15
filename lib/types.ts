@@ -22,6 +22,7 @@ export interface Store {
   lat?: number | null;
   lng?: number | null;
   is_active: boolean;
+  is_hub?: boolean;
   created_at: string;
 }
 
@@ -217,6 +218,10 @@ export interface ShopifyOrder {
   sale_id: string | null;
   fulfilled_at: string | null;
   fulfilled_by: string | null;
+  store_assignment_locked: boolean;
+  transferred_from_store_id: string | null;
+  transferred_at: string | null;
+  transferred_by: string | null;
   assigned_livreur_id: string | null;
   total: number;
   currency: string;

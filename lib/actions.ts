@@ -929,3 +929,87 @@ export async function markShopifyCodPaid(
 
   return { success: true };
 }
+
+export async function transferShopifyOrder(
+  orderId: string,
+  toStoreId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+  const {
+    canTransferShopifyOrder,
+    isValidTransferTarget,
+  } = await import("@/lib/shopify/order-transfer");
+  const { getStoreById } = await import("@/lib/inventory");
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+
+  const order = await getShopifyOrderById(orderId);
+  if (!order) return { error: "Commande introuvable" };
+
+  if (!(await canAccessShopifyOrder(profile, order))) {
+    return { error: "Accès refusé" };
+  }
+
+  if (!canTransferShopifyOrder(profile, order)) {
+    return { error: "Cette commande ne peut plus être transférée" };
+  }
+
+  if (!order.store_id) {
+    return { error: "Commande sans magasin assigné" };
+  }
+
+  const fromStore = await getStoreById(order.store_id);
+  const { data: targetStore, error: targetError } = await admin
+    .from("stores")
+    .select("*")
+    .eq("id", toStoreId)
+    .maybeSingle();
+  const { data: hubStore } = await admin
+    .from("stores")
+    .select("*")
+    .eq("is_active", true)
+    .eq("is_hub", true)
+    .maybeSingle();
+
+  if (targetError) return { error: targetError.message };
+
+  if (!fromStore || !targetStore) {
+    return { error: "Magasin introuvable" };
+  }
+
+  if (!isValidTransferTarget(fromStore, targetStore, hubStore)) {
+    return { error: "Transfert autorisé vers un magasin de la même ville ou le hub stock" };
+  }
+
+  const now = new Date().toISOString();
+
+  // Service role : le transfert change store_id, ce qui échoue le WITH CHECK RLS caissier/manager.
+  const { error } = await admin
+    .from("shopify_orders")
+    .update({
+      store_id: toStoreId,
+      city: targetStore.city,
+      transferred_from_store_id: order.store_id,
+      transferred_at: now,
+      transferred_by: profile.id,
+      store_assignment_locked: true,
+      assigned_livreur_id: null,
+      workflow_status: "pending",
+      updated_at: now,
+    })
+    .eq("id", orderId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/director/orders");
+  revalidatePath("/manager/orders");
+  revalidatePath("/cashier/orders");
+  revalidatePath("/livreur/orders");
+
+  return { success: true };
+}

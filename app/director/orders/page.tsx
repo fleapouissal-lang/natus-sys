@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { isDirector } from "@/lib/permissions";
-import { getActiveStores, getProductCatalog } from "@/lib/inventory";
+import { getActiveStores, getProductCatalog, getHubStore } from "@/lib/inventory";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getSelectedStore } from "@/lib/management-store";
 import { CityStoreFilterBar } from "@/components/stores/city-store-filter-bar";
@@ -19,6 +19,10 @@ export default async function DirectorOrdersPage({
   if (!profile || !isDirector(profile)) redirect("/login");
 
   const stores = await getActiveStores(null);
+  const hubStore = await getHubStore();
+  const transferTargets = hubStore
+    ? [...stores.filter((s) => s.id !== hubStore.id), hubStore]
+    : stores;
   const selectedCity = cityParam && stores.some((s) => s.city === cityParam) ? cityParam : "";
   const selectedStoreId =
     storeParam && stores.some((s) => s.id === storeParam) ? storeParam : "";
@@ -57,7 +61,15 @@ export default async function DirectorOrdersPage({
         />
       </Suspense>
 
-      <ShopifyOrdersManager orders={orders} scopeLabel={scopeLabel} editable products={products} />
+      <ShopifyOrdersManager
+        orders={orders}
+        scopeLabel={scopeLabel}
+        editable
+        products={products}
+        enableOrderTransfer
+        transferTargets={transferTargets}
+        transferProfile={profile}
+      />
     </div>
   );
 }

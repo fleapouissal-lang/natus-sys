@@ -90,6 +90,46 @@ export async function processShopifyOrder(
   const paymentType = detectPaymentType(order);
   const workflowStatus = resolveWorkflowStatus(order);
 
+  const { data: existing } = await supabase
+    .from("shopify_orders")
+    .select("id, store_id, store_assignment_locked, city")
+    .eq("shopify_order_id", order.id)
+    .maybeSingle();
+
+  const now = new Date().toISOString();
+
+  if (existing?.store_assignment_locked) {
+    const { data, error } = await supabase
+      .from("shopify_orders")
+      .update({
+        order_number: order.name || `#${order.order_number}`,
+        customer_name: resolveCustomerName(order),
+        customer_email: order.email || order.customer?.email || null,
+        customer_phone: order.phone || shipping?.phone || order.customer?.phone || null,
+        shipping_address: shippingAddress,
+        shipping_lat: shippingLat,
+        shipping_lng: shippingLng,
+        financial_status: order.financial_status,
+        fulfillment_status: order.fulfillment_status,
+        order_status: resolveOrderStatus(order),
+        payment_gateway: resolvePaymentGateway(order),
+        total: parseFloat(order.total_price) || 0,
+        currency: order.currency || "MAD",
+        line_items: lineItems,
+        shopify_created_at: order.created_at,
+        updated_at: now,
+      })
+      .eq("shopify_order_id", order.id)
+      .select("id")
+      .single();
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    return { ok: true, id: data.id };
+  }
+
   const row = {
     shopify_order_id: order.id,
     order_number: order.name || `#${order.order_number}`,
@@ -114,7 +154,7 @@ export async function processShopifyOrder(
     currency: order.currency || "MAD",
     line_items: lineItems,
     shopify_created_at: order.created_at,
-    updated_at: new Date().toISOString(),
+    updated_at: now,
   };
 
   const { data, error } = await supabase

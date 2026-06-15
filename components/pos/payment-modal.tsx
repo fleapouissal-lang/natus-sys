@@ -54,7 +54,7 @@ export function PaymentModal({
             onClick={() => onPay("card")}
           >
             <CreditCard className="h-6 w-6" />
-            Carte bancaire
+            TPE
           </Button>
         </div>
     </Modal>

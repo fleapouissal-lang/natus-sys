@@ -50,7 +50,7 @@ export function paymentFilterOptions(): SelectMenuOption[] {
   return [
     { value: "", label: "Tous les paiements", icon: LayoutGrid },
     { value: "cash", label: "Espèces", icon: Banknote },
-    { value: "card", label: "Carte bancaire", icon: CreditCard },
+    { value: "card", label: "TPE", icon: CreditCard },
   ];
 }
 
@@ -91,7 +91,7 @@ export function cityOptions(
 }
 
 export function storeOptions(
-  stores: Pick<StoreType, "id" | "name" | "city">[],
+  stores: Pick<StoreType, "id" | "name" | "city" | "is_hub">[],
   opts?: {
     allLabel?: string;
     showCity?: boolean;
@@ -109,7 +109,9 @@ export function storeOptions(
     ...items,
     ...stores.map((store) => ({
       value: store.id,
-      label: showCity ? `${store.name} (${store.city})` : store.name,
+      label: showCity
+        ? `${store.name}${store.is_hub ? " — Hub stock" : ""} (${store.city})`
+        : store.name,
       icon: Store,
     })),
   ];
