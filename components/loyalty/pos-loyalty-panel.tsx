@@ -13,10 +13,11 @@ import {
   canRedeemLoyaltyPoints,
   pointsUntilRedemption,
 } from "@/lib/loyalty/points";
-import { LOYALTY_MIN_POINTS_TO_REDEEM } from "@/lib/loyalty/config";
+import { formatLoyaltyEarnRule, formatLoyaltyRedeemRule } from "@/lib/loyalty/settings";
+import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 import { formatCurrency } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
-import type { LoyaltyCustomer } from "@/lib/types";
+import type { LoyaltyCustomer, LoyaltySettings } from "@/lib/types";
 import { CreateLoyaltyCustomerModal } from "@/components/loyalty/create-customer-modal";
 import { LoyaltyCardQrForCashier } from "@/components/loyalty/loyalty-card-client-view";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
@@ -30,12 +31,14 @@ export function PosLoyaltyPanel({
   pointsToRedeem,
   onCustomerChange,
   onPointsToRedeemChange,
+  loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
 }: {
   subtotal: number;
   customer: LoyaltyCustomer | null;
   pointsToRedeem: number;
   onCustomerChange: (customer: LoyaltyCustomer | null) => void;
   onPointsToRedeemChange: (points: number) => void;
+  loyaltySettings?: LoyaltySettings;
 }) {
   const [lookupInput, setLookupInput] = useState("");
   const [error, setError] = useState("");
@@ -76,12 +79,18 @@ export function PosLoyaltyPanel({
     handleKeyDown(e);
   }
 
-  const maxRedeem = customer ? maxRedeemablePoints(customer.loyalty_points, subtotal) : 0;
-  const redeemEligible = customer ? canRedeemLoyaltyPoints(customer.loyalty_points) : false;
-  const pointsRemaining = customer ? pointsUntilRedemption(customer.loyalty_points) : 0;
-  const discount = discountFromPoints(pointsToRedeem);
-  const payable = payableAfterRedemption(subtotal, pointsToRedeem);
-  const pointsToEarn = customer ? pointsEarnedForAmount(payable) : 0;
+  const maxRedeem = customer
+    ? maxRedeemablePoints(customer.loyalty_points, subtotal, loyaltySettings)
+    : 0;
+  const redeemEligible = customer
+    ? canRedeemLoyaltyPoints(customer.loyalty_points, loyaltySettings)
+    : false;
+  const pointsRemaining = customer
+    ? pointsUntilRedemption(customer.loyalty_points, loyaltySettings)
+    : 0;
+  const discount = discountFromPoints(pointsToRedeem, loyaltySettings);
+  const payable = payableAfterRedemption(subtotal, pointsToRedeem, loyaltySettings);
+  const pointsToEarn = customer ? pointsEarnedForAmount(payable, loyaltySettings) : 0;
 
   return (
     <>
@@ -157,7 +166,7 @@ export function PosLoyaltyPanel({
             {customer && !redeemEligible && (
               <div className="rounded-lg border border-border bg-surface px-3 py-2.5 text-xs text-muted">
                 <p className="font-medium text-foreground">
-                  Utilisation des points à partir de {LOYALTY_MIN_POINTS_TO_REDEEM} pts
+                  Utilisation des points à partir de {loyaltySettings.minPointsToRedeem} pts
                 </p>
                 <p className="mt-1">
                   Encore <span className="font-semibold text-primary">{pointsRemaining} pts</span>{" "}
@@ -212,6 +221,9 @@ export function PosLoyaltyPanel({
             <p className="text-xs text-muted">
               Saisissez le numéro de téléphone, scannez le code-barres au verso de la carte ou le QR
               code.
+            </p>
+            <p className="text-xs text-muted">
+              {formatLoyaltyEarnRule(loyaltySettings)} · {formatLoyaltyRedeemRule(loyaltySettings)}
             </p>
           </div>
         )}

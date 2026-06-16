@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPublicLoyaltyCustomer } from "@/lib/loyalty/customers";
+import { getPublicLoyaltySettings } from "@/lib/loyalty/settings.server";
 import { applyPrivateCacheHeaders } from "@/lib/security/headers";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +18,13 @@ export async function GET(
     );
   }
 
+  const settings = await getPublicLoyaltySettings();
+
   return applyPrivateCacheHeaders(
     NextResponse.json({
       customer: data.customer,
       transactions: data.transactions,
+      settings,
     })
   );
 }

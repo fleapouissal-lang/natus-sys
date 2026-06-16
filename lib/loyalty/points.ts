@@ -1,31 +1,50 @@
-import { LOYALTY_POINTS_PER_MAD, LOYALTY_POINT_VALUE_MAD, LOYALTY_MIN_POINTS_TO_REDEEM } from "@/lib/loyalty/config";
+import type { LoyaltySettings } from "@/lib/types";
+import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 
-export function canRedeemLoyaltyPoints(customerPoints: number): boolean {
-  return customerPoints >= LOYALTY_MIN_POINTS_TO_REDEEM;
+export function canRedeemLoyaltyPoints(
+  customerPoints: number,
+  settings: LoyaltySettings = DEFAULT_LOYALTY_SETTINGS
+): boolean {
+  return customerPoints >= settings.minPointsToRedeem;
 }
 
-export function pointsUntilRedemption(customerPoints: number): number {
-  return Math.max(0, LOYALTY_MIN_POINTS_TO_REDEEM - customerPoints);
+export function pointsUntilRedemption(
+  customerPoints: number,
+  settings: LoyaltySettings = DEFAULT_LOYALTY_SETTINGS
+): number {
+  return Math.max(0, settings.minPointsToRedeem - customerPoints);
 }
 
-export function pointsEarnedForAmount(amountMad: number): number {
-  if (amountMad <= 0) return 0;
-  return Math.floor(amountMad / LOYALTY_POINTS_PER_MAD);
+export function pointsEarnedForAmount(
+  amountMad: number,
+  settings: LoyaltySettings = DEFAULT_LOYALTY_SETTINGS
+): number {
+  if (amountMad <= 0 || settings.pointsPerMad <= 0) return 0;
+  return Math.floor(amountMad / settings.pointsPerMad);
 }
 
 export function maxRedeemablePoints(
   customerPoints: number,
-  subtotalMad: number
+  subtotalMad: number,
+  settings: LoyaltySettings = DEFAULT_LOYALTY_SETTINGS
 ): number {
-  if (!canRedeemLoyaltyPoints(customerPoints)) return 0;
-  const maxByTotal = Math.floor(subtotalMad / LOYALTY_POINT_VALUE_MAD);
+  if (!canRedeemLoyaltyPoints(customerPoints, settings)) return 0;
+  if (settings.pointValueMad <= 0) return 0;
+  const maxByTotal = Math.floor(subtotalMad / settings.pointValueMad);
   return Math.max(0, Math.min(customerPoints, maxByTotal));
 }
 
-export function discountFromPoints(points: number): number {
-  return points * LOYALTY_POINT_VALUE_MAD;
+export function discountFromPoints(
+  points: number,
+  settings: LoyaltySettings = DEFAULT_LOYALTY_SETTINGS
+): number {
+  return points * settings.pointValueMad;
 }
 
-export function payableAfterRedemption(subtotalMad: number, pointsToRedeem: number): number {
-  return Math.max(0, subtotalMad - discountFromPoints(pointsToRedeem));
+export function payableAfterRedemption(
+  subtotalMad: number,
+  pointsToRedeem: number,
+  settings: LoyaltySettings = DEFAULT_LOYALTY_SETTINGS
+): number {
+  return Math.max(0, subtotalMad - discountFromPoints(pointsToRedeem, settings));
 }

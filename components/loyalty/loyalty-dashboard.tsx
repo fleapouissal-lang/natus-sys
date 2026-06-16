@@ -3,14 +3,18 @@ import { Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
-import type { LoyaltyStats } from "@/lib/types";
+import type { LoyaltyStats, LoyaltySettings } from "@/lib/types";
+import { pointsValueInMad } from "@/lib/loyalty/settings";
+import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 
 export function LoyaltyDashboard({
   stats,
   customerBasePath,
+  loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
 }: {
   stats: LoyaltyStats;
   customerBasePath: string;
+  loyaltySettings?: LoyaltySettings;
 }) {
   return (
     <div className="space-y-6">
@@ -73,7 +77,7 @@ export function LoyaltyDashboard({
                       {customer.loyalty_points} pts
                     </td>
                     <td className="px-6 py-4 text-right text-muted">
-                      ≈ {formatCurrency(customer.loyalty_points)}
+                      ≈ {formatCurrency(pointsValueInMad(customer.loyalty_points, loyaltySettings))}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end">

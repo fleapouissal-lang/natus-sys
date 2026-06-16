@@ -7,19 +7,23 @@ import { Button } from "@/components/ui/button";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
 import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
 import { formatDate } from "@/lib/utils";
-import { LOYALTY_MIN_POINTS_TO_REDEEM } from "@/lib/loyalty/config";
 import { canRedeemLoyaltyPoints, pointsUntilRedemption } from "@/lib/loyalty/points";
-import type { LoyaltyCustomer, LoyaltyTransaction } from "@/lib/types";
+import { formatLoyaltyRedeemRule, pointsValueInMad } from "@/lib/loyalty/settings";
+import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
+import type { LoyaltyCustomer, LoyaltyTransaction, LoyaltySettings } from "@/lib/types";
 
 export function LoyaltyCardClientView({
   initialCustomer,
   initialTransactions,
+  loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
 }: {
   initialCustomer: LoyaltyCustomer;
   initialTransactions: LoyaltyTransaction[];
+  loyaltySettings?: LoyaltySettings;
 }) {
   const [customer, setCustomer] = useState(initialCustomer);
   const [transactions, setTransactions] = useState(initialTransactions);
+  const [settings, setSettings] = useState(loyaltySettings);
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -33,6 +37,7 @@ export function LoyaltyCardClientView({
       const data = await res.json();
       setCustomer((prev) => ({ ...prev, ...data.customer }));
       setTransactions(data.transactions);
+      if (data.settings) setSettings(data.settings);
     } finally {
       setRefreshing(false);
     }
@@ -77,24 +82,26 @@ export function LoyaltyCardClientView({
       <LoyaltyWalletCard customer={customer} />
 
       <div className="rounded-2xl border border-border bg-surface p-4 text-sm">
-        {canRedeemLoyaltyPoints(customer.loyalty_points) ? (
+        {canRedeemLoyaltyPoints(customer.loyalty_points, settings) ? (
           <>
             <p className="font-semibold text-success">Points utilisables en caisse</p>
             <p className="mt-1 text-muted">
               Présentez votre carte en magasin : le caissier pourra déduire vos{" "}
               <span className="font-medium text-foreground">{customer.loyalty_points} points</span>{" "}
-              sur votre achat (1 pt = 1 MAD).
+              sur votre achat (
+              {formatLoyaltyRedeemRule(settings).toLowerCase()} — ≈{" "}
+              {pointsValueInMad(customer.loyalty_points, settings)} MAD).
             </p>
           </>
         ) : (
           <>
             <p className="font-semibold text-foreground">
-              Paiement avec points dès {LOYALTY_MIN_POINTS_TO_REDEEM} pts
+              Paiement avec points dès {settings.minPointsToRedeem} pts
             </p>
             <p className="mt-1 text-muted">
               Vous avez {customer.loyalty_points} pts — encore{" "}
               <span className="font-medium text-primary">
-                {pointsUntilRedemption(customer.loyalty_points)} pts
+                {pointsUntilRedemption(customer.loyalty_points, settings)} pts
               </span>{" "}
               pour utiliser vos points à la caisse et obtenir une réduction sur vos produits.
             </p>

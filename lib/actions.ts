@@ -508,6 +508,52 @@ export async function createLoyaltyCustomer(input: {
   return { success: true, customer: data as import("@/lib/types").LoyaltyCustomer };
 }
 
+export async function updateLoyaltySettings(input: {
+  pointsPerMad: number;
+  pointValueMad: number;
+  minPointsToRedeem: number;
+}): Promise<{ success: true; settings: import("@/lib/types").LoyaltySettings } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const pointsPerMad = Number(input.pointsPerMad);
+  const pointValueMad = Number(input.pointValueMad);
+  const minPointsToRedeem = Math.floor(Number(input.minPointsToRedeem));
+
+  if (!Number.isFinite(pointsPerMad) || pointsPerMad <= 0) {
+    return { error: "Le montant MAD par point doit être supérieur à 0" };
+  }
+  if (!Number.isFinite(pointValueMad) || pointValueMad <= 0) {
+    return { error: "La valeur du point doit être supérieure à 0" };
+  }
+  if (!Number.isFinite(minPointsToRedeem) || minPointsToRedeem < 0) {
+    return { error: "Le minimum de points est invalide" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("update_loyalty_settings", {
+    p_points_per_mad: pointsPerMad,
+    p_point_value_mad: pointValueMad,
+    p_min_points_to_redeem: minPointsToRedeem,
+  });
+
+  if (error) return { error: error.message };
+
+  const { mapLoyaltySettings } = await import("@/lib/loyalty/settings");
+  const settings = mapLoyaltySettings(
+    data as {
+      points_per_mad: number;
+      point_value_mad: number;
+      min_points_to_redeem: number;
+    }
+  );
+
+  revalidatePath("/director/loyalty");
+  revalidatePath("/cashier/pos");
+  revalidatePath("/carte", "layout");
+  return { success: true, settings };
+}
+
 export async function lookupLoyaltyCustomerByPhone(
   phone: string
 ): Promise<{ customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {

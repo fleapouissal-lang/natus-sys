@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { getPublicLoyaltyCustomer } from "@/lib/loyalty/customers";
 import { toPublicLoyaltyCustomer } from "@/lib/loyalty/public";
+import { getPublicLoyaltySettings } from "@/lib/loyalty/settings.server";
 import { LoyaltyCardClientView } from "@/components/loyalty/loyalty-card-client-view";
 
 export const viewport: Viewport = {
@@ -63,11 +64,14 @@ export default async function LoyaltyCardPage({
   const data = await getPublicLoyaltyCustomer(token);
   if (!data) notFound();
 
+  const loyaltySettings = await getPublicLoyaltySettings();
+
   return (
     <div className="px-4 py-8 sm:px-6">
       <LoyaltyCardClientView
         initialCustomer={toPublicLoyaltyCustomer(data.customer)}
         initialTransactions={data.transactions}
+        loyaltySettings={loyaltySettings}
       />
     </div>
   );

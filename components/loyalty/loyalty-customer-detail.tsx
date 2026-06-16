@@ -7,24 +7,27 @@ import { Badge } from "@/components/ui/badge";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
 import { loyaltyTierFromPoints, loyaltyTierLabel } from "@/lib/loyalty/tiers";
 import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
-import { LOYALTY_MIN_POINTS_TO_REDEEM } from "@/lib/loyalty/config";
-import { canRedeemLoyaltyPoints, pointsUntilRedemption } from "@/lib/loyalty/points";
 import { loyaltyCardVariantLabel } from "@/lib/loyalty/card-variant";
+import { canRedeemLoyaltyPoints, pointsUntilRedemption } from "@/lib/loyalty/points";
+import { pointsValueInMad } from "@/lib/loyalty/settings";
+import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
-import type { LoyaltyCustomer, LoyaltyTransaction } from "@/lib/types";
+import type { LoyaltyCustomer, LoyaltyTransaction, LoyaltySettings } from "@/lib/types";
 
 export function LoyaltyCustomerDetailView({
   customer,
   transactions,
   backHref,
+  loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
 }: {
   customer: LoyaltyCustomer;
   transactions: LoyaltyTransaction[];
   backHref: string;
+  loyaltySettings?: LoyaltySettings;
 }) {
   const tier = loyaltyTierFromPoints(customer.loyalty_points);
-  const redeemEligible = canRedeemLoyaltyPoints(customer.loyalty_points);
+  const redeemEligible = canRedeemLoyaltyPoints(customer.loyalty_points, loyaltySettings);
   const publicUrl = loyaltyCardPublicUrl(customer.qr_token);
 
   return (
@@ -76,7 +79,7 @@ export function LoyaltyCustomerDetailView({
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">Valeur estimée</dt>
-                <dd>{formatCurrency(customer.loyalty_points)}</dd>
+                <dd>{formatCurrency(pointsValueInMad(customer.loyalty_points, loyaltySettings))}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">Membre depuis</dt>
@@ -91,9 +94,9 @@ export function LoyaltyCustomerDetailView({
                 </p>
               ) : (
                 <p>
-                  Utilisation en caisse à partir de {LOYALTY_MIN_POINTS_TO_REDEEM} pts — encore{" "}
+                  Utilisation en caisse à partir de {loyaltySettings.minPointsToRedeem} pts — encore{" "}
                   <span className="font-semibold text-primary">
-                    {pointsUntilRedemption(customer.loyalty_points)} pts
+                    {pointsUntilRedemption(customer.loyalty_points, loyaltySettings)} pts
                   </span>
                   .
                 </p>

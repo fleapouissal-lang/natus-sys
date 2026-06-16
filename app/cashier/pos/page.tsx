@@ -6,6 +6,7 @@ import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store
 import { loadShopifyOrderForPos, getShopifyOrders } from "@/lib/orders";
 import { PosTerminal } from "@/components/pos/pos-terminal";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
+import { getLoyaltySettings } from "@/lib/loyalty/settings.server";
 
 export default async function PosPage({
   searchParams,
@@ -32,6 +33,7 @@ export default async function PosPage({
   let shopifyLoad = null;
   let shopifyError: string | null = null;
   const shopifyOrders = profile ? await getShopifyOrders(profile) : [];
+  const loyaltySettings = await getLoyaltySettings();
 
   if (shopifyOrderId && profile) {
     const result = await loadShopifyOrderForPos(profile, shopifyOrderId, products);
@@ -70,6 +72,7 @@ export default async function PosPage({
           shopifyOrder={shopifyLoad?.context}
           missingShopifyProducts={shopifyLoad?.missingProducts}
           shopifyOrders={shopifyOrders}
+          loyaltySettings={loyaltySettings}
         />
       </div>
     </div>
