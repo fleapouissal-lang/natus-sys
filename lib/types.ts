@@ -139,6 +139,12 @@ export interface LoyaltyStats {
   }[];
 }
 
+export interface LoyaltySettings {
+  pointsPerMad: number;
+  pointValueMad: number;
+  minPointsToRedeem: number;
+}
+
 export interface SaleItem {
   id: string;
   sale_id: string;

@@ -37,7 +37,8 @@ import { workflowStatusLabel } from "@/lib/shopify/order-status";
 import { formatCurrency } from "@/lib/utils";
 import { computeTvaBreakdown, TVA_RATE } from "@/lib/constants/sales";
 import { cn } from "@/lib/utils";
-import type { Product, CartItem, UserRole, PaymentMethod, Store, ShopifyOrder, LoyaltyCustomer } from "@/lib/types";
+import type { Product, CartItem, UserRole, PaymentMethod, Store, ShopifyOrder, LoyaltyCustomer, LoyaltySettings } from "@/lib/types";
+import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 import { parseLoyaltyQrPayload } from "@/lib/loyalty/qr";
 import {
   payableAfterRedemption,
@@ -68,6 +69,7 @@ export function PosTerminal({
   shopifyOrder: initialShopifyOrder,
   missingShopifyProducts: initialMissingProducts = [],
   shopifyOrders = [],
+  loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
 }: {
   products: Product[];
   role: UserRole;
@@ -79,6 +81,7 @@ export function PosTerminal({
   shopifyOrder?: ShopifyOrderPosContext;
   missingShopifyProducts?: string[];
   shopifyOrders?: ShopifyOrder[];
+  loyaltySettings?: LoyaltySettings;
 }) {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
@@ -377,9 +380,9 @@ export function PosTerminal({
       (sum, item) => sum + item.product.price * item.quantity,
       0
     );
-    const loyaltyDiscount = discountFromPoints(pointsToRedeem);
-    const total = payableAfterRedemption(subtotal, pointsToRedeem);
-    const pointsEarned = loyaltyCustomer ? pointsEarnedForAmount(total) : 0;
+    const loyaltyDiscount = discountFromPoints(pointsToRedeem, loyaltySettings);
+    const total = payableAfterRedemption(subtotal, pointsToRedeem, loyaltySettings);
+    const pointsEarned = loyaltyCustomer ? pointsEarnedForAmount(total, loyaltySettings) : 0;
 
     setReceipt({
       saleId: result.saleId ?? activeShopifyOrder?.id ?? "web",
@@ -437,8 +440,8 @@ export function PosTerminal({
     (sum, item) => sum + item.product.price * item.quantity,
     0
   );
-  const loyaltyDiscount = discountFromPoints(pointsToRedeem);
-  const total = payableAfterRedemption(subtotal, pointsToRedeem);
+  const loyaltyDiscount = discountFromPoints(pointsToRedeem, loyaltySettings);
+  const total = payableAfterRedemption(subtotal, pointsToRedeem, loyaltySettings);
   const { ht: totalHt, tva: totalTva, ttc: totalTtc } = computeTvaBreakdown(total);
   const tvaPercent = Math.round(TVA_RATE * 100);
 
@@ -690,6 +693,7 @@ export function PosTerminal({
                         pointsToRedeem={pointsToRedeem}
                         onCustomerChange={setLoyaltyCustomer}
                         onPointsToRedeemChange={setPointsToRedeem}
+                        loyaltySettings={loyaltySettings}
                       />
                     </div>
                   )}
