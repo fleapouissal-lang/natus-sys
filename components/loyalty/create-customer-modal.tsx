@@ -112,7 +112,7 @@ export function CreateLoyaltyCustomerModal({
             customer={preview}
             compact
             flipable
-            showBarcode={false}
+            showBarcode={cardVariant === "noir" || cardVariant === "champagne"}
           />
         </div>
 

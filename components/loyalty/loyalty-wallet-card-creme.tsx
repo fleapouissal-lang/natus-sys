@@ -86,14 +86,18 @@ function CremeInfoRow({
   children: React.ReactNode;
   compact: boolean;
 }) {
+  const circle = compact ? 15 : 17;
+
   return (
     <div className="flex items-center gap-2">
       <div
-        className={cn(
-          "flex shrink-0 items-center justify-center",
-          compact ? "h-3.5 w-3.5" : "h-4 w-4"
-        )}
-        style={{ color: STRIP }}
+        className="loyalty-wallet-card-round flex shrink-0 items-center justify-center"
+        style={{
+          width: circle,
+          height: circle,
+          backgroundColor: STRIP,
+          color: CREAM,
+        }}
       >
         {icon}
       </div>
@@ -121,31 +125,42 @@ function CremeCardFront({
   displayNumber: string;
   validUntil: string;
 }) {
-  const qrSize = compact ? 46 : 56;
+  const qrSize = compact ? 52 : 64;
   const qrUrl = loyaltyCardPublicUrl(customer.qr_token);
-  const pad = compact ? "px-3 py-2.5" : "px-4 py-3";
-  const iconSize = compact ? 10 : 11;
+  const pad = compact ? "py-2.5 pr-3 pl-2" : "py-3 pr-4 pl-2.5";
+  const iconSize = compact ? 7.5 : 8.5;
 
   return (
     <CremeCardFace>
       <div className="flex h-full w-full">
         <div
-          className="loyalty-creme-strip flex w-[21%] shrink-0 items-center justify-center"
+          className="loyalty-creme-strip flex w-[27%] shrink-0 items-center justify-center"
           style={{ backgroundColor: STRIP }}
         >
-          <div className={compact ? "w-[68%]" : "w-[70%]"}>
+          <div className={compact ? "w-[72%]" : "w-[74%]"}>
             <LoyaltyCardQr value={qrUrl} size={qrSize} />
           </div>
         </div>
 
         <div
-          className="loyalty-creme-main relative flex min-w-0 flex-1 flex-col border-l"
+          className="loyalty-creme-main relative flex min-w-0 flex-1 flex-col"
           style={{
             backgroundColor: CREAM,
             color: INK,
-            borderColor: "rgba(74,68,63,0.18)",
           }}
         >
+          <div
+            className="absolute left-0 z-[2]"
+            style={{
+              top: compact ? "10%" : "12%",
+              bottom: compact ? "10%" : "12%",
+              width: 1,
+              backgroundColor: STRIP,
+              opacity: 0.9,
+            }}
+            aria-hidden
+          />
+
           <div
             className="pointer-events-none absolute select-none"
             style={{
@@ -164,27 +179,16 @@ function CremeCardFront({
           </div>
 
           <div className={cn("relative z-[1] flex min-h-0 flex-1 flex-col", pad)}>
-            <NatusCremeLogo compact={compact} />
-            <div
-              className="mt-2"
-              style={{
-                height: 1,
-                width: compact ? 64 : 80,
-                backgroundColor: STRIP,
-                opacity: 0.5,
-              }}
-            />
-            <p
-              className={cn(
-                "mt-1.5 uppercase tracking-[0.16em]",
-                compact ? "text-[5px]" : "text-[6px]"
-              )}
-              style={{ fontFamily: SANS, color: STRIP }}
-            >
-              Natus Cosmétiques · Carte Fidélité
-            </p>
+            <div className="pl-1.5">
+              <NatusCremeLogo compact={compact} />
+            </div>
 
-            <div className={cn("mt-3 space-y-2", compact ? "space-y-1.5" : "space-y-2")}>
+            <div
+              className={cn(
+                "mt-3 space-y-2 pl-1",
+                compact ? "space-y-1.5" : "space-y-2"
+              )}
+            >
               <CremeInfoRow
                 compact={compact}
                 icon={<User size={iconSize} strokeWidth={1.75} />}
