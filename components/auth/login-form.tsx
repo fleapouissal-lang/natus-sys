@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { getHomePath } from "@/lib/permissions";
+import { touchSessionActivity } from "@/components/auth/session-guard";
 
 function getLoginErrorMessage(code?: string): string {
   switch (code) {
@@ -66,6 +67,8 @@ export function LoginForm() {
       setLoading(false);
       return;
     }
+
+    touchSessionActivity();
 
     router.push(getHomePath(profile.role as "directeur" | "manager" | "cashier"));
     router.refresh();

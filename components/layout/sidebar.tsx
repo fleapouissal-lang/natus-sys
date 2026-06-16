@@ -23,6 +23,7 @@ import {
   Gift,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
 import { cn } from "@/lib/utils";
 import { getRoleLabel, getManagementBasePath } from "@/lib/permissions";
 import type { UserRole } from "@/lib/types";
@@ -158,6 +159,7 @@ export function Sidebar({
   async function handleLogout() {
     const supabase = createClient();
     await supabase.auth.signOut();
+    localStorage.removeItem(SESSION_LAST_ACTIVITY_KEY);
     router.push("/login");
     router.refresh();
   }

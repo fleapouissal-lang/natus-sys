@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
+import { SessionGuard } from "@/components/auth/session-guard";
 import { CashierNotificationsProvider } from "@/components/notifications/cashier-notifications-context";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { cn } from "@/lib/utils";
@@ -25,7 +26,9 @@ export function DashboardShell({
   const orderNotifications = Boolean(storeId);
 
   const shell = (
-    <div className="flex h-screen overflow-hidden bg-page">
+    <>
+      <SessionGuard />
+      <div className="flex h-screen overflow-hidden bg-page">
       <Sidebar role={role} userName={userName} cityLabel={cityLabel} />
       <main
         className={cn(
@@ -39,6 +42,7 @@ export function DashboardShell({
         </div>
       </main>
     </div>
+    </>
   );
 
   if (!storeId) return shell;

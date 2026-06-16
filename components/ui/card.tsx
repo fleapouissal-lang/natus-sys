@@ -26,7 +26,7 @@ export function CardHeader({
   return (
     <div className="mb-6 flex items-start justify-between">
       <div>
-        <h2 className="text-lg font-semibold text-primary">{title}</h2>
+        <h2 className="font-heading text-lg font-semibold text-primary">{title}</h2>
         {description && (
           <p className="mt-1 text-sm text-muted">{description}</p>
         )}

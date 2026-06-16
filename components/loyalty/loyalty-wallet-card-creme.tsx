@@ -81,32 +81,18 @@ function CremeMonogram({
 
 function NatusCremeLogo({ compact }: { compact: boolean }) {
   return (
-    <div>
-      <p
-        className="leading-none"
-        style={{
-          fontFamily: SERIF,
-          fontWeight: 600,
-          fontSize: compact ? 12 : 14,
-          color: STRIP,
-          letterSpacing: "0.04em",
-        }}
-      >
-        natus
-      </p>
-      <p
-        className="mt-0.5 uppercase"
-        style={{
-          fontFamily: SANS,
-          fontSize: compact ? 4.5 : 5,
-          letterSpacing: "0.36em",
-          color: STRIP,
-          opacity: 0.68,
-        }}
-      >
-        Marrakech
-      </p>
-    </div>
+    <p
+      className="leading-none"
+      style={{
+        fontFamily: SERIF,
+        fontWeight: 600,
+        fontSize: compact ? 14 : 17,
+        color: STRIP,
+        letterSpacing: "0.04em",
+      }}
+    >
+      Natus
+    </p>
   );
 }
 
@@ -144,7 +130,7 @@ function CremeInfoRow({
           <p
             className={cn(
               "mb-0.5 uppercase tracking-[0.16em]",
-              compact ? "text-[5px]" : "text-[5.5px]"
+              compact ? "text-[6px]" : "text-[7px]"
             )}
             style={{ fontFamily: SANS, color: INK_SOFT }}
           >
@@ -152,7 +138,7 @@ function CremeInfoRow({
           </p>
         )}
         <div
-          className={cn("leading-snug", compact ? "text-[7px]" : "text-[8px]")}
+          className={cn("leading-snug", compact ? "text-[8px]" : "text-[9px]")}
           style={{
             fontFamily: accent ? SERIF : SANS,
             color: accent ? STRIP : INK,
@@ -247,7 +233,7 @@ function CremeCardFront({
               <p
                 className={cn(
                   "truncate uppercase leading-tight tracking-[0.06em]",
-                  compact ? "text-[9px]" : "text-[10px]"
+                  compact ? "text-[10px]" : "text-[11px]"
                 )}
                 style={{ fontFamily: SERIF, fontWeight: 600, color: INK }}
               >
@@ -355,8 +341,8 @@ function CremeCardBack({
         <div className="relative z-[1] flex flex-1 flex-col items-center justify-center px-4 text-center">
           <p
             className={cn(
-              "lowercase tracking-[0.06em]",
-              compact ? "text-[1.35rem]" : "text-[1.85rem]"
+              "tracking-[0.06em]",
+              compact ? "text-[1.5rem]" : "text-[2rem]"
             )}
             style={{
               fontFamily: SERIF,
@@ -365,7 +351,7 @@ function CremeCardBack({
               textShadow: "0 1px 8px rgba(0,0,0,0.12)",
             }}
           >
-            natus
+            Natus
           </p>
           <div
             className="mx-auto mt-2"
@@ -378,17 +364,8 @@ function CremeCardBack({
           />
           <p
             className={cn(
-              "mt-2 uppercase tracking-[0.3em]",
-              compact ? "text-[5px]" : "text-[6px]"
-            )}
-            style={{ fontFamily: SANS, color: CREAM, opacity: 0.88 }}
-          >
-            Marrakech
-          </p>
-          <p
-            className={cn(
               "mt-3 max-w-full truncate uppercase tracking-[0.08em]",
-              compact ? "text-[8px]" : "text-[9px]"
+              compact ? "text-[9px]" : "text-[10px]"
             )}
             style={{ fontFamily: SERIF, fontWeight: 600, color: CREAM }}
           >

@@ -231,15 +231,6 @@ function LoyaltyCardBack({
         >
           Natus
         </p>
-        <p
-          className={cn(
-            "mt-1 uppercase tracking-[0.28em] opacity-70",
-            compact ? "text-[5px]" : "text-[6px]"
-          )}
-          style={{ fontFamily: SANS }}
-        >
-          Marrakech
-        </p>
 
         <div className="mt-4 grid w-full grid-cols-2 gap-3">
           <div className="text-center">

@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getHomePath } from "@/lib/permissions";
 import { applySecurityHeaders } from "@/lib/security/headers";
+import { asSessionCookieOptions } from "@/lib/supabase/session-cookies";
 import type { UserRole } from "@/lib/types";
 
 const STAFF_ROLES: UserRole[] = ["cashier", "manager", "directeur", "admin"];
@@ -23,7 +24,7 @@ export async function updateSession(request: NextRequest) {
           );
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, asSessionCookieOptions(options))
           );
         },
       },
