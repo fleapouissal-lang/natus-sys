@@ -15,6 +15,7 @@ export default async function CashierLayout({
       role={profile.role}
       userName={profile.full_name || profile.email}
       cityLabel={profile.city || undefined}
+      storeId={profile.store_id}
     >
       {children}
     </DashboardShell>

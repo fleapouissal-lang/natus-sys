@@ -25,6 +25,9 @@ import { PosOrdersPanel } from "@/components/pos/pos-orders-panel";
 import { Modal } from "@/components/ui/modal";
 import { Receipt, printReceipt, type ReceiptData } from "@/components/pos/receipt";
 import { ProductCatalog } from "@/components/pos/product-catalog";
+import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
+import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
+import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
 import { completeSale, completeShopifyOrderSale, prepareShopifyOrderForPos } from "@/lib/actions";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
@@ -90,6 +93,7 @@ export function PosTerminal({
   const [scanListening, setScanListening] = useState(true);
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const orderNotifications = useCashierNotifications();
 
   const isManagementUser =
     role === "manager" || role === "directeur" || role === "admin";
@@ -498,16 +502,17 @@ export function PosTerminal({
           <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
             {/* Colonne gauche 60% — scroll catalogue uniquement */}
             <div className="flex min-h-0 w-full flex-col lg:w-[60%]">
+              {orderNotifications && <CashierNotificationBar />}
               <div className="shrink-0 px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
                     <h1 className="text-xl font-bold tracking-tight text-primary">Caisse</h1>
                     {storeName && (
-                      <p className="mt-0.5 text-sm text-muted">{storeName}</p>
+                      <p className="mt-0.5 truncate text-sm text-muted">{storeName}</p>
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    {shopifyOrders.length > 0 && (
+                  <div className="flex shrink-0 items-center gap-2">
+                    {(shopifyOrders.length > 0 || orderNotifications) && (
                       <Button
                         type="button"
                         variant="secondary"
@@ -517,6 +522,11 @@ export function PosTerminal({
                         <ClipboardList className="h-4 w-4" />
                         Commandes
                       </Button>
+                    )}
+                    {orderNotifications && (
+                      <CashierNotificationBell
+                        onSelect={() => setShowOrdersPanel(true)}
+                      />
                     )}
                     {isManagementUser && (
                       <div className="flex rounded-md border border-border bg-surface p-1">

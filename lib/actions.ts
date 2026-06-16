@@ -677,35 +677,19 @@ export async function syncShopifyOrders(): Promise<
   const profile = await requireRole(["directeur", "admin"]);
   if (!profile) return { error: "Non autorisé" };
 
-  try {
-    const { fetchShopifyOrders, isShopifyConfigured } = await import(
-      "@/lib/shopify/client"
-    );
-    const { processShopifyOrder } = await import("@/lib/shopify/process-order");
+  const { runShopifyOrdersSync } = await import("@/lib/shopify/sync-orders");
+  const result = await runShopifyOrdersSync(100);
 
-    if (!isShopifyConfigured()) {
-      return { error: "Shopify non configuré (variables d'environnement)" };
-    }
-
-    const orders = await fetchShopifyOrders(100);
-    let synced = 0;
-    let failed = 0;
-
-    for (const order of orders) {
-      const result = await processShopifyOrder(order);
-      if (result.ok) synced++;
-      else failed++;
-    }
-
-    revalidatePath("/director/orders");
-  revalidatePath("/director/hub");
-    revalidatePath("/manager/orders");
-    revalidatePath("/cashier/orders");
-
-    return { success: true, synced, failed };
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : "Erreur sync Shopify" };
+  if (!result.success) {
+    return { error: result.error };
   }
+
+  revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
+  revalidatePath("/manager/orders");
+  revalidatePath("/cashier/orders");
+
+  return { success: true, synced: result.synced, failed: result.failed };
 }
 
 export async function updateShopifyOrderStatus(
