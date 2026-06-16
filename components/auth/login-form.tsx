@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Logo } from "@/components/ui/logo";
 import { getHomePath } from "@/lib/permissions";
 
 function getLoginErrorMessage(code?: string): string {
@@ -73,20 +72,21 @@ export function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md animate-fade-in">
+    <div className="natus-bg-pattern relative flex min-h-screen items-center justify-center p-4">
+      <div className="relative z-10 w-full max-w-md animate-fade-in">
         <div className="mb-8 flex flex-col items-center text-center">
-          <Logo size="lg" className="mb-6" />
-          <p className="text-muted">
+          <h1 className="text-5xl font-semibold tracking-tight text-[#B38C4A] sm:text-6xl">Natus</h1>
+          <p className="mt-3 text-base text-muted">
             Connectez-vous à votre espace de caisse
           </p>
         </div>
 
-        <Card className="border-border/50">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <Card className="border border-[#B38C4A]/15 bg-surface/95 shadow-[0_0_0_1px_rgba(179,140,74,0.08),0_12px_40px_rgba(179,140,74,0.06)] backdrop-blur-sm">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <Input
               label="Email"
               type="email"
+              inputSize="lg"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="manager@natus.ma"
@@ -95,9 +95,11 @@ export function LoginForm() {
             />
             <PasswordInput
               label="Mot de passe"
+              inputSize="lg"
+              maskWithAsterisk
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="********"
               required
               autoComplete="current-password"
             />
@@ -108,7 +110,12 @@ export function LoginForm() {
               </p>
             )}
 
-            <Button type="submit" className="w-full" size="lg" loading={loading}>
+            <Button
+              type="submit"
+              className="w-full bg-[#B38C4A] text-black hover:brightness-95"
+              size="lg"
+              loading={loading}
+            >
               Se connecter
             </Button>
           </form>

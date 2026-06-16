@@ -6,6 +6,7 @@ const sizes = {
   sm: 40,
   md: 112,
   lg: 140,
+  xl: 180,
 } as const;
 
 export function Logo({
@@ -13,7 +14,7 @@ export function Logo({
   collapsed = false,
   className,
 }: {
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   collapsed?: boolean;
   className?: string;
 }) {

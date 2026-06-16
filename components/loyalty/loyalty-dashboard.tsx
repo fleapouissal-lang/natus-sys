@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
@@ -46,6 +47,16 @@ export function LoyaltyDashboard({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-primary-light/30">
+                  <th className="px-6 py-3 text-left font-medium text-muted">#</th>
+                  <th className="px-6 py-3 text-left font-medium text-muted">Client</th>
+                  <th className="px-6 py-3 text-left font-medium text-muted">Carte</th>
+                  <th className="px-6 py-3 text-right font-medium text-muted">Points</th>
+                  <th className="px-6 py-3 text-right font-medium text-muted">Valeur</th>
+                  <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
+                </tr>
+              </thead>
               <tbody>
                 {stats.topCustomers.map((customer, index) => (
                   <tr
@@ -54,15 +65,8 @@ export function LoyaltyDashboard({
                   >
                     <td className="px-6 py-4 font-medium text-muted">#{index + 1}</td>
                     <td className="px-6 py-4">
-                      <Link
-                        href={`${customerBasePath}/${customer.id}`}
-                        className="group block"
-                      >
-                        <p className="font-medium text-foreground group-hover:text-primary">
-                          {customer.full_name}
-                        </p>
-                        <p className="text-muted">{formatPhoneDisplay(customer.phone)}</p>
-                      </Link>
+                      <p className="font-medium text-foreground">{customer.full_name}</p>
+                      <p className="text-muted">{formatPhoneDisplay(customer.phone)}</p>
                     </td>
                     <td className="px-6 py-4">{customer.card_number}</td>
                     <td className="px-6 py-4 text-right font-bold text-primary">
@@ -70,6 +74,17 @@ export function LoyaltyDashboard({
                     </td>
                     <td className="px-6 py-4 text-right text-muted">
                       ≈ {formatCurrency(customer.loyalty_points)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end">
+                        <Link
+                          href={`${customerBasePath}/${customer.id}`}
+                          title="Voir la fiche client"
+                          className="order-action-icon flex h-8 w-8 items-center justify-center border border-primary/30 bg-page text-primary hover:bg-primary-light"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

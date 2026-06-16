@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { loyaltyTierFromPoints, loyaltyTierLabel } from "@/lib/loyalty/tiers";
@@ -59,6 +59,7 @@ export function LoyaltyCustomersList({
                 <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">Points</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Adhésion</th>
+                <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -67,15 +68,8 @@ export function LoyaltyCustomersList({
                 return (
                   <tr key={customer.id} className="border-b border-border last:border-b-0">
                     <td className="px-6 py-4">
-                      <Link
-                        href={`${detailBasePath}/${customer.id}`}
-                        className="group block"
-                      >
-                        <p className="font-medium text-foreground group-hover:text-primary">
-                          {customer.full_name}
-                        </p>
-                        <p className="text-xs text-muted">{formatPhoneDisplay(customer.phone)}</p>
-                      </Link>
+                      <p className="font-medium text-foreground">{customer.full_name}</p>
+                      <p className="text-xs text-muted">{formatPhoneDisplay(customer.phone)}</p>
                     </td>
                     <td className="px-6 py-4 font-mono">{customer.card_number}</td>
                     <td className="px-6 py-4">
@@ -89,12 +83,23 @@ export function LoyaltyCustomersList({
                     <td className="px-6 py-4 whitespace-nowrap text-muted">
                       {formatDate(customer.created_at)}
                     </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end">
+                        <Link
+                          href={`${detailBasePath}/${customer.id}`}
+                          title="Voir la fiche client"
+                          className="order-action-icon flex h-8 w-8 items-center justify-center border border-primary/30 bg-page text-primary hover:bg-primary-light"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Link>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-muted">
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted">
                     Aucun client trouvé
                   </td>
                 </tr>
