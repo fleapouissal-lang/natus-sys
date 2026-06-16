@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { getLoyaltyStats } from "@/lib/loyalty/stats";
+import { getManagementBasePath } from "@/lib/permissions";
 import { LoyaltyDashboard } from "@/components/loyalty/loyalty-dashboard";
 
 export default async function ManagerLoyaltyPage() {
@@ -8,6 +9,7 @@ export default async function ManagerLoyaltyPage() {
   if (!profile) redirect("/login");
 
   const stats = await getLoyaltyStats(profile);
+  const basePath = getManagementBasePath(profile.role)!;
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -18,7 +20,10 @@ export default async function ManagerLoyaltyPage() {
         </p>
       </div>
 
-      <LoyaltyDashboard stats={stats} />
+      <LoyaltyDashboard
+        stats={stats}
+        customerBasePath={`${basePath}/loyalty`}
+      />
     </div>
   );
 }

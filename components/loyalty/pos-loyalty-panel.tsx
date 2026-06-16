@@ -10,7 +10,10 @@ import {
   discountFromPoints,
   pointsEarnedForAmount,
   payableAfterRedemption,
+  canRedeemLoyaltyPoints,
+  pointsUntilRedemption,
 } from "@/lib/loyalty/points";
+import { LOYALTY_MIN_POINTS_TO_REDEEM } from "@/lib/loyalty/config";
 import { formatCurrency } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import type { LoyaltyCustomer } from "@/lib/types";
@@ -74,6 +77,8 @@ export function PosLoyaltyPanel({
   }
 
   const maxRedeem = customer ? maxRedeemablePoints(customer.loyalty_points, subtotal) : 0;
+  const redeemEligible = customer ? canRedeemLoyaltyPoints(customer.loyalty_points) : false;
+  const pointsRemaining = customer ? pointsUntilRedemption(customer.loyalty_points) : 0;
   const discount = discountFromPoints(pointsToRedeem);
   const payable = payableAfterRedemption(subtotal, pointsToRedeem);
   const pointsToEarn = customer ? pointsEarnedForAmount(payable) : 0;
@@ -124,7 +129,7 @@ export function PosLoyaltyPanel({
               </div>
             </div>
 
-            {maxRedeem > 0 && (
+            {redeemEligible && maxRedeem > 0 && (
               <div>
                 <label className="mb-1.5 block text-sm font-medium">
                   Utiliser des points (max {maxRedeem})
@@ -147,6 +152,24 @@ export function PosLoyaltyPanel({
                   </p>
                 )}
               </div>
+            )}
+
+            {customer && !redeemEligible && (
+              <div className="rounded-lg border border-border bg-surface px-3 py-2.5 text-xs text-muted">
+                <p className="font-medium text-foreground">
+                  Utilisation des points à partir de {LOYALTY_MIN_POINTS_TO_REDEEM} pts
+                </p>
+                <p className="mt-1">
+                  Encore <span className="font-semibold text-primary">{pointsRemaining} pts</span>{" "}
+                  à accumuler pour payer en caisse avec vos points.
+                </p>
+              </div>
+            )}
+
+            {customer && redeemEligible && maxRedeem === 0 && subtotal > 0 && (
+              <p className="text-xs text-muted">
+                Solde utilisable en caisse — ajoutez des produits au panier pour appliquer vos points.
+              </p>
             )}
           </div>
         ) : (

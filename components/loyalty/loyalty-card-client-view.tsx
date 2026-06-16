@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Copy, Check, Share2, RefreshCw, Smartphone } from "lucide-react";
+import { Copy, Check, Share2, RefreshCw } from "lucide-react";
+import { LoyaltyCardInstall } from "@/components/loyalty/loyalty-card-install";
 import { Button } from "@/components/ui/button";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
 import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
 import { formatDate } from "@/lib/utils";
+import { LOYALTY_MIN_POINTS_TO_REDEEM } from "@/lib/loyalty/config";
+import { canRedeemLoyaltyPoints, pointsUntilRedemption } from "@/lib/loyalty/points";
 import type { LoyaltyCustomer, LoyaltyTransaction } from "@/lib/types";
 
 export function LoyaltyCardClientView({
@@ -19,7 +22,6 @@ export function LoyaltyCardClientView({
   const [transactions, setTransactions] = useState(initialTransactions);
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [showInstallHelp, setShowInstallHelp] = useState(false);
 
   const cardUrl = loyaltyCardPublicUrl(customer.qr_token);
 
@@ -74,6 +76,34 @@ export function LoyaltyCardClientView({
 
       <LoyaltyWalletCard customer={customer} />
 
+      <div className="rounded-2xl border border-border bg-surface p-4 text-sm">
+        {canRedeemLoyaltyPoints(customer.loyalty_points) ? (
+          <>
+            <p className="font-semibold text-success">Points utilisables en caisse</p>
+            <p className="mt-1 text-muted">
+              Présentez votre carte en magasin : le caissier pourra déduire vos{" "}
+              <span className="font-medium text-foreground">{customer.loyalty_points} points</span>{" "}
+              sur votre achat (1 pt = 1 MAD).
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="font-semibold text-foreground">
+              Paiement avec points dès {LOYALTY_MIN_POINTS_TO_REDEEM} pts
+            </p>
+            <p className="mt-1 text-muted">
+              Vous avez {customer.loyalty_points} pts — encore{" "}
+              <span className="font-medium text-primary">
+                {pointsUntilRedemption(customer.loyalty_points)} pts
+              </span>{" "}
+              pour utiliser vos points à la caisse et obtenir une réduction sur vos produits.
+            </p>
+          </>
+        )}
+      </div>
+
+      <LoyaltyCardInstall token={customer.qr_token} />
+
       <div className="grid grid-cols-2 gap-2">
         <Button
           type="button"
@@ -104,35 +134,6 @@ export function LoyaltyCardClientView({
           Actualiser mes points
         </Button>
       </div>
-
-      <button
-        type="button"
-        onClick={() => setShowInstallHelp((v) => !v)}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary-light/20 px-4 py-3 text-sm font-medium text-primary cursor-pointer"
-      >
-        <Smartphone className="h-4 w-4" />
-        Installer sur mon téléphone
-      </button>
-
-      {showInstallHelp && (
-        <div className="rounded-2xl border border-border bg-surface p-5 text-sm">
-          <p className="font-semibold text-foreground">iPhone (Safari)</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted">
-            <li>Ouvrez ce lien dans Safari</li>
-            <li>Appuyez sur Partager (icône carré avec flèche)</li>
-            <li>Choisissez « Sur l&apos;écran d&apos;accueil »</li>
-          </ol>
-          <p className="mt-4 font-semibold text-foreground">Android (Chrome)</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted">
-            <li>Ouvrez ce lien dans Chrome</li>
-            <li>Menu ⋮ en haut à droite</li>
-            <li>« Ajouter à l&apos;écran d&apos;accueil » ou « Installer l&apos;application »</li>
-          </ol>
-          <p className="mt-4 text-xs text-muted">
-            Vous retrouverez votre carte comme une app — points mis à jour avec « Actualiser ».
-          </p>
-        </div>
-      )}
 
       <div className="rounded-2xl border border-border bg-surface p-5">
         <h2 className="text-sm font-semibold text-foreground">Historique des points</h2>

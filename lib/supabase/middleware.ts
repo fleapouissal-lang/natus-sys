@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getHomePath } from "@/lib/permissions";
+import { applySecurityHeaders } from "@/lib/security/headers";
 import type { UserRole } from "@/lib/types";
+
+const STAFF_ROLES: UserRole[] = ["cashier", "manager", "directeur", "admin"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -43,7 +46,7 @@ export async function updateSession(request: NextRequest) {
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return applySecurityHeaders(NextResponse.redirect(url));
   }
 
   if (user) {
@@ -58,14 +61,14 @@ export async function updateSession(request: NextRequest) {
     if (isAuthRoute && role) {
       const url = request.nextUrl.clone();
       url.pathname = getHomePath(role);
-      return NextResponse.redirect(url);
+      return applySecurityHeaders(NextResponse.redirect(url));
     }
 
     if (pathname.startsWith("/director")) {
       if ((role !== "directeur" && role !== "admin") || !profile?.is_active) {
         const url = request.nextUrl.clone();
         url.pathname = role ? getHomePath(role) : "/login";
-        return NextResponse.redirect(url);
+        return applySecurityHeaders(NextResponse.redirect(url));
       }
     }
 
@@ -73,7 +76,7 @@ export async function updateSession(request: NextRequest) {
       if (role !== "manager" || !profile?.is_active) {
         const url = request.nextUrl.clone();
         url.pathname = role ? getHomePath(role) : "/login";
-        return NextResponse.redirect(url);
+        return applySecurityHeaders(NextResponse.redirect(url));
       }
     }
 
@@ -81,26 +84,30 @@ export async function updateSession(request: NextRequest) {
       if (role !== "livreur" || !profile?.is_active) {
         const url = request.nextUrl.clone();
         url.pathname = role ? getHomePath(role) : "/login";
-        return NextResponse.redirect(url);
+        return applySecurityHeaders(NextResponse.redirect(url));
       }
     }
 
-    if (
-      pathname.startsWith("/cashier") &&
-      role === "livreur" &&
-      profile?.is_active
-    ) {
-      const url = request.nextUrl.clone();
-      url.pathname = getHomePath("livreur");
-      return NextResponse.redirect(url);
-    }
+    if (pathname.startsWith("/cashier")) {
+      if (!profile?.is_active) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        return applySecurityHeaders(NextResponse.redirect(url));
+      }
 
-    if (pathname.startsWith("/cashier") && !profile?.is_active) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
+      if (role === "livreur") {
+        const url = request.nextUrl.clone();
+        url.pathname = getHomePath("livreur");
+        return applySecurityHeaders(NextResponse.redirect(url));
+      }
+
+      if (!role || !STAFF_ROLES.includes(role)) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        return applySecurityHeaders(NextResponse.redirect(url));
+      }
     }
   }
 
-  return supabaseResponse;
+  return applySecurityHeaders(supabaseResponse);
 }

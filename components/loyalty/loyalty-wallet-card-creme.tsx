@@ -278,13 +278,15 @@ function CremeCardFront({
                 </span>
               </CremeInfoRow>
 
-              <CremeInfoRow
-                compact={compact}
-                label="Téléphone"
-                icon={<Phone size={iconSize} strokeWidth={1.75} />}
-              >
-                {formatPhoneDisplay(customer.phone)}
-              </CremeInfoRow>
+              {customer.phone?.trim() && (
+                <CremeInfoRow
+                  compact={compact}
+                  label="Téléphone"
+                  icon={<Phone size={iconSize} strokeWidth={1.75} />}
+                >
+                  {formatPhoneDisplay(customer.phone)}
+                </CremeInfoRow>
+              )}
 
               {customer.email && (
                 <CremeInfoRow

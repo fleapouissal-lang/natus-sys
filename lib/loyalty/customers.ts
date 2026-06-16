@@ -1,6 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
-import type { LoyaltyCustomer, LoyaltyTransaction } from "@/lib/types";
+import type { LoyaltyCustomer, LoyaltyTransaction, Profile } from "@/lib/types";
 import { normalizeLoyaltyCardNumber } from "@/lib/loyalty/qr";
+import { getCityFilter, isDirector, isManager } from "@/lib/permissions";
+import {
+  isValidLoyaltyQrToken,
+  toPublicLoyaltyCustomer,
+  toPublicLoyaltyTransactions,
+  type PublicLoyaltyCustomer,
+  type PublicLoyaltyTransaction,
+} from "@/lib/loyalty/public";
 
 export async function getCustomerByPhone(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -56,23 +64,102 @@ export async function getCustomerTransactions(
   return (data || []) as LoyaltyTransaction[];
 }
 
+export async function canStaffAccessLoyaltyCustomer(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  profile: Profile,
+  customer: Pick<LoyaltyCustomer, "store_id">
+): Promise<boolean> {
+  if (isDirector(profile)) return true;
+
+  if (isManager(profile)) {
+    const city = getCityFilter(profile);
+    if (!city) return false;
+    if (!customer.store_id) return true;
+
+    const { data: store } = await supabase
+      .from("stores")
+      .select("city")
+      .eq("id", customer.store_id)
+      .maybeSingle();
+
+    return store?.city === city;
+  }
+
+  return false;
+}
+
+export async function getLoyaltyCustomerForStaff(
+  profile: Profile,
+  customerId: string
+): Promise<{ customer: LoyaltyCustomer; transactions: LoyaltyTransaction[] } | null> {
+  const supabase = await createClient();
+
+  const { data: customer, error } = await supabase
+    .from("customers")
+    .select("*")
+    .eq("id", customerId)
+    .maybeSingle();
+
+  if (error || !customer) return null;
+
+  const allowed = await canStaffAccessLoyaltyCustomer(
+    supabase,
+    profile,
+    customer as LoyaltyCustomer
+  );
+  if (!allowed) return null;
+
+  const transactions = await getCustomerTransactions(supabase, customer.id, 50);
+
+  return {
+    customer: customer as LoyaltyCustomer,
+    transactions,
+  };
+}
+
 export async function getPublicLoyaltyCustomer(
   qrToken: string
 ): Promise<
   | {
-      customer: LoyaltyCustomer;
-      transactions: LoyaltyTransaction[];
+      customer: PublicLoyaltyCustomer;
+      transactions: PublicLoyaltyTransaction[];
     }
   | null
 > {
+  if (!isValidLoyaltyQrToken(qrToken)) return null;
+
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_loyalty_customer_by_qr_token", {
+
+  const { data: cardRows, error: cardError } = await supabase.rpc("get_public_loyalty_card", {
     p_token: qrToken,
   });
 
-  if (error || !data) return null;
+  if (cardError || !cardRows?.length) return null;
 
-  const customer = data as LoyaltyCustomer;
-  const transactions = await getCustomerTransactions(supabase, customer.id, 15);
-  return { customer, transactions };
+  const row = cardRows[0] as PublicLoyaltyCustomer & { card_variant?: string | null };
+
+  const { data: txRows, error: txError } = await supabase.rpc(
+    "get_public_loyalty_transactions",
+    {
+      p_token: qrToken,
+      p_limit: 15,
+    }
+  );
+
+  if (txError) return null;
+
+  return {
+    customer: {
+      id: row.id,
+      full_name: row.full_name,
+      card_number: row.card_number,
+      loyalty_points: row.loyalty_points,
+      qr_token: row.qr_token,
+      card_variant: (row.card_variant ?? "champagne") as PublicLoyaltyCustomer["card_variant"],
+      created_at: row.created_at,
+    },
+    transactions: toPublicLoyaltyTransactions(
+      (txRows || []) as LoyaltyTransaction[]
+    ),
+  };
 }
