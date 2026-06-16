@@ -57,6 +57,14 @@
   border-radius: 9999px !important;
 }
 
+.loyalty-wallet-card {
+  border-radius: 22px !important;
+}
+
+.loyalty-wallet-card-round {
+  border-radius: 9999px !important;
+}
+
 .natus-nav-link:not(.natus-nav-link-active),
 .natus-nav-link-active::before,
 .natus-nav-link-active::after {

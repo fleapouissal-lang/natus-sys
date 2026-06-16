@@ -25,10 +25,11 @@ import { PosOrdersPanel } from "@/components/pos/pos-orders-panel";
 import { Modal } from "@/components/ui/modal";
 import { Receipt, printReceipt, type ReceiptData } from "@/components/pos/receipt";
 import { ProductCatalog } from "@/components/pos/product-catalog";
+import { PosLoyaltyPanel } from "@/components/loyalty/pos-loyalty-panel";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
-import { completeSale, completeShopifyOrderSale, prepareShopifyOrderForPos } from "@/lib/actions";
+import { completeSale, completeShopifyOrderSale, prepareShopifyOrderForPos, lookupLoyaltyCustomerByScan } from "@/lib/actions";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
 import { shopifyOrderToPosContext } from "@/lib/shopify/order-pos";
@@ -36,7 +37,13 @@ import { workflowStatusLabel } from "@/lib/shopify/order-status";
 import { formatCurrency } from "@/lib/utils";
 import { computeTvaBreakdown, TVA_RATE } from "@/lib/constants/sales";
 import { cn } from "@/lib/utils";
-import type { Product, CartItem, UserRole, PaymentMethod, Store, ShopifyOrder } from "@/lib/types";
+import type { Product, CartItem, UserRole, PaymentMethod, Store, ShopifyOrder, LoyaltyCustomer } from "@/lib/types";
+import { parseLoyaltyQrPayload } from "@/lib/loyalty/qr";
+import {
+  payableAfterRedemption,
+  discountFromPoints,
+  pointsEarnedForAmount,
+} from "@/lib/loyalty/points";
 import type { ShopifyOrderPosContext } from "@/lib/orders";
 
 type ManagerMode = "stock" | "sale";
@@ -90,6 +97,8 @@ export function PosTerminal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(null);
+  const [loyaltyCustomer, setLoyaltyCustomer] = useState<LoyaltyCustomer | null>(null);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
   const [scanListening, setScanListening] = useState(true);
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -145,6 +154,21 @@ export function PosTerminal({
     (code: string) => {
       const trimmed = code.trim();
       if (!trimmed) return;
+
+      const loyaltyPayload = parseLoyaltyQrPayload(trimmed);
+      if (loyaltyPayload && !isStockScan && !activeShopifyOrder) {
+        void lookupLoyaltyCustomerByScan(trimmed).then((result) => {
+          if ("customer" in result) {
+            setLoyaltyCustomer(result.customer);
+            setPointsToRedeem(0);
+            setError("");
+          } else {
+            setError(result.error);
+          }
+        });
+        return;
+      }
+
       const product = products.find((p) => p.barcode === trimmed);
       if (!product) {
         setError(`Produit non trouvé : ${trimmed}`);
@@ -280,6 +304,8 @@ export function PosTerminal({
     setActiveShopifyOrder(null);
     setMissingShopifyProducts([]);
     setValidatedQty({});
+    setLoyaltyCustomer(null);
+    setPointsToRedeem(0);
     setError("");
     setLastAddedProduct(null);
   }
@@ -335,7 +361,10 @@ export function PosTerminal({
       : await completeSale(
           items,
           effectivePaymentMethod,
-          isManagementUser ? defaultStoreId : undefined
+          isManagementUser ? defaultStoreId : undefined,
+          loyaltyCustomer
+            ? { customerId: loyaltyCustomer.id, pointsToRedeem }
+            : undefined
         );
 
     if (result.error) {
@@ -344,14 +373,21 @@ export function PosTerminal({
       return;
     }
 
-    const total = cart.reduce(
+    const subtotal = cart.reduce(
       (sum, item) => sum + item.product.price * item.quantity,
       0
     );
+    const loyaltyDiscount = discountFromPoints(pointsToRedeem);
+    const total = payableAfterRedemption(subtotal, pointsToRedeem);
+    const pointsEarned = loyaltyCustomer ? pointsEarnedForAmount(total) : 0;
 
     setReceipt({
       saleId: result.saleId ?? activeShopifyOrder?.id ?? "web",
       total,
+      subtotal,
+      loyaltyDiscount,
+      pointsEarned,
+      pointsRedeemed: pointsToRedeem,
       paymentMethod: effectivePaymentMethod,
       paymentLabel: shopifyPaymentLabel ?? undefined,
       cashierName,
@@ -362,12 +398,15 @@ export function PosTerminal({
       })),
       createdAt: new Date().toISOString(),
       shopifyOrderNumber: activeShopifyOrder?.orderNumber,
-      customerName: activeShopifyOrder?.customerName || undefined,
+      customerName: loyaltyCustomer?.full_name || activeShopifyOrder?.customerName || undefined,
+      loyaltyCardNumber: loyaltyCustomer?.card_number,
     });
 
     setCart([]);
     const wasShopifyOrder = !!activeShopifyOrder;
     setActiveShopifyOrder(null);
+    setLoyaltyCustomer(null);
+    setPointsToRedeem(0);
     setValidatedQty({});
     setMissingShopifyProducts([]);
     setLoading(false);
@@ -394,10 +433,12 @@ export function PosTerminal({
     [cart]
   );
 
-  const total = cart.reduce(
+  const subtotal = cart.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
     0
   );
+  const loyaltyDiscount = discountFromPoints(pointsToRedeem);
+  const total = payableAfterRedemption(subtotal, pointsToRedeem);
   const { ht: totalHt, tva: totalTva, ttc: totalTtc } = computeTvaBreakdown(total);
   const tvaPercent = Math.round(TVA_RATE * 100);
 
@@ -640,6 +681,18 @@ export function PosTerminal({
                       </Button>
                     </div>
                   </div>
+
+                  {!isShopifyOrderCheckout && !isStockScan && (
+                    <div className="mt-4">
+                      <PosLoyaltyPanel
+                        subtotal={subtotal}
+                        customer={loyaltyCustomer}
+                        pointsToRedeem={pointsToRedeem}
+                        onCustomerChange={setLoyaltyCustomer}
+                        onPointsToRedeemChange={setPointsToRedeem}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-natus">
@@ -736,6 +789,18 @@ export function PosTerminal({
 
                 <div className="shrink-0 bg-surface px-4 py-4">
                   <div className="space-y-2 text-sm">
+                    {loyaltyDiscount > 0 && (
+                      <>
+                        <div className="flex items-center justify-between text-muted">
+                          <span>Sous-total</span>
+                          <span>{formatCurrency(subtotal)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-success">
+                          <span>Points fidélité</span>
+                          <span>-{formatCurrency(loyaltyDiscount)}</span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex items-center justify-between text-muted">
                       <span>Total HT</span>
                       <span>{formatCurrency(totalHt)}</span>

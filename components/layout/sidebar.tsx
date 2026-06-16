@@ -20,6 +20,7 @@ import {
   PanelLeftOpen,
   RotateCcw,
   Boxes,
+  Gift,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ function buildManagementLinks(basePath: "/director" | "/manager") {
     { href: `${basePath}/stock`, label: "Stock", icon: Warehouse },
     { href: `${basePath}/activity`, label: "Activité", icon: ClipboardList },
     { href: `${basePath}/orders`, label: "Commandes", icon: ShoppingBag },
+    { href: `${basePath}/loyalty`, label: "Fidélité", icon: Gift },
     { href: `${basePath}/sales`, label: "Ventes", icon: Receipt },
     { href: `${basePath}/users`, label: "Utilisateurs", icon: Users },
     { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
@@ -55,6 +57,7 @@ function buildManagementLinks(basePath: "/director" | "/manager") {
 const cashierLinks = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
   { href: "/cashier/orders", label: "Commandes", icon: ShoppingBag },
+  { href: "/cashier/customers", label: "Clients fidélité", icon: Gift },
   { href: "/cashier/returns", label: "Retours magasin", icon: RotateCcw },
   { href: "/cashier/sales", label: "Mes ventes", icon: History },
 ];

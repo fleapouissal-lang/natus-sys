@@ -81,10 +81,59 @@ export interface Sale {
   total: number;
   payment_method: PaymentMethod;
   store_id: string | null;
+  customer_id: string | null;
+  loyalty_discount: number;
+  loyalty_points_redeemed: number;
+  loyalty_points_earned: number;
   created_at: string;
   profiles?: Pick<Profile, "full_name" | "email">;
   stores?: Pick<Store, "name" | "city"> | null;
   sale_items?: SaleItem[];
+  customers?: Pick<LoyaltyCustomer, "full_name" | "card_number" | "phone"> | null;
+}
+
+export type LoyaltyTier = "bronze" | "silver" | "gold";
+
+export type LoyaltyTransactionType = "earn" | "redeem";
+
+export interface LoyaltyCustomer {
+  id: string;
+  full_name: string;
+  phone: string;
+  email: string | null;
+  card_number: string;
+  loyalty_points: number;
+  qr_token: string;
+  store_id: string | null;
+  apple_wallet_pass_id: string | null;
+  google_wallet_pass_id: string | null;
+  created_at: string;
+  updated_at: string;
+  stores?: Pick<Store, "name" | "city"> | null;
+}
+
+export interface LoyaltyTransaction {
+  id: string;
+  customer_id: string;
+  sale_id: string | null;
+  type: LoyaltyTransactionType;
+  points: number;
+  description: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface LoyaltyStats {
+  totalMembers: number;
+  pointsDistributed: number;
+  pointsRedeemed: number;
+  topCustomers: {
+    id: string;
+    full_name: string;
+    card_number: string;
+    loyalty_points: number;
+    phone: string;
+  }[];
 }
 
 export interface SaleItem {

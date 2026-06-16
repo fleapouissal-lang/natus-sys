@@ -437,7 +437,8 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
 export async function completeSale(
   items: { product_id: string; quantity: number }[],
   paymentMethod: "cash" | "card" = "cash",
-  storeId?: string
+  storeId?: string,
+  loyalty?: { customerId: string; pointsToRedeem?: number }
 ) {
   const profile = await requireRole([...MANAGEMENT, "cashier"]);
   if (!profile) return { error: "Non autorisé" };
@@ -454,6 +455,8 @@ export async function completeSale(
     p_items: items,
     p_payment_method: paymentMethod,
     p_store_id: storeId || null,
+    p_customer_id: loyalty?.customerId || null,
+    p_points_to_redeem: loyalty?.pointsToRedeem || 0,
   });
 
   if (error) return { error: error.message };
@@ -462,9 +465,67 @@ export async function completeSale(
   revalidatePath("/cashier/sales");
   revalidatePath("/manager/sales");
   revalidatePath("/manager");
+  revalidatePath("/manager/loyalty");
   revalidatePath("/director/sales");
   revalidatePath("/director");
+  revalidatePath("/director/loyalty");
   return { success: true, saleId: data as string };
+}
+
+export async function createLoyaltyCustomer(input: {
+  fullName: string;
+  phone: string;
+  email?: string;
+  storeId?: string;
+}): Promise<{ success: true; customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT, "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_loyalty_customer", {
+    p_full_name: input.fullName.trim(),
+    p_phone: input.phone.trim(),
+    p_email: input.email?.trim() || null,
+    p_store_id: input.storeId || profile.store_id || null,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/cashier/pos");
+  revalidatePath("/cashier/customers");
+  revalidatePath("/manager/loyalty");
+  revalidatePath("/director/loyalty");
+  return { success: true, customer: data as import("@/lib/types").LoyaltyCustomer };
+}
+
+export async function lookupLoyaltyCustomerByPhone(
+  phone: string
+): Promise<{ customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT, "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getCustomerByPhone } = await import("@/lib/loyalty/customers");
+  const supabase = await createClient();
+  const customer = await getCustomerByPhone(supabase, phone);
+  if (!customer) return { error: "Client introuvable" };
+  return { customer };
+}
+
+export async function lookupLoyaltyCustomerByScan(
+  raw: string
+): Promise<{ customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT, "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { parseLoyaltyQrPayload } = await import("@/lib/loyalty/qr");
+  const { getCustomerByCardOrToken } = await import("@/lib/loyalty/customers");
+  const identifier = parseLoyaltyQrPayload(raw);
+  if (!identifier) return { error: "QR Code fidélité invalide" };
+
+  const supabase = await createClient();
+  const customer = await getCustomerByCardOrToken(supabase, identifier);
+  if (!customer) return { error: "Carte fidélité introuvable" };
+  return { customer };
 }
 
 export async function completeShopifyOrderSale(

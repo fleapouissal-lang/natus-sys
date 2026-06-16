@@ -8,6 +8,11 @@ import type { PaymentMethod } from "@/lib/types";
 export interface ReceiptData {
   saleId: string;
   total: number;
+  subtotal?: number;
+  loyaltyDiscount?: number;
+  pointsEarned?: number;
+  pointsRedeemed?: number;
+  loyaltyCardNumber?: string;
   paymentMethod: PaymentMethod;
   cashierName: string;
   items: {
@@ -43,6 +48,11 @@ export function Receipt({ data }: { data: ReceiptData }) {
           <p>Commande web : {data.shopifyOrderNumber}</p>
         )}
         {data.customerName && <p>Client : {data.customerName}</p>}
+        {data.loyaltyCardNumber && <p>Carte : {data.loyaltyCardNumber}</p>}
+        {data.pointsRedeemed ? (
+          <p>Points utilisés : {data.pointsRedeemed}</p>
+        ) : null}
+        {data.pointsEarned ? <p>Points gagnés : +{data.pointsEarned}</p> : null}
         <p>Date : {formatDate(data.createdAt)}</p>
         <p>Caissier : {data.cashierName}</p>
         <p>Paiement : {data.paymentLabel ?? PAYMENT_LABELS[data.paymentMethod]}</p>
