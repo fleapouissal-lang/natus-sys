@@ -12,7 +12,7 @@ export default async function LoyaltyCardPage({
   if (!data) notFound();
 
   return (
-    <div className="min-h-screen bg-page px-4 py-8 sm:px-6">
+    <div className="px-4 py-8 sm:px-6">
       <LoyaltyCardClientView
         initialCustomer={data.customer}
         initialTransactions={data.transactions}

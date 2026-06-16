@@ -11,11 +11,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#121212",
+  themeColor: "#FFFEFB",
   width: "device-width",
   initialScale: 1,
 };
 
 export default function CarteLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <div className="loyalty-carte-page">{children}</div>;
 }

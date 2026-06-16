@@ -18,6 +18,7 @@ import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import type { LoyaltyCustomer } from "@/lib/types";
 import { CreateLoyaltyCustomerModal } from "@/components/loyalty/create-customer-modal";
 import { LoyaltyCardQrForCashier } from "@/components/loyalty/loyalty-card-client-view";
+import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
 import { Modal } from "@/components/ui/modal";
 
 export function PosLoyaltyPanel({
@@ -73,23 +74,24 @@ export function PosLoyaltyPanel({
 
         {customer ? (
           <div className="space-y-3">
-            <div className="flex items-start justify-between gap-3 rounded-lg bg-primary-light/30 px-3 py-3">
-              <div className="min-w-0">
-                <p className="font-medium text-foreground">{customer.full_name}</p>
-                <p className="text-sm text-muted">{customer.card_number}</p>
-                <p className="text-sm text-muted">{formatPhoneDisplay(customer.phone)}</p>
-              </div>
+            <div className="relative">
               <button
                 type="button"
                 onClick={() => {
                   onCustomerChange(null);
                   onPointsToRedeemChange(0);
                 }}
-                className="text-muted hover:text-foreground cursor-pointer"
+                className="absolute right-2 top-2 z-10 rounded-full bg-black/50 p-1 text-[#EBD4BA] hover:bg-black/70 cursor-pointer"
                 aria-label="Retirer le client"
               >
                 <X className="h-4 w-4" />
               </button>
+              <LoyaltyWalletCard customer={customer} compact />
+            </div>
+
+            <div className="rounded-lg bg-primary-light/20 px-3 py-2 text-sm">
+              <p className="font-medium text-foreground">{customer.full_name}</p>
+              <p className="text-muted">{formatPhoneDisplay(customer.phone)}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-sm">
