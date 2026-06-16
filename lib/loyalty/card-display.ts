@@ -39,3 +39,12 @@ export function formatMemberSinceLuxury(isoDate: string): string {
   const yy = String(d.getFullYear()).slice(-2);
   return `${mm} / ${yy}`;
 }
+
+/** Date d'expiration affichée sur le recto (2 ans après adhésion) */
+export function formatLoyaltyCardExpiry(isoDate: string): string {
+  const d = new Date(isoDate);
+  d.setFullYear(d.getFullYear() + 2);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${mm} / ${yy}`;
+}

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { LoyaltyCustomer, LoyaltyTransaction } from "@/lib/types";
+import { normalizeLoyaltyCardNumber } from "@/lib/loyalty/qr";
 
 export async function getCustomerByPhone(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -23,9 +24,9 @@ export async function getCustomerByCardOrToken(
   supabase: Awaited<ReturnType<typeof createClient>>,
   identifier: string
 ): Promise<LoyaltyCustomer | null> {
-  const isCard = /^FID-\d{6}$/i.test(identifier);
+  const isCard = /^FID-\d+$/i.test(identifier);
   const column = isCard ? "card_number" : "qr_token";
-  const value = isCard ? identifier.toUpperCase() : identifier;
+  const value = isCard ? normalizeLoyaltyCardNumber(identifier) : identifier;
 
   const { data, error } = await supabase
     .from("customers")

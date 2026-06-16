@@ -96,6 +96,8 @@ export type LoyaltyTier = "bronze" | "silver" | "gold";
 
 export type LoyaltyTransactionType = "earn" | "redeem";
 
+export type LoyaltyCardVariant = "champagne" | "noir";
+
 export interface LoyaltyCustomer {
   id: string;
   full_name: string;
@@ -105,6 +107,7 @@ export interface LoyaltyCustomer {
   loyalty_points: number;
   qr_token: string;
   store_id: string | null;
+  card_variant?: LoyaltyCardVariant;
   apple_wallet_pass_id: string | null;
   google_wallet_pass_id: string | null;
   created_at: string;

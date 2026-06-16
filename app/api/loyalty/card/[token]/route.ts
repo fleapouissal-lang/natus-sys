@@ -20,6 +20,7 @@ export async function GET(
       full_name: data.customer.full_name,
       card_number: data.customer.card_number,
       loyalty_points: data.customer.loyalty_points,
+      card_variant: data.customer.card_variant ?? "champagne",
       qr_token: data.customer.qr_token,
       created_at: data.customer.created_at,
     },

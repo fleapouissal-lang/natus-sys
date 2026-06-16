@@ -1,30 +1,16 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Barcode from "react-barcode";
 import { cn } from "@/lib/utils";
+import { loyaltyCardBarcodeValue } from "@/lib/loyalty/qr";
 
 const CARD_GOLD = "#EBD4BA";
+const BARCODE_QUIET_ZONE = 6;
 
-function stretchBarcodeSvg(container: HTMLDivElement, barHeight: number) {
-  const svg = container.querySelector("svg");
-  if (!svg) return;
-
-  const targetWidth = container.clientWidth;
-  const naturalWidth =
-    parseFloat(svg.getAttribute("width") ?? "") ||
-    svg.getBoundingClientRect().width;
-  const naturalHeight =
-    parseFloat(svg.getAttribute("height") ?? "") || barHeight;
-
-  if (targetWidth <= 0 || naturalWidth <= 0) return;
-
-  svg.setAttribute("viewBox", `0 0 ${naturalWidth} ${naturalHeight}`);
-  svg.setAttribute("preserveAspectRatio", "none");
-  svg.style.display = "block";
-  svg.style.width = "100%";
-  svg.style.height = `${barHeight}px`;
-  svg.style.maxWidth = "100%";
+/** Estimation modules CODE128-B (start + chars + checksum + stop) */
+function estimateCode128Modules(value: string): number {
+  return 35 + value.length * 11;
 }
 
 export function LoyaltyCardBarcode({
@@ -32,42 +18,57 @@ export function LoyaltyCardBarcode({
   compact = false,
   className,
   showValue = false,
+  lineColor = CARD_GOLD,
 }: {
   value: string;
   compact?: boolean;
   className?: string;
   showValue?: boolean;
+  lineColor?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const barHeight = compact ? 30 : 36;
+  const encoded = loyaltyCardBarcodeValue(value);
+  const [barWidth, setBarWidth] = useState(2);
+  const barHeight = compact ? 40 : 48;
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const apply = () => stretchBarcodeSvg(container, barHeight);
-    apply();
+    const update = () => {
+      const available = container.clientWidth;
+      if (available <= 0) return;
+      const modules = estimateCode128Modules(encoded);
+      const next = Math.floor((available - BARCODE_QUIET_ZONE * 2) / modules);
+      setBarWidth(Math.max(1, Math.min(3, next)));
+    };
 
-    const observer = new ResizeObserver(apply);
+    update();
+    const observer = new ResizeObserver(update);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [value, barHeight, compact]);
+  }, [encoded]);
 
   return (
     <div ref={containerRef} className={cn("w-full bg-transparent", className)}>
-      <Barcode
-        value={value}
-        format="CODE128"
-        width={2}
-        height={barHeight}
-        displayValue={false}
-        margin={0}
-        background="transparent"
-        lineColor={CARD_GOLD}
-      />
+      <div className="flex w-full justify-center overflow-visible">
+        <Barcode
+          value={encoded}
+          format="CODE128"
+          width={barWidth}
+          height={barHeight}
+          displayValue={false}
+          margin={BARCODE_QUIET_ZONE}
+          background="transparent"
+          lineColor={lineColor}
+        />
+      </div>
       {showValue && (
-        <p className="mt-1 text-center font-mono text-[7px] tracking-[0.16em] text-[#EBD4BA]/70">
-          {value}
+        <p
+          className="mt-1 text-center font-mono text-[8px] tracking-[0.14em]"
+          style={{ color: lineColor }}
+        >
+          {encoded}
         </p>
       )}
     </div>

@@ -86,7 +86,7 @@ export function PosLoyaltyPanel({
               >
                 <X className="h-4 w-4" />
               </button>
-              <LoyaltyWalletCard customer={customer} compact />
+              <LoyaltyWalletCard customer={customer} compact flipable={false} />
             </div>
 
             <div className="rounded-lg bg-primary-light/20 px-3 py-2 text-sm">

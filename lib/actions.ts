@@ -477,6 +477,7 @@ export async function createLoyaltyCustomer(input: {
   phone: string;
   email?: string;
   storeId?: string;
+  cardVariant?: import("@/lib/types").LoyaltyCardVariant;
 }): Promise<{ success: true; customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
   const profile = await requireRole([...MANAGEMENT, "cashier"]);
   if (!profile) return { error: "Non autorisé" };
@@ -487,6 +488,7 @@ export async function createLoyaltyCustomer(input: {
     p_phone: input.phone.trim(),
     p_email: input.email?.trim() || null,
     p_store_id: input.storeId || profile.store_id || null,
+    p_card_variant: input.cardVariant ?? "champagne",
   });
 
   if (error) return { error: error.message };
