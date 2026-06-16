@@ -65,6 +65,14 @@
   border-radius: 9999px !important;
 }
 
+.loyalty-creme-strip {
+  border-radius: 22px 0 0 22px !important;
+}
+
+.loyalty-creme-main {
+  border-radius: 0 22px 22px 0 !important;
+}
+
 /* Page publique carte fidélité — fond prestige clair */
 .loyalty-carte-page {
   min-height: 100vh;

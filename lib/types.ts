@@ -96,7 +96,7 @@ export type LoyaltyTier = "bronze" | "silver" | "gold";
 
 export type LoyaltyTransactionType = "earn" | "redeem";
 
-export type LoyaltyCardVariant = "champagne" | "noir";
+export type LoyaltyCardVariant = "champagne" | "noir" | "creme";
 
 export interface LoyaltyCustomer {
   id: string;

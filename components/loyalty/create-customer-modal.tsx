@@ -81,7 +81,7 @@ export function CreateLoyaltyCustomerModal({
       <form onSubmit={handleSubmit} className="mt-5 space-y-5">
         <div>
           <p className="mb-2 text-sm font-medium">Modèle de carte</p>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-3">
             {LOYALTY_CARD_VARIANTS.map((option) => {
               const selected = cardVariant === option.id;
               return (
@@ -111,7 +111,7 @@ export function CreateLoyaltyCustomerModal({
           <LoyaltyWalletCard
             customer={preview}
             compact
-            flipable={false}
+            flipable
             showBarcode={false}
           />
         </div>

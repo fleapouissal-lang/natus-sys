@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { loyaltyTierFromPoints } from "@/lib/loyalty/tiers";
+import { loyaltyTierFromPoints, loyaltyTierLabel } from "@/lib/loyalty/tiers";
 import {
   formatLoyaltyCardNumber,
   formatLoyaltyCardExpiry,
 } from "@/lib/loyalty/card-display";
 import { LoyaltyCardBarcode } from "@/components/loyalty/loyalty-card-barcode";
 import { LoyaltyContactlessIcon } from "@/components/loyalty/loyalty-card-icons";
+import { LoyaltyCardFlipShell } from "@/components/loyalty/loyalty-card-flip-shell";
 import { LoyaltyWalletCardNoir } from "@/components/loyalty/loyalty-wallet-card-noir";
+import { LoyaltyWalletCardCreme } from "@/components/loyalty/loyalty-wallet-card-creme";
 import { resolveLoyaltyCardVariant } from "@/lib/loyalty/card-variant";
 import type { LoyaltyCardVariant, LoyaltyCustomer } from "@/lib/types";
 
@@ -27,19 +28,14 @@ const GOLD_BAND = `linear-gradient(180deg, ${METAL_GOLD} 0%, ${METAL_BRONZE} 100
 
 function ChampagneCardFace({
   children,
-  className,
   flipped = false,
 }: {
   children: React.ReactNode;
-  className?: string;
   flipped?: boolean;
 }) {
   return (
     <div
-      className={cn(
-        "loyalty-wallet-card absolute inset-0 flex flex-col overflow-hidden",
-        className
-      )}
+      className="absolute inset-0 flex flex-col overflow-hidden"
       style={{
         background: CARD_GRADIENT,
         backfaceVisibility: "hidden",
@@ -120,87 +116,6 @@ function BrandCircles({ compact }: { compact: boolean }) {
   );
 }
 
-function NatusCardLogo({ compact }: { compact: boolean }) {
-  return (
-    <div
-      className="flex flex-col items-center justify-center"
-      style={{
-        paddingTop: compact ? 6 : 8,
-        paddingBottom: compact ? 4 : 6,
-      }}
-    >
-      <p
-        className="leading-none"
-        style={{
-          fontFamily: SERIF,
-          fontWeight: 700,
-          fontSize: compact ? 12 : 14,
-          color: BRONZE,
-          letterSpacing: "0.04em",
-        }}
-      >
-        Natus
-      </p>
-      <p
-        className="mt-0.5 uppercase"
-        style={{
-          fontFamily: SANS,
-          fontSize: compact ? 4 : 5,
-          letterSpacing: "0.32em",
-          color: BRONZE,
-          opacity: 0.65,
-        }}
-      >
-        Marrakech
-      </p>
-    </div>
-  );
-}
-
-function StampGrid({
-  points,
-  compact,
-}: {
-  points: number;
-  compact: boolean;
-}) {
-  const filled = Math.min(8, Math.max(0, points));
-  const size = compact ? 20 : 24;
-
-  return (
-    <div className="grid grid-cols-4 gap-1.5">
-      {Array.from({ length: 8 }, (_, i) => {
-        const on = i < filled;
-        const isReward = i === 3 || i === 7;
-        return (
-          <div
-            key={i}
-            className="loyalty-wallet-card-round flex items-center justify-center border border-dashed"
-            style={{
-              width: size,
-              height: size,
-              borderColor: "rgba(74,68,63,0.45)",
-              background: on ? "rgba(197,179,153,0.35)" : "rgba(255,255,255,0.55)",
-            }}
-          >
-            {!on && isReward && i === 3 && (
-              <span className="text-[5px] font-bold uppercase leading-tight text-center">
-                Silver
-              </span>
-            )}
-            {!on && isReward && i === 7 && (
-              <span className="text-[5px] font-bold uppercase leading-tight text-center">
-                Gold
-              </span>
-            )}
-            {on && <span className="text-[8px] font-bold">✓</span>}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function LoyaltyCardFront({
   customer,
   compact,
@@ -217,78 +132,75 @@ function LoyaltyCardFront({
   return (
     <ChampagneCardFace>
       <div className={cn("flex h-full flex-col", pad)}>
-        {/* En-tête */}
-        <div className="relative flex items-start justify-center">
-          <p
-            className={cn(
-              "text-center uppercase tracking-[0.28em]",
-              compact ? "text-[7px]" : "text-[8px]"
-            )}
-            style={{ fontFamily: SANS, color: BRONZE }}
-          >
-            Natus Cosmétiques
-          </p>
-          <CustomerPointsBadge points={customer.loyalty_points} compact={compact} />
-        </div>
+      <div className="relative flex items-start justify-center">
+        <p
+          className={cn(
+            "text-center uppercase tracking-[0.28em]",
+            compact ? "text-[7px]" : "text-[8px]"
+          )}
+          style={{ fontFamily: SANS, color: BRONZE }}
+        >
+          Natus Cosmétiques
+        </p>
+        <CustomerPointsBadge points={customer.loyalty_points} compact={compact} />
+      </div>
 
-        {/* Titre */}
-        <div className="mt-3 flex flex-1 flex-col items-center justify-center text-center">
+      <div className="mt-3 flex flex-1 flex-col items-center justify-center text-center">
+        <p
+          className={cn(
+            "uppercase leading-none",
+            compact ? "text-lg" : "text-xl"
+          )}
+          style={{ fontFamily: SERIF, color: BRONZE, letterSpacing: "0.06em" }}
+        >
+          Loyalty Card
+        </p>
+        <p
+          className={cn(
+            "mt-3 font-medium tracking-[0.14em]",
+            compact ? "text-[11px]" : "text-sm"
+          )}
+          style={{ fontFamily: SERIF, color: BRONZE }}
+        >
+          {displayNumber}
+        </p>
+        <p
+          className={cn(
+            "mt-2 uppercase tracking-[0.12em] opacity-75",
+            compact ? "text-[8px]" : "text-[9px]"
+          )}
+          style={{ fontFamily: SERIF }}
+        >
+          {customer.full_name}
+        </p>
+      </div>
+
+      <div className="flex items-end justify-between gap-2">
+        <div>
           <p
             className={cn(
-              "uppercase leading-none",
-              compact ? "text-lg" : "text-xl"
+              "uppercase tracking-[0.12em]",
+              compact ? "text-[6px]" : "text-[7px]"
             )}
-            style={{ fontFamily: SERIF, color: BRONZE, letterSpacing: "0.06em" }}
+            style={{ fontFamily: SANS }}
           >
-            Loyalty Card
+            Valid until
           </p>
           <p
-            className={cn(
-              "mt-3 font-medium tracking-[0.14em]",
-              compact ? "text-[11px]" : "text-sm"
-            )}
-            style={{ fontFamily: SERIF, color: BRONZE }}
-          >
-            {displayNumber}
-          </p>
-          <p
-            className={cn(
-              "mt-2 uppercase tracking-[0.12em] opacity-75",
-              compact ? "text-[8px]" : "text-[9px]"
-            )}
+            className={cn("mt-0.5 font-semibold", compact ? "text-[9px]" : "text-[10px]")}
             style={{ fontFamily: SERIF }}
           >
-            {customer.full_name}
+            {validUntil}
           </p>
         </div>
-
-        {/* Pied */}
-        <div className="flex items-end justify-between gap-2">
-          <div>
-            <p
-              className={cn(
-                "uppercase tracking-[0.12em]",
-                compact ? "text-[6px]" : "text-[7px]"
-              )}
-              style={{ fontFamily: SANS }}
-            >
-              Valid until
-            </p>
-            <p
-              className={cn("mt-0.5 font-semibold", compact ? "text-[9px]" : "text-[10px]")}
-              style={{ fontFamily: SERIF }}
-            >
-              {validUntil}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <BrandCircles compact={compact} />
-            <LoyaltyContactlessIcon
-              className={compact ? "h-5 w-5" : "h-6 w-6"}
-              style={{ color: BRONZE }}
-            />
-          </div>
+        <div className="flex items-center gap-2">
+          <BrandCircles compact={compact} />
+          <LoyaltyContactlessIcon
+            className={compact ? "h-5 w-5" : "h-6 w-6"}
+            style={{ color: BRONZE }}
+          />
         </div>
+      </div>
       </div>
     </ChampagneCardFace>
   );
@@ -303,63 +215,74 @@ function LoyaltyCardBack({
   compact: boolean;
   showBarcode: boolean;
 }) {
+  const tier = loyaltyTierFromPoints(customer.loyalty_points);
   const pad = compact ? "px-4 pb-3" : "px-5 pb-4";
 
   return (
     <ChampagneCardFace flipped>
       <div style={{ height: 3, background: GOLD_BAND }} />
-      <NatusCardLogo compact={compact} />
+      <div className={cn("flex flex-1 flex-col items-center", pad)}>
+        <p
+          className={cn(
+            "mt-3 font-bold uppercase tracking-[0.2em]",
+            compact ? "text-[10px]" : "text-xs"
+          )}
+          style={{ fontFamily: SERIF }}
+        >
+          Natus
+        </p>
+        <p
+          className={cn(
+            "mt-1 uppercase tracking-[0.28em] opacity-70",
+            compact ? "text-[5px]" : "text-[6px]"
+          )}
+          style={{ fontFamily: SANS }}
+        >
+          Marrakech
+        </p>
 
-      <div className={cn("flex flex-1 flex-col", pad)}>
-        <div className="mt-2 grid grid-cols-[1fr_auto] gap-3">
-          <StampGrid points={customer.loyalty_points} compact={compact} />
-          <div className="flex flex-col gap-2">
-            <div
-              className="loyalty-wallet-card-round flex items-center justify-center text-white"
-              style={{
-                width: compact ? 34 : 40,
-                height: compact ? 34 : 40,
-                background: `linear-gradient(135deg, ${METAL_GOLD}, ${METAL_BRONZE})`,
-                fontSize: compact ? 6 : 7,
-                fontWeight: 700,
-                textAlign: "center",
-                lineHeight: 1.1,
-              }}
+        <div className="mt-4 grid w-full grid-cols-2 gap-3">
+          <div className="text-center">
+            <p
+              className={cn(
+                "uppercase tracking-[0.12em] opacity-60",
+                compact ? "text-[5px]" : "text-[6px]"
+              )}
+              style={{ fontFamily: SANS }}
+            >
+              Solde points
+            </p>
+            <p
+              className={cn("mt-0.5 font-bold", compact ? "text-sm" : "text-base")}
+              style={{ fontFamily: SERIF }}
             >
               {customer.loyalty_points}
-              <br />
-              PTS
-            </div>
-            <div
-              className="loyalty-wallet-card-round flex items-center justify-center text-white"
-              style={{
-                width: compact ? 34 : 40,
-                height: compact ? 34 : 40,
-                background: METAL_BRONZE,
-                fontSize: compact ? 7 : 8,
-                fontWeight: 700,
-              }}
+            </p>
+          </div>
+          <div className="text-center">
+            <p
+              className={cn(
+                "uppercase tracking-[0.12em] opacity-60",
+                compact ? "text-[5px]" : "text-[6px]"
+              )}
+              style={{ fontFamily: SANS }}
             >
-              {loyaltyTierFromPoints(customer.loyalty_points) === "gold"
-                ? "VIP"
-                : "MEMBER"}
-            </div>
+              Statut
+            </p>
+            <p
+              className={cn(
+                "mt-0.5 font-bold uppercase",
+                compact ? "text-[9px]" : "text-[10px]"
+              )}
+              style={{ fontFamily: SERIF }}
+            >
+              {loyaltyTierLabel(tier)}
+            </p>
           </div>
         </div>
 
-        <p
-          className={cn(
-            "mt-3 text-center uppercase leading-relaxed tracking-[0.08em]",
-            compact ? "text-[5px]" : "text-[6px]"
-          )}
-          style={{ fontFamily: SANS, color: BRONZE }}
-        >
-          1 point / 10 MAD · 1 pt = 1 MAD de réduction. Cumulez vos points à chaque
-          visite en boutique Natus.
-        </p>
-
         {showBarcode && (
-          <div className="mt-auto pt-2">
+          <div className="mt-auto w-full pt-3">
             <LoyaltyCardBarcode
               value={customer.card_number}
               compact={compact}
@@ -369,6 +292,47 @@ function LoyaltyCardBack({
         )}
       </div>
     </ChampagneCardFace>
+  );
+}
+
+export function LoyaltyWalletCardChampagne({
+  customer,
+  compact = false,
+  showBarcode = true,
+  flipable = true,
+}: {
+  customer: LoyaltyCustomer;
+  compact?: boolean;
+  showBarcode?: boolean;
+  flipable?: boolean;
+}) {
+  const displayNumber = formatLoyaltyCardNumber(customer.card_number);
+  const validUntil = formatLoyaltyCardExpiry(customer.created_at);
+
+  return (
+    <LoyaltyCardFlipShell
+      compact={compact}
+      flipable={flipable}
+      variant="champagne"
+      style={{
+        boxShadow: "0 18px 42px rgba(74,68,63,0.22)",
+      }}
+      front={
+        <LoyaltyCardFront
+          customer={customer}
+          compact={compact}
+          displayNumber={displayNumber}
+          validUntil={validUntil}
+        />
+      }
+      back={
+        <LoyaltyCardBack
+          customer={customer}
+          compact={compact}
+          showBarcode={showBarcode}
+        />
+      }
+    />
   );
 }
 
@@ -383,12 +347,8 @@ export function LoyaltyWalletCard({
   compact?: boolean;
   showBarcode?: boolean;
   flipable?: boolean;
-  /** Surcharge ponctuelle (ex. aperçu création) — sinon utilise customer.card_variant */
   variant?: LoyaltyCardVariant;
 }) {
-  const [flipped, setFlipped] = useState(false);
-  const displayNumber = formatLoyaltyCardNumber(customer.card_number);
-  const validUntil = formatLoyaltyCardExpiry(customer.created_at);
   const resolvedVariant = resolveLoyaltyCardVariant(variant ?? customer.card_variant);
 
   if (resolvedVariant === "noir") {
@@ -397,59 +357,28 @@ export function LoyaltyWalletCard({
         customer={customer}
         compact={compact}
         showBarcode={showBarcode}
+        flipable={flipable}
       />
     );
   }
 
-  const card = (
-    <div
-      className={cn(
-        "loyalty-wallet-card relative mx-auto w-full",
-        compact ? "max-w-[360px]" : "max-w-[420px]"
-      )}
-      style={{
-        aspectRatio: "1.586 / 1",
-        boxShadow: "0 18px 42px rgba(74,68,63,0.22)",
-      }}
-    >
-      <div
-        className="relative h-full w-full"
-        style={{
-          transformStyle: "preserve-3d",
-          transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
-          transition: "transform 0.65s ease",
-        }}
-      >
-        <LoyaltyCardFront
-          customer={customer}
-          compact={compact}
-          displayNumber={displayNumber}
-          validUntil={validUntil}
-        />
-        <LoyaltyCardBack
-          customer={customer}
-          compact={compact}
-          showBarcode={showBarcode}
-        />
-      </div>
-    </div>
-  );
-
-  if (!flipable) return card;
+  if (resolvedVariant === "creme") {
+    return (
+      <LoyaltyWalletCardCreme
+        customer={customer}
+        compact={compact}
+        showBarcode={showBarcode}
+        flipable={flipable}
+      />
+    );
+  }
 
   return (
-    <div>
-      <button
-        type="button"
-        className="w-full cursor-pointer text-left"
-        onClick={() => setFlipped((f) => !f)}
-        aria-label={flipped ? "Voir le recto" : "Voir le verso"}
-      >
-        {card}
-      </button>
-      <p className="mt-2 text-center text-xs text-muted">
-        {flipped ? "Recto" : "Verso"} — appuyez pour retourner
-      </p>
-    </div>
+    <LoyaltyWalletCardChampagne
+      customer={customer}
+      compact={compact}
+      showBarcode={showBarcode}
+      flipable={flipable}
+    />
   );
 }
