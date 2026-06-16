@@ -19,17 +19,21 @@ export function LoyaltyCardBarcode({
   className,
   showValue = false,
   lineColor = CARD_GOLD,
+  backgroundColor = "transparent",
 }: {
   value: string;
   compact?: boolean;
   className?: string;
   showValue?: boolean;
   lineColor?: string;
+  /** Fond clair (#FFF6EC) requis pour un scan fiable sur carte sombre */
+  backgroundColor?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const encoded = loyaltyCardBarcodeValue(value);
   const [barWidth, setBarWidth] = useState(2);
-  const barHeight = compact ? 40 : 48;
+  const barHeight = compact ? 44 : 52;
+  const scanOptimized = backgroundColor !== "transparent";
 
   useEffect(() => {
     const container = containerRef.current;
@@ -40,18 +44,28 @@ export function LoyaltyCardBarcode({
       if (available <= 0) return;
       const modules = estimateCode128Modules(encoded);
       const next = Math.floor((available - BARCODE_QUIET_ZONE * 2) / modules);
-      setBarWidth(Math.max(1, Math.min(3, next)));
+      const minWidth = scanOptimized ? 2 : 1;
+      setBarWidth(Math.max(minWidth, Math.min(3, next)));
     };
 
     update();
     const observer = new ResizeObserver(update);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [encoded]);
+  }, [encoded, scanOptimized]);
 
   return (
-    <div ref={containerRef} className={cn("w-full bg-transparent", className)}>
-      <div className="flex w-full justify-center overflow-visible">
+    <div ref={containerRef} className={cn("w-full", className)}>
+      <div
+        className={cn(
+          "flex w-full flex-col items-center overflow-visible",
+          scanOptimized && "px-1 py-1"
+        )}
+        style={{
+          backgroundColor,
+          borderRadius: scanOptimized ? 4 : undefined,
+        }}
+      >
         <Barcode
           value={encoded}
           format="CODE128"
@@ -59,18 +73,18 @@ export function LoyaltyCardBarcode({
           height={barHeight}
           displayValue={false}
           margin={BARCODE_QUIET_ZONE}
-          background="transparent"
+          background={backgroundColor}
           lineColor={lineColor}
         />
+        {showValue && (
+          <p
+            className="mt-0.5 text-center font-mono text-[8px] tracking-[0.14em]"
+            style={{ color: scanOptimized ? "#1a1a1a" : lineColor }}
+          >
+            {encoded}
+          </p>
+        )}
       </div>
-      {showValue && (
-        <p
-          className="mt-1 text-center font-mono text-[8px] tracking-[0.14em]"
-          style={{ color: lineColor }}
-        >
-          {encoded}
-        </p>
-      )}
     </div>
   );
 }

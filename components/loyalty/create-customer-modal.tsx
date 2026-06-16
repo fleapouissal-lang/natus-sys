@@ -19,7 +19,7 @@ function previewCustomer(
     full_name: fullName.trim() || "Nouveau client",
     phone: "+212600000000",
     email: null,
-    card_number: "FID-000001",
+    card_number: "FID-284719",
     loyalty_points: 1,
     qr_token: "00000000-0000-0000-0000-000000000000",
     store_id: null,
@@ -88,7 +88,10 @@ export function CreateLoyaltyCustomerModal({
                 <button
                   key={option.id}
                   type="button"
-                  onClick={() => setCardVariant(option.id)}
+                  onClick={() => {
+                    setCardVariant(option.id);
+                    setError("");
+                  }}
                   className={cn(
                     "rounded-xl border px-3 py-3 text-left transition-colors cursor-pointer",
                     selected
@@ -112,7 +115,7 @@ export function CreateLoyaltyCustomerModal({
             customer={preview}
             compact
             flipable
-            showBarcode={cardVariant === "noir" || cardVariant === "champagne"}
+            showBarcode={cardVariant === "noir" || cardVariant === "champagne" || cardVariant === "creme"}
           />
         </div>
 

@@ -24,9 +24,11 @@ export async function getCustomerByCardOrToken(
   supabase: Awaited<ReturnType<typeof createClient>>,
   identifier: string
 ): Promise<LoyaltyCustomer | null> {
-  const isCard = /^FID-\d+$/i.test(identifier);
+  const isCard = /^FID-?\d+$/i.test(identifier);
   const column = isCard ? "card_number" : "qr_token";
-  const value = isCard ? normalizeLoyaltyCardNumber(identifier) : identifier;
+  const value = isCard
+    ? normalizeLoyaltyCardNumber(identifier.replace(/^FID-?/i, "FID-"))
+    : identifier;
 
   const { data, error } = await supabase
     .from("customers")

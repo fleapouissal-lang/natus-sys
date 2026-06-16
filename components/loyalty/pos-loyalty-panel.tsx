@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Search, UserPlus, X, ScanLine } from "lucide-react";
+import { ScanLine, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  lookupLoyaltyCustomerByPhone,
-} from "@/lib/actions";
+import { lookupLoyaltyCustomer } from "@/lib/actions";
 import {
   maxRedeemablePoints,
   discountFromPoints,
@@ -20,6 +18,8 @@ import { CreateLoyaltyCustomerModal } from "@/components/loyalty/create-customer
 import { LoyaltyCardQrForCashier } from "@/components/loyalty/loyalty-card-client-view";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
 import { Modal } from "@/components/ui/modal";
+import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
+import { cn } from "@/lib/utils";
 
 export function PosLoyaltyPanel({
   subtotal,
@@ -34,24 +34,43 @@ export function PosLoyaltyPanel({
   onCustomerChange: (customer: LoyaltyCustomer | null) => void;
   onPointsToRedeemChange: (points: number) => void;
 }) {
-  const [phone, setPhone] = useState("");
+  const [lookupInput, setLookupInput] = useState("");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const [showCreate, setShowCreate] = useState(false);
   const [qrCustomer, setQrCustomer] = useState<LoyaltyCustomer | null>(null);
+  const [scannerFocused, setScannerFocused] = useState(false);
 
-  function handleSearch() {
+  function runLookup(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed || pending) return;
+
     setError("");
     startTransition(async () => {
-      const result = await lookupLoyaltyCustomerByPhone(phone);
+      const result = await lookupLoyaltyCustomer(trimmed);
       if ("error" in result) {
         setError(result.error);
         return;
       }
       onCustomerChange(result.customer);
       onPointsToRedeemChange(0);
-      setPhone("");
+      setLookupInput("");
     });
+  }
+
+  const { inputRef, handleKeyDown, handleChange } = useBarcodeScanner({
+    onScan: runLookup,
+    enabled: !customer,
+    autoRefocus: false,
+  });
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    handleChange(e);
+    setLookupInput(e.target.value);
+  }
+
+  function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    handleKeyDown(e);
   }
 
   const maxRedeem = customer ? maxRedeemablePoints(customer.loyalty_points, subtotal) : 0;
@@ -133,24 +152,43 @@ export function PosLoyaltyPanel({
         ) : (
           <div className="space-y-3">
             <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+              <div
+                className={cn(
+                  "relative flex-1 rounded-lg border transition-colors",
+                  scannerFocused ? "border-primary" : "border-transparent"
+                )}
+              >
+                <ScanLine
+                  className={cn(
+                    "pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2",
+                    scannerFocused ? "text-primary" : "text-muted"
+                  )}
+                />
                 <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  placeholder="Téléphone client"
-                  className="natus-field w-full bg-surface py-2 pl-10 pr-3 text-sm"
+                  ref={inputRef}
+                  type="text"
+                  value={lookupInput}
+                  onChange={handleInputChange}
+                  onKeyDown={handleInputKeyDown}
+                  onFocus={() => setScannerFocused(true)}
+                  onBlur={() => setScannerFocused(false)}
+                  placeholder="Téléphone, code-barres ou QR code"
+                  autoComplete="off"
+                  className="natus-field w-full bg-surface py-2 pl-10 pr-3 text-sm font-mono placeholder:font-sans"
                 />
               </div>
-              <Button type="button" size="sm" disabled={pending || !phone.trim()} onClick={handleSearch}>
+              <Button
+                type="button"
+                size="sm"
+                disabled={pending || !lookupInput.trim()}
+                onClick={() => runLookup(lookupInput)}
+              >
                 Chercher
               </Button>
             </div>
-            <p className="flex items-center gap-1.5 text-xs text-muted">
-              <ScanLine className="h-3.5 w-3.5" />
-              Scannez le code-barres de la carte fidélité
+            <p className="text-xs text-muted">
+              Saisissez le numéro de téléphone, scannez le code-barres au verso de la carte ou le QR
+              code.
             </p>
           </div>
         )}

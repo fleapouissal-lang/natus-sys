@@ -491,7 +491,15 @@ export async function createLoyaltyCustomer(input: {
     p_card_variant: input.cardVariant ?? "champagne",
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.message.includes("Modèle de carte invalide")) {
+      return {
+        error:
+          "Le modèle Crème n'est pas encore activé sur la base de données. Exécutez : npx supabase db push",
+      };
+    }
+    return { error: error.message };
+  }
 
   revalidatePath("/cashier/pos");
   revalidatePath("/cashier/customers");
@@ -511,6 +519,34 @@ export async function lookupLoyaltyCustomerByPhone(
   const customer = await getCustomerByPhone(supabase, phone);
   if (!customer) return { error: "Client introuvable" };
   return { customer };
+}
+
+/** Téléphone, code-barres carte (FID-…) ou QR code (NATUS:LOYALTY:…) */
+export async function lookupLoyaltyCustomer(
+  raw: string
+): Promise<{ customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT, "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const trimmed = raw.trim();
+  if (!trimmed) return { error: "Saisie vide" };
+
+  const { parseLoyaltyQrPayload } = await import("@/lib/loyalty/qr");
+  const scanPayload = parseLoyaltyQrPayload(trimmed);
+  if (scanPayload) {
+    const { getCustomerByCardOrToken } = await import("@/lib/loyalty/customers");
+    const supabase = await createClient();
+    const customer = await getCustomerByCardOrToken(supabase, scanPayload);
+    if (!customer) return { error: "Carte fidélité introuvable" };
+    return { customer };
+  }
+
+  const { normalizePhone } = await import("@/lib/loyalty/phone");
+  if (!normalizePhone(trimmed)) {
+    return { error: "Téléphone, code-barres ou QR code invalide" };
+  }
+
+  return lookupLoyaltyCustomerByPhone(trimmed);
 }
 
 export async function lookupLoyaltyCustomerByScan(

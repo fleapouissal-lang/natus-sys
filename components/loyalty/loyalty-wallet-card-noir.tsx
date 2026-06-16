@@ -215,7 +215,13 @@ function NoirCardBack({
 
         {showBarcode && (
           <div className="mt-auto pt-2">
-            <LoyaltyCardBarcode value={customer.card_number} compact={compact} />
+            <LoyaltyCardBarcode
+              value={customer.card_number}
+              compact={compact}
+              lineColor="#000000"
+              backgroundColor="#FFF6EC"
+              showValue
+            />
           </div>
         )}
       </div>

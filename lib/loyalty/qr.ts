@@ -13,18 +13,42 @@ export function buildLoyaltyQrPayload(qrToken: string): string {
 
 export function parseLoyaltyQrPayload(raw: string): string | null {
   const trimmed = raw.trim();
-  if (trimmed.startsWith(QR_PREFIX)) {
+  const upper = trimmed.toUpperCase();
+  if (upper.startsWith(QR_PREFIX)) {
     return trimmed.slice(QR_PREFIX.length);
   }
-  if (/^FID-\d+$/i.test(trimmed)) {
-    return normalizeLoyaltyCardNumber(trimmed);
+  const fidMatch = trimmed.match(/^FID-?(\d+)$/i);
+  if (fidMatch) {
+    return normalizeLoyaltyCardNumber(`FID-${fidMatch[1]}`);
   }
+  const carteToken = extractLoyaltyCarteToken(trimmed);
+  if (carteToken) return carteToken;
   return null;
+}
+
+/** Token extrait d'une URL publique …/carte/{token} */
+export function extractLoyaltyCarteToken(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed.includes("/carte/")) return null;
+
+  try {
+    const path = trimmed.includes("://") ? new URL(trimmed).pathname : trimmed;
+    const match = path.match(/\/carte\/([0-9a-f-]{36})/i);
+    return match ? match[1] : null;
+  } catch {
+    const match = trimmed.match(/\/carte\/([0-9a-f-]{36})/i);
+    return match ? match[1] : null;
+  }
 }
 
 /** Valeur encodée dans le code-barres carte fidélité */
 export function loyaltyCardBarcodeValue(cardNumber: string): string {
   return normalizeLoyaltyCardNumber(cardNumber);
+}
+
+/** Payload court pour QR caisse — même valeur que le code-barres */
+export function loyaltyCardScanPayload(cardNumber: string): string {
+  return loyaltyCardBarcodeValue(cardNumber);
 }
 
 export function loyaltyCardPublicUrl(qrToken: string, baseUrl?: string): string {
