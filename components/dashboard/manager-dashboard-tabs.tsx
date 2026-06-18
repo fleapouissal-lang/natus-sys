@@ -14,8 +14,10 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { StoreOverviewChart } from "@/components/dashboard/store-overview-chart";
 import { StoreSnapshotsPanel } from "@/components/dashboard/store-snapshots-panel";
+import { RecentActivityPanel } from "@/components/activity/recent-activity-panel";
 import { formatCurrency, cn } from "@/lib/utils";
 import type {
+  ActivityEntry,
   DashboardStats,
   Store,
   StoreOverviewRow,
@@ -100,6 +102,7 @@ function ManagerDashboardTabsInner({
   storeOverview,
   storeSnapshots,
   overviewByStore,
+  storeActivities,
 }: {
   stores: Store[];
   selectedStoreId: string;
@@ -108,6 +111,7 @@ function ManagerDashboardTabsInner({
   storeOverview: StoreOverviewRow[];
   storeSnapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
+  storeActivities: ActivityEntry[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -219,6 +223,16 @@ function ManagerDashboardTabsInner({
               </p>
             )}
           </Card>
+
+          {selectedStoreId && (
+            <RecentActivityPanel
+              activities={storeActivities}
+              title="Activité du magasin"
+              description={selectedStoreLabel}
+              viewAllHref={`/manager/activity?store=${selectedStoreId}`}
+              limit={8}
+            />
+          )}
         </div>
       )}
     </div>
@@ -233,6 +247,7 @@ export function ManagerDashboardTabs(props: {
   storeOverview: StoreOverviewRow[];
   storeSnapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
+  storeActivities: ActivityEntry[];
 }) {
   return (
     <Suspense fallback={null}>

@@ -7,6 +7,10 @@ export function getActivityKindLabel(kind: ActivityKind): string {
       return "Ajout stock";
     case "stock_adjustment":
       return "Ajustement";
+    case "stock_transfer_in":
+      return "Réception";
+    case "stock_transfer_out":
+      return "Envoi hub";
     case "sale":
       return "Vente";
   }

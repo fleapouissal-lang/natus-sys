@@ -49,6 +49,13 @@ function unwrapProductName(
   return row?.name || "Produit";
 }
 
+function stockActionLabel(type: string, quantity: number): string {
+  if (type === "add") return "Ajout";
+  if (type === "adjustment") return "Ajustement";
+  if (type === "transfer") return quantity > 0 ? "Réception hub" : "Envoi hub";
+  return "Stock";
+}
+
 export async function getStoresSnapshots(
   stores: Pick<Store, "id" | "name">[]
 ): Promise<StoreSnapshot[]> {
@@ -78,13 +85,31 @@ export async function getStoresSnapshots(
     supabase
       .from("stock_movements")
       .select(
-        "id, quantity, created_at, store_id, products(name), profiles:created_by(full_name, email)"
+        "id, quantity, type, notes, created_at, store_id, related_store_id, products(name), profiles:created_by(full_name, email)"
       )
       .in("store_id", storeIds)
-      .eq("type", "add")
+      .in("type", ["add", "adjustment", "transfer"])
       .order("created_at", { ascending: false })
       .limit(fetchLimit),
   ]);
+
+  const relatedStoreIds = [
+    ...new Set(
+      (movements || [])
+        .map((row) => row.related_store_id as string | null)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const relatedStoreNameById = new Map<string, string>();
+  if (relatedStoreIds.length > 0) {
+    const { data: relatedStores } = await supabase
+      .from("stores")
+      .select("id, name")
+      .in("id", relatedStoreIds);
+    for (const store of relatedStores || []) {
+      relatedStoreNameById.set(store.id, store.name);
+    }
+  }
 
   const salesByStore = takePerStore(sales || [], storeIds, RECENT_LIMIT);
   const ordersByStore = takePerStore(orders || [], storeIds, RECENT_LIMIT);
@@ -127,6 +152,10 @@ export async function getStoresSnapshots(
           | { full_name: string | null; email: string }[]
           | null
       ),
+      action_label: stockActionLabel(row.type as string, row.quantity as number),
+      related_store_name: row.related_store_id
+        ? relatedStoreNameById.get(row.related_store_id as string) ?? null
+        : null,
     })) satisfies StoreRecentStock[],
   }));
 }

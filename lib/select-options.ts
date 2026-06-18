@@ -154,6 +154,8 @@ export function activityTypeOptions(
     "": LayoutGrid,
     stock_add: Package,
     stock_adjustment: PackageCheck,
+    stock_transfer_in: Package,
+    stock_transfer_out: Package,
     sale: ShoppingBag,
   };
   return options.map((o) => ({
@@ -169,8 +171,11 @@ export function activityRoleOptions(
   const icons: Record<string, LucideIcon> = {
     "": Users,
     directeur: Shield,
+    admin: Shield,
+    hub: Store,
     manager: User,
     cashier: User,
+    livreur: Truck,
   };
   return options.map((o) => ({
     value: o.value,

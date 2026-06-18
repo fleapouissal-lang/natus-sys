@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { getCurrentProfile } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { autoRoutePendingShopifyOrders, autoRouteOrdersAtStore } from "@/lib/shopify/auto-route-order";
 import { getActiveStores, getProductCatalog, getHubStore } from "@/lib/inventory";
 import { getCityFilter } from "@/lib/permissions";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
@@ -17,8 +19,11 @@ export default async function ManagerOrdersPage({
   if (!profile) return null;
 
   const city = getCityFilter(profile);
+  const admin = createAdminClient();
+  await autoRoutePendingShopifyOrders(admin, { city, limit: 25 });
+
   const stores = await getActiveStores(city);
-  const hubStore = await getHubStore();
+  const hubStore = city ? await getHubStore(city) : await getHubStore();
   const transferTargets = [
     ...stores.filter((s) => !s.is_hub),
     ...(hubStore ? [hubStore] : []),
@@ -26,6 +31,10 @@ export default async function ManagerOrdersPage({
   const storeId =
     storeParam && stores.some((s) => s.id === storeParam) ? storeParam : "";
   const selectedStore = storeId ? getSelectedStore(stores, storeId) : undefined;
+
+  if (storeId) {
+    await autoRouteOrdersAtStore(admin, storeId);
+  }
 
   const orders = await getShopifyOrders(profile, {
     storeId: storeId || null,

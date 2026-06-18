@@ -81,6 +81,18 @@ export async function getShopifyOrders(
 ): Promise<ShopifyOrder[]> {
   const supabase = await createClient();
   const limit = query.limit ?? 100;
+  const storeScopeId =
+    profile.role === "cashier" ? profile.store_id : query.storeId || null;
+
+  if (storeScopeId) {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const {
+      autoRouteOrdersAtStore,
+      filterOrdersFulfillableAtStore,
+    } = await import("@/lib/shopify/auto-route-order");
+    const admin = createAdminClient();
+    await autoRouteOrdersAtStore(admin, storeScopeId);
+  }
 
   let dbQuery = supabase
     .from("shopify_orders")
@@ -128,7 +140,16 @@ export async function getShopifyOrders(
     return [];
   }
 
-  const orders = (data || []) as ShopifyOrder[];
+  let orders = (data || []) as ShopifyOrder[];
+
+  if (storeScopeId) {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const { filterOrdersFulfillableAtStore } = await import(
+      "@/lib/shopify/auto-route-order"
+    );
+    const admin = createAdminClient();
+    orders = await filterOrdersFulfillableAtStore(admin, orders, storeScopeId);
+  }
 
   if (isDirector(profile) || isManager(profile)) {
     return attachStoreNamesToOrders(orders);

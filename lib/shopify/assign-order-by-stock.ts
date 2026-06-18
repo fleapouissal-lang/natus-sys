@@ -196,13 +196,36 @@ export async function resolveOrderStoreByStock(opts: {
     };
   }
 
-  if (hubStore) {
+  if (
+    hubStore &&
+    storeCanFulfillOrder(hubStore.id, requirements, inventoryByStore)
+  ) {
     return {
       targetStoreId: hubStore.id,
       targetStoreName: hubStore.name,
       routedToHub: true,
       currentStoreCanFulfill: false,
-      reason: "Aucun magasin de la ville n'a le stock complet — routage hub",
+      reason: "Hub ville — stock complet pour toute la commande",
+    };
+  }
+
+  if (hubStore && currentStoreId && currentStoreId !== hubStore.id) {
+    return {
+      targetStoreId: hubStore.id,
+      targetStoreName: hubStore.name,
+      routedToHub: true,
+      currentStoreCanFulfill: false,
+      reason: "Aucun magasin retail avec stock complet — routage hub",
+    };
+  }
+
+  if (hubStore && !currentStoreId) {
+    return {
+      targetStoreId: hubStore.id,
+      targetStoreName: hubStore.name,
+      routedToHub: true,
+      currentStoreCanFulfill: false,
+      reason: "Aucun magasin avec stock complet — routage hub en attente",
     };
   }
 

@@ -31,6 +31,9 @@ export default async function DirectorActivityPage({
   const stockAdds = activities.filter((a) => a.kind === "stock_add").length;
   const sales = activities.filter((a) => a.kind === "sale").length;
   const adjustments = activities.filter((a) => a.kind === "stock_adjustment").length;
+  const transfers = activities.filter(
+    (a) => a.kind === "stock_transfer_in" || a.kind === "stock_transfer_out"
+  ).length;
 
   let scopeLabel = "Tous les magasins";
   if (selectedStore) {
@@ -56,7 +59,7 @@ export default async function DirectorActivityPage({
         />
       </Suspense>
 
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-5">
         <Card>
           <p className="text-sm text-muted">Actions récentes</p>
           <p className="mt-1 text-2xl font-bold">{activities.length}</p>
@@ -68,6 +71,10 @@ export default async function DirectorActivityPage({
         <Card>
           <p className="text-sm text-muted">Ajustements</p>
           <p className="mt-1 text-2xl font-bold">{adjustments}</p>
+        </Card>
+        <Card>
+          <p className="text-sm text-muted">Transferts hub</p>
+          <p className="mt-1 text-2xl font-bold">{transfers}</p>
         </Card>
         <Card>
           <p className="text-sm text-muted">Ventes</p>

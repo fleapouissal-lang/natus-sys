@@ -1,6 +1,6 @@
 export type PaymentMethod = "cash" | "card";
 
-export type UserRole = "directeur" | "admin" | "manager" | "cashier" | "livreur";
+export type UserRole = "directeur" | "admin" | "manager" | "cashier" | "livreur" | "hub";
 
 export type ShopifyPaymentType = "online" | "cod";
 
@@ -172,7 +172,12 @@ export interface StockMovement {
   stores?: Pick<Store, "name"> | null;
 }
 
-export type ActivityKind = "stock_add" | "stock_adjustment" | "sale";
+export type ActivityKind =
+  | "stock_add"
+  | "stock_adjustment"
+  | "stock_transfer_in"
+  | "stock_transfer_out"
+  | "sale";
 
 export interface ActivityEntry {
   id: string;
@@ -181,6 +186,7 @@ export interface ActivityEntry {
   store_id: string | null;
   store_name: string | null;
   store_city: string | null;
+  related_store_name: string | null;
   actor_name: string | null;
   actor_role: UserRole | null;
   title: string;
@@ -234,6 +240,36 @@ export interface StoreRecentStock {
   quantity: number;
   created_at: string;
   actor_name: string | null;
+  action_label: string;
+  related_store_name?: string | null;
+}
+
+export type HubStockTransferStatus = "sent" | "received";
+
+export interface HubStockTransferItem {
+  id: string;
+  product_id: string;
+  quantity: number;
+  product_name: string;
+  product_barcode: string;
+}
+
+export interface HubStockTransfer {
+  id: string;
+  from_store_id: string;
+  to_store_id: string;
+  status: HubStockTransferStatus;
+  notes: string | null;
+  created_by: string;
+  received_by: string | null;
+  sent_at: string;
+  received_at: string | null;
+  from_store_name: string | null;
+  to_store_name: string | null;
+  creator_name: string | null;
+  receiver_name: string | null;
+  items: HubStockTransferItem[];
+  total_units: number;
 }
 
 export interface StoreSnapshot {

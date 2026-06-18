@@ -13,12 +13,18 @@ import {
 import { formatDate } from "@/lib/utils";
 import type { ActivityEntry, ActivityKind, UserRole } from "@/lib/types";
 
-function kindVariant(kind: ActivityKind): "success" | "warning" | "default" {
+function kindVariant(
+  kind: ActivityKind
+): "success" | "warning" | "default" | "accent" {
   switch (kind) {
     case "stock_add":
       return "success";
     case "stock_adjustment":
       return "warning";
+    case "stock_transfer_in":
+      return "success";
+    case "stock_transfer_out":
+      return "accent";
     case "sale":
       return "default";
   }
@@ -35,6 +41,8 @@ const TYPE_OPTIONS: { value: "" | ActivityKind; label: string }[] = [
   { value: "", label: "Tous les types" },
   { value: "stock_add", label: "Ajout stock" },
   { value: "stock_adjustment", label: "Ajustement" },
+  { value: "stock_transfer_in", label: "Réception hub" },
+  { value: "stock_transfer_out", label: "Envoi hub" },
   { value: "sale", label: "Vente" },
 ];
 
@@ -42,6 +50,7 @@ const ROLE_OPTIONS: { value: "" | UserRole; label: string }[] = [
   { value: "", label: "Tous les rôles" },
   { value: "admin", label: "Administrateur" },
   { value: "directeur", label: "Directeur" },
+  { value: "hub", label: "Hub stock" },
   { value: "manager", label: "Gérant" },
   { value: "cashier", label: "Caissier" },
   { value: "livreur", label: "Livreur" },

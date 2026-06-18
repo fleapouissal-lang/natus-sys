@@ -75,30 +75,35 @@ export function PasswordInput({
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
   const inputId = id || label?.toLowerCase().replace(/\s/g, "-");
-  const textValue = String(value ?? "");
+  const isControlled = value !== undefined;
+  const textValue = isControlled ? String(value) : undefined;
 
   function handleMaskedChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!onChange) return;
 
+    const current = textValue ?? "";
     const next = e.target.value;
     if (visible || !maskWithAsterisk) {
       onChange(e);
       return;
     }
 
-    if (next.length > textValue.length) {
-      const added = next.slice(textValue.length).replace(/\*/g, "");
-      e.target.value = textValue + added;
+    if (next.length > current.length) {
+      const added = next.slice(current.length).replace(/\*/g, "");
+      e.target.value = current + added;
     } else {
-      e.target.value = textValue.slice(0, next.length);
+      e.target.value = current.slice(0, next.length);
     }
     onChange(e);
   }
 
   const displayValue =
-    maskWithAsterisk && !visible ? "*".repeat(textValue.length) : textValue;
+    maskWithAsterisk && !visible && textValue !== undefined
+      ? "*".repeat(textValue.length)
+      : textValue;
 
   const inputType = maskWithAsterisk ? "text" : visible ? "text" : "password";
+  const useMaskedValue = maskWithAsterisk && textValue !== undefined;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -114,8 +119,7 @@ export function PasswordInput({
         <input
           id={inputId}
           type={inputType}
-          value={displayValue}
-          onChange={handleMaskedChange}
+          {...(useMaskedValue ? { value: displayValue, onChange: handleMaskedChange } : {})}
           className={cn(
             "natus-field w-full bg-surface transition-colors",
             inputSizeClasses[inputSize],

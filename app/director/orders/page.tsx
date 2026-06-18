@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { autoRoutePendingShopifyOrders } from "@/lib/shopify/auto-route-order";
 import { isDirector } from "@/lib/permissions";
 import { getActiveStores, getProductCatalog, getHubStore } from "@/lib/inventory";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
@@ -18,11 +20,19 @@ export default async function DirectorOrdersPage({
   const profile = await getCurrentProfile();
   if (!profile || !isDirector(profile)) redirect("/login");
 
+  const admin = createAdminClient();
+  const selectedCityForRoute =
+    cityParam || null;
+  await autoRoutePendingShopifyOrders(admin, {
+    city: selectedCityForRoute,
+    limit: selectedCityForRoute ? 25 : 40,
+  });
+
   const stores = await getActiveStores(null);
-  const hubStore = await getHubStore();
-  const retailStores = hubStore
-    ? stores.filter((s) => s.id !== hubStore.id)
-    : stores;
+  const hubStore = selectedCityForRoute
+    ? await getHubStore(selectedCityForRoute)
+    : null;
+  const retailStores = stores.filter((s) => !s.is_hub);
   const transferTargets = hubStore
     ? [...retailStores.filter((s) => !s.is_hub), hubStore]
     : stores;

@@ -30,7 +30,16 @@ import type { UserRole } from "@/lib/types";
 
 const SIDEBAR_COLLAPSED_KEY = "natus-sidebar-collapsed";
 
-function buildManagementLinks(basePath: "/director" | "/manager") {
+function buildManagementLinks(basePath: "/director" | "/manager" | "/hub") {
+  if (basePath === "/hub") {
+    return [
+      { href: "/hub", label: "Tableau de bord", icon: LayoutDashboard },
+      { href: "/hub/stock", label: "Stock magasins", icon: Warehouse },
+      { href: "/hub/hub-stock", label: "Entrepôt hub", icon: Boxes },
+      { href: "/hub/activity", label: "Activité", icon: ClipboardList },
+    ];
+  }
+
   const links = [
     { href: basePath, label: "Tableau de bord", icon: LayoutDashboard },
     { href: `${basePath}/products`, label: "Produits", icon: Package },
@@ -50,6 +59,11 @@ function buildManagementLinks(basePath: "/director" | "/manager") {
       label: "Hub stock",
       icon: Boxes,
     });
+    links.splice(10, 0, {
+      href: "/director/hubs",
+      label: "Comptes hub",
+      icon: Users,
+    });
   }
 
   return links;
@@ -58,6 +72,7 @@ function buildManagementLinks(basePath: "/director" | "/manager") {
 const cashierLinks = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
   { href: "/cashier/orders", label: "Commandes", icon: ShoppingBag },
+  { href: "/cashier/transfers", label: "Réceptions hub", icon: Boxes },
   { href: "/cashier/customers", label: "Clients fidélité", icon: Gift },
   { href: "/cashier/returns", label: "Retours magasin", icon: RotateCcw },
   { href: "/cashier/sales", label: "Mes ventes", icon: History },
@@ -67,6 +82,14 @@ const livreurLinks = [
   { href: "/livreur/orders", label: "Mes livraisons", icon: Truck },
   { href: "/livreur/returns", label: "Mes retours", icon: RotateCcw },
 ];
+
+function isNavLinkActive(pathname: string, href: string): boolean {
+  if (href === "/manager" || href === "/director" || href === "/hub") {
+    return pathname === href;
+  }
+  if (pathname === href) return true;
+  return pathname.startsWith(`${href}/`);
+}
 
 function getInitials(name: string) {
   return name
@@ -239,10 +262,7 @@ export function Sidebar({
       >
         <ul className={cn("m-0 list-none p-0", collapsed && "flex flex-col items-center gap-1")}>
           {links.map(({ href, label, icon: Icon }) => {
-            const isDashboard = href === "/manager" || href === "/director";
-            const isActive = isDashboard
-              ? pathname === href
-              : pathname.startsWith(href);
+            const isActive = isNavLinkActive(pathname, href);
 
             if (collapsed) {
               return (

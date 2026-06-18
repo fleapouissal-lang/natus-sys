@@ -58,6 +58,38 @@ export async function getProductsWithStoreStock(storeId: string): Promise<Produc
   }));
 }
 
+/** Stock total par produit, agrégé sur tous les magasins actifs (optionnellement filtrés par ville). */
+export async function getProductsWithTotalStock(
+  city?: string | null
+): Promise<Product[]> {
+  const supabase = await createClient();
+  const stores = await getActiveStores(city);
+  const storeIds = stores.map((s) => s.id);
+
+  const [{ data: products }, { data: inventory }] = await Promise.all([
+    supabase.from("products").select("*").order("name"),
+    storeIds.length > 0
+      ? supabase
+          .from("store_inventory")
+          .select("product_id, stock")
+          .in("store_id", storeIds)
+      : Promise.resolve({ data: [] as { product_id: string; stock: number }[] }),
+  ]);
+
+  const stockMap = new Map<string, number>();
+  for (const row of inventory || []) {
+    stockMap.set(
+      row.product_id,
+      (stockMap.get(row.product_id) ?? 0) + row.stock
+    );
+  }
+
+  return (products || []).map((product) => ({
+    ...product,
+    stock: stockMap.get(product.id) ?? 0,
+  }));
+}
+
 export async function getProductCatalog(): Promise<
   Pick<Product, "id" | "name" | "barcode" | "image_url" | "category" | "price">[]
 > {
@@ -116,14 +148,19 @@ export async function getStoreById(storeId: string): Promise<Store | null> {
   return data;
 }
 
-export async function getHubStore(): Promise<Store | null> {
+export async function getHubStore(city?: string | null): Promise<Store | null> {
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("stores")
     .select("*")
     .eq("is_active", true)
-    .eq("is_hub", true)
-    .maybeSingle();
+    .eq("is_hub", true);
+
+  if (city) {
+    query = query.eq("city", city);
+  }
+
+  const { data } = await query.maybeSingle();
   return data;
 }
 
@@ -153,6 +190,7 @@ export async function getOrderTransferTargets(fromStoreId: string): Promise<Stor
     .select("*")
     .eq("is_active", true)
     .eq("is_hub", true)
+    .eq("city", fromStore.city)
     .maybeSingle();
 
   if (hubError) {

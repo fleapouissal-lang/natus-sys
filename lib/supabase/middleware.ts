@@ -5,7 +5,7 @@ import { applySecurityHeaders } from "@/lib/security/headers";
 import { asSessionCookieOptions } from "@/lib/supabase/session-cookies";
 import type { UserRole } from "@/lib/types";
 
-const STAFF_ROLES: UserRole[] = ["cashier", "manager", "directeur", "admin"];
+const STAFF_ROLES: UserRole[] = ["cashier", "manager", "directeur", "admin", "hub"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -40,6 +40,7 @@ export async function updateSession(request: NextRequest) {
   const isProtected =
     pathname.startsWith("/manager") ||
     pathname.startsWith("/director") ||
+    pathname.startsWith("/hub") ||
     pathname.startsWith("/cashier") ||
     pathname.startsWith("/livreur") ||
     pathname.startsWith("/pos");
@@ -67,6 +68,14 @@ export async function updateSession(request: NextRequest) {
 
     if (pathname.startsWith("/director")) {
       if ((role !== "directeur" && role !== "admin") || !profile?.is_active) {
+        const url = request.nextUrl.clone();
+        url.pathname = role ? getHomePath(role) : "/login";
+        return applySecurityHeaders(NextResponse.redirect(url));
+      }
+    }
+
+    if (pathname.startsWith("/hub")) {
+      if (role !== "hub" || !profile?.is_active) {
         const url = request.nextUrl.clone();
         url.pathname = role ? getHomePath(role) : "/login";
         return applySecurityHeaders(NextResponse.redirect(url));

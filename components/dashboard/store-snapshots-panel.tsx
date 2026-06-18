@@ -126,9 +126,9 @@ function StoreSnapshotCard({
         />
 
         <MiniList
-          title="5 derniers ajouts stock"
+          title="5 dernières actions stock"
           icon={Package}
-          emptyLabel="Aucun ajout récent"
+          emptyLabel="Aucune action stock récente"
           items={snapshot.recentStockAdds}
           renderItem={(item) => (
             <div
@@ -138,7 +138,11 @@ function StoreSnapshotCard({
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{item.product_name}</p>
                 <p className="text-xs text-muted">
-                  +{item.quantity} · {item.actor_name || "Utilisateur"}
+                  {item.action_label}
+                  {item.quantity > 0 ? ` +${item.quantity}` : ` ${item.quantity}`}
+                  {item.related_store_name ? ` · ${item.related_store_name}` : ""}
+                  {" · "}
+                  {item.actor_name || "Utilisateur"}
                 </p>
               </div>
               <p className="shrink-0 text-[11px] text-muted">
@@ -165,7 +169,7 @@ export function StoreSnapshotsPanel({
     <div className="space-y-4">
       <CardHeader
         title="Vue générale par magasin"
-        description="Activité récente — 5 dernières ventes, commandes et ajouts stock"
+        description="Activité récente — ventes, commandes et actions stock (ajouts, ajustements, transferts hub)"
       />
 
       <div className="space-y-4">

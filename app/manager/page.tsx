@@ -3,6 +3,7 @@ import { getCityFilter } from "@/lib/permissions";
 import { getActiveStores, getStoresWithStats } from "@/lib/inventory";
 import { getDashboardStats, getStoreOverviewStats, getStoresSnapshots } from "@/lib/dashboard";
 import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store";
+import { getActivityLog } from "@/lib/activity";
 import { ManagerDashboardTabs } from "@/components/dashboard/manager-dashboard-tabs";
 
 export default async function ManagerDashboard({
@@ -17,10 +18,11 @@ export default async function ManagerDashboard({
   const storesWithStats = await getStoresWithStats(city);
   const storeId = resolveSelectedStoreId(stores, storeParam);
   const selectedStore = getSelectedStore(stores, storeId);
-  const [stats, storeOverview, storeSnapshots] = await Promise.all([
+  const [stats, storeOverview, storeSnapshots, storeActivities] = await Promise.all([
     storeId ? getDashboardStats(storeId) : Promise.resolve(null),
     getStoreOverviewStats(storesWithStats),
     getStoresSnapshots(stores),
+    storeId ? getActivityLog([storeId], 12) : Promise.resolve([]),
   ]);
 
   const overviewByStore = Object.fromEntries(
@@ -48,6 +50,7 @@ export default async function ManagerDashboard({
         storeOverview={storeOverview}
         storeSnapshots={storeSnapshots}
         overviewByStore={overviewByStore}
+        storeActivities={storeActivities}
       />
     </div>
   );

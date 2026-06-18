@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
-import { canManageStore, canCreateStoreInCity, canCreateRole } from "@/lib/permissions";
+import { canCreateRole, canCreateStoreInCity, canManageStore } from "@/lib/permissions";
 import { NATUS_CITIES } from "@/lib/constants/cities";
 import { getStoreById } from "@/lib/inventory";
 import { PRODUCT_BRAND, PRODUCT_CATEGORIES } from "@/lib/constants/products";
@@ -11,6 +11,7 @@ import { uploadProductImage } from "@/lib/storage";
 import type { Profile } from "@/lib/types";
 
 const MANAGEMENT = ["directeur", "admin", "manager"] as const;
+const STOCK_MANAGEMENT = ["directeur", "admin", "manager", "hub"] as const;
 
 type StoreStockRow = { store_id: string; quantity: number };
 
@@ -38,6 +39,26 @@ function parseStoreStocks(formData: FormData): StoreStockRow[] {
   }
 }
 
+function normalizeUserEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function mapCreateUserAuthError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("email") && (lower.includes("invalid") || lower.includes("format"))) {
+    return "Adresse email invalide. Vérifiez le format (ex. hub.marrakech@natus.ma).";
+  }
+  if (
+    lower.includes("already") ||
+    lower.includes("exists") ||
+    lower.includes("registered") ||
+    lower.includes("duplicate")
+  ) {
+    return "Cet email est déjà utilisé";
+  }
+  return message;
+}
+
 function revalidateManagement() {
   revalidatePath("/manager/products");
   revalidatePath("/manager/stock");
@@ -49,6 +70,12 @@ function revalidateManagement() {
   revalidatePath("/director/activity");
   revalidatePath("/director/stores");
   revalidatePath("/director/users");
+  revalidatePath("/director/hubs");
+  revalidatePath("/hub");
+  revalidatePath("/hub/stock");
+  revalidatePath("/hub/hub-stock");
+  revalidatePath("/hub/activity");
+  revalidatePath("/cashier/transfers");
   revalidatePath("/cashier/pos");
 }
 
@@ -290,7 +317,7 @@ export async function addStock(
   storeId: string,
   notes?: string
 ) {
-  const profile = await requireRole([...MANAGEMENT]);
+  const profile = await requireRole([...STOCK_MANAGEMENT]);
   if (!profile) return { error: "Non autorisé" };
 
   if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -337,8 +364,8 @@ export async function setProductStock(
   stock: number,
   storeId: string
 ) {
-  const profile = await requireRole(["directeur", "admin"]);
-  if (!profile) return { error: "Seul le directeur peut modifier le stock actuel" };
+  const profile = await requireRole(["directeur", "admin", "hub"]);
+  if (!profile) return { error: "Seul le directeur ou le hub stock peut ajuster le stock actuel" };
 
   if (stock < 0) return { error: "Le stock ne peut pas être négatif" };
   if (!storeId) return { error: "Veuillez sélectionner un magasin" };
@@ -380,8 +407,155 @@ export async function setProductStock(
   return { success: true };
 }
 
+export type HubStockTransferItem = {
+  productId: string;
+  quantity: number;
+};
+
+export async function transferHubStock(
+  toStoreId: string,
+  items: HubStockTransferItem[],
+  notes?: string
+): Promise<{ success: true; storeName: string } | { error: string }> {
+  const profile = await requireRole(["hub"]);
+  if (!profile?.city) return { error: "Non autorisé" };
+
+  if (!toStoreId) return { error: "Sélectionnez un magasin destination" };
+
+  const cleaned = items
+    .map((item) => ({
+      product_id: item.productId,
+      quantity: Math.floor(item.quantity),
+    }))
+    .filter((item) => item.product_id && item.quantity > 0);
+
+  if (cleaned.length === 0) {
+    return { error: "Indiquez au moins une quantité à transférer" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("transfer_hub_stock", {
+    p_to_store_id: toStoreId,
+    p_items: cleaned,
+    p_notes: notes?.trim() || null,
+  });
+
+  if (error) {
+    const msg = error.message;
+    if (msg.includes("Stock insuffisant")) {
+      return { error: "Stock insuffisant à l'entrepôt pour un ou plusieurs produits" };
+    }
+    if (msg.includes("gérant affecté")) {
+      return { error: "Aucun gérant affecté — contactez le directeur" };
+    }
+    if (msg.includes("destination invalide")) {
+      return { error: "Magasin destination non autorisé" };
+    }
+    return { error: msg };
+  }
+
+  revalidateManagement();
+  const storeName =
+    typeof data === "object" && data !== null && "store" in data
+      ? String((data as { store?: string }).store || "")
+      : "";
+
+  return { success: true, storeName };
+}
+
+export async function confirmHubStockTransfer(
+  transferId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["cashier", "manager", "directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { data: transfer, error: loadError } = await supabase
+    .from("hub_stock_transfers")
+    .select("id, status, to_store_id, items:hub_stock_transfer_items(id)")
+    .eq("id", transferId)
+    .maybeSingle();
+
+  if (loadError || !transfer) {
+    return { error: "Transfert introuvable" };
+  }
+
+  if (transfer.status !== "sent") {
+    return { error: "Ce transfert a déjà été reçu" };
+  }
+
+  if (profile.role === "cashier" && profile.store_id !== transfer.to_store_id) {
+    return { error: "Ce transfert ne concerne pas votre magasin" };
+  }
+
+  const itemCount = Array.isArray(transfer.items) ? transfer.items.length : 0;
+  if (itemCount === 0) {
+    return { error: "Ce transfert ne contient aucun produit — contactez le hub" };
+  }
+
+  const { data, error } = await supabase.rpc("confirm_hub_stock_transfer", {
+    p_transfer_id: transferId,
+  });
+
+  if (error) {
+    const msg = error.message;
+    if (msg.includes("déjà été traité")) {
+      return { error: "Ce transfert a déjà été reçu" };
+    }
+    if (msg.includes("votre magasin")) {
+      return { error: "Ce transfert ne concerne pas votre magasin" };
+    }
+    if (msg.includes("sans articles")) {
+      return { error: "Ce transfert ne contient aucun produit — contactez le hub" };
+    }
+    return { error: msg };
+  }
+
+  const credited =
+    typeof data === "object" &&
+    data !== null &&
+    "items_credited" in data &&
+    typeof (data as { items_credited?: unknown }).items_credited === "number"
+      ? (data as { items_credited: number }).items_credited
+      : itemCount;
+
+  if (credited === 0) {
+    return { error: "Aucun stock n'a été crédité — contactez le support" };
+  }
+
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function repairHubStockTransfer(
+  transferId: string
+): Promise<{ success: true; credited: number } | { error: string }> {
+  const profile = await requireRole(["manager", "directeur", "admin", "hub"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("repair_hub_transfer_stock", {
+    p_transfer_id: transferId,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const credited =
+    typeof data === "object" &&
+    data !== null &&
+    "items_credited" in data &&
+    typeof (data as { items_credited?: unknown }).items_credited === "number"
+      ? (data as { items_credited: number }).items_credited
+      : 0;
+
+  revalidateManagement();
+  return { success: true, credited };
+}
+
 export async function getProductStoreStock(productId: string, storeId: string) {
-  const profile = await requireRole([...MANAGEMENT]);
+  const profile = await requireRole([...STOCK_MANAGEMENT]);
   if (!profile) return { error: "Non autorisé", stock: 0 };
 
   const access = await assertStoreAccess(profile, storeId);
@@ -735,21 +909,33 @@ export async function createUser(formData: FormData) {
   const profile = await requireRole([...MANAGEMENT]);
   if (!profile) return { error: "Non autorisé" };
 
-  const email = formData.get("email") as string;
+  const email = normalizeUserEmail((formData.get("email") as string) || "");
   const password = formData.get("password") as string;
-  const fullName = formData.get("full_name") as string;
-  const role = formData.get("role") as "manager" | "cashier" | "livreur";
+  const fullName = ((formData.get("full_name") as string) || "").trim();
+  const role = formData.get("role") as "manager" | "cashier" | "livreur" | "hub";
   const city = ((formData.get("city") as string) || "").trim() || null;
   const storeId = (formData.get("store_id") as string) || null;
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Adresse email invalide" };
+  }
+  if (!password || password.length < 6) {
+    return { error: "Le mot de passe doit contenir au moins 6 caractères" };
+  }
+  if (!fullName) {
+    return { error: "Le nom est requis" };
+  }
 
   if (!canCreateRole(profile, role)) {
     return { error: "Vous n'êtes pas autorisé à créer ce type de compte" };
   }
 
-  if (role === "manager") {
-    if (!city) return { error: "Ville requise pour le gérant" };
+  if (role === "manager" || role === "hub") {
+    if (!city) {
+      return { error: role === "hub" ? "Ville requise pour le hub stock" : "Ville requise pour le gérant" };
+    }
     if (!canCreateStoreInCity(profile, city)) {
-      return { error: "Vous ne pouvez créer un gérant que pour votre ville" };
+      return { error: "Vous ne pouvez créer ce compte que pour votre ville" };
     }
   }
 
@@ -777,28 +963,31 @@ export async function createUser(formData: FormData) {
     }
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+
+  const { data, error } = await admin.auth.admin.createUser({
     email,
     password,
-    options: {
-      data: {
-        full_name: fullName,
-        role,
-        city: role === "manager" ? city : undefined,
-      },
+    email_confirm: true,
+    user_metadata: {
+      full_name: fullName,
+      role,
+      city: role === "manager" || role === "hub" ? city : undefined,
     },
+    app_metadata: { provider: "email", providers: ["email"] },
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: mapCreateUserAuthError(error.message) };
 
   if (data.user) {
     const updates: Record<string, unknown> = {
       full_name: fullName,
       role,
+      is_active: true,
     };
 
-    if (role === "manager") {
+    if (role === "manager" || role === "hub") {
       updates.city = city;
       updates.store_id = null;
     }
@@ -809,10 +998,68 @@ export async function createUser(formData: FormData) {
       updates.city = store?.city || null;
     }
 
-    await supabase.from("profiles").update(updates).eq("id", data.user.id);
+    await admin.from("profiles").update(updates).eq("id", data.user.id);
+
+    if (role === "hub" && city) {
+      await admin.rpc("auto_assign_hub_managers", {
+        p_hub_user_id: data.user.id,
+        p_city: city,
+      });
+    }
   }
 
   revalidateManagement();
+  revalidatePath("/director/hubs");
+  return { success: true };
+}
+
+export async function updateHubManagers(
+  hubUserId: string,
+  managerIds: string[]
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+
+  const { data: hubProfile } = await supabase
+    .from("profiles")
+    .select("id, role, city")
+    .eq("id", hubUserId)
+    .eq("role", "hub")
+    .maybeSingle();
+
+  if (!hubProfile?.city) return { error: "Compte hub introuvable" };
+
+  const { data: validManagers } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("role", "manager")
+    .eq("city", hubProfile.city)
+    .in("id", managerIds);
+
+  const validIds = new Set((validManagers || []).map((m) => m.id));
+  const filtered = managerIds.filter((id) => validIds.has(id));
+
+  const { error: deleteError } = await supabase
+    .from("hub_manager_assignments")
+    .delete()
+    .eq("hub_user_id", hubUserId);
+
+  if (deleteError) return { error: deleteError.message };
+
+  if (filtered.length > 0) {
+    const { error: insertError } = await supabase.from("hub_manager_assignments").insert(
+      filtered.map((managerId) => ({
+        hub_user_id: hubUserId,
+        manager_id: managerId,
+      }))
+    );
+    if (insertError) return { error: insertError.message };
+  }
+
+  revalidatePath("/director/hubs");
+  revalidatePath("/hub");
   return { success: true };
 }
 
@@ -1351,7 +1598,7 @@ export async function suggestShopifyOrderRoute(orderId: string): Promise<
   const { getShopifyOrderById, canAccessShopifyOrder } = await import(
     "@/lib/shopify/order-access"
   );
-  const { resolveOrderStoreByStock } = await import("@/lib/shopify/assign-order-by-stock");
+  const { resolveShopifyOrderRoute } = await import("@/lib/shopify/auto-route-order");
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();
 
@@ -1360,74 +1607,72 @@ export async function suggestShopifyOrderRoute(orderId: string): Promise<
   if (!(await canAccessShopifyOrder(profile, order))) return { error: "Accès refusé" };
   if (!order.store_id) return { error: "Commande sans magasin assigné" };
 
-  const { data: fromStore } = await admin
-    .from("stores")
-    .select("id, name, city, address, lat, lng, is_hub")
-    .eq("id", order.store_id)
-    .maybeSingle();
-
-  if (!fromStore) return { error: "Magasin introuvable" };
-
-  const { data: cityStores } = await admin
-    .from("stores")
-    .select("id, name, city, address, lat, lng, is_hub")
-    .eq("is_active", true)
-    .eq("city", fromStore.city);
-
-  const { data: hubStore } = await admin
-    .from("stores")
-    .select("id, name, city, is_hub")
-    .eq("is_active", true)
-    .eq("is_hub", true)
-    .maybeSingle();
-
-  const { data: products } = await admin.from("products").select("id, name, barcode");
-
-  async function updateStoreCoords(id: string, lat: number, lng: number) {
-    await admin.from("stores").update({ lat, lng }).eq("id", id);
-  }
-
-  return resolveOrderStoreByStock({
-    supabase: admin,
-    lineItems: order.line_items,
-    products: products || [],
-    retailStores: cityStores || [],
-    hubStore,
-    shippingAddress: order.shipping_address || fromStore.city,
-    shippingLat: order.shipping_lat,
-    shippingLng: order.shipping_lng,
-    updateStoreCoords,
-    currentStoreId: order.store_id,
+  const resolved = await resolveShopifyOrderRoute(admin, {
+    id: order.id,
+    store_id: order.store_id,
+    city: order.city,
+    line_items: order.line_items,
+    shipping_address: order.shipping_address,
+    shipping_lat: order.shipping_lat,
+    shipping_lng: order.shipping_lng,
+    store_assignment_locked: order.store_assignment_locked,
+    workflow_status: order.workflow_status,
+    fulfilled_at: order.fulfilled_at,
+    sale_id: order.sale_id,
+    order_status: order.order_status,
   });
+
+  if ("error" in resolved) return { error: resolved.error };
+  return resolved.route;
 }
 
 export async function autoRouteShopifyOrder(
   orderId: string
 ): Promise<{ success: true; targetStoreName: string } | { error: string }> {
-  const suggestion = await suggestShopifyOrderRoute(orderId);
-  if ("error" in suggestion) return suggestion;
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
 
-  if (suggestion.currentStoreCanFulfill) {
-    return { error: "Stock suffisant dans ce magasin — transfert inutile" };
-  }
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { maybeAutoRouteShopifyOrder } = await import("@/lib/shopify/auto-route-order");
+  const admin = createAdminClient();
 
-  if (!suggestion.targetStoreId) {
-    return { error: "Aucune destination disponible" };
-  }
-
-  const { getShopifyOrderById } = await import("@/lib/shopify/order-access");
   const order = await getShopifyOrderById(orderId);
-  if (!order?.store_id) return { error: "Commande introuvable" };
+  if (!order) return { error: "Commande introuvable" };
+  if (!(await canAccessShopifyOrder(profile, order))) return { error: "Accès refusé" };
 
-  if (suggestion.targetStoreId === order.store_id) {
-    return { error: "Aucun autre magasin avec stock complet dans la ville" };
+  const result = await maybeAutoRouteShopifyOrder(admin, {
+    id: order.id,
+    store_id: order.store_id,
+    city: order.city,
+    line_items: order.line_items,
+    shipping_address: order.shipping_address,
+    shipping_lat: order.shipping_lat,
+    shipping_lng: order.shipping_lng,
+    store_assignment_locked: order.store_assignment_locked,
+    workflow_status: order.workflow_status,
+    fulfilled_at: order.fulfilled_at,
+    sale_id: order.sale_id,
+    order_status: order.order_status,
+  }, { transferredBy: profile.id });
+
+  if (!result.routed) {
+    if (result.reason.includes("suffisant")) {
+      return { error: "Stock suffisant dans ce magasin — transfert inutile" };
+    }
+    return { error: result.reason };
   }
 
-  const result = await transferShopifyOrder(orderId, suggestion.targetStoreId);
-  if ("error" in result) return result;
+  revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
+  revalidatePath("/manager/orders");
+  revalidatePath("/cashier/orders");
+  revalidatePath("/livreur/orders");
 
   return {
     success: true,
-    targetStoreName: suggestion.targetStoreName || "magasin destination",
+    targetStoreName: result.targetStoreName,
   };
 }

@@ -28,7 +28,11 @@ export function StockManager({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const basePath = pathname.startsWith("/director") ? "/director" : "/manager";
+  const basePath = pathname.startsWith("/director")
+    ? "/director"
+    : pathname.startsWith("/hub")
+      ? "/hub"
+      : "/manager";
   const [storeId, setStoreId] = useState(defaultStoreId);
   const [selectedId, setSelectedId] = useState("");
   const [addQty, setAddQty] = useState("");

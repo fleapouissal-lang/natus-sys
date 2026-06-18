@@ -139,8 +139,8 @@ export function OrderTransferModal({
           )}
 
           <p className="mb-4 text-sm text-muted">
-            Un magasin de la même ville avec tout le stock est choisi en priorité.
-            Sinon la commande part au hub stock Casablanca.
+            Priorité : magasin le plus proche avec tout le stock, puis un autre magasin
+            de la ville, puis le hub de la ville s&apos;il a le stock complet.
           </p>
 
           {!manualMode ? (
@@ -169,7 +169,7 @@ export function OrderTransferModal({
 
           {targetStore?.is_hub && (
             <p className="mt-2 text-xs text-primary">
-              Hub stock parent — préparation centralisée à Casablanca
+              Hub stock de la ville — préparation centralisée
             </p>
           )}
         </>

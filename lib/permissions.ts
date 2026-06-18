@@ -3,6 +3,8 @@ import type { Profile, Store, UserRole } from "@/lib/types";
 export const MANAGEMENT_ROLES = ["directeur", "admin", "manager"] as const;
 export type ManagementRole = (typeof MANAGEMENT_ROLES)[number];
 
+export const STOCK_MANAGEMENT_ROLES = ["directeur", "admin", "manager", "hub"] as const;
+
 export function isDirector(profile: Pick<Profile, "role">): boolean {
   return profile.role === "directeur" || profile.role === "admin";
 }
@@ -13,6 +15,10 @@ export function isAdmin(profile: Pick<Profile, "role">): boolean {
 
 export function isManager(profile: Pick<Profile, "role">): boolean {
   return profile.role === "manager";
+}
+
+export function isHub(profile: Pick<Profile, "role">): boolean {
+  return profile.role === "hub";
 }
 
 export function isLivreur(profile: Pick<Profile, "role">): boolean {
@@ -31,6 +37,8 @@ export function getRoleLabel(role: UserRole): string {
       return "Administrateur";
     case "manager":
       return "Gérant";
+    case "hub":
+      return "Hub stock";
     case "cashier":
       return "Caissier";
     case "livreur":
@@ -41,20 +49,24 @@ export function getRoleLabel(role: UserRole): string {
 export function getHomePath(role: UserRole): string {
   if (role === "directeur" || role === "admin") return "/director";
   if (role === "manager") return "/manager";
+  if (role === "hub") return "/hub";
   if (role === "livreur") return "/livreur/orders";
   return "/cashier/pos";
 }
 
-export function getManagementBasePath(role: UserRole): "/director" | "/manager" | null {
+export function getManagementBasePath(
+  role: UserRole
+): "/director" | "/manager" | "/hub" | null {
   if (role === "directeur" || role === "admin") return "/director";
   if (role === "manager") return "/manager";
+  if (role === "hub") return "/hub";
   return null;
 }
 
-/** Ville accessible : null = toutes (directeur/admin), sinon ville du gérant */
+/** Ville accessible : null = toutes (directeur/admin), sinon ville du profil */
 export function getCityFilter(profile: Profile): string | null {
   if (isDirector(profile)) return null;
-  if (isManager(profile)) return profile.city;
+  if (isManager(profile) || isHub(profile)) return profile.city;
   return null;
 }
 
@@ -67,15 +79,13 @@ export function filterStoresByProfile<T extends Pick<Store, "city">>(
   return stores.filter((s) => s.city === city);
 }
 
-export function canCreateRole(
-  creator: Profile,
-  targetRole: UserRole
-): boolean {
+export function canCreateRole(creator: Profile, targetRole: UserRole): boolean {
   if (isDirector(creator)) {
     return (
       targetRole === "manager" ||
       targetRole === "cashier" ||
-      targetRole === "livreur"
+      targetRole === "livreur" ||
+      targetRole === "hub"
     );
   }
   if (isManager(creator)) {
@@ -92,6 +102,10 @@ export function canCreateStoreInCity(profile: Profile, city: string): boolean {
 
 export function canManageStore(profile: Profile, store: Pick<Store, "city">): boolean {
   if (isDirector(profile)) return true;
-  if (isManager(profile)) return profile.city === store.city;
+  if (isManager(profile) || isHub(profile)) return profile.city === store.city;
   return false;
+}
+
+export function canEditStockTotal(profile: Pick<Profile, "role">): boolean {
+  return isDirector(profile) || isHub(profile);
 }

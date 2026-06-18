@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode, type WheelEvent, type MouseEvent } from "react";
+import { useEffect, type ReactNode, type MouseEvent } from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -16,14 +16,20 @@ export function Modal({
   size = "md",
   className,
   scrollable = true,
+  closeOnBackdrop = true,
+  closeOnEscape = true,
 }: {
   onClose: () => void;
   children: ReactNode;
   size?: keyof typeof sizeClasses;
   className?: string;
   scrollable?: boolean;
+  closeOnBackdrop?: boolean;
+  closeOnEscape?: boolean;
 }) {
   useEffect(() => {
+    if (!closeOnEscape) return;
+
     function onEscape(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
@@ -36,13 +42,20 @@ export function Modal({
       document.removeEventListener("keydown", onEscape);
       document.body.style.overflow = overflow;
     };
-  }, [onClose]);
+  }, [onClose, closeOnEscape]);
+
+  useEffect(() => {
+    if (closeOnEscape) return;
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, [closeOnEscape]);
 
   function handleBackdropClick(e: MouseEvent<HTMLDivElement>) {
-    if (e.target === e.currentTarget) onClose();
-  }
-
-  function handleBackdropWheel(e: WheelEvent<HTMLDivElement>) {
+    if (!closeOnBackdrop) return;
     if (e.target === e.currentTarget) onClose();
   }
 
@@ -50,7 +63,6 @@ export function Modal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/25 p-4"
       onClick={handleBackdropClick}
-      onWheel={handleBackdropWheel}
       role="presentation"
     >
       <div

@@ -1,5 +1,5 @@
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter } from "@/lib/permissions";
+import { getCityFilter, canEditStockTotal } from "@/lib/permissions";
 import { getActiveStores } from "@/lib/inventory";
 import { StockManager } from "@/components/stock/stock-manager";
 
@@ -28,7 +28,7 @@ export default async function StockPage({
       products={products}
       defaultStoreId={defaultStoreId}
       cityLabel={city || undefined}
-      canEditTotal={profile?.role === "directeur"}
+      canEditTotal={profile ? canEditStockTotal(profile) : false}
     />
   );
 }
