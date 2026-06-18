@@ -3,7 +3,10 @@
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { formatCurrency, formatDate, formatPaymentMethod } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { PaymentMethod, Sale } from "@/lib/types";
 
 const ACTION_COLOR = "#B38C4A";
@@ -38,79 +41,117 @@ export function SalesHistoryTable({
   showStore = true,
   showCashier = false,
   onViewSale,
+  paginationKey,
 }: {
   sales: Sale[];
   showStore?: boolean;
   showCashier?: boolean;
   onViewSale: (sale: Sale) => void;
+  paginationKey?: string;
 }) {
   const colSpan = 5 + (showStore ? 1 : 0) + (showCashier ? 1 : 0);
+  const {
+    paginated,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(sales, DEFAULT_PAGE_SIZE, paginationKey);
 
   return (
-    <div className="overflow-x-auto scrollbar-natus max-h-[560px] overflow-y-auto">
-      <table className="w-full text-sm">
-        <thead className="sticky top-0 z-10 bg-primary-light/80 backdrop-blur-sm">
-          <tr className="border-y border-border">
-            <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
-            {showStore && (
-              <th className="px-6 py-3 text-left font-medium text-muted">Magasin</th>
-            )}
-            {showCashier && (
-              <th className="px-6 py-3 text-left font-medium text-muted">Caissier</th>
-            )}
-            <th className="px-6 py-3 text-left font-medium text-muted">Paiement</th>
-            <th className="px-6 py-3 text-right font-medium text-muted">Montant</th>
-            <th className="px-6 py-3 text-left font-medium text-muted">Réf.</th>
-            <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sales.map((sale) => (
-            <tr key={sale.id} className="border-b border-border">
-              <td className="px-6 py-4 whitespace-nowrap">
-                {formatDate(sale.created_at)}
-              </td>
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-y border-border bg-primary-light/50">
+              <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
               {showStore && (
-                <td className="px-6 py-4">
-                  {sale.stores?.name || "—"}
-                  {sale.stores?.city && (
-                    <p className="text-xs text-muted">{sale.stores.city}</p>
-                  )}
-                </td>
+                <th className="px-6 py-3 text-left font-medium text-muted">Magasin</th>
               )}
               {showCashier && (
-                <td className="px-6 py-4">
-                  {sale.profiles?.full_name || sale.profiles?.email || "—"}
-                </td>
+                <th className="px-6 py-3 text-left font-medium text-muted">Caissier</th>
               )}
-              <td className="px-6 py-4">
-                <Badge variant={paymentVariant(sale.payment_method)}>
-                  {formatPaymentMethod(sale.payment_method)}
-                </Badge>
-              </td>
-              <td className="px-6 py-4 text-right font-medium">
-                {formatCurrency(Number(sale.total))}
-              </td>
-              <td className="px-6 py-4">
-                <Badge>{sale.id.slice(0, 8)}</Badge>
-              </td>
-              <td className="px-6 py-4">
-                <div className="flex justify-end">
-                  <SaleViewButton onClick={() => onViewSale(sale)} />
-                </div>
-              </td>
+              <th className="px-6 py-3 text-left font-medium text-muted">Paiement</th>
+              <th className="px-6 py-3 text-right font-medium text-muted">Montant</th>
+              <th className="px-6 py-3 text-left font-medium text-muted">Réf.</th>
+              <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
             </tr>
-          ))}
-          {sales.length === 0 && (
-            <tr>
-              <td colSpan={colSpan} className="px-6 py-12 text-center text-muted">
-                Aucune vente pour ces filtres
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {paginated.map((sale) => (
+              <tr
+                key={sale.id}
+                className={cn(
+                  "border-b border-border",
+                  sale.cancelled_at ? "opacity-60" : undefined
+                )}
+              >
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {formatDate(sale.created_at)}
+                </td>
+                {showStore && (
+                  <td className="px-6 py-4">
+                    {sale.stores?.name || "—"}
+                    {sale.stores?.city && (
+                      <p className="text-xs text-muted">{sale.stores.city}</p>
+                    )}
+                  </td>
+                )}
+                {showCashier && (
+                  <td className="px-6 py-4">
+                    {sale.profiles?.full_name || sale.profiles?.email || "—"}
+                  </td>
+                )}
+                <td className="px-6 py-4">
+                  <Badge variant={paymentVariant(sale.payment_method)}>
+                    {formatPaymentMethod(sale.payment_method)}
+                  </Badge>
+                </td>
+                <td className="px-6 py-4 text-right font-medium">
+                  {sale.cancelled_at ? (
+                    <span className="text-muted line-through">
+                      {formatCurrency(Number(sale.total))}
+                    </span>
+                  ) : (
+                    formatCurrency(Number(sale.total))
+                  )}
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Badge>{sale.id.slice(0, 8)}</Badge>
+                    {sale.cancelled_at && <Badge variant="danger">Annulée</Badge>}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex justify-end">
+                    <SaleViewButton onClick={() => onViewSale(sale)} />
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {paginated.length === 0 && (
+              <tr>
+                <td colSpan={colSpan} className="px-6 py-12 text-center text-muted">
+                  Aucune vente pour ces filtres
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {sales.length > 0 && (
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          totalItems={totalItems}
+          onPageChange={setPage}
+        />
+      )}
+    </>
   );
 }
 

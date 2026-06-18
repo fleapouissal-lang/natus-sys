@@ -1,9 +1,9 @@
-import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
-import type { Product, ShopifyOrder } from "@/lib/types";
+import { mapShopifyLineItemsToCart, type ProductLineLookup } from "@/lib/shopify/order-cart";
+import type { ShopifyOrder } from "@/lib/types";
 
 export function shopifyOrderToSaleItems(
   order: Pick<ShopifyOrder, "line_items">,
-  products: Product[]
+  products: ProductLineLookup[]
 ): { items: { product_id: string; quantity: number }[] } | { error: string } {
   const { cart, missing } = mapShopifyLineItemsToCart(order.line_items, products);
 

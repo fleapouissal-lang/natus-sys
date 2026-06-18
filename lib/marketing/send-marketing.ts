@@ -11,6 +11,7 @@ import {
 import { getBotSession } from "@/lib/kapso/whatsapp-bot/sessions";
 import type { ChatTurn } from "@/lib/kapso/whatsapp-bot/gemini";
 import { crossSellMessage, winbackMessage } from "@/lib/marketing/messages";
+import { unwrapJoin } from "@/lib/utils";
 import {
   createUniqueWinbackPromoCode,
 } from "@/lib/marketing/promo-codes";
@@ -114,7 +115,12 @@ export async function sendCrossSellForSale(saleId: string): Promise<boolean> {
 
   if (!sale || sale.whatsapp_cross_sell_sent_at) return false;
 
-  const customer = sale.customers as { phone: string; full_name: string } | null;
+  const customer = unwrapJoin(
+    sale.customers as
+      | { phone: string; full_name: string }
+      | { phone: string; full_name: string }[]
+      | null
+  );
   if (!customer?.phone) return false;
 
   const ctx = await getSaleProductCategories(saleId);

@@ -25,6 +25,7 @@ import { ProductInfoCard } from "@/components/products/product-info-card";
 import { ProductImage } from "@/components/pos/product-image";
 import { ImageUploadInput } from "@/components/ui/image-upload-input";
 import { Modal } from "@/components/ui/modal";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import {
   createProduct,
@@ -34,6 +35,7 @@ import {
 import { PRODUCT_BRAND, PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, Store } from "@/lib/types";
 
 function ProductForm({
@@ -375,6 +377,17 @@ export function ProductsManager({
     });
   }, [products, search, categoryFilter]);
 
+  const productsFilterToken = `${search}|${categoryFilter}`;
+  const {
+    paginated: paginatedProducts,
+    page: productsPage,
+    setPage: setProductsPage,
+    totalPages: productsTotalPages,
+    rangeStart: productsRangeStart,
+    rangeEnd: productsRangeEnd,
+    totalItems: productsTotalItems,
+  } = usePagination(filteredProducts, DEFAULT_PAGE_SIZE, productsFilterToken);
+
   async function handleDelete(id: string) {
     if (!confirm("Supprimer ce produit ?")) return;
     setDeleting(id);
@@ -560,7 +573,7 @@ export function ProductsManager({
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((product) => (
+              {paginatedProducts.map((product) => (
                 <tr
                   key={product.id}
                   onClick={() => setSelectedProduct(product)}
@@ -620,7 +633,7 @@ export function ProductsManager({
                   </td>
                 </tr>
               ))}
-              {filteredProducts.length === 0 && (
+              {paginatedProducts.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-muted">
                     Aucun produit trouvé
@@ -630,6 +643,16 @@ export function ProductsManager({
             </tbody>
           </table>
         </div>
+        {filteredProducts.length > 0 && (
+          <PaginationBar
+            page={productsPage}
+            totalPages={productsTotalPages}
+            rangeStart={productsRangeStart}
+            rangeEnd={productsRangeEnd}
+            totalItems={productsTotalItems}
+            onPageChange={setProductsPage}
+          />
+        )}
       </Card>
 
       {showForm && (

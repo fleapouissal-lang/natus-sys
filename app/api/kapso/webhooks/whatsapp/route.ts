@@ -157,7 +157,11 @@ export async function POST(request: NextRequest) {
 
   if (secret) {
     const signature = request.headers.get("x-webhook-signature");
-    if (signature && !verifyKapsoSignature(rawBody, payload, signature, secret)) {
+    if (!signature) {
+      console.error("[Kapso webhook] signature manquante");
+      return NextResponse.json({ error: "Signature requise" }, { status: 401 });
+    }
+    if (!verifyKapsoSignature(rawBody, payload, signature, secret)) {
       console.error("[Kapso webhook] signature invalide");
       return NextResponse.json({ error: "Signature invalide" }, { status: 401 });
     }

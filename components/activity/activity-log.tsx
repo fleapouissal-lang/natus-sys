@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { activityRoleOptions, activityTypeOptions } from "@/lib/select-options";
 import {
@@ -11,6 +12,7 @@ import {
   getActorRoleLabel,
 } from "@/lib/activity-utils";
 import { formatDate } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { ActivityEntry, ActivityKind, UserRole } from "@/lib/types";
 
 function kindVariant(
@@ -84,6 +86,17 @@ export function ActivityLog({
     });
   }, [activities, search, typeFilter, roleFilter]);
 
+  const filterToken = `${search}|${typeFilter}|${roleFilter}`;
+  const {
+    paginated,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(filtered, DEFAULT_PAGE_SIZE, filterToken);
+
   const hasFilters = Boolean(search || typeFilter || roleFilter);
 
   function resetFilters() {
@@ -153,9 +166,9 @@ export function ActivityLog({
           />
         </div>
 
-        <div className="overflow-x-auto scrollbar-natus max-h-[520px] overflow-y-auto">
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-primary-light/80 backdrop-blur-sm">
+            <thead className="bg-primary-light/80">
               <tr className="border-y border-border">
                 <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Type</th>
@@ -168,7 +181,7 @@ export function ActivityLog({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((entry) => (
+              {paginated.map((entry) => (
                 <tr key={entry.id} className="border-b border-border">
                   <td className="px-6 py-4 whitespace-nowrap">
                     {formatDate(entry.created_at)}
@@ -203,7 +216,7 @@ export function ActivityLog({
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <tr>
                   <td
                     colSpan={showStoreColumn ? 6 : 5}
@@ -216,6 +229,16 @@ export function ActivityLog({
             </tbody>
           </table>
         </div>
+        {filtered.length > 0 && (
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            totalItems={totalItems}
+            onPageChange={setPage}
+          />
+        )}
       </Card>
     </div>
   );

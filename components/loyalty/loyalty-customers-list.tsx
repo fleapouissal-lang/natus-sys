@@ -5,9 +5,11 @@ import { useMemo, useState } from "react";
 import { Search, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { loyaltyTierFromPoints, loyaltyTierLabel } from "@/lib/loyalty/tiers";
 import { formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { LoyaltyCustomer } from "@/lib/types";
 
 export function LoyaltyCustomersList({
@@ -30,6 +32,16 @@ export function LoyaltyCustomersList({
         (c.email?.toLowerCase().includes(q) ?? false)
     );
   }, [customers, search]);
+
+  const {
+    paginated,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(filtered, DEFAULT_PAGE_SIZE, search);
 
   return (
     <>
@@ -63,7 +75,7 @@ export function LoyaltyCustomersList({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((customer) => {
+              {paginated.map((customer) => {
                 const tier = loyaltyTierFromPoints(customer.loyalty_points);
                 return (
                   <tr key={customer.id} className="border-b border-border last:border-b-0">
@@ -97,7 +109,7 @@ export function LoyaltyCustomersList({
                   </tr>
                 );
               })}
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-muted">
                     Aucun client trouvé
@@ -107,6 +119,16 @@ export function LoyaltyCustomersList({
             </tbody>
           </table>
         </div>
+        {filtered.length > 0 && (
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            totalItems={totalItems}
+            onPageChange={setPage}
+          />
+        )}
       </Card>
     </>
   );

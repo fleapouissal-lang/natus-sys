@@ -674,6 +674,27 @@ export async function completeSale(
   return { success: true, saleId: data as string };
 }
 
+export async function cancelSale(
+  saleId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT, "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cancel_sale", { p_sale_id: saleId });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/cashier/sales");
+  revalidatePath("/cashier/pos");
+  revalidatePath("/manager/sales");
+  revalidatePath("/director/sales");
+  revalidatePath("/manager/stock");
+  revalidatePath("/director/stock");
+
+  return { success: true };
+}
+
 export async function createLoyaltyCustomer(input: {
   fullName: string;
   phone: string;
@@ -1732,7 +1753,7 @@ export async function suggestShopifyOrderRoute(orderId: string): Promise<
     order_status: order.order_status,
   });
 
-  if ("error" in resolved) return { error: resolved.error };
+  if ("error" in resolved) return { error: resolved.error ?? "Erreur inconnue" };
   return resolved.route;
 }
 

@@ -6,9 +6,11 @@ import { PackageCheck, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { ProductImage } from "@/components/pos/product-image";
 import { confirmHubStockTransfer } from "@/lib/actions";
 import { formatDate } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { HubStockTransfer, Product } from "@/lib/types";
 
 export function CashierStockTransfers({
@@ -24,6 +26,16 @@ export function CashierStockTransfers({
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const {
+    paginated: paginatedTransfers,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(transfers, DEFAULT_PAGE_SIZE);
 
   async function handleConfirm(transferId: string) {
     setError("");
@@ -60,7 +72,7 @@ export function CashierStockTransfers({
         </Card>
       ) : (
         <div className="space-y-4">
-          {transfers.map((transfer) => (
+          {paginatedTransfers.map((transfer) => (
             <Card key={transfer.id} padding={false}>
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-4">
                 <div>
@@ -127,6 +139,18 @@ export function CashierStockTransfers({
             </Card>
           ))}
         </div>
+      )}
+
+      {transfers.length > 0 && (
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          totalItems={totalItems}
+          onPageChange={setPage}
+          className="rounded-lg border border-border bg-surface px-6 py-4"
+        />
       )}
     </div>
   );

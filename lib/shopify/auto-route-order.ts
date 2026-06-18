@@ -4,6 +4,7 @@ import {
   resolveOrderStoreByStock,
   storeCanFulfillOrder,
 } from "@/lib/shopify/assign-order-by-stock";
+import type { ProductLineLookup } from "@/lib/shopify/order-cart";
 import { isOrderTransferable } from "@/lib/shopify/order-transfer";
 import type { ShopifyLineItemRow, ShopifyWorkflowStatus } from "@/lib/types";
 
@@ -90,7 +91,7 @@ export async function resolveShopifyOrderRoute(
   const route = await resolveOrderStoreByStock({
     supabase,
     lineItems: order.line_items,
-    products: products || [],
+    products: (products || []) as ProductLineLookup[],
     retailStores: cityStores || [],
     hubStore,
     shippingAddress: order.shipping_address || fromStore.city,
@@ -118,7 +119,7 @@ export async function maybeAutoRouteShopifyOrder(
 
   const resolved = await resolveShopifyOrderRoute(supabase, order);
   if ("error" in resolved) {
-    return { routed: false, reason: resolved.error };
+    return { routed: false, reason: resolved.error ?? "Erreur inconnue" };
   }
 
   const { route } = resolved;
@@ -297,7 +298,7 @@ export async function filterOrdersFulfillableAtStore<T extends ShopifyOrderForRo
   if (orders.length === 0) return orders;
 
   const { data: products } = await supabase.from("products").select("id, name, barcode");
-  const productList = products || [];
+  const productList = (products || []) as ProductLineLookup[];
 
   const requirementsByOrder = orders.map((order) =>
     orderLineItemsToRequirements(order.line_items, productList)

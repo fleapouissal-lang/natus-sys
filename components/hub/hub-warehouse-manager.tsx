@@ -6,6 +6,7 @@ import { ArrowRightLeft, Package, Search, Warehouse } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Input } from "@/components/ui/input";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { StoreSelect } from "@/components/stores/store-select";
@@ -14,6 +15,7 @@ import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { transferHubStock } from "@/lib/actions";
 import { formatCurrency } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, Profile, Store, HubStockTransfer } from "@/lib/types";
 import { HubTransfersList } from "@/components/hub/hub-transfers-list";
 
@@ -52,6 +54,17 @@ export function HubWarehouseManager({
       );
     });
   }, [products, search, category]);
+
+  const filterToken = `${search}|${category}`;
+  const {
+    paginated: paginatedProducts,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(filteredProducts, DEFAULT_PAGE_SIZE, filterToken);
 
   const totalUnits = useMemo(
     () => products.reduce((sum, p) => sum + p.stock, 0),
@@ -249,7 +262,7 @@ export function HubWarehouseManager({
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map((product) => (
+                {paginatedProducts.map((product) => (
                   <tr key={product.id} className="border-b border-border last:border-b-0">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -292,6 +305,16 @@ export function HubWarehouseManager({
               </tbody>
             </table>
           </div>
+        )}
+        {filteredProducts.length > 0 && (
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            totalItems={totalItems}
+            onPageChange={setPage}
+          />
         )}
       </Card>
 

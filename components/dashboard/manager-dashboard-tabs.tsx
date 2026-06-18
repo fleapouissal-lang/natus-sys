@@ -7,7 +7,7 @@ import {
   BarChart3,
   Package,
   ShoppingBag,
-  Store,
+  Store as StoreIcon,
   TrendingUp,
 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -31,7 +31,7 @@ const TABS: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { id: "suivi", label: "Suivi des magasins", icon: Store },
+  { id: "suivi", label: "Suivi des magasins", icon: StoreIcon },
   { id: "stats", label: "Statistiques", icon: BarChart3 },
 ];
 

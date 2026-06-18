@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { unwrapJoin } from "@/lib/utils";
 import { createStoreComplaint } from "@/lib/feedback/complaints";
 import {
   askReclamationMessage,
@@ -72,7 +73,13 @@ async function loadSaleContext(saleId: string): Promise<FeedbackContext | null> 
     .eq("id", saleId)
     .maybeSingle();
 
-  const customer = data?.customers as { full_name: string; phone: string } | null;
+  const customer = unwrapJoin(
+    data?.customers as
+      | { full_name: string; phone: string }
+      | { full_name: string; phone: string }[]
+      | null
+      | undefined
+  );
   if (!data?.store_id || !customer?.phone) return null;
 
   return {

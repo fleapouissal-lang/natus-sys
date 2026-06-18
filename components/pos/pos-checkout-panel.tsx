@@ -20,6 +20,7 @@ import {
   canRedeemLoyaltyPoints,
   pointsUntilRedemption,
 } from "@/lib/loyalty/points";
+import { looksLikePromoCode } from "@/lib/marketing/promo-input";
 import {
   checkoutTotal,
   promoDiscountAmount,
@@ -217,7 +218,7 @@ export function PosCheckoutPanel({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    if (input.trim().toUpperCase().startsWith("NATUS")) {
+                    if (looksLikePromoCode(input)) {
                       applyPromo();
                     } else {
                       applyCard();

@@ -110,8 +110,8 @@ export async function appendBotHistory(
   const existing = await getBotSession(phone);
   const history: ChatTurn[] = [
     ...(existing?.history ?? []),
-    { role: "user", text: userText },
-    { role: "model", text: modelReply },
+    { role: "user" as const, text: userText },
+    { role: "model" as const, text: modelReply },
   ].slice(-10);
 
   await upsertBotSession(phone, {

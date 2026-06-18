@@ -5,8 +5,8 @@ import { requireRole } from "@/lib/auth";
 import { getHubCityStaff, getHubAssignedManagers, getHubStoreByCity } from "@/lib/hub";
 import { getActivityLog } from "@/lib/activity";
 import { RecentActivityPanel } from "@/components/activity/recent-activity-panel";
+import { HubCashiersTable } from "@/components/hub/hub-cashiers-table";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 export default async function HubDashboardPage() {
   const profile = await requireRole(["hub"]);
@@ -123,45 +123,10 @@ export default async function HubDashboardPage() {
         title="Mes actions récentes"
         description="Modifications de stock et transferts effectués par le hub"
         viewAllHref="/hub/activity"
-        limit={8}
+        paginate
       />
 
-      {staff.cashiers.length > 0 && (
-        <Card padding={false}>
-          <div className="border-b border-border px-6 py-4">
-            <h2 className="text-lg font-semibold">Caissiers — {profile.city}</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-primary-light/30">
-                  <th className="px-6 py-3 text-left font-medium text-muted">Nom</th>
-                  <th className="px-6 py-3 text-left font-medium text-muted">Magasin</th>
-                  <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staff.cashiers.map((cashier) => (
-                  <tr key={cashier.id} className="border-b border-border last:border-b-0">
-                    <td className="px-6 py-4">
-                      <p className="font-medium">{cashier.full_name}</p>
-                      <p className="text-muted">{cashier.email}</p>
-                    </td>
-                    <td className="px-6 py-4 text-muted">
-                      {(cashier.stores as { name?: string } | null)?.name || "—"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge variant={cashier.is_active ? "success" : "default"}>
-                        {cashier.is_active ? "Actif" : "Inactif"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
+      <HubCashiersTable cashiers={staff.cashiers} city={profile.city} />
     </div>
   );
 }

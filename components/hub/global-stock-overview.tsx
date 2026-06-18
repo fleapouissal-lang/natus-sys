@@ -4,11 +4,13 @@ import { useMemo, useState } from "react";
 import { Package, Search, Store } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { ProductImage } from "@/components/pos/product-image";
 import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { formatCurrency } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product } from "@/lib/types";
 
 export function GlobalStockOverview({
@@ -33,6 +35,17 @@ export function GlobalStockOverview({
       );
     });
   }, [products, search, category]);
+
+  const filterToken = `${search}|${category}`;
+  const {
+    paginated: paginatedProducts,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(filteredProducts, DEFAULT_PAGE_SIZE, filterToken);
 
   const totalUnits = useMemo(
     () => products.reduce((sum, p) => sum + p.stock, 0),
@@ -151,7 +164,7 @@ export function GlobalStockOverview({
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map((product) => (
+                {paginatedProducts.map((product) => (
                   <tr
                     key={product.id}
                     className="border-b border-border last:border-b-0"
@@ -191,6 +204,16 @@ export function GlobalStockOverview({
               </tbody>
             </table>
           </div>
+        )}
+        {filteredProducts.length > 0 && (
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            totalItems={totalItems}
+            onPageChange={setPage}
+          />
         )}
       </Card>
     </div>

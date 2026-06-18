@@ -12,6 +12,7 @@ import { OrderTransferModal } from "@/components/orders/order-transfer-modal";
 import { ReturnNoteModal } from "@/components/orders/return-note-modal";
 import { ConfirmationFollowUpModal } from "@/components/orders/confirmation-follow-up-modal";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { DateInputField } from "@/components/ui/date-input-field";
 import { formatCurrency, formatDate, cn, toLocalDateKey } from "@/lib/utils";
 import {
@@ -38,6 +39,7 @@ import {
   isConfirmationFollowUpResolved,
 } from "@/lib/shopify/confirmation-follow-up";
 import { updateShopifyOrderStatus, markShopifyCodPaid, handOrderToLivreur, confirmShopifyOrderReturn } from "@/lib/actions";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { ShopifyOrder, ShopifyPaymentType, ShopifyWorkflowStatus, Store } from "@/lib/types";
 
 const STATUS_CELL_WIDTH = "w-[172px]";
@@ -243,6 +245,17 @@ export function ShopifyOrdersManager({
     0
   );
 
+  const ordersFilterToken = `${search}|${dateFrom}|${dateTo}|${paymentFilter}|${statusFilter}`;
+  const {
+    paginated: paginatedOrders,
+    page: ordersPage,
+    setPage: setOrdersPage,
+    totalPages: ordersTotalPages,
+    rangeStart: ordersRangeStart,
+    rangeEnd: ordersRangeEnd,
+    totalItems: ordersTotalItems,
+  } = usePagination(filteredOrders, DEFAULT_PAGE_SIZE, ordersFilterToken);
+
   function resetFilters() {
     setSearch("");
     setDateFrom(defaultDateFrom);
@@ -443,7 +456,7 @@ export function ShopifyOrdersManager({
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.map((order) => {
+              {paginatedOrders.map((order) => {
                 const isCod = order.payment_type === "cod";
                 const isPaid =
                   order.workflow_status === "paid" || order.financial_status === "paid";
@@ -741,6 +754,16 @@ export function ShopifyOrdersManager({
             </tbody>
           </table>
         </div>
+        {filteredOrders.length > 0 && (
+          <PaginationBar
+            page={ordersPage}
+            totalPages={ordersTotalPages}
+            rangeStart={ordersRangeStart}
+            rangeEnd={ordersRangeEnd}
+            totalItems={ordersTotalItems}
+            onPageChange={setOrdersPage}
+          />
+        )}
       </Card>
 
       {detailOrder && (

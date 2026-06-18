@@ -7,7 +7,7 @@ import {
 import { sendKapsoTemplateMessage, sendKapsoTextMessage } from "@/lib/kapso/client";
 import { toWhatsAppRecipient } from "@/lib/kapso/phone";
 import { getCustomerByPhone } from "@/lib/loyalty/customers";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, unwrapJoin } from "@/lib/utils";
 import type { ShopifyLineItemRow } from "@/lib/types";
 
 type SaleLine = {
@@ -190,11 +190,7 @@ export async function sendSaleWhatsAppNotification(saleId: string): Promise<void
     return;
   }
 
-  const customer = sale.customers as {
-    full_name: string;
-    phone: string;
-    loyalty_points: number;
-  } | null;
+  const customer = unwrapJoin(sale.customers as { full_name: string; phone: string; loyalty_points: number } | { full_name: string; phone: string; loyalty_points: number }[] | null);
 
   if (!customer?.phone) {
     if (isKapsoSandboxMode()) {
@@ -216,18 +212,18 @@ export async function sendSaleWhatsAppNotification(saleId: string): Promise<void
     isKapsoSandboxMode() ? "(sandbox)" : "→ client"
   );
 
-  const saleItems = (sale.sale_items || []) as {
+  const saleItems = (sale.sale_items || []) as Array<{
     quantity: number;
     unit_price: number;
-    products: { name: string } | null;
-  }[];
+    products: { name: string } | { name: string }[] | null;
+  }>;
 
   await dispatchWhatsApp(customerPhone, {
     customerName: customer?.full_name?.trim() || "Client",
-    storeName: (sale.stores as { name: string } | null)?.name,
+    storeName: unwrapJoin(sale.stores as { name: string } | { name: string }[] | null)?.name,
     orderLabel: `Référence : ${saleId.slice(0, 8).toUpperCase()}`,
     lines: saleItems.map((item) => ({
-      name: item.products?.name?.trim() || "Produit",
+      name: unwrapJoin(item.products)?.name?.trim() || "Produit",
       quantity: item.quantity,
       lineTotal: item.quantity * Number(item.unit_price),
     })),
@@ -304,7 +300,7 @@ export async function sendShopifyOrderWhatsAppNotification(
 
   await dispatchWhatsApp(order.customer_phone, {
     customerName: order.customer_name?.trim() || "Client",
-    storeName: (order.stores as { name: string } | null)?.name,
+    storeName: unwrapJoin(order.stores as { name: string } | { name: string }[] | null)?.name,
     orderLabel: `Commande Shopify #${order.order_number}`,
     lines: saleLines,
     total: Number(order.total),

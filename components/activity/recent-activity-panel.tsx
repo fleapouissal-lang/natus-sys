@@ -4,8 +4,10 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { getActivityKindLabel } from "@/lib/activity-utils";
 import { formatDate } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { ActivityEntry } from "@/lib/types";
 
 function kindVariant(
@@ -30,14 +32,30 @@ export function RecentActivityPanel({
   description,
   viewAllHref,
   limit = 8,
+  paginate = false,
+  pageSize = DEFAULT_PAGE_SIZE,
 }: {
   activities: ActivityEntry[];
   title?: string;
   description?: string;
   viewAllHref?: string;
+  /** Nombre d’entrées affichées sans pagination (défaut 8). */
   limit?: number;
+  /** Active la pagination (10 par page par défaut). */
+  paginate?: boolean;
+  pageSize?: number;
 }) {
-  const recent = activities.slice(0, limit);
+  const {
+    paginated: pagedActivities,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(activities, pageSize);
+
+  const recent = paginate ? pagedActivities : activities.slice(0, limit);
 
   return (
     <Card padding={false}>
@@ -82,6 +100,16 @@ export function RecentActivityPanel({
             </li>
           ))}
         </ul>
+      )}
+      {paginate && activities.length > 0 && (
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          totalItems={totalItems}
+          onPageChange={setPage}
+        />
       )}
     </Card>
   );

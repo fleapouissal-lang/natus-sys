@@ -132,9 +132,7 @@ export function ShopifyOrderDetailModal({
           <h4 className="mb-2 text-sm font-semibold">Suivi confirmation client</h4>
           {order.cashier_confirmation_status && (
             <p className="text-sm font-medium">
-              {order.cashier_confirmation_status === "confirmed"
-                ? "Confirmée (appel)"
-                : order.cashier_confirmation_status === "not_confirmed"
+              {order.cashier_confirmation_status === "not_confirmed"
                   ? "Non confirmée"
                   : order.cashier_confirmation_status === "no_response"
                     ? "Pas de réponse"

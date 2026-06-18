@@ -123,11 +123,17 @@ export function ManagerSalesHistory({
           showStore={false}
           showCashier
           onViewSale={setDetailSale}
+          paginationKey={`${dateFrom}|${dateTo}|${paymentFilter}|${selectedStoreId}`}
         />
       </Card>
 
       {detailSale && (
-        <SaleDetailModal sale={detailSale} onClose={() => setDetailSale(null)} />
+        <SaleDetailModal
+          sale={detailSale}
+          onClose={() => setDetailSale(null)}
+          canCancel={!detailSale.cancelled_at}
+          onCancelled={() => router.refresh()}
+        />
       )}
     </div>
   );

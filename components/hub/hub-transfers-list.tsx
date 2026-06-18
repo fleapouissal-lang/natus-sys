@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { repairHubStockTransfer } from "@/lib/actions";
 import { formatDate } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { HubStockTransfer } from "@/lib/types";
 
 function statusLabel(status: HubStockTransfer["status"]): string {
@@ -31,6 +33,16 @@ export function HubTransfersList({
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+
+  const {
+    paginated,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(transfers, DEFAULT_PAGE_SIZE);
 
   async function handleRepair(transferId: string) {
     setMessage("");
@@ -80,7 +92,7 @@ export function HubTransfersList({
             </tr>
           </thead>
           <tbody>
-            {transfers.map((transfer) => (
+            {paginated.map((transfer) => (
               <tr key={transfer.id} className="border-b border-border last:border-b-0">
                 <td className="px-6 py-4 whitespace-nowrap">
                   {formatDate(transfer.sent_at)}
@@ -140,6 +152,14 @@ export function HubTransfersList({
           </tbody>
         </table>
       </div>
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        totalItems={totalItems}
+        onPageChange={setPage}
+      />
     </Card>
   );
 }

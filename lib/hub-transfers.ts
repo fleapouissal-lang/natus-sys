@@ -1,24 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
 import type { HubStockTransfer } from "@/lib/types";
 
-function unwrapStore<T extends { name: string }>(
-  value: T | T[] | null | undefined
-): T | null {
+function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
   return Array.isArray(value) ? value[0] ?? null : value;
 }
 
 function mapTransferRow(row: Record<string, unknown>): HubStockTransfer {
-  const fromStore = unwrapStore(
+  const fromStore = unwrapOne(
     row.from_store as { id: string; name: string; city: string } | { id: string; name: string; city: string }[] | null
   );
-  const toStore = unwrapStore(
+  const toStore = unwrapOne(
     row.to_store as { id: string; name: string; city: string } | { id: string; name: string; city: string }[] | null
   );
-  const creator = unwrapStore(
+  const creator = unwrapOne(
     row.creator as { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null
   );
-  const receiver = unwrapStore(
+  const receiver = unwrapOne(
     row.receiver as { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null
   );
   const rawItems = (row.items as Array<Record<string, unknown>>) || [];
@@ -38,7 +36,7 @@ function mapTransferRow(row: Record<string, unknown>): HubStockTransfer {
     creator_name: creator?.full_name || creator?.email || null,
     receiver_name: receiver?.full_name || receiver?.email || null,
     items: rawItems.map((item) => {
-      const product = unwrapStore(
+      const product = unwrapOne(
         item.products as { name: string; barcode: string } | { name: string; barcode: string }[] | null
       );
       return {

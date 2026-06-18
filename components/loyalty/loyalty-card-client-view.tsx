@@ -10,7 +10,8 @@ import { formatDate } from "@/lib/utils";
 import { canRedeemLoyaltyPoints, pointsUntilRedemption } from "@/lib/loyalty/points";
 import { formatLoyaltyRedeemRule, pointsValueInMad } from "@/lib/loyalty/settings";
 import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
-import type { LoyaltyCustomer, LoyaltyTransaction, LoyaltySettings } from "@/lib/types";
+import type { LoyaltyCustomer, LoyaltySettings } from "@/lib/types";
+import type { PublicLoyaltyTransaction } from "@/lib/loyalty/public";
 
 export function LoyaltyCardClientView({
   initialCustomer,
@@ -18,7 +19,7 @@ export function LoyaltyCardClientView({
   loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
 }: {
   initialCustomer: LoyaltyCustomer;
-  initialTransactions: LoyaltyTransaction[];
+  initialTransactions: PublicLoyaltyTransaction[];
   loyaltySettings?: LoyaltySettings;
 }) {
   const [customer, setCustomer] = useState(initialCustomer);

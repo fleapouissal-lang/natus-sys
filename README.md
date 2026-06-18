@@ -1,111 +1,79 @@
-# Natus POS — Application de caisse cosmétiques
+# Natus POS — Marrakech
 
-Application de point de vente (POS) moderne pour un magasin de cosmétiques, construite avec **Next.js 16** et **Supabase**.
+Application de caisse, fidélité, commandes Shopify et marketing WhatsApp pour **Natus Cosmétiques** (Guéliz, Médina, hub logistique).
 
-## Fonctionnalités
+## Stack
 
-### Authentification
-- Connexion par email et mot de passe
-- Gestion des rôles via Supabase (Row Level Security)
-- Deux rôles : **Gérant** (manager) et **Caissier** (cashier)
+- **Next.js 16** (App Router)
+- **Supabase** (auth, PostgreSQL, RLS)
+- **Kapso** + **Gemini** (WhatsApp bot, notifications)
+- **Shopify** (commandes web)
 
-### Gérant (Manager)
-- Ajouter / modifier / supprimer des produits
-- Gérer le stock et les alertes de rupture
-- Consulter toutes les ventes
-- Tableau de bord avec statistiques
-- Gérer les utilisateurs (création, rôles, activation)
+## Rôles
 
-### Caissier (Cashier)
-- Interface de caisse dédiée
-- Scanner des codes-barres ou recherche manuelle
-- Effectuer des ventes avec gestion du panier
-- Consulter l'historique de ses ventes
+| Rôle | Accès |
+|------|--------|
+| `cashier` | Caisse, ventes, clients fidélité |
+| `manager` | Magasin(s) ville, stock, ventes, réclamations |
+| `directeur` | Tous magasins, utilisateurs, paramètres fidélité |
+| `hub` | Transferts inter-magasins |
+| `livreur` | Livraisons Shopify |
 
 ## Installation
 
-### 1. Cloner et installer
-
 ```bash
 npm install
-```
-
-### 2. Configurer Supabase
-
-1. Créez un projet sur [supabase.com](https://supabase.com)
-2. Copiez `.env.local.example` vers `.env.local` :
-
-```bash
 cp .env.local.example .env.local
-```
-
-3. Renseignez vos clés Supabase dans `.env.local` :
-
-```
-NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=votre-clé-anon
-```
-
-4. Exécutez le script SQL dans l'éditeur SQL Supabase :
-
-```
-supabase/migrations/001_initial_schema.sql
-```
-
-### 3. Créer le premier utilisateur gérant
-
-Dans le dashboard Supabase → Authentication → Users → Add user, créez un utilisateur avec :
-
-- Email et mot de passe
-- User Metadata : `{ "role": "manager", "full_name": "Admin" }`
-
-Le trigger SQL créera automatiquement le profil avec le rôle gérant.
-
-### 4. Lancer l'application
-
-```bash
+# Renseigner les clés Supabase, Kapso, etc.
+npm run db:migrate
+npm run seed:users
 npm run dev
 ```
 
-Ouvrez [http://localhost:3000](http://localhost:3000).
+Comptes test (seed) : `manager@natus.ma` / `cashier@natus.ma` / `directeur@natus.ma` → `Natus2026!`
+
+## Scripts utiles
+
+| Commande | Description |
+|----------|-------------|
+| `npm run db:migrate` | Appliquer les migrations Supabase |
+| `npm run seed:users` | Magasins, produits, utilisateurs |
+| `npm run seed:marketing-test` | Jeu de test marketing WhatsApp |
+| `npm run seed:shopify-feedback` | Test avis / réclamations |
+| `npm test` | Tests unitaires (promo, checkout) |
+| `npm run typecheck` | Vérification TypeScript |
 
 ## Structure
 
 ```
 app/
-├── login/              # Page de connexion
-├── manager/            # Espace gérant
-│   ├── products/       # Gestion produits
-│   ├── stock/          # Gestion stock
-│   ├── sales/          # Historique ventes
-│   └── users/          # Gestion utilisateurs
-└── cashier/
-    ├── pos/            # Interface caisse
-    └── sales/          # Historique caissier
-
-components/
-├── auth/               # Formulaire connexion
-├── layout/             # Sidebar navigation
-├── pos/                # Terminal de caisse
-├── products/           # Gestion produits
-├── stock/              # Gestion stock
-├── users/              # Gestion utilisateurs
-└── ui/                 # Composants UI
-
+├── cashier/          # Caisse POS, ventes
+├── manager/          # Gérant magasin
+├── director/         # Direction
+├── hub/              # Logistique
+├── livreur/          # Livraisons
+├── commande/         # Suivi commande Shopify (public)
+├── carte/            # Carte fidélité client (public)
+├── avis-google/      # Avis Google (public)
+├── api/cron/         # Win-back, feedback livraison, sync Shopify
 lib/
-├── actions.ts          # Server Actions
-├── auth.ts             # Helpers authentification
-├── types.ts            # Types TypeScript
-└── supabase/           # Clients Supabase
-
-supabase/
-└── migrations/         # Schéma base de données
+├── kapso/            # WhatsApp bot, notifications
+├── marketing/        # Promo, win-back, cross-sell, avis
+├── loyalty/          # Fidélité
+supabase/migrations/  # Schéma SQL (52+ migrations)
 ```
 
-## Technologies
+## Fonctionnalités principales
 
-- **Next.js 16** — App Router, Server Actions, Middleware
-- **Supabase** — Auth, PostgreSQL, Row Level Security
-- **Tailwind CSS 4** — Design system cosmétiques (rose/doré)
-- **TypeScript** — Typage strict
-- **Lucide React** — Icônes
+- **Caisse** : scan code-barres, fidélité + code promo cumulables, annulation vente (24 h caissier / gérant)
+- **Fidélité** : carte QR, points, réduction en caisse
+- **Shopify** : commandes web, validation caisse, livraison, retours
+- **WhatsApp** : confirmation commande, statuts, avis 2 h après livraison, bot Gemini
+- **Marketing** : win-back 60 j (code unique 24 h), cross-sell, avis Google CTA
+
+## Déploiement (Vercel)
+
+1. Variables d'environnement (voir `.env.local.example`)
+2. `CRON_SECRET` pour les crons `/api/cron/*`
+3. `npm run db:migrate` sur la base Supabase prod
+4. Webhook Kapso → `https://votre-domaine/api/kapso/webhooks/whatsapp`

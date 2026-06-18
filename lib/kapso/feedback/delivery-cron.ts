@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendFeedbackPrompt } from "@/lib/kapso/feedback/messages";
 import { getBotSession } from "@/lib/kapso/whatsapp-bot/sessions";
+import { unwrapJoin } from "@/lib/utils";
 
 const FEEDBACK_DELAY_MS = 2 * 60 * 60 * 1000;
 
@@ -85,7 +86,12 @@ export async function sendPosServiceFeedback(saleId: string): Promise<boolean> {
 
   if (!sale || sale.whatsapp_service_feedback_sent_at) return false;
 
-  const customer = sale.customers as { full_name: string; phone: string } | null;
+  const customer = unwrapJoin(
+    sale.customers as
+      | { full_name: string; phone: string }
+      | { full_name: string; phone: string }[]
+      | null
+  );
   if (!customer?.phone) return false;
 
   const session = await getBotSession(customer.phone);

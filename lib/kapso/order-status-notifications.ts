@@ -77,11 +77,12 @@ export async function notifyShopifyOrderWorkflowStatus(
 
   if (error || !data?.customer_phone) return;
 
+  const customerPhone = data.customer_phone;
   const order = data as OrderNotifyRow;
   const sent = order.whatsapp_status_notifications || {};
   if (sent[newStatus]) return;
 
-  const recipient = resolveKapsoRecipient(order.customer_phone);
+  const recipient = resolveKapsoRecipient(customerPhone);
   if (!recipient) return;
 
   const trackingUrl = order.tracking_token

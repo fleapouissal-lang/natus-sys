@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import type { Sale } from "@/lib/types";
 
 const SALE_SELECT =
-  "*, profiles(full_name, email), stores(name, city), sale_items(id, quantity, unit_price, products(name, barcode))";
+  "*, profiles(full_name, email), stores(name, city), customers(full_name, card_number, phone), sale_items(id, quantity, unit_price, products(name, barcode))";
 
 export default async function SalesPage({
   searchParams,

@@ -44,3 +44,9 @@ export function toLocalDateKey(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleDateString("fr-CA");
 }
+
+/** Supabase nested selects often return T or T[] — normalize to one row. */
+export function unwrapJoin<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? value[0] ?? null : value;
+}

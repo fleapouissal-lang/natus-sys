@@ -20,14 +20,14 @@ export function resolveProductForLineItem(
 
 export function mapShopifyLineItemsToCart(
   lineItems: ShopifyLineItemRow[],
-  products: Product[]
+  products: ProductLineLookup[]
 ): { cart: CartItem[]; missing: string[] } {
   const cart: CartItem[] = [];
   const missing: string[] = [];
 
   for (const item of lineItems) {
     const sku = item.sku?.trim();
-    let product: Product | undefined;
+    let product: ProductLineLookup | undefined;
 
     if (sku) {
       product = products.find((p) => p.barcode === sku);
@@ -48,7 +48,7 @@ export function mapShopifyLineItemsToCart(
     if (existing) {
       existing.quantity += qty;
     } else {
-      cart.push({ product, quantity: qty });
+      cart.push({ product: product as Product, quantity: qty });
     }
   }
 

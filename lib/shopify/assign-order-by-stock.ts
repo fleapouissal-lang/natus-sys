@@ -1,6 +1,6 @@
 import type { Product, ShopifyLineItemRow, Store } from "@/lib/types";
 import { assignClosestStore } from "@/lib/shopify/assign-store";
-import { resolveProductForLineItem } from "@/lib/shopify/order-cart";
+import { resolveProductForLineItem, type ProductLineLookup } from "@/lib/shopify/order-cart";
 
 export type OrderStockRequirement = { productId: string; quantity: number };
 
@@ -13,7 +13,7 @@ type InventoryRow = { store_id: string; product_id: string; stock: number };
 
 export function orderLineItemsToRequirements(
   lineItems: ShopifyLineItemRow[],
-  products: Pick<Product, "id" | "name" | "barcode">[]
+  products: ProductLineLookup[]
 ): { requirements: OrderStockRequirement[]; unresolved: string[] } {
   const qtyByProduct = new Map<string, number>();
   const unresolved: string[] = [];
@@ -94,7 +94,7 @@ export type OrderRouteSuggestion = {
 export async function resolveOrderStoreByStock(opts: {
   supabase: ReturnType<typeof import("@/lib/supabase/admin").createAdminClient>;
   lineItems: ShopifyLineItemRow[];
-  products: Pick<Product, "id" | "name" | "barcode">[];
+  products: ProductLineLookup[];
   retailStores: StoreWithCoords[];
   hubStore: Pick<Store, "id" | "name" | "is_hub"> | null;
   shippingAddress: string;

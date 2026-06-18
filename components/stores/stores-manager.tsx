@@ -13,20 +13,34 @@ import {
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { ProductImage } from "@/components/pos/product-image";
 import { CreateStoreForm } from "@/components/stores/create-store-form";
 import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { formatCurrency } from "@/lib/utils";
+import { STORE_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, StoreWithStats } from "@/lib/types";
 
 function StoreInventoryTable({
   storeId,
   products,
+  filterToken,
 }: {
   storeId: string;
   products: Product[];
+  filterToken: string;
 }) {
+  const {
+    paginated,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(products, STORE_PAGE_SIZE, filterToken);
+
   if (products.length === 0) {
     return (
       <p className="px-4 py-6 text-center text-sm text-muted">
@@ -36,48 +50,59 @@ function StoreInventoryTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-y border-border bg-primary-light/50">
-            <th className="px-4 py-2 text-left font-medium text-muted">Produit</th>
-            <th className="px-4 py-2 text-left font-medium text-muted">Catégorie</th>
-            <th className="px-4 py-2 text-right font-medium text-muted">Prix</th>
-            <th className="px-4 py-2 text-right font-medium text-muted">Stock</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((product) => (
-            <tr key={`${storeId}-${product.id}`} className="border-b border-border">
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <ProductImage product={product} size="sm" />
-                  <div>
-                    <p className="font-medium">{product.name}</p>
-                    <p className="font-mono text-xs text-muted">{product.barcode}</p>
-                  </div>
-                </div>
-              </td>
-              <td className="px-4 py-3 text-muted">{product.category || "—"}</td>
-              <td className="px-4 py-4 text-right">{formatCurrency(product.price)}</td>
-              <td className="px-4 py-3 text-right">
-                <Badge
-                  variant={
-                    product.stock === 0
-                      ? "danger"
-                      : product.stock < 10
-                        ? "warning"
-                        : "success"
-                  }
-                >
-                  {product.stock}
-                </Badge>
-              </td>
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-y border-border bg-primary-light/50">
+              <th className="px-4 py-2 text-left font-medium text-muted">Produit</th>
+              <th className="px-4 py-2 text-left font-medium text-muted">Catégorie</th>
+              <th className="px-4 py-2 text-right font-medium text-muted">Prix</th>
+              <th className="px-4 py-2 text-right font-medium text-muted">Stock</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {paginated.map((product) => (
+              <tr key={`${storeId}-${product.id}`} className="border-b border-border">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <ProductImage product={product} size="sm" />
+                    <div>
+                      <p className="font-medium">{product.name}</p>
+                      <p className="font-mono text-xs text-muted">{product.barcode}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-muted">{product.category || "—"}</td>
+                <td className="px-4 py-4 text-right">{formatCurrency(product.price)}</td>
+                <td className="px-4 py-3 text-right">
+                  <Badge
+                    variant={
+                      product.stock === 0
+                        ? "danger"
+                        : product.stock < 10
+                          ? "warning"
+                          : "success"
+                    }
+                  >
+                    {product.stock}
+                  </Badge>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        className="border-t border-border px-4 py-4"
+      />
+    </>
   );
 }
 
@@ -251,7 +276,11 @@ function StoreCard({
             onCategoryChange={setCategory}
             onReset={resetFilters}
           />
-          <StoreInventoryTable storeId={store.id} products={filteredProducts} />
+          <StoreInventoryTable
+            storeId={store.id}
+            products={filteredProducts}
+            filterToken={`${search}|${category}`}
+          />
         </div>
       )}
     </Card>
@@ -271,6 +300,16 @@ export function StoresManager({
   defaultCity?: string;
   cityLabel?: string;
 }) {
+  const {
+    paginated: paginatedStores,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(stores, STORE_PAGE_SIZE);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -279,13 +318,14 @@ export function StoresManager({
           {cityLabel
             ? `Magasins — ${cityLabel}`
             : "Tous les magasins par ville"}
+          {stores.length > 0 ? ` · ${stores.length} magasin${stores.length !== 1 ? "s" : ""}` : ""}
         </p>
       </div>
 
       <CreateStoreForm allowedCities={allowedCities} defaultCity={defaultCity} />
 
       <div className="space-y-4">
-        {stores.map((store) => (
+        {paginatedStores.map((store) => (
           <StoreCard
             key={store.id}
             store={store}
@@ -293,6 +333,18 @@ export function StoresManager({
           />
         ))}
       </div>
+
+      {stores.length > 0 && (
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          totalItems={totalItems}
+          onPageChange={setPage}
+          className="rounded-lg border border-border bg-surface px-6 py-4"
+        />
+      )}
 
       {stores.length === 0 && (
         <Card>

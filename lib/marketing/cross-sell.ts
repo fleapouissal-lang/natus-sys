@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { unwrapJoin } from "@/lib/utils";
 
 /** Catégories complémentaires après achat */
 const CROSS_SELL_TARGETS: Record<string, string[]> = {
@@ -62,13 +63,16 @@ export async function findCrossSellProduct(
       .limit(50);
 
     const match = (inventory || []).find((row) => {
-      const product = row.products as CrossSellProduct | null;
+      const product = unwrapJoin(
+        row.products as CrossSellProduct | CrossSellProduct[] | null
+      );
       if (!product || excludeProductIds.includes(product.id)) return false;
       return normalizeCategory(product.category) === category;
     });
 
     if (match?.products) {
-      const p = match.products as CrossSellProduct;
+      const p = unwrapJoin(match.products as CrossSellProduct | CrossSellProduct[] | null);
+      if (!p) continue;
       return {
         id: p.id,
         name: p.name,
@@ -117,14 +121,16 @@ export async function getSaleProductCategories(
 
   if (!sale?.store_id) return null;
 
-  const items = (sale.sale_items || []) as {
+  const items = (sale.sale_items || []) as Array<{
     product_id: string;
-    products: { id: string; category: string } | null;
-  }[];
+    products: { id: string; category: string } | { id: string; category: string }[] | null;
+  }>;
 
   return {
     storeId: sale.store_id,
-    categories: items.map((i) => i.products?.category).filter(Boolean) as string[],
+    categories: items
+      .map((i) => unwrapJoin(i.products)?.category)
+      .filter(Boolean) as string[],
     productIds: items.map((i) => i.product_id),
   };
 }

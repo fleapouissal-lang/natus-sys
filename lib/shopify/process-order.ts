@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveOrderStoreByStock } from "@/lib/shopify/assign-order-by-stock";
+import type { ProductLineLookup } from "@/lib/shopify/order-cart";
 import { maybeAutoRouteShopifyOrder } from "@/lib/shopify/auto-route-order";
 import {
   formatShippingAddress,
@@ -139,7 +140,7 @@ export async function processShopifyOrder(
   const route = await resolveOrderStoreByStock({
     supabase,
     lineItems,
-    products: products || [],
+    products: (products || []) as ProductLineLookup[],
     retailStores: cityStores || [],
     hubStore,
     shippingAddress,
@@ -153,17 +154,6 @@ export async function processShopifyOrder(
   const orderCity = route.routedToHub && hubStore ? hubStore.city : city;
   const storeChanged =
     Boolean(existing?.store_id && storeId && existing.store_id !== storeId);
-
-  const transferMeta =
-    storeChanged
-      ? {
-          transferred_from_store_id: existing!.store_id,
-          transferred_at: now,
-          transferred_by: null as string | null,
-          assigned_livreur_id: null,
-          workflow_status: "pending" as const,
-        }
-      : {};
 
   const row = {
     shopify_order_id: order.id,
@@ -180,19 +170,21 @@ export async function processShopifyOrder(
     fulfillment_status: order.fulfillment_status,
     order_status: resolveOrderStatus(order),
     payment_type: paymentType,
-    workflow_status:
-      storeChanged
-        ? ("pending" as const)
-        : paymentType === "online" && order.financial_status === "paid"
-          ? ("preparing" as const)
-          : workflowStatus,
+    workflow_status: storeChanged
+      ? ("pending" as const)
+      : paymentType === "online" && order.financial_status === "paid"
+        ? ("preparing" as const)
+        : workflowStatus,
     payment_gateway: resolvePaymentGateway(order),
     total: parseFloat(order.total_price) || 0,
     currency: order.currency || "MAD",
     line_items: lineItems,
     shopify_created_at: order.created_at,
     updated_at: now,
-    ...transferMeta,
+    transferred_from_store_id: storeChanged ? existing!.store_id : null,
+    transferred_at: storeChanged ? now : null,
+    transferred_by: null as string | null,
+    assigned_livreur_id: null,
   };
 
   const { data, error } = await supabase

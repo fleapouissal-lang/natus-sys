@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Banknote, CreditCard } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SalesAgendaFilter } from "@/components/sales/sales-agenda-filter";
@@ -10,6 +11,7 @@ import { formatCurrency, toLocalDateKey } from "@/lib/utils";
 import type { PaymentMethod, Sale } from "@/lib/types";
 
 export function CashierSalesHistory({ sales }: { sales: Sale[] }) {
+  const router = useRouter();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<"" | PaymentMethod>("");
@@ -28,14 +30,15 @@ export function CashierSalesHistory({ sales }: { sales: Sale[] }) {
   }, [sales, dateFrom, dateTo, paymentFilter]);
 
   const stats = useMemo(() => {
-    const total = filtered.reduce((sum, s) => sum + Number(s.total), 0);
-    const cash = filtered
+    const active = filtered.filter((s) => !s.cancelled_at);
+    const total = active.reduce((sum, s) => sum + Number(s.total), 0);
+    const cash = active
       .filter((s) => s.payment_method === "cash")
       .reduce((sum, s) => sum + Number(s.total), 0);
-    const card = filtered
+    const card = active
       .filter((s) => s.payment_method === "card")
       .reduce((sum, s) => sum + Number(s.total), 0);
-    return { count: filtered.length, total, cash, card };
+    return { count: active.length, total, cash, card };
   }, [filtered]);
 
   function resetFilters() {
@@ -94,11 +97,17 @@ export function CashierSalesHistory({ sales }: { sales: Sale[] }) {
           sales={filtered}
           showStore
           onViewSale={setDetailSale}
+          paginationKey={`${dateFrom}|${dateTo}|${paymentFilter}`}
         />
       </Card>
 
       {detailSale && (
-        <SaleDetailModal sale={detailSale} onClose={() => setDetailSale(null)} />
+        <SaleDetailModal
+          sale={detailSale}
+          onClose={() => setDetailSale(null)}
+          canCancel={!detailSale.cancelled_at}
+          onCancelled={() => router.refresh()}
+        />
       )}
     </div>
   );

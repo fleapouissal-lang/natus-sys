@@ -8,6 +8,7 @@ import { Input, PasswordInput } from "@/components/ui/input";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { StoreSelect } from "@/components/stores/store-select";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { cityOptions, roleOptions, storeOptions } from "@/lib/select-options";
@@ -19,6 +20,7 @@ import {
 import { NATUS_CITIES } from "@/lib/constants/cities";
 import { getRoleLabel, isDirector, isManager } from "@/lib/permissions";
 import { formatDate } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Profile, Store, UserRole } from "@/lib/types";
 
 function CreateUserForm({
@@ -181,6 +183,16 @@ export function UsersManager({
     [stores]
   );
 
+  const {
+    paginated: paginatedUsers,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(users, DEFAULT_PAGE_SIZE);
+
   async function handleStoreChange(userId: string, storeId: string) {
     setLoading(userId);
     await updateUserStore(userId, storeId || null);
@@ -229,7 +241,7 @@ export function UsersManager({
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
+              {paginatedUsers.map((user) => (
                 <tr key={user.id} className="border-b border-border">
                   <td className="px-6 py-4">
                     <div>
@@ -310,6 +322,16 @@ export function UsersManager({
             </tbody>
           </table>
         </div>
+        {users.length > 0 && (
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            totalItems={totalItems}
+            onPageChange={setPage}
+          />
+        )}
       </Card>
 
       {showForm && (

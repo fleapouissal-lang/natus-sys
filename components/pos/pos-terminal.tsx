@@ -505,7 +505,7 @@ export function PosTerminal({
                     onClick={() => setManagerMode("sale")}
                     className={cn(
                       "flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors cursor-pointer",
-                      managerMode === "sale"
+                      (managerMode as ManagerMode) === "sale"
                         ? "bg-champagne text-black"
                         : "text-muted hover:text-foreground"
                     )}
@@ -609,7 +609,7 @@ export function PosTerminal({
                           onClick={() => setManagerMode("sale")}
                           className={cn(
                             "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-                            managerMode === "sale"
+                            (managerMode as ManagerMode) === "sale"
                               ? "bg-champagne text-black"
                               : "text-muted hover:text-foreground"
                           )}
