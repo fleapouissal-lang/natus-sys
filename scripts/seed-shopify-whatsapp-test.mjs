@@ -144,7 +144,7 @@ async function main() {
   const trackingToken = randomUUID();
   const shopifyOrderId = 9000099000 + Math.floor(Math.random() * 999);
   const orderNumber = `#TEST${Date.now().toString().slice(-6)}`;
-  const customerName = "Client Test WhatsApp";
+  const customerName = "Youssef Benali";
   const customerPhone = sandboxTo.startsWith("0") ? sandboxTo : `0${sandboxTo.slice(-9)}`;
 
   console.log("🛒 Création commande Shopify test…");

@@ -1177,6 +1177,19 @@ export async function updateShopifyOrderStatus(
 
   if (error) return { error: error.message };
 
+  try {
+    const { notifyShopifyOrderWorkflowStatus } = await import(
+      "@/lib/kapso/order-status-notifications"
+    );
+    await notifyShopifyOrderWorkflowStatus(
+      orderId,
+      effectiveStatus,
+      order.workflow_status
+    );
+  } catch (notifyError) {
+    console.error("updateShopifyOrderStatus WhatsApp:", notifyError);
+  }
+
   const { syncShopifyWorkflowStatus } = await import("@/lib/shopify/update-order");
   await syncShopifyWorkflowStatus(order.shopify_order_id, effectiveStatus);
 
@@ -1411,6 +1424,15 @@ export async function handOrderToLivreur(
     .eq("id", orderId);
 
   if (error) return { error: error.message };
+
+  try {
+    const { notifyShopifyOrderWorkflowStatus } = await import(
+      "@/lib/kapso/order-status-notifications"
+    );
+    await notifyShopifyOrderWorkflowStatus(orderId, "shipping", "ready");
+  } catch (notifyError) {
+    console.error("handOrderToLivreur WhatsApp:", notifyError);
+  }
 
   try {
     const { syncShopifyWorkflowStatus } = await import("@/lib/shopify/update-order");

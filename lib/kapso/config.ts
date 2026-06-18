@@ -31,3 +31,9 @@ export function getKapsoTemplateConfig(): KapsoTemplateConfig | null {
 export function isKapsoSandboxMode(): boolean {
   return Boolean(process.env.KAPSO_SANDBOX_OVERRIDE_TO?.trim());
 }
+
+/** Bot suivi commande + réponses clients (webhook entrant). */
+export function isKapsoBotEnabled(): boolean {
+  if (process.env.KAPSO_BOT_ENABLED === "false") return false;
+  return Boolean(getKapsoConfig());
+}

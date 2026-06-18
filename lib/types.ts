@@ -329,6 +329,7 @@ export interface ShopifyOrder {
   tracking_token?: string;
   customer_confirmed_at?: string | null;
   whatsapp_confirmation_sent_at?: string | null;
+  whatsapp_status_notifications?: Record<string, string> | null;
   cashier_confirmation_status?:
     | "confirmed"
     | "not_confirmed"

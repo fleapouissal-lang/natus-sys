@@ -1,11 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getKapsoConfig, isKapsoSandboxMode } from "@/lib/kapso/config";
+import { getKapsoConfig } from "@/lib/kapso/config";
 import {
   sendKapsoButtonMessage,
   sendKapsoCtaUrlMessage,
   sendKapsoTextMessage,
 } from "@/lib/kapso/client";
-import { toWhatsAppRecipient } from "@/lib/kapso/phone";
+import { resolveKapsoRecipient } from "@/lib/kapso/recipient";
+import { clientFirstName } from "@/lib/kapso/whatsapp-bot/language";
 import {
   shopifyOrderConfirmPublicUrl,
   shopifyOrderTrackingPublicUrl,
@@ -41,11 +42,7 @@ type ConfirmResult = {
 };
 
 function resolveRecipient(customerPhone: string): string | null {
-  if (isKapsoSandboxMode()) {
-    const override = process.env.KAPSO_SANDBOX_OVERRIDE_TO?.trim();
-    if (override) return toWhatsAppRecipient(override);
-  }
-  return toWhatsAppRecipient(customerPhone);
+  return resolveKapsoRecipient(customerPhone);
 }
 
 function buildOrderLinesSummary(lineItems: ShopifyLineItemRow[]): string {
@@ -92,7 +89,10 @@ export async function sendShopifyOrderConfirmationRequest(
   const recipient = resolveRecipient(order.customer_phone);
   if (!recipient) return;
 
-  const customerName = order.customer_name?.trim() || "Client";
+  const customerName =
+    clientFirstName(order.customer_name) ||
+    order.customer_name?.trim() ||
+    "Client";
   const confirmUrl = shopifyOrderConfirmPublicUrl(order.tracking_token);
   const detailsBody = [
     `Bonjour ${customerName} 👋`,
@@ -168,7 +168,6 @@ export async function handleShopifyOrderConfirmButton(
       const recipient = resolveRecipient(order.customer_phone);
       if (recipient) {
         const trackingUrl = shopifyOrderTrackingPublicUrl(result.tracking_token);
-        const cardUrl = loyaltyCardPublicUrl(result.qr_token);
 
         const lines = [
           `Merci ${result.customer_name} ✅`,
@@ -185,14 +184,13 @@ export async function handleShopifyOrderConfirmButton(
         }
 
         if (result.created_new_card) {
+          const cardUrl = loyaltyCardPublicUrl(result.qr_token);
           lines.push(
             "",
             "🎁 Nous avons créé votre carte fidélité Natus !",
             `Consultez votre carte :`,
             cardUrl
           );
-        } else if (result.points_earned > 0) {
-          lines.push("", `💳 Votre carte fidélité :`, cardUrl);
         }
 
         await sendKapsoTextMessage(config, recipient, lines.join("\n"));

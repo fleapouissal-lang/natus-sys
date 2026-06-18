@@ -2,12 +2,14 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import {
-  handleShopifyOrderConfirmButton,
-  parseShopifyConfirmButtonId,
-} from "@/lib/kapso/shopify-order-whatsapp";
+  handleInboundWhatsAppMessage,
+  type InboundKapsoMessage,
+} from "@/lib/kapso/whatsapp-bot/handler";
 
 type KapsoIncomingMessage = {
   type?: string;
+  from?: string;
+  text?: { body?: string };
   interactive?: {
     type?: string;
     button_reply?: { id?: string };
@@ -16,11 +18,13 @@ type KapsoIncomingMessage = {
 
 type KapsoWebhookBatchItem = {
   message?: KapsoIncomingMessage;
+  conversation?: { phone_number?: string };
 };
 
 type KapsoWebhookData = {
   message?: KapsoIncomingMessage;
   messages?: KapsoIncomingMessage[];
+  conversation?: { phone_number?: string };
 };
 
 type KapsoWebhookPayload = {
@@ -37,6 +41,7 @@ type KapsoWebhookPayload = {
   }[];
   message?: KapsoIncomingMessage;
   messages?: KapsoIncomingMessage[];
+  conversation?: { phone_number?: string };
 };
 
 function verifyKapsoSignature(
@@ -65,31 +70,72 @@ function verifyKapsoSignature(
   return false;
 }
 
-function extractButtonIds(payload: KapsoWebhookPayload): string[] {
-  const ids: string[] = [];
+function resolveFrom(
+  message: KapsoIncomingMessage | undefined,
+  conversation?: { phone_number?: string }
+): string | null {
+  if (message?.from) return message.from;
+  if (conversation?.phone_number) return conversation.phone_number;
+  return null;
+}
 
-  const collect = (message: KapsoIncomingMessage | undefined) => {
-    const id = message?.interactive?.button_reply?.id;
-    if (id) ids.push(id);
+function messageToInbound(
+  message: KapsoIncomingMessage | undefined,
+  conversation?: { phone_number?: string }
+): InboundKapsoMessage | null {
+  if (!message) return null;
+
+  const from = resolveFrom(message, conversation);
+  if (!from) return null;
+
+  const buttonId = message.interactive?.button_reply?.id;
+  const text = message.text?.body;
+
+  if (!buttonId && !text?.trim()) return null;
+
+  return {
+    from,
+    text: text?.trim(),
+    buttonId,
+  };
+}
+
+function extractInboundMessages(payload: KapsoWebhookPayload): InboundKapsoMessage[] {
+  const items: InboundKapsoMessage[] = [];
+
+  const push = (
+    message: KapsoIncomingMessage | undefined,
+    conversation?: { phone_number?: string }
+  ) => {
+    const inbound = messageToInbound(message, conversation);
+    if (inbound) items.push(inbound);
   };
 
   if (Array.isArray(payload.data)) {
-    for (const item of payload.data) collect(item.message);
+    for (const item of payload.data) {
+      push(item.message, item.conversation);
+    }
   } else if (payload.data) {
-    collect(payload.data.message);
-    for (const message of payload.data.messages || []) collect(message);
-  }
-
-  collect(payload.message);
-  for (const message of payload.messages || []) collect(message);
-
-  for (const entry of payload.entry || []) {
-    for (const change of entry.changes || []) {
-      for (const message of change.value?.messages || []) collect(message);
+    push(payload.data.message, payload.data.conversation);
+    for (const message of payload.data.messages || []) {
+      push(message, payload.data.conversation);
     }
   }
 
-  return ids;
+  push(payload.message, payload.conversation);
+  for (const message of payload.messages || []) {
+    push(message, payload.conversation);
+  }
+
+  for (const entry of payload.entry || []) {
+    for (const change of entry.changes || []) {
+      for (const message of change.value?.messages || []) {
+        push(message);
+      }
+    }
+  }
+
+  return items;
 }
 
 export async function POST(request: NextRequest) {
@@ -117,24 +163,20 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const buttonIds = extractButtonIds(payload);
-  if (buttonIds.length > 0) {
-    console.info("[Kapso webhook] boutons reçus:", buttonIds);
-  }
+  const inbound = extractInboundMessages(payload);
 
-  for (const buttonId of buttonIds) {
-    const token = parseShopifyConfirmButtonId(buttonId);
-    if (token) {
-      try {
-        await handleShopifyOrderConfirmButton(token);
+  for (const msg of inbound) {
+    try {
+      await handleInboundWhatsAppMessage(msg);
+      if (msg.buttonId?.startsWith("natus_confirm:")) {
         revalidatePath("/manager/orders");
         revalidatePath("/director/orders");
         revalidatePath("/cashier/orders");
-      } catch (error) {
-        console.error("[Kapso webhook] confirm:", error);
       }
+    } catch (error) {
+      console.error("[Kapso webhook] inbound:", error);
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, processed: inbound.length });
 }

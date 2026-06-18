@@ -47,6 +47,19 @@ export async function applyShopifyOrderWorkflowStatus(
     await assignOrderToStoreLivreur(orderId, order.store_id);
   }
 
+  try {
+    const { notifyShopifyOrderWorkflowStatus } = await import(
+      "@/lib/kapso/order-status-notifications"
+    );
+    await notifyShopifyOrderWorkflowStatus(
+      orderId,
+      effectiveStatus,
+      order.workflow_status
+    );
+  } catch (notifyError) {
+    console.error("applyShopifyOrderWorkflowStatus WhatsApp:", notifyError);
+  }
+
   const { syncShopifyWorkflowStatus } = await import("@/lib/shopify/update-order");
   await syncShopifyWorkflowStatus(order.shopify_order_id, effectiveStatus);
 
