@@ -135,13 +135,16 @@ export function categoryOptions(categories: readonly string[]): SelectMenuOption
 }
 
 export function productPickOptions(
-  products: { id: string; name: string; stock: number }[]
+  products: { id: string; name: string; stock: number; barcode?: string }[]
 ): SelectMenuOption[] {
   return [
     { value: "", label: "Sélectionner un produit", icon: Package },
     ...products.map((p) => ({
       value: p.id,
-      label: `${p.name} (stock : ${p.stock})`,
+      label: p.name,
+      description: p.barcode
+        ? `${p.barcode} · Stock : ${p.stock}`
+        : `Stock : ${p.stock}`,
       icon: Box,
     })),
   ];

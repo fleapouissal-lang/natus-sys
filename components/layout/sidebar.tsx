@@ -198,9 +198,8 @@ export function Sidebar({
     >
       {collapsed ? (
         <>
-          <div className="flex shrink-0 flex-col items-center gap-3 px-2 py-3">
+          <div className="flex shrink-0 flex-col items-center px-2 py-3">
             <SidebarBrand collapsed />
-            <UserAvatar name={userName} title={userName} />
           </div>
 
           <button
@@ -311,7 +310,24 @@ export function Sidebar({
         </ul>
       </nav>
 
-      <div className={cn("shrink-0", !collapsed && "border-t border-black/10", collapsed ? "p-2" : "p-3")}>
+      <div
+        className={cn(
+          "shrink-0",
+          !collapsed && "border-t border-black/10",
+          collapsed ? "flex flex-col items-center gap-2 border-t border-black/10 p-2" : "p-3"
+        )}
+      >
+        {collapsed && (
+          <div className="flex flex-col items-center gap-1 px-1 py-1">
+            <UserAvatar
+              name={userName}
+              title={[userName, roleLabel, cityLabel].filter(Boolean).join(" · ")}
+            />
+            <p className="max-w-full truncate text-center text-[10px] font-semibold leading-tight text-black">
+              {userName.split(" ")[0]}
+            </p>
+          </div>
+        )}
         <button
           onClick={handleLogout}
           onDoubleClick={(e) => e.stopPropagation()}

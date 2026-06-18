@@ -5,12 +5,13 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Layers, type LucideIcon } from "lucide-react";
+import { ChevronDown, Layers, Search, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SelectMenuOption {
@@ -36,6 +37,10 @@ export interface SelectMenuProps {
   required?: boolean;
   defaultIcon?: LucideIcon;
   showIcons?: boolean;
+  /** Barre de recherche dans la liste (filtre par label / description). */
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  emptySearchLabel?: string;
 }
 
 function OptionIcon({
@@ -76,18 +81,34 @@ export function SelectMenu({
   required,
   defaultIcon: DefaultIcon = Layers,
   showIcons = true,
+  searchable = false,
+  searchPlaceholder = "Rechercher...",
+  emptySearchLabel = "Aucun résultat",
 }: SelectMenuProps) {
   const autoId = useId();
   const controlId = id || name || autoId;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
+  const [searchQuery, setSearchQuery] = useState("");
   const [panelStyle, setPanelStyle] = useState<{
     top: number;
     left: number;
     width: number;
   } | null>(null);
+
+  const filteredOptions = useMemo(() => {
+    if (!searchable) return options;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((option) => {
+      if (!option.value) return false;
+      const haystack = `${option.label} ${option.description ?? ""}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [options, searchable, searchQuery]);
 
   const selected = options.find((o) => o.value === value);
   const SelectedIcon = selected?.icon || DefaultIcon;
@@ -149,19 +170,62 @@ export function SelectMenu({
 
   useEffect(() => {
     if (open) {
-      const idx = options.findIndex((o) => o.value === value);
-      setHighlight(idx >= 0 ? idx : 0);
+      const list = searchable ? filteredOptions : options;
+      const idx = list.findIndex((o) => o.value === value);
+      setHighlight(idx >= 0 ? idx : list.length > 0 ? 0 : -1);
+      if (searchable) {
+        requestAnimationFrame(() => searchInputRef.current?.focus());
+      }
+    } else {
+      setSearchQuery("");
     }
-  }, [open, options, value]);
+  }, [open, options, filteredOptions, value, searchable]);
 
   function selectOption(option: SelectMenuOption) {
     onChange(option.value);
     setOpen(false);
+    setSearchQuery("");
     triggerRef.current?.focus();
+  }
+
+  function onSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    const list = filteredOptions;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (list.length === 0) return;
+      setHighlight((i) => Math.min(i < 0 ? 0 : i + 1, list.length - 1));
+      return;
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (list.length === 0) return;
+      setHighlight((i) => Math.max(i < 0 ? 0 : i - 1, 0));
+      return;
+    }
+
+    if (e.key === "Enter" && highlight >= 0 && list[highlight]) {
+      e.preventDefault();
+      selectOption(list[highlight]);
+      return;
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+    }
   }
 
   function onTriggerKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
     if (disabled) return;
+
+    if (searchable && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      setOpen(true);
+      setSearchQuery(e.key);
+      return;
+    }
 
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -175,7 +239,7 @@ export function SelectMenu({
         setOpen(true);
         return;
       }
-      setHighlight((i) => Math.min(i + 1, options.length - 1));
+      setHighlight((i) => Math.min(i + 1, filteredOptions.length - 1));
     }
 
     if (e.key === "ArrowUp") {
@@ -187,9 +251,9 @@ export function SelectMenu({
       setHighlight((i) => Math.max(i - 1, 0));
     }
 
-    if (e.key === "Enter" && open && highlight >= 0) {
+    if (e.key === "Enter" && open && highlight >= 0 && filteredOptions[highlight]) {
       e.preventDefault();
-      selectOption(options[highlight]);
+      selectOption(filteredOptions[highlight]);
     }
   }
 
@@ -211,8 +275,32 @@ export function SelectMenu({
             role="listbox"
             id={`${controlId}-listbox`}
           >
+            {searchable && (
+              <div className="border-b border-border bg-background/80 p-2">
+                <div className="flex items-center gap-2 border border-border bg-surface px-2.5 py-1.5">
+                  <Search className="h-3.5 w-3.5 shrink-0 text-muted" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setHighlight(0);
+                    }}
+                    onKeyDown={onSearchKeyDown}
+                    placeholder={searchPlaceholder}
+                    className="select-menu-search-input w-full min-w-0 border-0 bg-transparent text-sm outline-none placeholder:text-muted"
+                    autoComplete="off"
+                    aria-label={searchPlaceholder}
+                  />
+                </div>
+              </div>
+            )}
             <ul className="select-menu-scroll max-h-[280px] overflow-y-auto p-2">
-              {options.map((option, index) => {
+              {filteredOptions.length === 0 ? (
+                <li className="px-3 py-6 text-center text-sm text-muted">{emptySearchLabel}</li>
+              ) : (
+                filteredOptions.map((option, index) => {
                 const Icon = option.icon || DefaultIcon;
                 const active = option.value === value;
                 const highlighted = index === highlight;
@@ -246,7 +334,8 @@ export function SelectMenu({
                     </button>
                   </li>
                 );
-              })}
+              })
+              )}
             </ul>
           </div>,
           document.body

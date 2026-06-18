@@ -145,7 +145,9 @@ export function AddStockCard({
                 value={selectedId}
                 onChange={onProductChange}
                 options={productPickOptions(products)}
-                placeholder="Rechercher un produit..."
+                placeholder="Choisir un produit..."
+                searchPlaceholder="Tapez le nom ou le code-barres..."
+                searchable
                 size="sm"
               />
             ) : (

@@ -92,7 +92,7 @@
 
 /* Champs formulaire — bordure dorée Natus */
 .natus-field,
-input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not(.natus-filter-inline-input),
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not(.natus-filter-inline-input):not(.select-menu-search-input),
 select,
 textarea,
 .select-menu-trigger {
@@ -100,7 +100,7 @@ textarea,
 }
 
 .natus-field:focus,
-input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not(.natus-filter-inline-input):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not(.natus-filter-inline-input):not(.select-menu-search-input):focus,
 select:focus,
 textarea:focus,
 .select-menu-trigger:focus,
@@ -125,7 +125,7 @@ textarea.border-danger {
 }
 
 /* Champs barres de filtrage — hauteur uniforme input / select */
-.natus-filter-bar input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not(.natus-filter-inline-input),
+.natus-filter-bar input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not(.natus-filter-inline-input):not(.select-menu-search-input),
 .natus-filter-bar .select-menu-trigger {
   height: 2rem !important;
   min-height: 2rem !important;
@@ -154,6 +154,13 @@ input.natus-filter-inline-input {
 }
 
 input.natus-filter-inline-input:focus {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none;
+}
+
+input.select-menu-search-input,
+input.select-menu-search-input:focus {
   border: none !important;
   box-shadow: none !important;
   outline: none;
