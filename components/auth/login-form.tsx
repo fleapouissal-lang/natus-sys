@@ -9,16 +9,20 @@ import { Card } from "@/components/ui/card";
 import { getHomePath } from "@/lib/permissions";
 import { touchSessionActivity } from "@/components/auth/session-guard";
 
-function getLoginErrorMessage(code?: string): string {
+function getLoginErrorMessage(code?: string, message?: string): string {
   switch (code) {
     case "invalid_credentials":
+    case "invalid_grant":
       return "Email ou mot de passe incorrect";
     case "email_not_confirmed":
       return "Veuillez confirmer votre email avant de vous connecter";
     case "too_many_requests":
       return "Trop de tentatives, réessayez dans quelques minutes";
     default:
-      return "Email ou mot de passe incorrect";
+      if (message?.toLowerCase().includes("invalid login")) {
+        return "Email ou mot de passe incorrect";
+      }
+      return message || "Email ou mot de passe incorrect";
   }
 }
 
@@ -29,21 +33,34 @@ export function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const normalizedEmail = String(formData.get("email") ?? email)
+      .trim()
+      .toLowerCase();
+    const submittedPassword = password;
+
+    if (!normalizedEmail || !submittedPassword) {
+      setError("Veuillez saisir votre email et mot de passe");
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
-    const normalizedEmail = email.trim().toLowerCase();
 
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
-      password,
+      password: submittedPassword,
     });
 
     if (authError) {
-      setError(getLoginErrorMessage(authError.code));
+      console.error("Login error:", authError.message, authError.code);
+      setError(getLoginErrorMessage(authError.code, authError.message));
       setLoading(false);
       return;
     }
@@ -70,7 +87,7 @@ export function LoginForm() {
 
     touchSessionActivity();
 
-    router.push(getHomePath(profile.role as "directeur" | "manager" | "cashier"));
+    router.push(getHomePath(profile.role));
     router.refresh();
   }
 
@@ -85,19 +102,22 @@ export function LoginForm() {
         </div>
 
         <Card className="border border-[#B38C4A]/15 bg-surface/95 shadow-[0_0_0_1px_rgba(179,140,74,0.08),0_12px_40px_rgba(179,140,74,0.06)] backdrop-blur-sm">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" autoComplete="on">
             <Input
               label="Email"
+              name="email"
               type="email"
+              inputMode="email"
               inputSize="lg"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="manager@natus.ma"
               required
-              autoComplete="email"
+              autoComplete="username"
             />
             <PasswordInput
               label="Mot de passe"
+              name="password"
               inputSize="lg"
               maskWithAsterisk
               value={password}

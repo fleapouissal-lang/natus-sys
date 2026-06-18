@@ -76,17 +76,18 @@ export function PasswordInput({
   const [visible, setVisible] = useState(false);
   const inputId = id || label?.toLowerCase().replace(/\s/g, "-");
   const isControlled = value !== undefined;
-  const textValue = isControlled ? String(value) : undefined;
+  const textValue = isControlled ? String(value) : "";
 
-  function handleMaskedChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!onChange) return;
 
-    const current = textValue ?? "";
-    const next = e.target.value;
-    if (visible || !maskWithAsterisk) {
+    if (!maskWithAsterisk || visible) {
       onChange(e);
       return;
     }
+
+    const current = textValue;
+    const next = e.target.value;
 
     if (next.length > current.length) {
       const added = next.slice(current.length).replace(/\*/g, "");
@@ -97,13 +98,9 @@ export function PasswordInput({
     onChange(e);
   }
 
-  const displayValue =
-    maskWithAsterisk && !visible && textValue !== undefined
-      ? "*".repeat(textValue.length)
-      : textValue;
-
+  const showMasked = maskWithAsterisk && !visible && isControlled;
+  const displayValue = showMasked ? "*".repeat(textValue.length) : textValue;
   const inputType = maskWithAsterisk ? "text" : visible ? "text" : "password";
-  const useMaskedValue = maskWithAsterisk && textValue !== undefined;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -119,7 +116,6 @@ export function PasswordInput({
         <input
           id={inputId}
           type={inputType}
-          {...(useMaskedValue ? { value: displayValue, onChange: handleMaskedChange } : {})}
           className={cn(
             "natus-field w-full bg-surface transition-colors",
             inputSizeClasses[inputSize],
@@ -128,6 +124,7 @@ export function PasswordInput({
             error && "border-danger focus:border-danger focus:ring-danger/20",
             className
           )}
+          {...(isControlled ? { value: displayValue, onChange: handleChange } : { onChange: handleChange })}
           {...props}
         />
         <button
