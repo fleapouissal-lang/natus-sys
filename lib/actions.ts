@@ -645,6 +645,15 @@ export async function completeSale(
     console.error("completeSale WhatsApp:", whatsappError);
   }
 
+  try {
+    const { sendPosServiceFeedback } = await import(
+      "@/lib/kapso/feedback/delivery-cron"
+    );
+    await sendPosServiceFeedback(saleId);
+  } catch (feedbackError) {
+    console.error("completeSale feedback WhatsApp:", feedbackError);
+  }
+
   revalidatePath("/cashier/pos");
   revalidatePath("/cashier/sales");
   revalidatePath("/manager/sales");
@@ -1755,6 +1764,45 @@ export async function updateShopifyOrderConfirmationFollowUp(
   revalidatePath("/cashier/notes");
   revalidatePath("/manager/orders");
   revalidatePath("/director/orders");
+
+  return { success: true };
+}
+
+export async function resolveStoreComplaint(
+  complaintId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { data: complaint, error: fetchError } = await supabase
+    .from("store_complaints")
+    .select("id, store_id, status")
+    .eq("id", complaintId)
+    .maybeSingle();
+
+  if (fetchError || !complaint) return { error: "Réclamation introuvable" };
+  if (complaint.status === "resolved") return { success: true };
+
+  if (profile.role === "manager") {
+    const access = await assertStoreAccess(profile, complaint.store_id);
+    if (access.error) return { error: access.error };
+  }
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("store_complaints")
+    .update({
+      status: "resolved",
+      resolved_at: now,
+      resolved_by: profile.id,
+    })
+    .eq("id", complaintId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/manager/reclamations");
+  revalidatePath("/director/reclamations");
 
   return { success: true };
 }

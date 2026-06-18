@@ -2,6 +2,14 @@ import { getKapsoConfig, isKapsoBotEnabled } from "@/lib/kapso/config";
 import { sendKapsoTextMessage } from "@/lib/kapso/client";
 import { resolveKapsoRecipient } from "@/lib/kapso/recipient";
 import {
+  handleFeedbackButtonClick,
+  handleReclamationText,
+  handleReclamationIntentFromText,
+  registerProblemComplaint,
+} from "@/lib/kapso/feedback/handler";
+import { FEEDBACK_BUTTON_PREFIX } from "@/lib/kapso/feedback/constants";
+import { isReclamationIntent } from "@/lib/kapso/feedback/intents";
+import {
   fallbackReply,
   generateCustomerReply,
 } from "@/lib/kapso/whatsapp-bot/gemini";
@@ -41,7 +49,11 @@ function buttonToText(buttonId: string): string | null {
   return null;
 }
 
-async function logProblemOnOrder(order: CustomerOrderRow, problemText: string) {
+async function logProblemOnOrder(
+  order: CustomerOrderRow,
+  problemText: string,
+  phone: string
+) {
   const admin = createAdminClient();
   const note = `[WhatsApp ${new Date().toISOString().slice(0, 16)}] ${problemText}`;
   await admin
@@ -53,6 +65,14 @@ async function logProblemOnOrder(order: CustomerOrderRow, problemText: string) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", order.id);
+
+  if (order.workflow_status === "delivered") {
+    await registerProblemComplaint({
+      orderId: order.id,
+      customerPhone: phone,
+      message: problemText,
+    });
+  }
 }
 
 async function loadOrderById(orderId: string): Promise<CustomerOrderRow | null> {
@@ -83,29 +103,55 @@ export async function handleInboundWhatsAppMessage(
     return;
   }
 
+  if (msg.buttonId?.startsWith(FEEDBACK_BUTTON_PREFIX)) {
+    await handleFeedbackButtonClick(msg.buttonId, phone);
+    return;
+  }
+
+  const session = await getBotSession(phone);
+  const text = msg.text?.trim();
+
+  if (text && session?.state === "awaiting_reclamation") {
+    await handleReclamationText(phone, text);
+    return;
+  }
+
+  const orderByPhone = text ? await findLatestOrderByPhone(phone) : null;
+  const orderForContext =
+    orderByPhone ??
+    (session?.last_order_id ? await loadOrderById(session.last_order_id) : null);
+
+  if (text && isReclamationIntent(text)) {
+    const handled = await handleReclamationIntentFromText(
+      phone,
+      text,
+      orderForContext,
+      session?.history ?? []
+    );
+    if (handled) return;
+  }
+
   const userMessage =
-    msg.text?.trim() ||
-    (msg.buttonId?.startsWith("natus_bot:") ? buttonToText(msg.buttonId) : null);
+    text || (msg.buttonId?.startsWith("natus_bot:") ? buttonToText(msg.buttonId) : null);
 
   if (!userMessage) return;
 
-  const session = await getBotSession(phone);
-  const orderByPhone = await findLatestOrderByPhone(phone);
-  const orderForContext =
-    orderByPhone ??
+  const orderForAi =
+    orderForContext ??
+    (await findLatestOrderByPhone(phone)) ??
     (session?.last_order_id ? await loadOrderById(session.last_order_id) : null);
 
   const ai =
     (await generateCustomerReply(
       userMessage,
-      orderForContext,
+      orderForAi,
       session?.history ?? []
-    )) ?? fallbackReply(userMessage, orderForContext, session?.history ?? []);
+    )) ?? (await fallbackReply(userMessage, orderForAi, session?.history ?? []));
 
-  if (ai.logProblem && orderForContext) {
-    await logProblemOnOrder(orderForContext, userMessage);
+  if (ai.logProblem && orderForAi) {
+    await logProblemOnOrder(orderForAi, userMessage, phone);
   }
 
   await sendText(phone, ai.reply);
-  await appendBotHistory(phone, userMessage, ai.reply, orderForContext?.id ?? null);
+  await appendBotHistory(phone, userMessage, ai.reply, orderForAi?.id ?? null);
 }

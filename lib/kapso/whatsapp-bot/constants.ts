@@ -10,4 +10,5 @@ export type BotSessionState =
   | "idle"
   | "offered_details"
   | "offered_menu"
-  | "awaiting_problem";
+  | "awaiting_problem"
+  | "awaiting_reclamation";

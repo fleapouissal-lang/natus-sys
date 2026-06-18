@@ -8,10 +8,10 @@ import {
 import { resolveKapsoRecipient } from "@/lib/kapso/recipient";
 import { clientFirstName } from "@/lib/kapso/whatsapp-bot/language";
 import {
-  shopifyOrderConfirmPublicUrl,
-  shopifyOrderTrackingPublicUrl,
-} from "@/lib/kapso/urls";
-import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
+  orderConfirmShortUrl,
+  orderTrackingShortUrl,
+  loyaltyCardShortUrl,
+} from "@/lib/short-url";
 import { formatCurrency } from "@/lib/utils";
 import type { ShopifyLineItemRow } from "@/lib/types";
 
@@ -93,8 +93,8 @@ export async function sendShopifyOrderConfirmationRequest(
     clientFirstName(order.customer_name) ||
     order.customer_name?.trim() ||
     "Client";
-  const confirmUrl = shopifyOrderConfirmPublicUrl(order.tracking_token);
-  const detailsBody = [
+  const confirmUrl = await orderConfirmShortUrl(order.tracking_token);
+  const confirmBody = [
     `Bonjour ${customerName} 👋`,
     "",
     `Nous avons bien reçu votre commande Shopify ${order.order_number}.`,
@@ -102,36 +102,31 @@ export async function sendShopifyOrderConfirmationRequest(
     buildOrderLinesSummary(order.line_items || []),
     "",
     `Total : ${formatCurrency(Number(order.total))}`,
+    "",
+    "Merci de confirmer votre commande en appuyant sur le bouton :",
   ].join("\n");
 
-  const textResult = await sendKapsoTextMessage(config, recipient, detailsBody);
-  if (!textResult.ok) return;
+  const buttonResult = await sendKapsoButtonMessage(config, recipient, confirmBody, [
+    {
+      id: `${SHOPIFY_CONFIRM_BUTTON_PREFIX}${order.tracking_token}`,
+      title: "Confirmer",
+    },
+  ]);
 
-  const ctaResult = await sendKapsoCtaUrlMessage(
-    config,
-    recipient,
-    "Appuyez sur le bouton pour confirmer votre commande.",
-    "Confirmer",
-    confirmUrl
-  );
-
-  if (!ctaResult.ok) {
-    const buttonResult = await sendKapsoButtonMessage(
+  if (!buttonResult.ok) {
+    const ctaResult = await sendKapsoCtaUrlMessage(
       config,
       recipient,
-      "Confirmer votre commande ?",
-      [
-        {
-          id: `${SHOPIFY_CONFIRM_BUTTON_PREFIX}${order.tracking_token}`,
-          title: "Confirmer",
-        },
-      ]
+      confirmBody,
+      "Confirmer",
+      confirmUrl
     );
-    if (!buttonResult.ok) {
+
+    if (!ctaResult.ok) {
       await sendKapsoTextMessage(
         config,
         recipient,
-        `👉 Confirmer votre commande : ${confirmUrl}`
+        `${confirmBody}\n\n👉 Confirmer : ${confirmUrl}`
       );
     }
   }
@@ -167,7 +162,7 @@ export async function handleShopifyOrderConfirmButton(
     if (order?.customer_phone) {
       const recipient = resolveRecipient(order.customer_phone);
       if (recipient) {
-        const trackingUrl = shopifyOrderTrackingPublicUrl(result.tracking_token);
+        const trackingUrl = await orderTrackingShortUrl(result.tracking_token);
 
         const lines = [
           `Merci ${result.customer_name} ✅`,
@@ -184,7 +179,7 @@ export async function handleShopifyOrderConfirmButton(
         }
 
         if (result.created_new_card) {
-          const cardUrl = loyaltyCardPublicUrl(result.qr_token);
+          const cardUrl = await loyaltyCardShortUrl(result.qr_token);
           lines.push(
             "",
             "🎁 Nous avons créé votre carte fidélité Natus !",

@@ -14,7 +14,7 @@ import {
   isDeliveryEtaQuestion,
 } from "@/lib/kapso/whatsapp-bot/replies";
 import { workflowStatusLabel } from "@/lib/shopify/order-status";
-import { shopifyOrderTrackingPublicUrl } from "@/lib/kapso/urls";
+import { orderTrackingShortUrl } from "@/lib/short-url";
 
 export type ChatTurn = { role: "user" | "model"; text: string };
 
@@ -34,12 +34,12 @@ function getGeminiConfig(): { apiKey: string; model: string } | null {
   };
 }
 
-function buildOrderContext(order: CustomerOrderRow | null): string {
+async function buildOrderContext(order: CustomerOrderRow | null): Promise<string> {
   if (!order) {
     return "Aucune commande Shopify récente liée à ce numéro WhatsApp.";
   }
   const tracking = order.tracking_token
-    ? shopifyOrderTrackingPublicUrl(order.tracking_token)
+    ? await orderTrackingShortUrl(order.tracking_token)
     : null;
   const firstName = clientFirstName(order.customer_name);
   return [
@@ -91,7 +91,7 @@ export async function generateCustomerReply(
   if (!config) return null;
 
   const lang = detectConversationLanguage(userMessage, history);
-  const orderBlock = buildOrderContext(order);
+  const orderBlock = await buildOrderContext(order);
   const historyBlock =
     history.length > 0
       ? history
@@ -156,11 +156,11 @@ export async function generateCustomerReply(
   }
 }
 
-export function fallbackReply(
+export async function fallbackReply(
   userMessage: string,
   order: CustomerOrderRow | null,
   history: ChatTurn[] = []
-): GeminiBotResult {
+): Promise<GeminiBotResult> {
   const lang: BotLanguage = detectConversationLanguage(userMessage, history);
 
   if (!order) {
@@ -177,7 +177,7 @@ export function fallbackReply(
     /état|statut|commande|suivi|where|status/i.test(userMessage.toLowerCase());
 
   return {
-    reply: buildStructuredReply(order, lang, {
+    reply: await buildStructuredReply(order, lang, {
       problem: isProblem,
       etaQuestion: etaQ || statusQ,
     }),

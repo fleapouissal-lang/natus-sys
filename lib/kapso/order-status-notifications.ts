@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getKapsoConfig } from "@/lib/kapso/config";
 import { sendKapsoTextMessage } from "@/lib/kapso/client";
 import { resolveKapsoRecipient } from "@/lib/kapso/recipient";
-import { shopifyOrderTrackingPublicUrl } from "@/lib/kapso/urls";
+import { orderTrackingShortUrl } from "@/lib/short-url";
 import { clientFirstName } from "@/lib/kapso/whatsapp-bot/language";
 import { workflowStatusLabel } from "@/lib/shopify/order-status";
 import type { ShopifyWorkflowStatus } from "@/lib/types";
@@ -32,7 +32,8 @@ type OrderNotifyRow = {
 
 function buildStatusMessage(
   order: OrderNotifyRow,
-  status: ShopifyWorkflowStatus
+  status: ShopifyWorkflowStatus,
+  trackingUrl: string | null
 ): string {
   const name = clientFirstName(order.customer_name) || order.customer_name?.trim() || "";
   const intro = STATUS_INTRO[status] || workflowStatusLabel(status).toLowerCase();
@@ -43,8 +44,8 @@ function buildStatusMessage(
     `Statut : ${workflowStatusLabel(status)}`,
   ];
 
-  if (order.tracking_token && status !== "delivered") {
-    lines.push("", "📦 Suivre ma commande :", shopifyOrderTrackingPublicUrl(order.tracking_token));
+  if (trackingUrl && status !== "delivered") {
+    lines.push("", "📦 Suivre ma commande :", trackingUrl);
   }
 
   if (status === "delivered") {
@@ -83,7 +84,11 @@ export async function notifyShopifyOrderWorkflowStatus(
   const recipient = resolveKapsoRecipient(order.customer_phone);
   if (!recipient) return;
 
-  const body = buildStatusMessage(order, newStatus);
+  const trackingUrl = order.tracking_token
+    ? await orderTrackingShortUrl(order.tracking_token)
+    : null;
+
+  const body = buildStatusMessage(order, newStatus, trackingUrl);
   const result = await sendKapsoTextMessage(config, recipient, body);
   if (!result.ok) {
     console.error("[Kapso] notify status:", newStatus, result.error);

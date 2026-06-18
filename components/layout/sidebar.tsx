@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Boxes,
   Gift,
+  AlertTriangle,
   MessageSquare,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -48,6 +49,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub") {
     { href: `${basePath}/stock`, label: "Stock", icon: Warehouse },
     { href: `${basePath}/activity`, label: "Activité", icon: ClipboardList },
     { href: `${basePath}/orders`, label: "Commandes", icon: ShoppingBag },
+    { href: `${basePath}/reclamations`, label: "Réclamations", icon: AlertTriangle },
     { href: `${basePath}/loyalty`, label: "Fidélité", icon: Gift },
     { href: `${basePath}/sales`, label: "Ventes", icon: Receipt },
     { href: `${basePath}/users`, label: "Utilisateurs", icon: Users },

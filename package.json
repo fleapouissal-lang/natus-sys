@@ -15,6 +15,7 @@
     "seed:orders": "npm run db:migrate && node scripts/reset-orders.mjs && node scripts/seed-shopify-orders.mjs && node scripts/backfill-livreur-orders.mjs",
     "backfill:livreur": "node scripts/backfill-livreur-orders.mjs",
     "seed:shopify-whatsapp": "node scripts/seed-shopify-whatsapp-test.mjs",
+    "seed:shopify-feedback": "node scripts/seed-shopify-feedback-test.mjs",
     "upload-images": "node scripts/upload-product-images.mjs"
   },
   "dependencies": {

@@ -2,7 +2,7 @@ import type { CustomerOrderRow } from "@/lib/kapso/whatsapp-bot/orders";
 import type { BotLanguage } from "@/lib/kapso/whatsapp-bot/language";
 import { clientFirstName } from "@/lib/kapso/whatsapp-bot/language";
 import { workflowStatusLabel } from "@/lib/shopify/order-status";
-import { shopifyOrderTrackingPublicUrl } from "@/lib/kapso/urls";
+import { orderTrackingShortUrl } from "@/lib/short-url";
 import type { ShopifyWorkflowStatus } from "@/lib/types";
 
 /** « imta atwslni », « quand je reçois », etc. */
@@ -60,14 +60,14 @@ function statusLine(status: ShopifyWorkflowStatus, lang: BotLanguage): string {
   return workflowStatusLabel(status);
 }
 
-export function buildStructuredReply(
+export async function buildStructuredReply(
   order: CustomerOrderRow,
   lang: BotLanguage,
   opts: { etaQuestion?: boolean; problem?: boolean }
-): string {
+): Promise<string> {
   const name = clientFirstName(order.customer_name);
   const tracking = order.tracking_token
-    ? shopifyOrderTrackingPublicUrl(order.tracking_token)
+    ? await orderTrackingShortUrl(order.tracking_token)
     : null;
 
   if (opts.problem) {

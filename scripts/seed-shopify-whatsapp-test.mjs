@@ -33,6 +33,40 @@ function formatCurrency(amount) {
   return `${Number(amount).toFixed(2).replace(".", ",")} DH`;
 }
 
+async function sendKapsoButtonMessage({ apiKey, phoneNumberId, to, body, buttonId, buttonTitle }) {
+  const apiUrl = `${KAPSO_API}/${phoneNumberId}/messages`;
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "X-API-Key": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "interactive",
+      interactive: {
+        type: "button",
+        body: { text: body.slice(0, 1024) },
+        action: {
+          buttons: [
+            {
+              type: "reply",
+              reply: {
+                id: buttonId.slice(0, 256),
+                title: buttonTitle.slice(0, 20),
+              },
+            },
+          ],
+        },
+      },
+    }),
+  });
+
+  const text = await response.text();
+  return { ok: response.ok, status: response.status, body: text };
+}
+
 async function sendKapsoCtaUrlMessage({ apiKey, phoneNumberId, to, body, displayText, url }) {
   const apiUrl = `${KAPSO_API}/${phoneNumberId}/messages`;
   const response = await fetch(apiUrl, {
@@ -200,7 +234,7 @@ async function main() {
 
   const appUrl = (env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
 
-  const messageBody = [
+  const confirmBody = [
     `Bonjour ${customerName} 👋`,
     "",
     `Nous avons bien reçu votre commande Shopify ${orderNumber}.`,
@@ -208,36 +242,46 @@ async function main() {
     linesSummary,
     "",
     `Total : ${formatCurrency(total)}`,
+    "",
+    "Merci de confirmer votre commande en appuyant sur le bouton :",
   ].join("\n");
 
-  const confirmUrl = `${appUrl.replace(/\/$/, "")}/commande/${order.tracking_token}/confirmer`;
+  const { data: shortCode, error: shortError } = await supabase.rpc(
+    "get_or_create_short_link",
+    { p_kind: "order", p_token: order.tracking_token }
+  );
 
-  console.log("\n📱 Envoi WhatsApp Kapso (détails + bouton lien)…");
+  const confirmUrl =
+    !shortError && shortCode
+      ? `${appUrl}/c/${shortCode}/ok`
+      : `${appUrl}/commande/${order.tracking_token}/confirmer`;
 
-  const textResult = await sendKapsoTextMessage({
+  console.log("\n📱 Envoi WhatsApp Kapso (détails + bouton Confirmer)…");
+
+  const buttonResult = await sendKapsoButtonMessage({
     apiKey,
     phoneNumberId,
     to: recipient,
-    body: messageBody,
+    body: confirmBody,
+    buttonId: `natus_confirm:${order.tracking_token}`,
+    buttonTitle: "Confirmer",
   });
 
-  if (!textResult.ok) {
-    console.error("❌ Kapso texte:", textResult.status, textResult.body);
-    process.exit(1);
-  }
+  if (!buttonResult.ok) {
+    console.warn("⚠️ Bouton reply échoué, fallback CTA URL…", buttonResult.status);
+    const result = await sendKapsoCtaUrlMessage({
+      apiKey,
+      phoneNumberId,
+      to: recipient,
+      body: confirmBody,
+      displayText: "Confirmer",
+      url: confirmUrl,
+    });
 
-  const result = await sendKapsoCtaUrlMessage({
-    apiKey,
-    phoneNumberId,
-    to: recipient,
-    body: "Appuyez sur le bouton pour confirmer votre commande.",
-    displayText: "Confirmer",
-    url: confirmUrl,
-  });
-
-  if (!result.ok) {
-    console.error("❌ Kapso:", result.status, result.body);
-    process.exit(1);
+    if (!result.ok) {
+      console.error("❌ Kapso:", result.status, result.body);
+      process.exit(1);
+    }
   }
 
   await supabase
@@ -248,9 +292,9 @@ async function main() {
   console.log("\n✅ Commande test créée + WhatsApp envoyé");
   console.log(`   ID commande : ${order.id}`);
   console.log(`   Token suivi : ${order.tracking_token}`);
-  console.log(`   Lien suivi (après confirmation) : ${appUrl}/commande/${order.tracking_token}`);
+  console.log(`   Lien suivi (après confirmation) : ${appUrl}/c/${shortCode || "…"}`);
   console.log(`   Dashboard : ${appUrl}/manager/orders ou /cashier/orders`);
-  console.log(`\n👉 Sur WhatsApp (${sandboxTo}), cliquez le bouton « Confirmer » (2e message)`);
+  console.log(`\n👉 Sur WhatsApp (${sandboxTo}), appuyez sur le bouton « Confirmer »`);
   console.log(`   Lien direct : ${confirmUrl}`);
 }
 

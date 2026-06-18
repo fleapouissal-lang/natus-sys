@@ -33,7 +33,11 @@ export default async function ShopifyOrderTrackingPage({
 
   return (
     <div className="min-h-screen bg-page px-4 py-8 sm:px-6">
-      <ShopifyOrderTrackingView order={order} justConfirmed={confirmed === "1"} />
+      <ShopifyOrderTrackingView
+        order={order}
+        trackingToken={token}
+        justConfirmed={confirmed === "1"}
+      />
     </div>
   );
 }

@@ -1,12 +1,16 @@
 import { workflowStatusLabel, paymentTypeLabel } from "@/lib/shopify/order-status";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { PublicShopifyOrder } from "@/lib/shopify/public-order";
+import Link from "next/link";
+import { Check } from "lucide-react";
 
 export function ShopifyOrderTrackingView({
   order,
+  trackingToken,
   justConfirmed = false,
 }: {
   order: PublicShopifyOrder;
+  trackingToken?: string;
   justConfirmed?: boolean;
 }) {
   const items = order.line_items || [];
@@ -83,6 +87,16 @@ export function ShopifyOrderTrackingView({
         <p className="mt-4 text-xs text-muted">
           Dernière mise à jour : {formatDate(order.updated_at)}
         </p>
+
+        {!order.customer_confirmed_at && trackingToken && (
+          <Link
+            href={`/commande/${trackingToken}/confirmer`}
+            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-champagne px-6 py-3 text-base font-medium text-black shadow-sm transition-colors hover:brightness-95"
+          >
+            <Check className="h-4 w-4" />
+            Confirmer ma commande
+          </Link>
+        )}
       </div>
     </div>
   );
