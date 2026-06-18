@@ -4,7 +4,6 @@ import {
   askReclamationMessage,
   reclamationReceivedMessage,
   sendFeedbackText,
-  thankYouMessage,
 } from "@/lib/kapso/feedback/messages";
 import {
   parseFeedbackButtonId,
@@ -23,6 +22,11 @@ import {
   isReclamationWithDetail,
 } from "@/lib/kapso/feedback/intents";
 import type { CustomerOrderRow } from "@/lib/kapso/whatsapp-bot/orders";
+import {
+  isWhatsAppReviewIntent,
+  parseRatingFromText,
+} from "@/lib/marketing/review-intents";
+import { sendGoogleReviewAfterPositiveFeedback } from "@/lib/marketing/send-marketing";
 
 type FeedbackContext = {
   storeId: string;
@@ -128,10 +132,20 @@ export async function handleFeedbackButtonClick(
   if (!ctx) return false;
 
   const session = await getBotSession(phone);
-  const lang = langFromSession(session?.history ?? []);
 
   if (parsed.action === "good") {
-    await sendFeedbackText(phone, thankYouMessage(lang));
+    await sendGoogleReviewAfterPositiveFeedback(
+      phone,
+      ctx.storeId,
+      session?.history ?? [],
+      {
+        customerName: ctx.customerName,
+        message: "Très bien",
+        rating: 5,
+        shopifyOrderId: ctx.shopifyOrderId,
+        saleId: ctx.saleId,
+      }
+    );
     await upsertBotSession(phone, {
       state: "idle",
       pending_store_id: null,
@@ -151,7 +165,10 @@ export async function handleFeedbackButtonClick(
     pending_problem: null,
   });
 
-  await sendFeedbackText(phone, askReclamationMessage(lang));
+  await sendFeedbackText(
+    phone,
+    askReclamationMessage(langFromSession(session?.history ?? []))
+  );
   return true;
 }
 
@@ -308,6 +325,69 @@ export async function handleReclamationIntentFromText(
   }
 
   return false;
+}
+
+async function resolveReviewContextFromPhone(
+  phone: string,
+  order: CustomerOrderRow | null
+): Promise<FeedbackContext | null> {
+  const ctx = await resolveReclamationContextFromPhone(phone, order);
+  if (ctx) return ctx;
+
+  const admin = createAdminClient();
+  const target = phone.replace(/\D/g, "");
+  const { data: customers } = await admin
+    .from("customers")
+    .select("id, full_name, phone, store_id")
+    .not("phone", "is", null)
+    .limit(500);
+
+  const customer = (customers || []).find((c) => {
+    const digits = String(c.phone || "").replace(/\D/g, "");
+    return digits === target || digits.endsWith(target.slice(-9));
+  });
+
+  if (!customer?.store_id) return null;
+
+  return {
+    storeId: customer.store_id,
+    source: "pos_sale",
+    shopifyOrderId: null,
+    saleId: null,
+    customerPhone: phone,
+    customerName: customer.full_name,
+    orderNumber: null,
+  };
+}
+
+export async function handleWhatsAppReviewFromText(
+  phone: string,
+  text: string,
+  order: CustomerOrderRow | null,
+  history: ChatTurn[] = []
+): Promise<boolean> {
+  if (!isWhatsAppReviewIntent(text)) return false;
+
+  const rating = parseRatingFromText(text);
+  if (rating === null) return false;
+
+  const ctx = await resolveReviewContextFromPhone(phone, order);
+  if (!ctx) return false;
+
+  await sendGoogleReviewAfterPositiveFeedback(
+    phone,
+    ctx.storeId,
+    history,
+    {
+      customerName: ctx.customerName,
+      message: text,
+      rating,
+      shopifyOrderId: ctx.shopifyOrderId,
+      saleId: ctx.saleId,
+    }
+  );
+
+  return true;
 }
 
 export async function registerProblemComplaint(input: {

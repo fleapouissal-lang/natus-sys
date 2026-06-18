@@ -16,6 +16,7 @@
     "backfill:livreur": "node scripts/backfill-livreur-orders.mjs",
     "seed:shopify-whatsapp": "node scripts/seed-shopify-whatsapp-test.mjs",
     "seed:shopify-feedback": "node scripts/seed-shopify-feedback-test.mjs",
+    "seed:marketing-demo": "node scripts/seed-marketing-demo.mjs",
     "upload-images": "node scripts/upload-product-images.mjs"
   },
   "dependencies": {

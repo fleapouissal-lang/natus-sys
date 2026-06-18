@@ -5,6 +5,7 @@ import {
   handleFeedbackButtonClick,
   handleReclamationText,
   handleReclamationIntentFromText,
+  handleWhatsAppReviewFromText,
   registerProblemComplaint,
 } from "@/lib/kapso/feedback/handler";
 import { FEEDBACK_BUTTON_PREFIX } from "@/lib/kapso/feedback/constants";
@@ -129,6 +130,16 @@ export async function handleInboundWhatsAppMessage(
       session?.history ?? []
     );
     if (handled) return;
+  }
+
+  if (text) {
+    const reviewHandled = await handleWhatsAppReviewFromText(
+      phone,
+      text,
+      orderForContext,
+      session?.history ?? []
+    );
+    if (reviewHandled) return;
   }
 
   const userMessage =

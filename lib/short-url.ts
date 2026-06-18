@@ -6,7 +6,7 @@ import {
 import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export type ShortLinkKind = "order" | "loyalty_card";
+export type ShortLinkKind = "order" | "loyalty_card" | "product";
 
 export type ResolvedShortLink = {
   kind: ShortLinkKind;
@@ -86,4 +86,13 @@ export async function loyaltyCardShortUrl(
   const code = await getOrCreateShortCode("loyalty_card", qrToken);
   if (code) return `${publicOrigin(baseUrl)}/f/${code}`;
   return loyaltyCardPublicUrl(qrToken, baseUrl);
+}
+
+export async function productStoryShortUrl(
+  productId: string,
+  baseUrl?: string
+): Promise<string> {
+  const code = await getOrCreateShortCode("product", productId);
+  if (code) return `${publicOrigin(baseUrl)}/p/${code}`;
+  return `${publicOrigin(baseUrl)}/produit/${productId}`;
 }

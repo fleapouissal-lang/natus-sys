@@ -654,6 +654,13 @@ export async function completeSale(
     console.error("completeSale feedback WhatsApp:", feedbackError);
   }
 
+  try {
+    const { sendCrossSellForSale } = await import("@/lib/marketing/send-marketing");
+    await sendCrossSellForSale(saleId);
+  } catch (crossSellError) {
+    console.error("completeSale cross-sell WhatsApp:", crossSellError);
+  }
+
   revalidatePath("/cashier/pos");
   revalidatePath("/cashier/sales");
   revalidatePath("/manager/sales");

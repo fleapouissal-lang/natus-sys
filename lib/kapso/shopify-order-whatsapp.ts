@@ -189,6 +189,15 @@ export async function handleShopifyOrderConfirmButton(
         }
 
         await sendKapsoTextMessage(config, recipient, lines.join("\n"));
+
+        try {
+          const { sendCrossSellForOrder } = await import(
+            "@/lib/marketing/send-marketing"
+          );
+          await sendCrossSellForOrder(result.order_id);
+        } catch (err) {
+          console.error("[Kapso] cross-sell order:", err);
+        }
       }
     }
   }
