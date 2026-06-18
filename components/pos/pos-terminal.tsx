@@ -26,6 +26,10 @@ import { Modal } from "@/components/ui/modal";
 import { Receipt, printReceipt, type ReceiptData } from "@/components/pos/receipt";
 import { ProductCatalog } from "@/components/pos/product-catalog";
 import { PosCheckoutPanel } from "@/components/pos/pos-checkout-panel";
+import {
+  PosScanAlertModal,
+  type PosScanAlert,
+} from "@/components/pos/pos-scan-alert-modal";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
@@ -107,6 +111,7 @@ export function PosTerminal({
   const [loyaltyCustomer, setLoyaltyCustomer] = useState<LoyaltyCustomer | null>(null);
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
   const [appliedPromo, setAppliedPromo] = useState<AppliedPosPromo | null>(null);
+  const [scanAlert, setScanAlert] = useState<PosScanAlert | null>(null);
   const [scanListening, setScanListening] = useState(true);
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -132,7 +137,7 @@ export function PosTerminal({
   const addToCart = useCallback((product: Product, qty: number) => {
     if (activeShopifyOrder) return;
     if (product.stock <= 0) {
-      setError(`${product.name} — rupture de stock`);
+      setScanAlert({ kind: "out_of_stock", product });
       return;
     }
     setError("");
@@ -141,7 +146,11 @@ export function PosTerminal({
       if (existing) {
         const newQty = existing.quantity + qty;
         if (newQty > product.stock) {
-          setError(`Stock insuffisant pour ${product.name}`);
+          setScanAlert({
+            kind: "insufficient_stock",
+            product,
+            available: product.stock,
+          });
           return prev;
         }
         setLastAddedProduct(product);
@@ -150,13 +159,60 @@ export function PosTerminal({
         );
       }
       if (qty > product.stock) {
-        setError(`Stock insuffisant pour ${product.name}`);
+        setScanAlert({
+          kind: "insufficient_stock",
+          product,
+          available: product.stock,
+        });
         return prev;
       }
       setLastAddedProduct(product);
       return [...prev, { product, quantity: qty }];
     });
   }, [activeShopifyOrder]);
+
+  const adjustOrderValidation = useCallback(
+    (productId: string, delta: number) => {
+      if (!activeShopifyOrder || delta === 0) return;
+
+      const cartItem = cart.find((item) => item.product.id === productId);
+      if (!cartItem) {
+        const product = products.find((p) => p.id === productId);
+        setError(
+          product
+            ? `${product.name} — absent de la commande`
+            : "Produit absent de la commande"
+        );
+        return;
+      }
+
+      const validated = validatedQty[productId] ?? 0;
+      const next = validated + delta;
+
+      if (next < 0) return;
+
+      if (next > cartItem.quantity) {
+        setError(
+          `${cartItem.product.name} — quantité commandée : ${cartItem.quantity}`
+        );
+        return;
+      }
+
+      setValidatedQty((prev) => {
+        if (next === 0) {
+          const { [productId]: _removed, ...rest } = prev;
+          return rest;
+        }
+        return { ...prev, [productId]: next };
+      });
+
+      if (delta > 0) {
+        setLastAddedProduct(cartItem.product);
+      }
+      setError("");
+    },
+    [activeShopifyOrder, cart, products, validatedQty]
+  );
 
   const handleScan = useCallback(
     (code: string) => {
@@ -179,7 +235,7 @@ export function PosTerminal({
 
       const product = products.find((p) => p.barcode === trimmed);
       if (!product) {
-        setError(`Produit non trouvé : ${trimmed}`);
+        setScanAlert({ kind: "not_found", barcode: trimmed });
         return;
       }
       if (isStockScan) {
@@ -188,25 +244,13 @@ export function PosTerminal({
         return;
       }
       if (activeShopifyOrder) {
-        const cartItem = cart.find((item) => item.product.id === product.id);
-        if (!cartItem) {
-          setError(`${product.name} — absent de la commande`);
-          return;
-        }
-        const validated = validatedQty[product.id] ?? 0;
-        if (validated >= cartItem.quantity) {
-          setError(`${product.name} — quantité déjà validée (${cartItem.quantity})`);
-          return;
-        }
-        setValidatedQty((prev) => ({ ...prev, [product.id]: validated + 1 }));
-        setLastAddedProduct(product);
-        setError("");
+        adjustOrderValidation(product.id, 1);
         return;
       }
       setError("");
       addToCart(product, 1);
     },
-    [products, isStockScan, addToCart, activeShopifyOrder, cart, validatedQty]
+    [products, isStockScan, addToCart, activeShopifyOrder, adjustOrderValidation]
   );
 
   async function loadShopifyOrder(order: ShopifyOrder) {
@@ -291,7 +335,11 @@ export function PosTerminal({
           if (item.product.id !== productId) return item;
           const newQty = item.quantity + delta;
           if (newQty > item.product.stock) {
-            setError("Stock insuffisant");
+            setScanAlert({
+              kind: "insufficient_stock",
+              product: item.product,
+              available: item.product.stock,
+            });
             return item;
           }
           return { ...item, quantity: newQty };
@@ -650,7 +698,7 @@ export function PosTerminal({
                       </Badge>
                     </div>
                     <p className="mt-2 text-xs text-muted">
-                      Scannez chaque produit pour valider les quantités avant d&apos;imprimer
+                      Scannez ou utilisez + pour valider chaque produit jusqu&apos;à la quantité commandée
                     </p>
                   </Card>
                 )}
@@ -665,9 +713,22 @@ export function PosTerminal({
               <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-natus">
                 <ProductCatalog
                   products={products}
-                  onAddToCart={addToCart}
-                  onUpdateQuantity={updateQuantity}
+                  onAddToCart={(product, qty) => {
+                    if (isOrderMode) {
+                      for (let i = 0; i < qty; i++) adjustOrderValidation(product.id, 1);
+                      return;
+                    }
+                    addToCart(product, qty);
+                  }}
+                  onUpdateQuantity={(productId, delta) => {
+                    if (isOrderMode) {
+                      adjustOrderValidation(productId, delta);
+                      return;
+                    }
+                    updateQuantity(productId, delta);
+                  }}
                   cartQuantities={cartQuantities}
+                  validatedQuantities={isOrderMode ? validatedQty : undefined}
                   onBarcodeScan={handleScan}
                   lastAddedProduct={lastAddedProduct}
                   scannerEnabled={!receipt && (!isStockScan || !scannedProduct)}
@@ -762,7 +823,7 @@ export function PosTerminal({
                               </p>
 
                               {isOrderMode ? (
-                                <div className="mt-1 flex items-center gap-2">
+                                <div className="mt-1 flex flex-wrap items-center gap-2">
                                   <Badge variant={isItemValidated ? "success" : "warning"}>
                                     {isItemValidated ? (
                                       <span className="inline-flex items-center gap-1">
@@ -770,9 +831,32 @@ export function PosTerminal({
                                         Validé {validated}/{item.quantity}
                                       </span>
                                     ) : (
-                                      `${validated}/${item.quantity} scanné${validated !== 1 ? "s" : ""}`
+                                      `${validated}/${item.quantity} validé${validated !== 1 ? "s" : ""}`
                                     )}
                                   </Badge>
+                                  <div className="avatar-round flex items-center gap-0.5 border border-border bg-page px-1 py-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => adjustOrderValidation(item.product.id, -1)}
+                                      disabled={validated <= 0}
+                                      className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                                      aria-label="Retirer une validation"
+                                    >
+                                      <Minus className="h-4 w-4" />
+                                    </button>
+                                    <span className="min-w-[1.5rem] text-center text-sm font-bold">
+                                      {validated}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => adjustOrderValidation(item.product.id, 1)}
+                                      disabled={validated >= item.quantity}
+                                      className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                                      aria-label="Valider une unité"
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                    </button>
+                                  </div>
                                 </div>
                               ) : (
                               <div className="avatar-round mt-1 flex w-fit items-center gap-0.5 border border-border bg-page px-1 py-0.5">
@@ -892,7 +976,7 @@ export function PosTerminal({
                     )}
                     {isOrderMode && !orderFullyValidated && (
                       <p className="mt-2 text-xs text-warning">
-                        Scannez tous les produits ({orderValidationDone}/{orderValidationTotal}) pour valider
+                        Validez tous les produits ({orderValidationDone}/{orderValidationTotal}) — scan ou +
                       </p>
                     )}
                   </div>
@@ -962,6 +1046,14 @@ export function PosTerminal({
           </div>
         </Modal>
       )}
+
+      <PosScanAlertModal
+        alert={scanAlert}
+        onClose={() => {
+          setScanAlert(null);
+          focusInput();
+        }}
+      />
 
       <PosOrdersPanel
         orders={shopifyOrders}

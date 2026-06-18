@@ -105,6 +105,7 @@ function CategoryStrip({
 function ProductCard({
   product,
   cartQty,
+  validatedQty = 0,
   onAddToCart,
   onUpdateQuantity,
   highlighted,
@@ -112,12 +113,15 @@ function ProductCard({
 }: {
   product: Product;
   cartQty: number;
+  validatedQty?: number;
   onAddToCart: (product: Product, qty: number) => void;
   onUpdateQuantity: (productId: string, delta: number) => void;
   highlighted?: boolean;
   orderMode?: boolean;
 }) {
   const outOfStock = product.stock <= 0;
+  const inOrder = cartQty > 0;
+  const orderValidated = validatedQty >= cartQty;
 
   return (
     <div
@@ -154,9 +158,39 @@ function ProductCard({
         </div>
 
         {orderMode ? (
-          <p className="mt-auto text-center text-xs text-muted">
-            {cartQty > 0 ? `${cartQty} dans la commande — scannez pour valider` : "—"}
-          </p>
+          inOrder ? (
+            <div className="mt-auto flex flex-col items-center gap-1.5">
+              <p className="text-center text-xs text-muted">
+                {cartQty} commandé{cartQty !== 1 ? "s" : ""}
+                {orderValidated ? " · validé" : ""}
+              </p>
+              <div className="flex items-center rounded-full bg-page px-1 py-0.5">
+                <button
+                  type="button"
+                  onClick={() => onUpdateQuantity(product.id, -1)}
+                  disabled={validatedQty <= 0}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-foreground transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                  aria-label="Retirer une validation"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="min-w-[2.75rem] text-center text-sm font-semibold">
+                  {validatedQty}/{cartQty}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onAddToCart(product, 1)}
+                  disabled={validatedQty >= cartQty}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-foreground transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                  aria-label="Valider une unité"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-auto text-center text-xs text-muted">Hors commande</p>
+          )
         ) : (
         <div className="mt-auto flex items-center justify-center">
           <div className="flex items-center rounded-full bg-page px-1 py-0.5">
@@ -194,6 +228,7 @@ export function ProductCatalog({
   onAddToCart,
   onUpdateQuantity,
   cartQuantities,
+  validatedQuantities,
   onBarcodeScan,
   lastAddedProduct = null,
   scannerEnabled = true,
@@ -204,6 +239,7 @@ export function ProductCatalog({
   onAddToCart: (product: Product, qty: number) => void;
   onUpdateQuantity: (productId: string, delta: number) => void;
   cartQuantities: Record<string, number>;
+  validatedQuantities?: Record<string, number>;
   onBarcodeScan?: (code: string) => void;
   lastAddedProduct?: Product | null;
   scannerEnabled?: boolean;
@@ -311,7 +347,9 @@ export function ProductCatalog({
             onFocus={() => focusInput()}
             placeholder={
               scannerActive
-                ? "Nom ou code-barres — scannez pour ajouter"
+                ? orderMode
+                  ? "Scannez ou cherchez un produit de la commande"
+                  : "Nom ou code-barres — scannez pour ajouter"
                 : "Nom ou code-barres…"
             }
             autoComplete="off"
@@ -350,6 +388,7 @@ export function ProductCatalog({
               key={product.id}
               product={product}
               cartQty={cartQuantities[product.id] ?? 0}
+              validatedQty={validatedQuantities?.[product.id] ?? 0}
               onAddToCart={onAddToCart}
               onUpdateQuantity={onUpdateQuantity}
               highlighted={lastAddedProduct?.id === product.id}
