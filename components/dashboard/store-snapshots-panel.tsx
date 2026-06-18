@@ -41,10 +41,19 @@ function MiniList<T>({
 function StoreSnapshotCard({
   snapshot,
   overview,
+  periodLabel,
+  displayLimit = 5,
 }: {
   snapshot: StoreSnapshot;
   overview?: StoreOverviewRow;
+  periodLabel: string;
+  displayLimit?: number;
 }) {
+  const periodRevenue = snapshot.recentSales.reduce((s, sale) => s + sale.total, 0);
+  const salesShown = snapshot.recentSales.slice(0, displayLimit);
+  const ordersShown = snapshot.recentOrders.slice(0, displayLimit);
+  const stockShown = snapshot.recentStockAdds.slice(0, displayLimit);
+
   return (
     <Card padding={false} className="overflow-hidden">
       <div className="border-b border-primary/15 bg-primary/8 px-5 py-4">
@@ -53,15 +62,24 @@ function StoreSnapshotCard({
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <div>
               <h3 className="font-semibold">{snapshot.storeName}</h3>
-              {overview && (
-                <p className="mt-1 text-xs text-muted">
-                  {overview.todaySales} vente{overview.todaySales !== 1 ? "s" : ""} aujourd&apos;hui
-                  {" · "}
-                  {formatCurrency(overview.todayRevenue)}
-                  {" · "}
-                  {overview.lowStockCount} alerte{overview.lowStockCount !== 1 ? "s" : ""} stock
-                </p>
-              )}
+              <p className="mt-1 text-xs text-muted">
+                {periodLabel}
+                {" · "}
+                {snapshot.recentSales.length} vente
+                {snapshot.recentSales.length !== 1 ? "s" : ""}
+                {" · "}
+                {formatCurrency(periodRevenue)}
+                {" · "}
+                {snapshot.recentOrders.length} commande
+                {snapshot.recentOrders.length !== 1 ? "s" : ""}
+                {overview ? (
+                  <>
+                    {" · "}
+                    {overview.lowStockCount} alerte
+                    {overview.lowStockCount !== 1 ? "s" : ""} stock
+                  </>
+                ) : null}
+              </p>
             </div>
           </div>
           {overview && (
@@ -74,10 +92,10 @@ function StoreSnapshotCard({
 
       <div className="grid gap-4 p-4 lg:grid-cols-3">
         <MiniList
-          title="5 dernières ventes"
+          title={`Ventes (${snapshot.recentSales.length})`}
           icon={ShoppingBag}
-          emptyLabel="Aucune vente récente"
-          items={snapshot.recentSales}
+          emptyLabel="Aucune vente sur cette période"
+          items={salesShown}
           renderItem={(sale) => (
             <div
               key={sale.id}
@@ -98,10 +116,10 @@ function StoreSnapshotCard({
         />
 
         <MiniList
-          title="5 dernières commandes"
+          title={`Commandes (${snapshot.recentOrders.length})`}
           icon={ShoppingCart}
-          emptyLabel="Aucune commande récente"
-          items={snapshot.recentOrders}
+          emptyLabel="Aucune commande sur cette période"
+          items={ordersShown}
           renderItem={(order) => (
             <div
               key={order.id}
@@ -126,10 +144,10 @@ function StoreSnapshotCard({
         />
 
         <MiniList
-          title="5 dernières actions stock"
+          title={`Actions stock (${snapshot.recentStockAdds.length})`}
           icon={Package}
-          emptyLabel="Aucune action stock récente"
-          items={snapshot.recentStockAdds}
+          emptyLabel="Aucune action stock sur cette période"
+          items={stockShown}
           renderItem={(item) => (
             <div
               key={item.id}
@@ -159,17 +177,19 @@ function StoreSnapshotCard({
 export function StoreSnapshotsPanel({
   snapshots,
   overviewByStore,
+  periodLabel = "Période sélectionnée",
 }: {
   snapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
+  periodLabel?: string;
 }) {
   if (snapshots.length === 0) return null;
 
   return (
     <div className="space-y-4">
       <CardHeader
-        title="Vue générale par magasin"
-        description="Activité récente — ventes, commandes et actions stock (ajouts, ajustements, transferts hub)"
+        title="Vue détaillée par magasin"
+        description={`Ventes, commandes et stock — ${periodLabel}`}
       />
 
       <div className="space-y-4">
@@ -178,6 +198,7 @@ export function StoreSnapshotsPanel({
             key={snapshot.storeId}
             snapshot={snapshot}
             overview={overviewByStore[snapshot.storeId]}
+            periodLabel={periodLabel}
           />
         ))}
       </div>

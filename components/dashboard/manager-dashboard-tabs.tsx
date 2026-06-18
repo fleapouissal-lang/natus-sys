@@ -12,8 +12,7 @@ import {
 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
-import { StoreOverviewChart } from "@/components/dashboard/store-overview-chart";
-import { StoreSnapshotsPanel } from "@/components/dashboard/store-snapshots-panel";
+import { StoreTrackingView } from "@/components/dashboard/store-tracking-view";
 import { RecentActivityPanel } from "@/components/activity/recent-activity-panel";
 import { formatCurrency, cn } from "@/lib/utils";
 import type {
@@ -69,37 +68,11 @@ function StatCard({
   );
 }
 
-function StoreSummaryCards({ rows }: { rows: StoreOverviewRow[] }) {
-  if (rows.length === 0) return null;
-
-  const totalWeek = rows.reduce((s, r) => s + r.weekRevenue, 0);
-  const totalToday = rows.reduce((s, r) => s + r.todaySales, 0);
-  const lowStock = rows.reduce((s, r) => s + r.lowStockCount, 0);
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      <Card>
-        <p className="text-sm text-muted">CA 7 jours — tous magasins</p>
-        <p className="mt-1 text-2xl font-bold">{formatCurrency(totalWeek)}</p>
-      </Card>
-      <Card>
-        <p className="text-sm text-muted">Ventes aujourd&apos;hui</p>
-        <p className="mt-1 text-2xl font-bold">{totalToday}</p>
-      </Card>
-      <Card>
-        <p className="text-sm text-muted">Alertes stock faible</p>
-        <p className="mt-1 text-2xl font-bold">{lowStock}</p>
-      </Card>
-    </div>
-  );
-}
-
 function ManagerDashboardTabsInner({
   stores,
   selectedStoreId,
   selectedStoreLabel,
   stats,
-  storeOverview,
   storeSnapshots,
   overviewByStore,
   storeActivities,
@@ -108,7 +81,6 @@ function ManagerDashboardTabsInner({
   selectedStoreId: string;
   selectedStoreLabel: string;
   stats: DashboardStats | null;
-  storeOverview: StoreOverviewRow[];
   storeSnapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
   storeActivities: ActivityEntry[];
@@ -148,31 +120,17 @@ function ManagerDashboardTabsInner({
       </div>
 
       {activeTab === "suivi" && (
-        <div className="space-y-6">
-          <StoreSummaryCards rows={storeOverview} />
-          {storeOverview.length > 0 ? (
-            <>
-              <StoreOverviewChart
-                rows={storeOverview}
-                selectedStoreId={selectedStoreId}
-                onStoreSelect={(storeId) => {
-                  const params = new URLSearchParams(searchParams.toString());
-                  params.set("store", storeId);
-                  params.set("tab", "stats");
-                  router.push(`${pathname}?${params.toString()}`);
-                }}
-              />
-              <StoreSnapshotsPanel
-                snapshots={storeSnapshots}
-                overviewByStore={overviewByStore}
-              />
-            </>
-          ) : (
-            <Card className="py-12 text-center text-muted">
-              Aucun magasin à suivre
-            </Card>
-          )}
-        </div>
+        <StoreTrackingView
+          storeSnapshots={storeSnapshots}
+          overviewByStore={overviewByStore}
+          selectedStoreId={selectedStoreId}
+          onStoreSelect={(storeId) => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("store", storeId);
+            params.set("tab", "stats");
+            router.push(`${pathname}?${params.toString()}`);
+          }}
+        />
       )}
 
       {activeTab === "stats" && (
@@ -244,7 +202,6 @@ export function ManagerDashboardTabs(props: {
   selectedStoreId: string;
   selectedStoreLabel: string;
   stats: DashboardStats | null;
-  storeOverview: StoreOverviewRow[];
   storeSnapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
   storeActivities: ActivityEntry[];

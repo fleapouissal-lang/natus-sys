@@ -18,11 +18,11 @@ export default async function ManagerDashboard({
   const storesWithStats = await getStoresWithStats(city);
   const storeId = resolveSelectedStoreId(stores, storeParam);
   const selectedStore = getSelectedStore(stores, storeId);
-  const [stats, storeOverview, storeSnapshots, storeActivities] = await Promise.all([
+  const [stats, storeSnapshots, storeActivities, storeOverview] = await Promise.all([
     storeId ? getDashboardStats(storeId) : Promise.resolve(null),
-    getStoreOverviewStats(storesWithStats),
     getStoresSnapshots(stores),
     storeId ? getActivityLog([storeId], 12) : Promise.resolve([]),
+    getStoreOverviewStats(storesWithStats),
   ]);
 
   const overviewByStore = Object.fromEntries(
@@ -47,7 +47,6 @@ export default async function ManagerDashboard({
         selectedStoreId={storeId}
         selectedStoreLabel={selectedStoreLabel}
         stats={stats}
-        storeOverview={storeOverview}
         storeSnapshots={storeSnapshots}
         overviewByStore={overviewByStore}
         storeActivities={storeActivities}

@@ -10,7 +10,15 @@ import type {
   StoreWithStats,
 } from "@/lib/types";
 
-const RECENT_LIMIT = 5;
+const RECENT_LIMIT = 50;
+const SNAPSHOT_HISTORY_DAYS = 92;
+
+function snapshotSinceIso(): string {
+  const since = new Date();
+  since.setDate(since.getDate() - SNAPSHOT_HISTORY_DAYS);
+  since.setHours(0, 0, 0, 0);
+  return since.toISOString();
+}
 
 function takePerStore<T extends { store_id: string | null }>(
   rows: T[],
@@ -63,7 +71,8 @@ export async function getStoresSnapshots(
 
   const supabase = await createClient();
   const storeIds = stores.map((s) => s.id);
-  const fetchLimit = Math.max(storeIds.length * RECENT_LIMIT, 25);
+  const fetchLimit = Math.max(storeIds.length * RECENT_LIMIT, 50);
+  const since = snapshotSinceIso();
 
   const [{ data: sales }, { data: orders }, { data: movements }] = await Promise.all([
     supabase
@@ -72,6 +81,7 @@ export async function getStoresSnapshots(
         "id, total, payment_method, created_at, store_id, profiles:cashier_id(full_name, email)"
       )
       .in("store_id", storeIds)
+      .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(fetchLimit),
     supabase
@@ -80,6 +90,7 @@ export async function getStoresSnapshots(
         "id, order_number, total, payment_type, workflow_status, customer_name, created_at, shopify_created_at, store_id"
       )
       .in("store_id", storeIds)
+      .gte("shopify_created_at", since)
       .order("shopify_created_at", { ascending: false })
       .limit(fetchLimit),
     supabase
@@ -89,6 +100,7 @@ export async function getStoresSnapshots(
       )
       .in("store_id", storeIds)
       .in("type", ["add", "adjustment", "transfer"])
+      .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(fetchLimit),
   ]);
