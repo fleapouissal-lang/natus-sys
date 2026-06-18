@@ -243,4 +243,35 @@ export function getOrdersScopeLabel(
   return profile.city ? `Ville — ${profile.city}` : "Commandes";
 }
 
+export async function getShopifyOrderFollowUpNotes(
+  profile: Profile
+): Promise<ShopifyOrder[]> {
+  const supabase = await createClient();
+  let dbQuery = supabase
+    .from("shopify_orders")
+    .select("*")
+    .not("cashier_confirmation_at", "is", null)
+    .neq("cashier_confirmation_status", "confirmed")
+    .order("cashier_confirmation_at", { ascending: false })
+    .limit(200);
+
+  if (profile.role === "cashier") {
+    if (!profile.store_id) return [];
+    dbQuery = dbQuery.eq("store_id", profile.store_id);
+  } else if (profile.role === "manager") {
+    if (!profile.city) return [];
+    dbQuery = dbQuery.eq("city", profile.city);
+  } else if (!isDirector(profile)) {
+    return [];
+  }
+
+  const { data, error } = await dbQuery;
+  if (error) {
+    console.error("getShopifyOrderFollowUpNotes:", error.message);
+    return [];
+  }
+
+  return (data || []) as ShopifyOrder[];
+}
+
 export { getCityFilter };

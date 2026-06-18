@@ -3,13 +3,14 @@
 import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, Eye, Loader2, RotateCcw, Search, ShoppingCart, Truck, Wallet, PackageCheck, ArrowRightLeft, Pencil } from "lucide-react";
+import { Banknote, Eye, Loader2, MessageSquare, Phone, RotateCcw, Search, ShoppingCart, Truck, Wallet, PackageCheck, ArrowRightLeft, Pencil } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShopifyOrderDetailModal } from "@/components/orders/shopify-order-detail-modal";
 import { OrderTransferModal } from "@/components/orders/order-transfer-modal";
 import { ReturnNoteModal } from "@/components/orders/return-note-modal";
+import { ConfirmationFollowUpModal } from "@/components/orders/confirmation-follow-up-modal";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { DateInputField } from "@/components/ui/date-input-field";
 import { formatCurrency, formatDate, cn, toLocalDateKey } from "@/lib/utils";
@@ -30,6 +31,12 @@ import {
 } from "@/lib/shopify/order-status";
 import { canTransferShopifyOrder } from "@/lib/shopify/order-transfer";
 import { canLivreurEditReturnNote } from "@/lib/shopify/return-note";
+import {
+  confirmationFollowUpBadge,
+  hasCashierConfirmationNote,
+  isConfirmationCallOverdue,
+  isConfirmationFollowUpResolved,
+} from "@/lib/shopify/confirmation-follow-up";
 import { updateShopifyOrderStatus, markShopifyCodPaid, handOrderToLivreur, confirmShopifyOrderReturn } from "@/lib/actions";
 import type { ShopifyOrder, ShopifyPaymentType, ShopifyWorkflowStatus, Store } from "@/lib/types";
 
@@ -160,6 +167,7 @@ export function ShopifyOrdersManager({
   enableOrderTransfer = false,
   transferTargets = [],
   transferProfile,
+  enableConfirmationFollowUp = false,
 }: {
   orders: ShopifyOrder[];
   scopeLabel: string;
@@ -178,6 +186,7 @@ export function ShopifyOrdersManager({
   enableOrderTransfer?: boolean;
   transferTargets?: Store[];
   transferProfile?: import("@/lib/types").Profile | null;
+  enableConfirmationFollowUp?: boolean;
 }) {
   const router = useRouter();
   const today = toLocalDateKey(new Date());
@@ -193,6 +202,8 @@ export function ShopifyOrdersManager({
     order: ShopifyOrder;
     mode: "create" | "edit";
   } | null>(null);
+  const [confirmationFollowUpOrder, setConfirmationFollowUpOrder] =
+    useState<ShopifyOrder | null>(null);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState(defaultDateFrom);
   const [dateTo, setDateTo] = useState(defaultDateTo);
@@ -480,6 +491,13 @@ export function ShopifyOrdersManager({
                   isReturned &&
                   Boolean(order.fulfilled_at) &&
                   !order.return_received_at;
+                const canFollowUpConfirmation =
+                  enableConfirmationFollowUp &&
+                  !cashierReturnsMode &&
+                  Boolean(order.whatsapp_confirmation_sent_at) &&
+                  !isConfirmationFollowUpResolved(order);
+                const confirmationOverdue = isConfirmationCallOverdue(order);
+                const orderHasFollowUpNote = hasCashierConfirmationNote(order);
 
                 return (
                   <tr key={order.id} className="border-b border-border">
@@ -491,9 +509,18 @@ export function ShopifyOrdersManager({
                     </td>
                     <td className="px-6 py-4">
                       <p>{order.customer_name || "—"}</p>
-                      {order.customer_phone && (
+                      {order.customer_phone && !isConfirmationFollowUpResolved(order) && (
                         <p className="text-xs text-muted">{order.customer_phone}</p>
                       )}
+                      {(() => {
+                        const badge = confirmationFollowUpBadge(order);
+                        if (!badge) return null;
+                        return (
+                          <Badge variant={badge.variant} className="mt-1.5 w-fit text-[10px]">
+                            {badge.label}
+                          </Badge>
+                        );
+                      })()}
                     </td>
                     {showStore && (
                       <td className="px-6 py-4">
@@ -654,6 +681,33 @@ export function ShopifyOrdersManager({
                             <ArrowRightLeft className="h-3.5 w-3.5" />
                           </IconAction>
                         )}
+                        {canFollowUpConfirmation && (
+                          <IconAction
+                            label={
+                              confirmationOverdue
+                                ? "Appeler le client — suivi confirmation"
+                                : "Suivi confirmation client"
+                            }
+                            onClick={() => setConfirmationFollowUpOrder(order)}
+                            loading={loading}
+                          >
+                            <Phone
+                              className={cn(
+                                "h-3.5 w-3.5",
+                                confirmationOverdue && "text-danger"
+                              )}
+                            />
+                          </IconAction>
+                        )}
+                        {enableConfirmationFollowUp && orderHasFollowUpNote && (
+                          <IconAction
+                            label="Note de suivi confirmation"
+                            onClick={() => setConfirmationFollowUpOrder(order)}
+                            loading={loading}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                          </IconAction>
+                        )}
                         <IconAction
                           label="Voir la commande"
                           onClick={() => setDetailOrder(order)}
@@ -718,6 +772,29 @@ export function ShopifyOrdersManager({
                             return_note_at: now,
                             return_note_by: livreurProfileId ?? null,
                           }
+                        : {}),
+                    }
+                  : o
+              )
+            );
+            router.refresh();
+          }}
+        />
+      )}
+
+      {confirmationFollowUpOrder && (
+        <ConfirmationFollowUpModal
+          order={confirmationFollowUpOrder}
+          onClose={() => setConfirmationFollowUpOrder(null)}
+          onSaved={(patch) => {
+            setOrders((prev) =>
+              prev.map((o) =>
+                o.id === confirmationFollowUpOrder.id
+                  ? {
+                      ...o,
+                      ...patch,
+                      ...(patch.cashier_confirmation_status === "confirmed"
+                        ? { cashier_confirmation_note: null }
                         : {}),
                     }
                   : o

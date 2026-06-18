@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Boxes,
   Gift,
+  MessageSquare,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
@@ -72,6 +73,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub") {
 const cashierLinks = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
   { href: "/cashier/orders", label: "Commandes", icon: ShoppingBag },
+  { href: "/cashier/notes", label: "Notes commandes", icon: MessageSquare },
   { href: "/cashier/transfers", label: "Réceptions hub", icon: Boxes },
   { href: "/cashier/customers", label: "Clients fidélité", icon: Gift },
   { href: "/cashier/returns", label: "Retours magasin", icon: RotateCcw },

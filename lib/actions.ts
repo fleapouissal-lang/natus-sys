@@ -856,15 +856,6 @@ export async function completeShopifyOrderSale(
   const { syncShopifyWorkflowStatus } = await import("@/lib/shopify/update-order");
   await syncShopifyWorkflowStatus(order.shopify_order_id, "ready");
 
-  try {
-    const { sendShopifyOrderWhatsAppNotification } = await import(
-      "@/lib/kapso/sale-notification"
-    );
-    await sendShopifyOrderWhatsAppNotification(shopifyOrderId, items);
-  } catch (whatsappError) {
-    console.error("completeShopifyOrderSale WhatsApp:", whatsappError);
-  }
-
   revalidatePath("/cashier/orders");
   revalidatePath("/cashier/sales");
   revalidatePath("/manager/orders");
@@ -1694,4 +1685,54 @@ export async function autoRouteShopifyOrder(
     success: true,
     targetStoreName: result.targetStoreName,
   };
+}
+
+export async function updateShopifyOrderConfirmationFollowUp(
+  orderId: string,
+  status: import("@/lib/shopify/confirmation-follow-up").CashierConfirmationStatus,
+  note?: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+
+  const order = await getShopifyOrderById(orderId);
+  if (!order) return { error: "Commande introuvable" };
+  if (!(await canAccessShopifyOrder(profile, order))) return { error: "Accès refusé" };
+
+  if (!order.whatsapp_confirmation_sent_at) {
+    return { error: "Aucune demande WhatsApp envoyée pour cette commande" };
+  }
+
+  if (order.customer_confirmed_at) {
+    return { error: "Le client a déjà confirmé via WhatsApp" };
+  }
+
+  const trimmedNote =
+    status === "confirmed" ? null : note?.trim() || null;
+  const now = new Date().toISOString();
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("shopify_orders")
+    .update({
+      cashier_confirmation_status: status,
+      cashier_confirmation_note: trimmedNote,
+      cashier_confirmation_at: now,
+      cashier_confirmation_by: profile.id,
+      updated_at: now,
+    })
+    .eq("id", orderId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/cashier/orders");
+  revalidatePath("/cashier/notes");
+  revalidatePath("/manager/orders");
+  revalidatePath("/director/orders");
+
+  return { success: true };
 }

@@ -222,5 +222,16 @@ export async function processShopifyOrder(
     order_status: data.order_status,
   });
 
+  if (row.customer_phone) {
+    try {
+      const { sendShopifyOrderConfirmationRequest } = await import(
+        "@/lib/kapso/shopify-order-whatsapp"
+      );
+      await sendShopifyOrderConfirmationRequest(data.id);
+    } catch (whatsappError) {
+      console.error("processShopifyOrder WhatsApp:", whatsappError);
+    }
+  }
+
   return { ok: true, id: data.id };
 }

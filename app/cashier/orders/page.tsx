@@ -48,6 +48,7 @@ export default async function CashierOrdersPage() {
         enableOrderTransfer
         transferTargets={transferTargets}
         transferProfile={profile}
+        enableConfirmationFollowUp
       />
     </div>
   );

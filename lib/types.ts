@@ -119,6 +119,7 @@ export interface LoyaltyTransaction {
   id: string;
   customer_id: string;
   sale_id: string | null;
+  shopify_order_id?: string | null;
   type: LoyaltyTransactionType;
   points: number;
   description: string | null;
@@ -325,6 +326,20 @@ export interface ShopifyOrder {
   total: number;
   currency: string;
   line_items: ShopifyLineItemRow[];
+  tracking_token?: string;
+  customer_confirmed_at?: string | null;
+  whatsapp_confirmation_sent_at?: string | null;
+  cashier_confirmation_status?:
+    | "confirmed"
+    | "not_confirmed"
+    | "no_response"
+    | "not_interested"
+    | null;
+  cashier_confirmation_note?: string | null;
+  cashier_confirmation_at?: string | null;
+  cashier_confirmation_by?: string | null;
+  loyalty_points_earned?: number;
+  customer_id?: string | null;
   shopify_created_at: string | null;
   assigned_at: string;
   created_at: string;

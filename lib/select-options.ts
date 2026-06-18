@@ -188,3 +188,12 @@ export function activityRoleOptions(
 }
 
 export type { PaymentMethod };
+
+export function cashierConfirmationStatusOptions(): SelectMenuOption[] {
+  return [
+    { value: "confirmed", label: "Confirmée (appel)" },
+    { value: "not_confirmed", label: "Non confirmée" },
+    { value: "no_response", label: "Pas de réponse" },
+    { value: "not_interested", label: "Pas intéressé" },
+  ];
+}

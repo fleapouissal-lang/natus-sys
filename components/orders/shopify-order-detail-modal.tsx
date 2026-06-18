@@ -26,6 +26,7 @@ import {
   resolveProductForLineItem,
   type ProductLineLookup,
 } from "@/lib/shopify/order-cart";
+import { isConfirmationFollowUpResolved } from "@/lib/shopify/confirmation-follow-up";
 import type { ShopifyOrder } from "@/lib/types";
 
 function statusVariant(
@@ -61,6 +62,7 @@ export function ShopifyOrderDetailModal({
 }) {
   const router = useRouter();
   const isCod = order.payment_type === "cod";
+  const confirmationResolved = isConfirmationFollowUpResolved(order);
   const storeName = (order.stores as { name: string } | null)?.name;
   const canSendToPos =
     enablePosCheckout &&
@@ -124,6 +126,44 @@ export function ShopifyOrderDetailModal({
         </section>
       )}
 
+      {(order.cashier_confirmation_status || order.cashier_confirmation_note) &&
+        order.cashier_confirmation_status !== "confirmed" && (
+        <section className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+          <h4 className="mb-2 text-sm font-semibold">Suivi confirmation client</h4>
+          {order.cashier_confirmation_status && (
+            <p className="text-sm font-medium">
+              {order.cashier_confirmation_status === "confirmed"
+                ? "Confirmée (appel)"
+                : order.cashier_confirmation_status === "not_confirmed"
+                  ? "Non confirmée"
+                  : order.cashier_confirmation_status === "no_response"
+                    ? "Pas de réponse"
+                    : "Pas intéressé"}
+            </p>
+          )}
+          {order.cashier_confirmation_note && (
+            <p className="mt-2 text-sm whitespace-pre-wrap">{order.cashier_confirmation_note}</p>
+          )}
+          {order.cashier_confirmation_at && (
+            <p className="mt-2 text-xs text-muted">{formatDate(order.cashier_confirmation_at)}</p>
+          )}
+        </section>
+      )}
+
+      {order.customer_confirmed_at && (
+        <section className="mb-4 rounded-lg border border-success/30 bg-success/5 p-4">
+          <h4 className="mb-1 text-sm font-semibold text-success">Confirmée par le client (WhatsApp)</h4>
+          <p className="text-xs text-muted">{formatDate(order.customer_confirmed_at)}</p>
+        </section>
+      )}
+
+      {order.cashier_confirmation_status === "confirmed" && order.cashier_confirmation_at && (
+        <section className="mb-4 rounded-lg border border-success/30 bg-success/5 p-4">
+          <h4 className="mb-1 text-sm font-semibold text-success">Confirmée (appel caisse)</h4>
+          <p className="text-xs text-muted">{formatDate(order.cashier_confirmation_at)}</p>
+        </section>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <section className="rounded-lg border border-border bg-primary-light/30 p-4">
           <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
@@ -144,7 +184,7 @@ export function ShopifyOrderDetailModal({
                 <dd>{order.customer_email}</dd>
               </div>
             )}
-            {order.customer_phone && (
+            {order.customer_phone && !confirmationResolved && (
               <div>
                 <dt className="flex items-center gap-1 text-muted">
                   <Phone className="h-3.5 w-3.5" />

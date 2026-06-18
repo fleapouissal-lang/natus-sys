@@ -101,3 +101,50 @@ export async function sendKapsoTemplateMessage(
   });
 }
 
+export async function sendKapsoButtonMessage(
+  config: KapsoConfig,
+  to: string,
+  body: string,
+  buttons: { id: string; title: string }[]
+): Promise<KapsoSendResult> {
+  return postKapsoMessage(config, to, {
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: body.slice(0, 1024) },
+      action: {
+        buttons: buttons.slice(0, 3).map((button) => ({
+          type: "reply",
+          reply: {
+            id: button.id.slice(0, 256),
+            title: button.title.slice(0, 20),
+          },
+        })),
+      },
+    },
+  });
+}
+
+export async function sendKapsoCtaUrlMessage(
+  config: KapsoConfig,
+  to: string,
+  body: string,
+  displayText: string,
+  url: string
+): Promise<KapsoSendResult> {
+  return postKapsoMessage(config, to, {
+    type: "interactive",
+    interactive: {
+      type: "cta_url",
+      body: { text: body.slice(0, 1024) },
+      action: {
+        name: "cta_url",
+        parameters: {
+          display_text: displayText.slice(0, 20),
+          url,
+        },
+      },
+    },
+  });
+}
+
