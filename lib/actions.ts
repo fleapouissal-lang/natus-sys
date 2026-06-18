@@ -635,6 +635,16 @@ export async function completeSale(
 
   if (error) return { error: error.message };
 
+  const saleId = data as string;
+  try {
+    const { sendSaleWhatsAppNotification } = await import(
+      "@/lib/kapso/sale-notification"
+    );
+    await sendSaleWhatsAppNotification(saleId);
+  } catch (whatsappError) {
+    console.error("completeSale WhatsApp:", whatsappError);
+  }
+
   revalidatePath("/cashier/pos");
   revalidatePath("/cashier/sales");
   revalidatePath("/manager/sales");
@@ -845,6 +855,15 @@ export async function completeShopifyOrderSale(
 
   const { syncShopifyWorkflowStatus } = await import("@/lib/shopify/update-order");
   await syncShopifyWorkflowStatus(order.shopify_order_id, "ready");
+
+  try {
+    const { sendShopifyOrderWhatsAppNotification } = await import(
+      "@/lib/kapso/sale-notification"
+    );
+    await sendShopifyOrderWhatsAppNotification(shopifyOrderId, items);
+  } catch (whatsappError) {
+    console.error("completeShopifyOrderSale WhatsApp:", whatsappError);
+  }
 
   revalidatePath("/cashier/orders");
   revalidatePath("/cashier/sales");
