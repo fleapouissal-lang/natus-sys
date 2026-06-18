@@ -1,6 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import {
+  charFromScannerKeyCode,
+  isScannerKeyBurst,
+} from "@/lib/barcode/scanner-key";
 
 interface UseBarcodeScannerOptions {
   onScan: (barcode: string) => void;
@@ -48,23 +52,36 @@ export function useBarcodeScanner({
   }, [enabled, autoRefocus, focusInput]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    const now = Date.now();
-    const isScanner = now - lastKeyTimeRef.current < 50;
-    lastKeyTimeRef.current = now;
+    const isScanner = isScannerKeyBurst(lastKeyTimeRef.current);
+    lastKeyTimeRef.current = Date.now();
 
     if (e.key === "Enter") {
       e.preventDefault();
       const inputValue = (e.target as HTMLInputElement).value.trim();
-      const code = inputValue || bufferRef.current.trim();
+      const code = bufferRef.current.trim() || inputValue;
       if (code) {
         onScan(code);
+        if (inputRef.current) inputRef.current.value = "";
         bufferRef.current = "";
       }
       return;
     }
 
-    if (isScanner && e.key.length === 1) {
-      bufferRef.current += e.key;
+    if (
+      isScanner &&
+      e.key.length === 1 &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey
+    ) {
+      const ch = charFromScannerKeyCode(e);
+      if (ch) {
+        e.preventDefault();
+        bufferRef.current += ch;
+        if (inputRef.current) inputRef.current.value = bufferRef.current;
+      }
+    } else if (!isScanner) {
+      bufferRef.current = "";
     }
   }
 

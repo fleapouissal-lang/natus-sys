@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -36,6 +36,10 @@ import { LoyaltyCardQrForCashier } from "@/components/loyalty/loyalty-card-clien
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
+import {
+  charFromScannerKeyCode,
+  isScannerKeyBurst,
+} from "@/lib/barcode/scanner-key";
 
 export function PosCheckoutPanel({
   subtotal,
@@ -65,11 +69,13 @@ export function PosCheckoutPanel({
   const [qrCustomer, setQrCustomer] = useState<LoyaltyCustomer | null>(null);
   const [focused, setFocused] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const scanBufferRef = useRef("");
+  const lastScanKeyRef = useRef(0);
 
   const hasBenefits = Boolean(customer || promo);
 
-  function applyCard() {
-    const trimmed = input.trim();
+  function applyCard(raw?: string) {
+    const trimmed = (raw ?? input).trim();
     if (!trimmed || pending) return;
 
     setError("");
@@ -82,12 +88,13 @@ export function PosCheckoutPanel({
       onCustomerChange(result.customer);
       onPointsToRedeemChange(0);
       setInput("");
+      scanBufferRef.current = "";
       setHidden(false);
     });
   }
 
-  function applyPromo() {
-    const trimmed = input.trim();
+  function applyPromo(raw?: string) {
+    const trimmed = (raw ?? input).trim();
     if (!trimmed || pending) return;
 
     setError("");
@@ -99,6 +106,7 @@ export function PosCheckoutPanel({
       }
       onPromoChange(result.promo);
       setInput("");
+      scanBufferRef.current = "";
     });
   }
 
@@ -212,17 +220,44 @@ export function PosCheckoutPanel({
               <input
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  scanBufferRef.current = "";
+                  setInput(e.target.value);
+                }}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
                 onKeyDown={(e) => {
+                  const isScanner = isScannerKeyBurst(lastScanKeyRef.current);
+                  lastScanKeyRef.current = Date.now();
+
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    if (looksLikePromoCode(input)) {
-                      applyPromo();
+                    const code = scanBufferRef.current.trim() || input.trim();
+                    scanBufferRef.current = "";
+                    if (code) setInput(code);
+                    if (looksLikePromoCode(code)) {
+                      applyPromo(code);
                     } else {
-                      applyCard();
+                      applyCard(code);
                     }
+                    return;
+                  }
+
+                  if (
+                    isScanner &&
+                    e.key.length === 1 &&
+                    !e.ctrlKey &&
+                    !e.metaKey &&
+                    !e.altKey
+                  ) {
+                    const ch = charFromScannerKeyCode(e);
+                    if (ch) {
+                      e.preventDefault();
+                      scanBufferRef.current += ch;
+                      setInput(scanBufferRef.current);
+                    }
+                  } else if (!isScanner) {
+                    scanBufferRef.current = "";
                   }
                 }}
                 placeholder="Téléphone, carte, QR ou code promo"
@@ -237,7 +272,7 @@ export function PosCheckoutPanel({
                 size="sm"
                 variant="secondary"
                 disabled={pending || !input.trim()}
-                onClick={applyCard}
+                onClick={() => applyCard()}
                 className="justify-center gap-1.5"
               >
                 <CreditCard className="h-4 w-4" />
@@ -247,7 +282,7 @@ export function PosCheckoutPanel({
                 type="button"
                 size="sm"
                 disabled={pending || !input.trim()}
-                onClick={applyPromo}
+                onClick={() => applyPromo()}
                 className="justify-center gap-1.5"
               >
                 <Tag className="h-4 w-4" />
@@ -367,7 +402,7 @@ export function PosCheckoutPanel({
                   type="button"
                   size="sm"
                   disabled={pending || !input.trim()}
-                  onClick={applyPromo}
+                  onClick={() => applyPromo()}
                 >
                   Promo
                 </Button>

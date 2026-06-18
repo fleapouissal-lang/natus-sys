@@ -2,6 +2,10 @@
 
 import { useRef } from "react";
 import { ScanBarcode } from "lucide-react";
+import {
+  charFromScannerKeyCode,
+  isScannerKeyBurst,
+} from "@/lib/barcode/scanner-key";
 import { cn } from "@/lib/utils";
 
 interface BarcodeInputProps {
@@ -51,17 +55,15 @@ export function BarcodeInput({
       return;
     }
 
-    const now = Date.now();
-    const gap = now - lastKeyRef.current;
-    const isContinuation = gap <= 50;
-    lastKeyRef.current = now;
+    const isContinuation = isScannerKeyBurst(lastKeyRef.current);
+    lastKeyRef.current = Date.now();
 
     if (e.key === "Enter") {
       e.preventDefault();
       const inputVal = (e.target as HTMLInputElement).value.trim();
       const code = replaceOnScan
-        ? inputVal || bufferRef.current.trim()
-        : inputVal || (bufferRef.current || value).trim();
+        ? bufferRef.current.trim() || inputVal
+        : bufferRef.current.trim() || inputVal || value.trim();
       if (code) {
         onChange(code);
         onScan?.(code);
@@ -77,20 +79,23 @@ export function BarcodeInput({
     }
 
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const scanChar = isContinuation ? charFromScannerKeyCode(e) : null;
+
       if (replaceOnScan) {
-        if (isContinuation) {
-          bufferRef.current += e.key;
+        if (isContinuation && scanChar) {
+          bufferRef.current += scanChar;
           onChange(bufferRef.current);
           e.preventDefault();
-        } else {
-          bufferRef.current = e.key;
+        } else if (!isContinuation) {
+          bufferRef.current = "";
         }
         return;
       }
 
-      if (isContinuation) {
-        bufferRef.current += e.key;
-      } else {
+      if (isContinuation && scanChar) {
+        bufferRef.current += scanChar;
+        e.preventDefault();
+      } else if (!isContinuation) {
         bufferRef.current = "";
       }
     }
