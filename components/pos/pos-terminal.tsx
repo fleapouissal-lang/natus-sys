@@ -25,7 +25,7 @@ import { PosOrdersPanel } from "@/components/pos/pos-orders-panel";
 import { Modal } from "@/components/ui/modal";
 import { Receipt, printReceipt, type ReceiptData } from "@/components/pos/receipt";
 import { ProductCatalog } from "@/components/pos/product-catalog";
-import { PosLoyaltyPanel } from "@/components/loyalty/pos-loyalty-panel";
+import { PosCheckoutPanel } from "@/components/pos/pos-checkout-panel";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
@@ -41,10 +41,14 @@ import type { Product, CartItem, UserRole, PaymentMethod, Store, ShopifyOrder, L
 import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 import { parseLoyaltyQrPayload } from "@/lib/loyalty/qr";
 import {
-  payableAfterRedemption,
   discountFromPoints,
   pointsEarnedForAmount,
 } from "@/lib/loyalty/points";
+import {
+  checkoutTotal,
+  promoDiscountAmount,
+  type AppliedPosPromo,
+} from "@/lib/marketing/pos-promo";
 import type { ShopifyOrderPosContext } from "@/lib/orders";
 
 type ManagerMode = "stock" | "sale";
@@ -102,6 +106,7 @@ export function PosTerminal({
   const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(null);
   const [loyaltyCustomer, setLoyaltyCustomer] = useState<LoyaltyCustomer | null>(null);
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPosPromo | null>(null);
   const [scanListening, setScanListening] = useState(true);
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -367,7 +372,8 @@ export function PosTerminal({
           isManagementUser ? defaultStoreId : undefined,
           loyaltyCustomer
             ? { customerId: loyaltyCustomer.id, pointsToRedeem }
-            : undefined
+            : undefined,
+          appliedPromo?.code
         );
 
     if (result.error) {
@@ -381,7 +387,11 @@ export function PosTerminal({
       0
     );
     const loyaltyDiscount = discountFromPoints(pointsToRedeem, loyaltySettings);
-    const total = payableAfterRedemption(subtotal, pointsToRedeem, loyaltySettings);
+    const afterLoyalty = Math.max(0, subtotal - loyaltyDiscount);
+    const promoDiscount = appliedPromo
+      ? promoDiscountAmount(afterLoyalty, appliedPromo.discountPercent)
+      : 0;
+    const total = checkoutTotal(subtotal, loyaltyDiscount, appliedPromo);
     const pointsEarned = loyaltyCustomer ? pointsEarnedForAmount(total, loyaltySettings) : 0;
 
     setReceipt({
@@ -389,6 +399,8 @@ export function PosTerminal({
       total,
       subtotal,
       loyaltyDiscount,
+      promoCode: appliedPromo?.code,
+      promoDiscount,
       pointsEarned,
       pointsRedeemed: pointsToRedeem,
       paymentMethod: effectivePaymentMethod,
@@ -410,6 +422,7 @@ export function PosTerminal({
     setActiveShopifyOrder(null);
     setLoyaltyCustomer(null);
     setPointsToRedeem(0);
+    setAppliedPromo(null);
     setValidatedQty({});
     setMissingShopifyProducts([]);
     setLoading(false);
@@ -441,7 +454,11 @@ export function PosTerminal({
     0
   );
   const loyaltyDiscount = discountFromPoints(pointsToRedeem, loyaltySettings);
-  const total = payableAfterRedemption(subtotal, pointsToRedeem, loyaltySettings);
+  const afterLoyalty = Math.max(0, subtotal - loyaltyDiscount);
+  const promoDiscount = appliedPromo
+    ? promoDiscountAmount(afterLoyalty, appliedPromo.discountPercent)
+    : 0;
+  const total = checkoutTotal(subtotal, loyaltyDiscount, appliedPromo);
   const { ht: totalHt, tva: totalTva, ttc: totalTtc } = computeTvaBreakdown(total);
   const tvaPercent = Math.round(TVA_RATE * 100);
 
@@ -687,12 +704,15 @@ export function PosTerminal({
 
                   {!isShopifyOrderCheckout && !isStockScan && (
                     <div className="mt-4">
-                      <PosLoyaltyPanel
+                      <PosCheckoutPanel
                         subtotal={subtotal}
+                        storeId={defaultStoreId || undefined}
                         customer={loyaltyCustomer}
                         pointsToRedeem={pointsToRedeem}
+                        promo={appliedPromo}
                         onCustomerChange={setLoyaltyCustomer}
                         onPointsToRedeemChange={setPointsToRedeem}
+                        onPromoChange={setAppliedPromo}
                         loyaltySettings={loyaltySettings}
                       />
                     </div>
@@ -793,16 +813,24 @@ export function PosTerminal({
 
                 <div className="shrink-0 bg-surface px-4 py-4">
                   <div className="space-y-2 text-sm">
-                    {loyaltyDiscount > 0 && (
+                    {(loyaltyDiscount > 0 || promoDiscount > 0) && (
                       <>
                         <div className="flex items-center justify-between text-muted">
                           <span>Sous-total</span>
                           <span>{formatCurrency(subtotal)}</span>
                         </div>
-                        <div className="flex items-center justify-between text-success">
-                          <span>Points fidélité</span>
-                          <span>-{formatCurrency(loyaltyDiscount)}</span>
-                        </div>
+                        {loyaltyDiscount > 0 && (
+                          <div className="flex items-center justify-between text-success">
+                            <span>Points fidélité</span>
+                            <span>-{formatCurrency(loyaltyDiscount)}</span>
+                          </div>
+                        )}
+                        {promoDiscount > 0 && appliedPromo && (
+                          <div className="flex items-center justify-between text-success">
+                            <span>Code {appliedPromo.code}</span>
+                            <span>-{formatCurrency(promoDiscount)}</span>
+                          </div>
+                        )}
                       </>
                     )}
                     <div className="flex items-center justify-between text-muted">

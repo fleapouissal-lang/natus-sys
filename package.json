@@ -17,6 +17,7 @@
     "seed:shopify-whatsapp": "node scripts/seed-shopify-whatsapp-test.mjs",
     "seed:shopify-feedback": "node scripts/seed-shopify-feedback-test.mjs",
     "seed:marketing-demo": "node scripts/seed-marketing-demo.mjs",
+    "seed:marketing-test": "npm run db:migrate && node scripts/seed-marketing-test.mjs",
     "upload-images": "node scripts/upload-product-images.mjs"
   },
   "dependencies": {

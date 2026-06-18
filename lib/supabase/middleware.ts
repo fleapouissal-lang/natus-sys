@@ -36,6 +36,13 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+
+  if (pathname.startsWith("/en/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/EN${pathname.slice(3)}`;
+    return applySecurityHeaders(NextResponse.redirect(url));
+  }
+
   const isAuthRoute = pathname.startsWith("/login");
   const isProtected =
     pathname.startsWith("/manager") ||

@@ -85,6 +85,8 @@ export interface Sale {
   loyalty_discount: number;
   loyalty_points_redeemed: number;
   loyalty_points_earned: number;
+  promo_code: string | null;
+  promo_discount: number;
   created_at: string;
   profiles?: Pick<Profile, "full_name" | "email">;
   stores?: Pick<Store, "name" | "city"> | null;

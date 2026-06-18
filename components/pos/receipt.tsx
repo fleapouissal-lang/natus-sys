@@ -10,6 +10,8 @@ export interface ReceiptData {
   total: number;
   subtotal?: number;
   loyaltyDiscount?: number;
+  promoCode?: string;
+  promoDiscount?: number;
   pointsEarned?: number;
   pointsRedeemed?: number;
   loyaltyCardNumber?: string;
@@ -49,6 +51,12 @@ export function Receipt({ data }: { data: ReceiptData }) {
         )}
         {data.customerName && <p>Client : {data.customerName}</p>}
         {data.loyaltyCardNumber && <p>Carte : {data.loyaltyCardNumber}</p>}
+        {data.promoCode && (
+          <p>
+            Promo {data.promoCode}
+            {data.promoDiscount ? ` : -${formatCurrency(data.promoDiscount)}` : ""}
+          </p>
+        )}
         {data.pointsRedeemed ? (
           <p>Points utilisés : {data.pointsRedeemed}</p>
         ) : null}
@@ -75,6 +83,24 @@ export function Receipt({ data }: { data: ReceiptData }) {
       <div className="my-3 border-t border-dashed border-gray-400" />
 
       <div className="space-y-1 text-xs text-gray-600">
+        {data.subtotal != null && (data.loyaltyDiscount || data.promoDiscount) ? (
+          <div className="flex justify-between">
+            <span>Sous-total</span>
+            <span>{formatCurrency(data.subtotal)}</span>
+          </div>
+        ) : null}
+        {data.loyaltyDiscount ? (
+          <div className="flex justify-between">
+            <span>Fidélité</span>
+            <span>-{formatCurrency(data.loyaltyDiscount)}</span>
+          </div>
+        ) : null}
+        {data.promoDiscount ? (
+          <div className="flex justify-between">
+            <span>Promo {data.promoCode}</span>
+            <span>-{formatCurrency(data.promoDiscount)}</span>
+          </div>
+        ) : null}
         <div className="flex justify-between">
           <span>Total HT</span>
           <span>{formatCurrency(ht)}</span>

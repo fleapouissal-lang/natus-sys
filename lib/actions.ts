@@ -612,7 +612,8 @@ export async function completeSale(
   items: { product_id: string; quantity: number }[],
   paymentMethod: "cash" | "card" = "cash",
   storeId?: string,
-  loyalty?: { customerId: string; pointsToRedeem?: number }
+  loyalty?: { customerId: string; pointsToRedeem?: number },
+  promoCode?: string | null
 ) {
   const profile = await requireRole([...MANAGEMENT, "cashier"]);
   if (!profile) return { error: "Non autorisé" };
@@ -631,6 +632,7 @@ export async function completeSale(
     p_store_id: storeId || null,
     p_customer_id: loyalty?.customerId || null,
     p_points_to_redeem: loyalty?.pointsToRedeem || 0,
+    p_promo_code: promoCode?.trim() || null,
   });
 
   if (error) return { error: error.message };
@@ -793,6 +795,66 @@ export async function lookupLoyaltyCustomer(
   }
 
   return lookupLoyaltyCustomerByPhone(trimmed);
+}
+
+export async function validatePosPromoCode(
+  code: string,
+  storeId?: string,
+  customerId?: string
+): Promise<
+  | {
+      promo: import("@/lib/marketing/pos-promo").AppliedPosPromo;
+    }
+  | { error: string }
+> {
+  const profile = await requireRole([...MANAGEMENT, "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const trimmed = code.trim();
+  if (!trimmed) return { error: "Code promo vide" };
+
+  const supabase = await createClient();
+  let resolvedStoreId = storeId || profile.store_id;
+
+  if (!resolvedStoreId && profile.role !== "cashier") {
+    const { data: store } = await supabase
+      .from("stores")
+      .select("id")
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    resolvedStoreId = store?.id ?? null;
+  }
+
+  if (!resolvedStoreId) {
+    return { error: "Magasin non configuré pour valider le code promo" };
+  }
+
+  const { data, error } = await supabase.rpc("validate_pos_promo_code", {
+    p_code: trimmed,
+    p_store_id: resolvedStoreId,
+    p_customer_id: customerId || null,
+  });
+
+  if (error) return { error: error.message };
+
+  const row = (data as Array<{
+    normalized_code: string;
+    promo_label: string;
+    discount_percent: number;
+    is_winback: boolean;
+  }> | null)?.[0];
+
+  if (!row) return { error: "Code promo invalide" };
+
+  return {
+    promo: {
+      code: row.normalized_code,
+      label: row.promo_label,
+      discountPercent: Number(row.discount_percent),
+      isWinback: row.is_winback,
+    },
+  };
 }
 
 export async function lookupLoyaltyCustomerByScan(
