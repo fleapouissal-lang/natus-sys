@@ -561,8 +561,8 @@ export function PosTerminal({
 
         {!isStockScan && (
           <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-            {/* Colonne gauche 60% — scroll catalogue uniquement */}
-            <div className="flex min-h-0 w-full flex-col lg:w-[60%]">
+            {/* Colonne gauche 65% — catalogue produits */}
+            <div className="flex min-h-0 w-full flex-col lg:w-[65%]">
               {orderNotifications && <CashierNotificationBar />}
               <div className="shrink-0 px-4 py-3">
                 <div className="flex items-center justify-between gap-3">
@@ -677,8 +677,8 @@ export function PosTerminal({
               </div>
             </div>
 
-            {/* Colonne droite 40% — panier fixe pleine hauteur */}
-            <div className="flex h-full min-h-0 w-full flex-col bg-page lg:w-[40%] lg:border-l lg:border-border">
+            {/* Colonne droite 35% — facture / panier */}
+            <div className="flex h-full min-h-0 w-full flex-col bg-page lg:w-[35%] lg:border-l lg:border-border">
               <div className="flex h-full min-h-0 flex-col">
                 <div className="shrink-0 px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
