@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { sidebarCollapsedForRoute } from "@/lib/layout/sidebar-state";
 import {
   LayoutDashboard,
   Package,
@@ -29,8 +30,6 @@ import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
 import { cn } from "@/lib/utils";
 import { getRoleLabel, getManagementBasePath } from "@/lib/permissions";
 import type { UserRole } from "@/lib/types";
-
-const SIDEBAR_COLLAPSED_KEY = "natus-sidebar-collapsed";
 
 function buildManagementLinks(basePath: "/director" | "/manager" | "/hub") {
   if (basePath === "/hub") {
@@ -150,7 +149,7 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => sidebarCollapsedForRoute(pathname));
 
   const basePath = getManagementBasePath(role);
   const links =
@@ -164,23 +163,15 @@ export function Sidebar({
   const roleLabel = getRoleLabel(role);
 
   useEffect(() => {
-    if (pathname.startsWith("/cashier/pos")) {
-      setCollapsed(true);
-      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "true");
-      return;
-    }
-    const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
-    if (stored === "true") {
-      setCollapsed(true);
-    }
+    setCollapsed(sidebarCollapsedForRoute(pathname));
   }, [pathname]);
 
+  useEffect(() => {
+    localStorage.removeItem("natus-sidebar-collapsed");
+  }, []);
+
   function toggleCollapsed() {
-    setCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
-      return next;
-    });
+    setCollapsed((prev) => !prev);
   }
 
   async function handleLogout() {

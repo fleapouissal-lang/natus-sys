@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
 import { Sidebar } from "@/components/layout/sidebar";
 import { SessionGuard } from "@/components/auth/session-guard";
 import { CashierNotificationsProvider } from "@/components/notifications/cashier-notifications-context";
@@ -22,7 +23,7 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isPos = pathname.startsWith("/cashier/pos");
+  const isPos = isCashierPosRoute(pathname);
   const orderNotifications = Boolean(storeId);
 
   const shell = (
