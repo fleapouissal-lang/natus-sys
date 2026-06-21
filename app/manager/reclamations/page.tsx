@@ -15,7 +15,7 @@ export default async function ManagerReclamationsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Réclamations clients</h1>
         <p className="mt-1 text-muted">
-          Réclamations WhatsApp des clients — magasin de livraison / vente (gérants uniquement)
+          Réclamations WhatsApp et formulaire web — visible par les gérants (magasin) et la direction
           {newCount > 0 ? ` · ${newCount} nouvelle(s)` : ""}
         </p>
       </div>

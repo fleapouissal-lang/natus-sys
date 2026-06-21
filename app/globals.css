@@ -406,6 +406,11 @@ textarea:focus {
   border-radius: var(--radius-natus) !important;
 }
 
+.select-menu .select-menu-icon-box {
+  background: transparent !important;
+  color: var(--primary) !important;
+}
+
 .select-menu-scroll {
   scrollbar-width: thin;
   scrollbar-color: var(--primary) transparent;

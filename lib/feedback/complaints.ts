@@ -1,16 +1,24 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Profile } from "@/lib/types";
 
-export type StoreComplaintSource = "shopify_delivery" | "pos_sale";
+export type StoreComplaintSource =
+  | "shopify_delivery"
+  | "pos_sale"
+  | "web_service"
+  | "web_order"
+  | "web_other";
 
 export type StoreComplaint = {
   id: string;
-  store_id: string;
+  store_id: string | null;
   source: StoreComplaintSource;
   shopify_order_id: string | null;
   sale_id: string | null;
   customer_phone: string;
   customer_name: string | null;
+  customer_email: string | null;
+  order_number: string | null;
+  photo_url: string | null;
   message: string;
   status: "new" | "resolved";
   created_at: string;
@@ -22,11 +30,14 @@ export type StoreComplaint = {
 
 export async function createStoreComplaint(input: {
   storeId: string;
-  source: StoreComplaintSource;
+  source: Exclude<StoreComplaintSource, "web_other">;
   shopifyOrderId?: string | null;
   saleId?: string | null;
   customerPhone: string;
   customerName?: string | null;
+  customerEmail?: string | null;
+  orderNumber?: string | null;
+  photoUrl?: string | null;
   message: string;
 }): Promise<StoreComplaint | null> {
   const admin = createAdminClient();
@@ -39,6 +50,9 @@ export async function createStoreComplaint(input: {
       sale_id: input.saleId ?? null,
       customer_phone: input.customerPhone,
       customer_name: input.customerName?.trim() || null,
+      customer_email: input.customerEmail?.trim() || null,
+      order_number: input.orderNumber?.trim() || null,
+      photo_url: input.photoUrl ?? null,
       message: input.message.trim(),
     })
     .select("*")

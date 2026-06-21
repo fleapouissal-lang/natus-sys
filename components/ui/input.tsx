@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   inputSize?: "sm" | "md" | "lg";
+  icon?: LucideIcon;
 }
 
 const inputSizeClasses = {
@@ -28,9 +29,25 @@ export function Input({
   className,
   id,
   inputSize = "md",
+  icon: Icon,
   ...props
 }: InputProps) {
   const inputId = id || label?.toLowerCase().replace(/\s/g, "-");
+
+  const field = (
+    <input
+      id={inputId}
+      className={cn(
+        "natus-field bg-surface transition-colors",
+        inputSizeClasses[inputSize],
+        Icon && "pl-10",
+        "placeholder:text-muted",
+        error && "border-danger focus:border-danger focus:ring-danger/20",
+        className
+      )}
+      {...props}
+    />
+  );
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -42,17 +59,16 @@ export function Input({
           {label}
         </label>
       )}
-      <input
-        id={inputId}
-        className={cn(
-          "natus-field bg-surface transition-colors",
-          inputSizeClasses[inputSize],
-          "placeholder:text-muted",
-          error && "border-danger focus:border-danger focus:ring-danger/20",
-          className
-        )}
-        {...props}
-      />
+      {Icon ? (
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center bg-transparent text-primary">
+            <Icon className="h-4 w-4" strokeWidth={2} />
+          </span>
+          {field}
+        </div>
+      ) : (
+        field
+      )}
       {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );

@@ -1911,6 +1911,7 @@ export async function resolveStoreComplaint(
   if (complaint.status === "resolved") return { success: true };
 
   if (profile.role === "manager") {
+    if (!complaint.store_id) return { error: "Non autorisé" };
     const access = await assertStoreAccess(profile, complaint.store_id);
     if (access.error) return { error: access.error };
   }

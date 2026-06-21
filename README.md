@@ -25,6 +25,8 @@ Application de caisse, fidélité, commandes Shopify et marketing WhatsApp pour 
 npm install
 cp .env.local.example .env.local
 # Renseigner les clés Supabase, Kapso, etc.
+npx supabase login
+# Ajouter SUPABASE_DB_PASSWORD dans .env.local (Dashboard → Database)
 npm run db:migrate
 npm run seed:users
 npm run dev

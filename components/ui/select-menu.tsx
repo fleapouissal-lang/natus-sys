@@ -45,19 +45,16 @@ export interface SelectMenuProps {
 
 function OptionIcon({
   icon: Icon,
-  active,
   compact = false,
 }: {
   icon: LucideIcon;
-  active?: boolean;
   compact?: boolean;
 }) {
   return (
     <span
       className={cn(
-        "select-menu-icon-box flex shrink-0 items-center justify-center",
-        compact ? "h-6 w-6" : "h-9 w-9",
-        active ? "bg-champagne text-black" : "bg-champagne text-black"
+        "select-menu-icon-box flex shrink-0 items-center justify-center bg-transparent text-primary",
+        compact ? "h-6 w-6" : "h-9 w-9"
       )}
     >
       <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} strokeWidth={2} />
@@ -319,7 +316,7 @@ export function SelectMenu({
                       )}
                     >
                       {showIcons && (
-                        <OptionIcon icon={Icon} active={active} compact={compact} />
+                        <OptionIcon icon={Icon} compact={compact} />
                       )}
                       <span className="min-w-0 flex-1">
                         <span className="block font-medium leading-tight">
@@ -378,7 +375,7 @@ export function SelectMenu({
         )}
       >
         {showIcons && (
-          <OptionIcon icon={SelectedIcon} active={Boolean(selected)} compact={compact} />
+          <OptionIcon icon={SelectedIcon} compact={compact} />
         )}
         <span
           className={cn(

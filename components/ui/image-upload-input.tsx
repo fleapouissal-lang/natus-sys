@@ -134,10 +134,8 @@ export function ImageUploadInput({
           </div>
         ) : (
           <>
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-primary/15 bg-primary/[0.04]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/30">
-                <Plus className="h-5 w-5 text-primary" strokeWidth={2} />
-              </div>
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-primary/30 bg-transparent">
+              <Plus className="h-6 w-6 text-primary" strokeWidth={2} />
             </div>
 
             <p className="text-base font-semibold text-primary">{label}</p>

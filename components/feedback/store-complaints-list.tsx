@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Phone, CheckCircle2, Search } from "lucide-react";
+import { Phone, CheckCircle2, Search, Mail, ExternalLink, ImageIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,9 @@ import type { StoreComplaint } from "@/lib/feedback/complaints";
 const SOURCE_LABELS: Record<StoreComplaint["source"], string> = {
   shopify_delivery: "Livraison Shopify",
   pos_sale: "Achat magasin",
+  web_service: "Service magasin (web)",
+  web_order: "Commande (web)",
+  web_other: "Autre (web)",
 };
 
 const STATUS_OPTIONS = [
@@ -29,6 +32,9 @@ const SOURCE_OPTIONS = [
   { value: "", label: "Toutes les sources" },
   { value: "shopify_delivery", label: "Livraison Shopify" },
   { value: "pos_sale", label: "Achat magasin" },
+  { value: "web_service", label: "Service magasin (web)" },
+  { value: "web_order", label: "Commande (web)" },
+  { value: "web_other", label: "Autre (web)" },
 ];
 
 export function StoreComplaintsList({
@@ -72,9 +78,11 @@ export function StoreComplaintsList({
       return (
         complaint.message.toLowerCase().includes(q) ||
         (complaint.customer_name?.toLowerCase().includes(q) ?? false) ||
+        (complaint.customer_email?.toLowerCase().includes(q) ?? false) ||
         complaint.customer_phone.includes(q) ||
         (complaint.stores?.name?.toLowerCase().includes(q) ?? false) ||
-        (complaint.shopify_orders?.order_number?.toLowerCase().includes(q) ?? false)
+        (complaint.shopify_orders?.order_number?.toLowerCase().includes(q) ?? false) ||
+        (complaint.order_number?.toLowerCase().includes(q) ?? false)
       );
     });
   }, [complaints, search, statusFilter, sourceFilter, storeFilter]);
@@ -217,14 +225,36 @@ export function StoreComplaintsList({
                       <Phone className="h-3 w-3" />
                       {formatPhoneDisplay(complaint.customer_phone)}
                     </a>
+                    {complaint.customer_email && (
+                      <a
+                        href={`mailto:${complaint.customer_email}`}
+                        className="mt-1 flex items-center gap-1 text-xs text-muted hover:text-primary"
+                      >
+                        <Mail className="h-3 w-3" />
+                        {complaint.customer_email}
+                      </a>
+                    )}
                   </td>
                   <td className="max-w-xs px-6 py-4">
                     <p className="line-clamp-2 text-foreground" title={complaint.message}>
                       {complaint.message}
                     </p>
+                    {complaint.photo_url && (
+                      <a
+                        href={complaint.photo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                      >
+                        <ImageIcon className="h-3 w-3" />
+                        Voir la photo
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-muted">
-                    {complaint.shopify_orders?.order_number || "—"}
+                    {complaint.shopify_orders?.order_number ||
+                      (complaint.order_number ? `#${complaint.order_number.replace(/^#/, "")}` : "—")}
                   </td>
                   {canResolve && (
                     <td className="px-6 py-4">
