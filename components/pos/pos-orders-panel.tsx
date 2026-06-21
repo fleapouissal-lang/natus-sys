@@ -6,7 +6,13 @@ import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { DateInputField } from "@/components/ui/date-input-field";
 import { formatCurrency, formatDate, toLocalDateKey, cn } from "@/lib/utils";
-import { weekToTodayDateKeys } from "@/lib/store-tracking-period";
+import {
+  detectOrderDatePreset,
+  orderDatePresetLabel,
+  orderDatePresetToKeys,
+  type OrderDatePreset,
+} from "@/lib/store-tracking-period";
+import { OrderDatePeriodFilter } from "@/components/orders/order-date-period-filter";
 import { canPrepareOrderForPos } from "@/lib/shopify/order-pos";
 import { paymentTypeLabel, workflowStatusLabel } from "@/lib/shopify/order-status";
 import type { ShopifyOrder } from "@/lib/types";
@@ -22,10 +28,20 @@ export function PosOrdersPanel({
   onClose: () => void;
   onSelectOrder: (order: ShopifyOrder) => void;
 }) {
-  const weekRange = weekToTodayDateKeys();
+  const defaultRange = orderDatePresetToKeys("week");
   const [search, setSearch] = useState("");
-  const [dateFrom, setDateFrom] = useState(weekRange.from);
-  const [dateTo, setDateTo] = useState(weekRange.to);
+  const [dateFrom, setDateFrom] = useState(defaultRange.from);
+  const [dateTo, setDateTo] = useState(defaultRange.to);
+  const activeDatePreset = useMemo(
+    () => detectOrderDatePreset(dateFrom, dateTo),
+    [dateFrom, dateTo]
+  );
+
+  function applyDatePreset(preset: OrderDatePreset) {
+    const { from, to } = orderDatePresetToKeys(preset);
+    setDateFrom(from);
+    setDateTo(to);
+  }
 
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -71,6 +87,12 @@ export function PosOrdersPanel({
         </button>
       </div>
 
+      <OrderDatePeriodFilter
+        activePreset={activeDatePreset}
+        onPresetChange={applyDatePreset}
+        className="mb-4"
+      />
+
       <div className="mb-4 grid gap-3 sm:grid-cols-2">
         <DateInputField label="Du" value={dateFrom} onChange={setDateFrom} />
         <DateInputField label="Au" value={dateTo} onChange={setDateTo} />
@@ -89,7 +111,7 @@ export function PosOrdersPanel({
 
       <p className="mb-3 text-xs text-muted">
         {filteredOrders.length} commande{filteredOrders.length !== 1 ? "s" : ""}
-        {dateFrom === weekRange.from && dateTo === weekRange.to ? " — cette semaine" : ""}
+        {activeDatePreset !== "all" ? ` — ${orderDatePresetLabel(activeDatePreset)}` : ""}
       </p>
 
       {filteredOrders.length === 0 ? (

@@ -15,7 +15,13 @@ import { SelectMenu } from "@/components/ui/select-menu";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { DateInputField } from "@/components/ui/date-input-field";
 import { formatCurrency, formatDate, cn, toLocalDateKey } from "@/lib/utils";
-import { weekToTodayDateKeys } from "@/lib/store-tracking-period";
+import {
+  detectOrderDatePreset,
+  orderDatePresetLabel,
+  orderDatePresetToKeys,
+  type OrderDatePreset,
+} from "@/lib/store-tracking-period";
+import { OrderDatePeriodFilter } from "@/components/orders/order-date-period-filter";
 import {
   shopifyOrderStatusFilterOptions,
   shopifyPaymentTypeFilterOptions,
@@ -192,9 +198,8 @@ export function ShopifyOrdersManager({
   enableConfirmationFollowUp?: boolean;
 }) {
   const router = useRouter();
-  const weekRange = weekToTodayDateKeys();
-  const defaultDateFrom = defaultDateThisWeek ? weekRange.from : "";
-  const defaultDateTo = defaultDateThisWeek ? weekRange.to : "";
+  const defaultDatePreset: OrderDatePreset = defaultDateThisWeek ? "week" : "all";
+  const defaultDateRange = orderDatePresetToKeys(defaultDatePreset);
   const [orders, setOrders] = useState(initialOrders);
   const [pending, startTransition] = useTransition();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -208,8 +213,12 @@ export function ShopifyOrdersManager({
   const [confirmationFollowUpOrder, setConfirmationFollowUpOrder] =
     useState<ShopifyOrder | null>(null);
   const [search, setSearch] = useState("");
-  const [dateFrom, setDateFrom] = useState(defaultDateFrom);
-  const [dateTo, setDateTo] = useState(defaultDateTo);
+  const [dateFrom, setDateFrom] = useState(defaultDateRange.from);
+  const [dateTo, setDateTo] = useState(defaultDateRange.to);
+  const activeDatePreset = useMemo(
+    () => detectOrderDatePreset(dateFrom, dateTo),
+    [dateFrom, dateTo]
+  );
   const [paymentFilter, setPaymentFilter] = useState<"" | ShopifyPaymentType>("");
   const [statusFilter, setStatusFilter] = useState<"" | ShopifyWorkflowStatus>("");
 
@@ -234,9 +243,8 @@ export function ShopifyOrdersManager({
     });
   }, [orders, search, dateFrom, dateTo, paymentFilter, statusFilter]);
 
-  const hasDateFilter = defaultDateThisWeek
-    ? dateFrom !== weekRange.from || dateTo !== weekRange.to
-    : Boolean(dateFrom || dateTo);
+  const hasDateFilter =
+    dateFrom !== defaultDateRange.from || dateTo !== defaultDateRange.to;
 
   const hasFilters = Boolean(
     search || hasDateFilter || paymentFilter || statusFilter
@@ -257,10 +265,16 @@ export function ShopifyOrdersManager({
     totalItems: ordersTotalItems,
   } = usePagination(filteredOrders, DEFAULT_PAGE_SIZE, ordersFilterToken);
 
+  function applyDatePreset(preset: OrderDatePreset) {
+    const { from, to } = orderDatePresetToKeys(preset);
+    setDateFrom(from);
+    setDateTo(to);
+  }
+
   function resetFilters() {
     setSearch("");
-    setDateFrom(defaultDateFrom);
-    setDateTo(defaultDateTo);
+    setDateFrom(defaultDateRange.from);
+    setDateTo(defaultDateRange.to);
     setPaymentFilter("");
     setStatusFilter("");
   }
@@ -389,14 +403,15 @@ export function ShopifyOrdersManager({
                 {filteredOrders.length}
               </span>{" "}
               commande{filteredOrders.length !== 1 ? "s" : ""}
-              {defaultDateThisWeek &&
-              dateFrom === weekRange.from &&
-              dateTo === weekRange.to
-                ? " — cette semaine"
-                : ""}
+              {activeDatePreset !== "all" ? ` — ${orderDatePresetLabel(activeDatePreset)}` : ""}
             </p>
           </div>
         </div>
+        <OrderDatePeriodFilter
+          activePreset={activeDatePreset}
+          onPresetChange={applyDatePreset}
+          className="mb-4"
+        />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-end">
           <div>
             <label className="mb-1.5 block text-sm font-medium">Rechercher</label>

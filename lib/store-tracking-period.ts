@@ -38,6 +38,54 @@ export function weekToTodayDateKeys(now = new Date()): { from: string; to: strin
   };
 }
 
+export type OrderDatePreset = "all" | "today" | "week" | "month";
+
+export const ORDER_DATE_PRESETS: { id: OrderDatePreset; label: string }[] = [
+  { id: "all", label: "Tout" },
+  { id: "today", label: "Aujourd'hui" },
+  { id: "week", label: "Cette semaine" },
+  { id: "month", label: "Ce mois" },
+];
+
+/** Clés date début/fin pour un filtre commandes (fr-CA). */
+export function orderDatePresetToKeys(
+  preset: OrderDatePreset,
+  now = new Date()
+): { from: string; to: string } {
+  switch (preset) {
+    case "all":
+      return { from: "", to: "" };
+    case "today": {
+      const today = toLocalDateKey(now);
+      return { from: today, to: today };
+    }
+    case "week":
+      return weekToTodayDateKeys(now);
+    case "month":
+      return {
+        from: toLocalDateKey(startOfMonth(now)),
+        to: toLocalDateKey(now),
+      };
+  }
+}
+
+export function detectOrderDatePreset(
+  from: string,
+  to: string,
+  now = new Date()
+): OrderDatePreset | "custom" {
+  for (const { id } of ORDER_DATE_PRESETS) {
+    const keys = orderDatePresetToKeys(id, now);
+    if (keys.from === from && keys.to === to) return id;
+  }
+  return "custom";
+}
+
+export function orderDatePresetLabel(preset: OrderDatePreset | "custom"): string {
+  if (preset === "custom") return "Période personnalisée";
+  return ORDER_DATE_PRESETS.find((p) => p.id === preset)?.label ?? "";
+}
+
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
