@@ -467,16 +467,15 @@ textarea:focus {
 }
 
 .natus-sales-report-print-only {
-  position: fixed;
-  left: -99999px;
-  top: 0;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  pointer-events: none;
+  display: none !important;
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -484,15 +483,12 @@ textarea:focus {
   #ticket-print,
   #ticket-print *,
   #invoice-print,
-  #invoice-print *,
-  #cashier-sales-report-print,
-  #cashier-sales-report-print * {
+  #invoice-print * {
     visibility: visible;
   }
 
   #ticket-print,
-  #invoice-print,
-  #cashier-sales-report-print {
+  #invoice-print {
     position: absolute;
     left: 0;
     top: 0;
@@ -570,25 +566,65 @@ textarea:focus {
     display: none !important;
   }
 
-  body[data-print-doc="sales-report"] #cashier-sales-report-print {
-    position: static;
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    padding: 0 !important;
-    background: white !important;
+  body[data-print-doc="sales-report"] .natus-sales-report-print-only,
+  body[data-print-doc="sales-report"] .natus-sales-report-print-only * {
+    visibility: visible !important;
   }
 
   body[data-print-doc="sales-report"] .natus-sales-report-print-only {
-    position: static;
-    left: auto;
-    width: auto;
-    height: auto;
-    overflow: visible;
+    display: block !important;
+    position: fixed !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+    z-index: 2147483647 !important;
+  }
+
+  body[data-print-doc="sales-report"] #cashier-sales-report-print {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body[data-print-doc="sales-report"] #cashier-sales-report-print,
+  body[data-print-doc="sales-report"] #cashier-sales-report-print * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report,
+  body[data-print-doc="sales-report"] .natus-sales-report .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report table {
+    page-break-inside: auto;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
   }
 
   body[data-print-doc="invoice"] #cashier-sales-report-print,
   body[data-print-doc="ticket"] #cashier-sales-report-print {
+    display: none !important;
+  }
+
+  body[data-print-doc="sales-report"] #invoice-print,
+  body[data-print-doc="sales-report"] #ticket-print {
     display: none !important;
   }
 }

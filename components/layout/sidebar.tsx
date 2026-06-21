@@ -18,7 +18,6 @@ import {
   ShoppingBag,
   Truck,
   PanelLeftClose,
-  PanelLeftOpen,
   RotateCcw,
   Boxes,
   Gift,
@@ -138,6 +137,81 @@ function SidebarBrand({ collapsed }: { collapsed?: boolean }) {
   );
 }
 
+function SidebarToggle({
+  onToggle,
+  className,
+}: {
+  onToggle: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+      className={cn(
+        "natus-sidebar-toggle flex h-9 w-9 items-center justify-center bg-sidebar text-black/80 transition-opacity hover:opacity-85 cursor-pointer",
+        className
+      )}
+      aria-label="Basculer la sidebar"
+      title="Masquer / afficher la sidebar"
+    >
+      <PanelLeftClose className="h-5 w-5" />
+    </button>
+  );
+}
+
+function SidebarUserProfile({
+  collapsed,
+  userName,
+  roleLabel,
+  cityLabel,
+  onToggleCollapsed,
+}: {
+  collapsed: boolean;
+  userName: string;
+  roleLabel: string;
+  cityLabel?: string;
+  onToggleCollapsed: () => void;
+}) {
+  if (collapsed) {
+    return (
+      <div className="flex w-full flex-col items-center gap-2 border-b border-black/10 px-2 py-3">
+        <SidebarToggle onToggle={onToggleCollapsed} className="mx-auto" />
+        <UserAvatar
+          name={userName}
+          title={[userName, roleLabel, cityLabel].filter(Boolean).join(" · ")}
+        />
+        <p className="max-w-full truncate text-center text-[10px] font-semibold leading-tight text-black">
+          {userName.split(" ")[0]}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-b border-black/10 px-4 py-4">
+      <div className="mb-3 flex justify-end">
+        <SidebarToggle onToggle={onToggleCollapsed} />
+      </div>
+      <div className="flex items-center gap-3 px-1 py-1">
+        <UserAvatar name={userName} />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-black">{userName}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-black/80">
+            {roleLabel}
+          </p>
+          {cityLabel && (
+            <p className="truncate text-xs text-black/60">{cityLabel}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Sidebar({
   role,
   userName,
@@ -192,61 +266,22 @@ export function Sidebar({
       title={collapsed ? "Double-clic pour agrandir" : "Double-clic pour réduire"}
     >
       {collapsed ? (
-        <>
-          <div className="flex shrink-0 flex-col items-center px-2 py-3">
-            <SidebarBrand collapsed />
-          </div>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleCollapsed();
-            }}
-            className="natus-sidebar-toggle natus-sidebar-toggle--open absolute top-1/2 right-0 z-30 flex h-11 w-11 -translate-y-1/2 translate-x-1/2 items-center justify-center bg-sidebar text-black transition-opacity hover:opacity-85 cursor-pointer"
-            aria-label="Agrandir la sidebar"
-            title="Afficher la sidebar"
-          >
-            <PanelLeftOpen className="h-6 w-6" />
-          </button>
-        </>
+        <div className="flex shrink-0 flex-col items-center border-b border-black/10 px-2 py-3">
+          <SidebarBrand collapsed />
+        </div>
       ) : (
-        <div className="relative shrink-0 border-b border-black/10">
-          <div className="relative flex items-center border-b border-black/10 px-4 py-5">
-            <SidebarBrand />
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleCollapsed();
-              }}
-              className="natus-sidebar-toggle natus-sidebar-toggle--close absolute right-2 top-2 flex h-9 w-9 items-center justify-center bg-sidebar text-black/80 transition-opacity hover:opacity-85 cursor-pointer"
-              aria-label="Réduire la sidebar"
-              title="Masquer la sidebar"
-            >
-              <PanelLeftClose className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="px-4 py-4">
-            <div className="flex items-center gap-3 px-1 py-1">
-              <UserAvatar name={userName} />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-black">
-                  {userName}
-                </p>
-                <p className="text-xs font-medium uppercase tracking-wide text-black/80">
-                  {roleLabel}
-                </p>
-                {cityLabel && (
-                  <p className="truncate text-xs text-black/60">{cityLabel}</p>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="relative shrink-0 border-b border-black/10 px-4 py-5">
+          <SidebarBrand />
         </div>
       )}
+
+      <SidebarUserProfile
+        collapsed={collapsed}
+        userName={userName}
+        roleLabel={roleLabel}
+        cityLabel={cityLabel}
+        onToggleCollapsed={toggleCollapsed}
+      />
 
       <nav
         className={cn(
@@ -307,22 +342,10 @@ export function Sidebar({
 
       <div
         className={cn(
-          "shrink-0",
-          !collapsed && "border-t border-black/10",
-          collapsed ? "flex flex-col items-center gap-2 border-t border-black/10 p-2" : "p-3"
+          "shrink-0 border-t border-black/10",
+          collapsed ? "flex flex-col items-center p-2" : "p-3"
         )}
       >
-        {collapsed && (
-          <div className="flex flex-col items-center gap-1 px-1 py-1">
-            <UserAvatar
-              name={userName}
-              title={[userName, roleLabel, cityLabel].filter(Boolean).join(" · ")}
-            />
-            <p className="max-w-full truncate text-center text-[10px] font-semibold leading-tight text-black">
-              {userName.split(" ")[0]}
-            </p>
-          </div>
-        )}
         <button
           onClick={handleLogout}
           onDoubleClick={(e) => e.stopPropagation()}

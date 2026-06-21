@@ -40,7 +40,10 @@ function formatFrDate(isoKey: string): string {
 export function printCashierSalesReport() {
   document.body.dataset.printDoc = "sales-report";
   window.print();
-  window.requestAnimationFrame(() => {
+  const cleanup = () => {
     delete document.body.dataset.printDoc;
-  });
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+  window.setTimeout(cleanup, 2000);
 }

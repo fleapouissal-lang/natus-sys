@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Banknote, CreditCard, Printer } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -44,6 +45,11 @@ export function CashierSalesHistory({
   const [dateTo, setDateTo] = useState(initialToday.to);
   const [paymentFilter, setPaymentFilter] = useState<"" | PaymentMethod>("");
   const [detailSale, setDetailSale] = useState<Sale | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setSales(initialSales);
@@ -202,16 +208,21 @@ export function CashierSalesHistory({
         }
       />
 
-      <div className="natus-sales-report-print-only" aria-hidden>
-        <CashierSalesReport
-          sales={filtered}
-          stats={stats}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          periodLabel={orderDatePresetLabel(activeDatePreset)}
-          cashierName={cashierName}
-        />
-      </div>
+      {mounted &&
+        createPortal(
+          <div className="natus-sales-report-print-only" aria-hidden>
+            <CashierSalesReport
+              sales={filtered}
+              stats={stats}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              periodLabel={orderDatePresetLabel(activeDatePreset)}
+              cashierName={cashierName}
+              paymentFilter={paymentFilter}
+            />
+          </div>,
+          document.body
+        )}
 
       <Card padding={false}>
         <div className="p-6">
