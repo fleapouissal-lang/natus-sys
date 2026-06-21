@@ -31,7 +31,7 @@ import { sendGoogleReviewAfterPositiveFeedback } from "@/lib/marketing/send-mark
 
 type FeedbackContext = {
   storeId: string;
-  source: StoreComplaintSource;
+  source: "shopify_delivery" | "pos_sale";
   shopifyOrderId: string | null;
   saleId: string | null;
   customerPhone: string;
@@ -193,7 +193,8 @@ export async function handleReclamationText(
 
   const ctx: FeedbackContext = {
     storeId: session.pending_store_id,
-    source: (session.feedback_source as StoreComplaintSource) || "shopify_delivery",
+    source:
+      session.feedback_source === "pos_sale" ? "pos_sale" : "shopify_delivery",
     shopifyOrderId: session.last_order_id,
     saleId: session.pending_sale_id,
     customerPhone: phone,

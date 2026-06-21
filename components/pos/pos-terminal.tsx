@@ -28,9 +28,13 @@ import { printSaleDocument } from "@/components/pos/print-sale-document";
 import { ProductCatalog } from "@/components/pos/product-catalog";
 import { PosCheckoutPanel } from "@/components/pos/pos-checkout-panel";
 import {
-  PosScanAlertModal,
+  PosScanAlertToast,
   type PosScanAlert,
 } from "@/components/pos/pos-scan-alert-modal";
+import {
+  CashChangeCalculator,
+  parseCashReceived,
+} from "@/components/pos/cash-change-calculator";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
@@ -108,6 +112,7 @@ export function PosTerminal({
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
   const [managerMode, setManagerMode] = useState<ManagerMode>("sale");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+  const [cashReceivedInput, setCashReceivedInput] = useState("");
   const [receipt, setReceipt] = useState<SaleDocumentData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -411,6 +416,14 @@ export function PosTerminal({
 
   async function handlePay(paymentMethod: PaymentMethod) {
     if (cart.length === 0) return;
+    if (
+      !activeShopifyOrder &&
+      paymentMethod === "cash" &&
+      parseCashReceived(cashReceivedInput) < totalTtc
+    ) {
+      setError("Montant remis insuffisant");
+      return;
+    }
     if (activeShopifyOrder) {
       const fullyValidated = cart.every(
         (item) => (validatedQty[item.product.id] ?? 0) >= item.quantity
@@ -586,6 +599,20 @@ export function PosTerminal({
   const total = checkoutTotal(subtotal, loyaltyDiscount, appliedPromo);
   const { ht: totalHt, tva: totalTva, ttc: totalTtc } = computeTvaBreakdown(total);
   const tvaPercent = Math.round(TVA_RATE * 100);
+  const cashReceived = parseCashReceived(cashReceivedInput);
+  const showCashCalculator =
+    !isShopifyOrderCheckout && paymentMethod === "cash" && cart.length > 0;
+  const cashPaymentReady = cashReceived >= totalTtc;
+
+  useEffect(() => {
+    setCashReceivedInput("");
+  }, [totalTtc]);
+
+  useEffect(() => {
+    if (paymentMethod !== "cash") {
+      setCashReceivedInput("");
+    }
+  }, [paymentMethod]);
 
   return (
     <>
@@ -1085,6 +1112,13 @@ export function PosTerminal({
                             );
                           })}
                         </div>
+                        {showCashCalculator && (
+                          <CashChangeCalculator
+                            total={totalTtc}
+                            value={cashReceivedInput}
+                            onChange={setCashReceivedInput}
+                          />
+                        )}
                       </>
                     )}
                     {isOrderMode && !orderFullyValidated && (
@@ -1107,7 +1141,8 @@ export function PosTerminal({
                     disabled={
                       cart.length === 0 ||
                       loading ||
-                      (isOrderMode && !orderFullyValidated)
+                      (isOrderMode && !orderFullyValidated) ||
+                      (showCashCalculator && !cashPaymentReady)
                     }
                     loading={loading}
                   >
@@ -1155,7 +1190,7 @@ export function PosTerminal({
         />
       )}
 
-      <PosScanAlertModal
+      <PosScanAlertToast
         alert={scanAlert}
         onClose={() => {
           setScanAlert(null);

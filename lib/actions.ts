@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { canCreateRole, canCreateStoreInCity, canManageStore } from "@/lib/permissions";
 import { NATUS_CITIES } from "@/lib/constants/cities";
@@ -65,11 +66,13 @@ function revalidateManagement() {
   revalidatePath("/manager/activity");
   revalidatePath("/manager/stores");
   revalidatePath("/manager/users");
+  revalidatePath("/manager/planning");
   revalidatePath("/director/products");
   revalidatePath("/director/stock");
   revalidatePath("/director/activity");
   revalidatePath("/director/stores");
   revalidatePath("/director/users");
+  revalidatePath("/director/planning");
   revalidatePath("/director/hubs");
   revalidatePath("/hub");
   revalidatePath("/hub/stock");
@@ -1931,5 +1934,297 @@ export async function resolveStoreComplaint(
   revalidatePath("/manager/reclamations");
   revalidatePath("/director/reclamations");
 
+  return { success: true };
+}
+
+function parseShiftTime(value: string): string | null {
+  const trimmed = value.trim();
+  if (!/^\d{2}:\d{2}(:\d{2})?$/.test(trimmed)) return null;
+  return trimmed.length === 5 ? `${trimmed}:00` : trimmed;
+}
+
+async function assertCashierInStores(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  cashierId: string,
+  storeIds: string[]
+): Promise<{ error?: string }> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, role, store_id")
+    .eq("id", cashierId)
+    .eq("role", "cashier")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!data?.store_id || !storeIds.includes(data.store_id)) {
+    return { error: "Caissier invalide pour cette ville" };
+  }
+
+  return {};
+}
+
+async function assertNoShiftConflict(input: {
+  cashierId: string;
+  shiftDate: string;
+  excludeId?: string;
+}): Promise<{ error?: string }> {
+  const admin = createAdminClient();
+  let query = admin
+    .from("cashier_shifts")
+    .select("id, start_time, end_time, store_id, store:stores!store_id(name)")
+    .eq("cashier_id", input.cashierId)
+    .eq("shift_date", input.shiftDate);
+
+  if (input.excludeId) {
+    query = query.neq("id", input.excludeId);
+  }
+
+  const { data } = await query.limit(1);
+  const row = data?.[0];
+  if (!row) return {};
+
+  const storeRel = row.store as { name?: string } | { name?: string }[] | null;
+  const storeName = Array.isArray(storeRel) ? storeRel[0]?.name : storeRel?.name;
+  const hours = `${row.start_time.slice(0, 5)} – ${row.end_time.slice(0, 5)}`;
+  const where = storeName ? ` au magasin ${storeName}` : "";
+  return {
+    error: `Ce caissier a déjà un créneau ce jour${where} (${hours}). Un seul créneau par jour est autorisé.`,
+  };
+}
+
+async function assertNotWeekOff(
+  cashierId: string,
+  shiftDate: string,
+  weekStart: string
+): Promise<{ error?: string }> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("cashier_week_offs")
+    .select("off_date")
+    .eq("cashier_id", cashierId)
+    .eq("week_start", weekStart)
+    .maybeSingle();
+
+  if (data?.off_date === shiftDate) {
+    return { error: "Ce jour est le jour de repos de ce caissier pour cette semaine" };
+  }
+
+  return {};
+}
+
+function normalizeWeekStart(dateStr: string): string {
+  const d = new Date(`${dateStr}T12:00:00`);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+export async function createCashierShift(input: {
+  storeId: string;
+  cashierId: string;
+  shiftDate: string;
+  startTime: string;
+  endTime: string;
+  notes?: string | null;
+}): Promise<{ success: true; id: string } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const access = await assertStoreAccess(profile, input.storeId);
+  if (access.error) return { error: access.error };
+
+  const shiftDate = input.shiftDate.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(shiftDate)) {
+    return { error: "Date invalide" };
+  }
+
+  const startTime = parseShiftTime(input.startTime);
+  const endTime = parseShiftTime(input.endTime);
+  if (!startTime || !endTime) return { error: "Horaires invalides" };
+  if (endTime <= startTime) return { error: "L'heure de fin doit être après le début" };
+
+  const supabase = await createClient();
+
+  const { data: cityStores } = await supabase
+    .from("stores")
+    .select("id")
+    .eq("city", access.store!.city);
+  const storeIds = (cityStores || []).map((s) => s.id);
+
+  const cashierCheck = await assertCashierInStores(supabase, input.cashierId, storeIds);
+  if (cashierCheck.error) return { error: cashierCheck.error };
+
+  const weekStart = normalizeWeekStart(shiftDate);
+  const weekOffCheck = await assertNotWeekOff(input.cashierId, shiftDate, weekStart);
+  if (weekOffCheck.error) return { error: weekOffCheck.error };
+
+  const conflict = await assertNoShiftConflict({
+    cashierId: input.cashierId,
+    shiftDate,
+  });
+  if (conflict.error) return { error: conflict.error };
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("cashier_shifts")
+    .insert({
+      store_id: input.storeId,
+      cashier_id: input.cashierId,
+      shift_date: shiftDate,
+      start_time: startTime,
+      end_time: endTime,
+      notes: input.notes?.trim() || null,
+      created_by: profile.id,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/manager/planning");
+  revalidatePath("/director/planning");
+  revalidatePath("/cashier/planning");
+  return { success: true, id: data.id };
+}
+
+export async function deleteCashierShift(
+  shiftId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { data: shift, error: fetchError } = await supabase
+    .from("cashier_shifts")
+    .select("id, store_id")
+    .eq("id", shiftId)
+    .maybeSingle();
+
+  if (fetchError || !shift) return { error: "Créneau introuvable" };
+
+  const access = await assertStoreAccess(profile, shift.store_id);
+  if (access.error) return { error: access.error };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("cashier_shifts").delete().eq("id", shiftId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/manager/planning");
+  revalidatePath("/director/planning");
+  revalidatePath("/cashier/planning");
+  return { success: true };
+}
+
+export async function setCashierWeekOff(input: {
+  cashierId: string;
+  weekStart: string;
+  offDate: string;
+}): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const weekStart = normalizeWeekStart(input.weekStart);
+  const offDate = input.offDate.trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(offDate)) {
+    return { error: "Date de repos invalide" };
+  }
+
+  const weekEnd = (() => {
+    const d = new Date(`${weekStart}T12:00:00`);
+    d.setDate(d.getDate() + 6);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  })();
+
+  if (offDate < weekStart || offDate > weekEnd) {
+    return { error: "Le jour de repos doit être dans la semaine affichée" };
+  }
+
+  const supabase = await createClient();
+  const { data: cashier } = await supabase
+    .from("profiles")
+    .select("id, store_id")
+    .eq("id", input.cashierId)
+    .eq("role", "cashier")
+    .maybeSingle();
+
+  if (!cashier?.store_id) return { error: "Caissier introuvable" };
+
+  const access = await assertStoreAccess(profile, cashier.store_id);
+  if (access.error) return { error: access.error };
+
+  const admin = createAdminClient();
+
+  const { data: conflicting } = await admin
+    .from("cashier_shifts")
+    .select("id")
+    .eq("cashier_id", input.cashierId)
+    .eq("shift_date", offDate)
+    .limit(1);
+
+  if (conflicting && conflicting.length > 0) {
+    return {
+      error: "Supprimez d'abord les créneaux de ce caissier sur ce jour avant de le mettre en repos",
+    };
+  }
+
+  const { error } = await admin.from("cashier_week_offs").upsert(
+    {
+      cashier_id: input.cashierId,
+      week_start: weekStart,
+      off_date: offDate,
+      created_by: profile.id,
+    },
+    { onConflict: "cashier_id,week_start" }
+  );
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/manager/planning");
+  revalidatePath("/director/planning");
+  revalidatePath("/cashier/planning");
+  return { success: true };
+}
+
+export async function clearCashierWeekOff(input: {
+  cashierId: string;
+  weekStart: string;
+}): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const weekStart = normalizeWeekStart(input.weekStart);
+  const supabase = await createClient();
+  const { data: cashier } = await supabase
+    .from("profiles")
+    .select("id, store_id")
+    .eq("id", input.cashierId)
+    .eq("role", "cashier")
+    .maybeSingle();
+
+  if (!cashier?.store_id) return { error: "Caissier introuvable" };
+
+  const access = await assertStoreAccess(profile, cashier.store_id);
+  if (access.error) return { error: access.error };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("cashier_week_offs")
+    .delete()
+    .eq("cashier_id", input.cashierId)
+    .eq("week_start", weekStart);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/manager/planning");
+  revalidatePath("/director/planning");
+  revalidatePath("/cashier/planning");
   return { success: true };
 }

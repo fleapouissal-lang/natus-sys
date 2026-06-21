@@ -124,20 +124,27 @@ function ProductCard({
   const orderValidated = validatedQty >= cartQty;
 
   function handleCardClick() {
-    if (outOfStock) return;
+    if (outOfStock) {
+      onAddToCart(product, 1);
+      return;
+    }
     if (orderMode) {
       if (inOrder && validatedQty < cartQty) {
         onAddToCart(product, 1);
       }
       return;
     }
-    if (cartQty >= product.stock) return;
+    if (cartQty >= product.stock) {
+      onAddToCart(product, 1);
+      return;
+    }
     onAddToCart(product, 1);
   }
 
   const cardClickable =
-    !outOfStock &&
-    (orderMode ? inOrder && validatedQty < cartQty : cartQty < product.stock);
+    orderMode
+      ? !outOfStock && inOrder && validatedQty < cartQty
+      : true;
 
   return (
     <div
@@ -307,12 +314,10 @@ export function ProductCatalog({
     (code: string) => {
       const trimmed = code.trim();
       if (!trimmed) return;
-      const exactBarcode = products.some((p) => p.barcode === trimmed);
-      if (!exactBarcode) return;
       onBarcodeScan?.(trimmed);
       setSearchQuery("");
     },
-    [onBarcodeScan, products]
+    [onBarcodeScan]
   );
 
   const { inputRef, handleKeyDown, handleChange, focusInput } = useBarcodeScanner({

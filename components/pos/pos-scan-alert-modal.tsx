@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertTriangle, PackageX, SearchX } from "lucide-react";
+import { useEffect } from "react";
+import { AlertTriangle, PackageX, SearchX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { formatCurrency } from "@/lib/utils";
@@ -41,6 +42,53 @@ function alertContent(alert: PosScanAlert) {
         iconBg: "bg-warning/15 text-warning",
       };
   }
+}
+
+export function PosScanAlertToast({
+  alert,
+  onClose,
+}: {
+  alert: PosScanAlert | null;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!alert) return;
+    const timer = setTimeout(onClose, 4500);
+    return () => clearTimeout(timer);
+  }, [alert, onClose]);
+
+  if (!alert) return null;
+
+  const { icon: Icon, title, message, detail, tone, iconBg } = alertContent(alert);
+
+  return (
+    <div
+      role="alert"
+      aria-live="assertive"
+      className="pointer-events-auto fixed left-1/2 top-4 z-[110] w-[min(100vw-2rem,24rem)] -translate-x-1/2 animate-fade-in overflow-hidden rounded-lg border border-danger/25 bg-surface shadow-lg"
+    >
+      <div className="flex items-start gap-3 px-4 py-3">
+        <span
+          className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconBg}`}
+        >
+          <Icon className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <p className={`text-sm font-bold ${tone}`}>{title}</p>
+          <p className="mt-0.5 text-sm text-foreground">{message}</p>
+          <p className="mt-1 truncate font-mono text-xs text-muted">{detail}</p>
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          className="shrink-0 rounded-md p-1 text-muted hover:bg-page cursor-pointer"
+          aria-label="Fermer"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function PosScanAlertModal({
