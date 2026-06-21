@@ -5,16 +5,49 @@ import {
   invoicePaymentModeLabel,
   NATUS_INVOICE_COMPANY,
 } from "@/lib/constants/company";
+import {
+  NATUS_BRAND,
+  NATUS_BRAND_GRADIENTS,
+  NATUS_BRAND_SERIF,
+} from "@/lib/constants/natus-brand";
 import { computeTvaBreakdown, PAYMENT_METHOD_LABELS, TVA_RATE } from "@/lib/constants/sales";
 import { formatCurrency } from "@/lib/utils";
 import type { SaleDocumentData } from "@/components/pos/sale-document-types";
 import { saleDocumentNumber } from "@/components/pos/sale-document-types";
 import { NatusDocumentBrand } from "@/components/pos/natus-document-brand";
 
-const SERIF = "Georgia, 'Times New Roman', serif";
-
 function lineUnitHt(unitPriceTtc: number): number {
   return unitPriceTtc / (1 + TVA_RATE);
+}
+
+function InvoiceMonogram() {
+  return (
+    <span
+      className="natus-invoice-monogram pointer-events-none absolute bottom-[-6%] right-[-2%] select-none leading-none"
+      style={{
+        fontFamily: NATUS_BRAND_SERIF,
+        fontSize: "22rem",
+        fontWeight: 700,
+        color: NATUS_BRAND.gold,
+        opacity: 0.09,
+        lineHeight: 0.78,
+      }}
+      aria-hidden
+    >
+      N
+    </span>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em]"
+      style={{ fontFamily: NATUS_BRAND_SERIF, color: NATUS_BRAND.gold }}
+    >
+      {children}
+    </p>
+  );
 }
 
 export function PosInvoice({ data }: { data: SaleDocumentData }) {
@@ -33,69 +66,108 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
   return (
     <div
       id="invoice-print"
-      className="natus-invoice sale-doc invoice mx-auto w-full max-w-[210mm] bg-[#f5f0e6] p-6 text-[#2c2418] shadow-sm print:max-w-none print:bg-white print:p-0 print:shadow-none"
+      className="natus-invoice sale-doc invoice mx-auto w-full max-w-[210mm] p-0 shadow-sm print:max-w-none print:p-0 print:shadow-none"
+      style={{
+        background: NATUS_BRAND_GRADIENTS.creamBg,
+        color: NATUS_BRAND.ink,
+      }}
     >
-      <div className="bg-[#faf7f2] p-8 print:bg-white print:px-0 print:pb-8 print:pt-4">
-        {/* Ligne 1 — titre à gauche, logo à droite */}
-        <div className="mb-6 mt-2 flex items-start justify-between gap-6 border-b border-[#ddd0bc] pb-5 pt-4 print:mt-4 print:pt-6">
+      <div
+        className="natus-invoice-sheet relative overflow-hidden px-8 py-8 print:px-0 print:pb-8 print:pt-4"
+        style={{ background: NATUS_BRAND_GRADIENTS.creamBg }}
+      >
+        <InvoiceMonogram />
+
+        {/* En-tête */}
+        <div
+          className="relative z-[1] mb-6 mt-2 flex items-start justify-between gap-6 border-b pb-5 pt-4 print:mt-4 print:pt-6"
+          style={{ borderColor: NATUS_BRAND.border }}
+        >
           <div className="min-w-0">
             <h1
-              className="text-[2.35rem] font-normal leading-none tracking-wide text-[#b38c4a]"
-              style={{ fontFamily: SERIF }}
+              className="text-[2.35rem] font-normal leading-none tracking-wide"
+              style={{ fontFamily: NATUS_BRAND_SERIF, color: NATUS_BRAND.gold }}
             >
               FACTURE
             </h1>
-            <p className="mt-2 text-base text-[#4a4034]">
-              <span className="text-[#8a7350]">Facture N°</span>{" "}
-              <span className="text-lg font-semibold text-[#2c2418]">{invoiceNo}</span>
+            <p className="mt-2.5 text-base" style={{ color: NATUS_BRAND.inkSoft }}>
+              <span style={{ color: NATUS_BRAND.goldDeep }}>Facture N°</span>{" "}
+              <span
+                className="text-lg font-semibold tabular-nums"
+                style={{ color: NATUS_BRAND.ink }}
+              >
+                {invoiceNo}
+              </span>
             </p>
           </div>
           <NatusDocumentBrand variant="invoiceLogo" className="print:mt-1" />
         </div>
 
-        {/* Ligne 2 — Natus (gauche) | dates + client (droite) */}
-        <div className="mb-8 grid gap-8 border-b border-[#ddd0bc] pb-8 sm:grid-cols-2">
-          <div className="space-y-1 text-sm leading-relaxed text-[#4a4034]">
-            <p className="text-base font-bold text-[#2c2418]">
-              {NATUS_INVOICE_COMPANY.legalName}
-            </p>
-            <p>{companyAddress}</p>
-            <p>{NATUS_INVOICE_COMPANY.city}</p>
-            <p className="pt-1">Tél. : {NATUS_INVOICE_COMPANY.phone}</p>
-            <p>Email : {NATUS_INVOICE_COMPANY.email}</p>
-            <p className="text-xs text-[#8a7350]">{NATUS_INVOICE_COMPANY.taxId}</p>
+        {/* Émetteur | Client */}
+        <div
+          className="relative z-[1] mb-8 grid gap-8 border-b pb-8 sm:grid-cols-2"
+          style={{ borderColor: NATUS_BRAND.border }}
+        >
+          <div className="relative pl-4">
+            <div
+              className="absolute bottom-2 left-0 top-2 w-px"
+              style={{
+                background: `linear-gradient(180deg, transparent, ${NATUS_BRAND.gold} 12%, ${NATUS_BRAND.gold} 88%, transparent)`,
+                opacity: 0.55,
+              }}
+              aria-hidden
+            />
+            <SectionLabel>Émetteur</SectionLabel>
+            <div className="space-y-1 text-sm leading-relaxed" style={{ color: NATUS_BRAND.inkSoft }}>
+              <p className="text-base font-bold" style={{ color: NATUS_BRAND.ink }}>
+                {NATUS_INVOICE_COMPANY.legalName}
+              </p>
+              <p>{companyAddress}</p>
+              <p>{NATUS_INVOICE_COMPANY.city}</p>
+              <p className="pt-1">Tél. : {NATUS_INVOICE_COMPANY.phone}</p>
+              <p>Email : {NATUS_INVOICE_COMPANY.email}</p>
+              <p className="text-xs" style={{ color: NATUS_BRAND.goldDeep }}>
+                {NATUS_INVOICE_COMPANY.taxId}
+              </p>
+            </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="relative pl-4">
+            <div
+              className="absolute bottom-2 left-0 top-2 w-px"
+              style={{
+                background: `linear-gradient(180deg, transparent, ${NATUS_BRAND.gold} 12%, ${NATUS_BRAND.gold} 88%, transparent)`,
+                opacity: 0.55,
+              }}
+              aria-hidden
+            />
             {data.shopifyOrderNumber && (
-              <p className="text-sm text-[#4a4034]">
-                <span className="text-[#8a7350]">Réf. commande : </span>
-                <span className="font-medium text-[#2c2418]">{data.shopifyOrderNumber}</span>
+              <p className="mb-3 text-sm" style={{ color: NATUS_BRAND.inkSoft }}>
+                <span style={{ color: NATUS_BRAND.goldDeep }}>Réf. commande : </span>
+                <span className="font-medium" style={{ color: NATUS_BRAND.ink }}>
+                  {data.shopifyOrderNumber}
+                </span>
               </p>
             )}
-
-            <div className={data.shopifyOrderNumber ? "border-t border-[#e0d4c2] pt-4" : ""}>
-              <p
-                className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#b38c4a]"
-                style={{ fontFamily: SERIF }}
-              >
-                Client
+            <SectionLabel>Client</SectionLabel>
+            <p className="text-base font-bold" style={{ color: NATUS_BRAND.ink }}>
+              {clientName}
+            </p>
+            {data.customerPhone && (
+              <p className="mt-1 text-sm" style={{ color: NATUS_BRAND.inkSoft }}>
+                Tél. : {data.customerPhone}
               </p>
-              <p className="text-base font-bold text-[#2c2418]">{clientName}</p>
-              {data.customerPhone && (
-                <p className="mt-1 text-sm text-[#4a4034]">Tél. : {data.customerPhone}</p>
-              )}
-              {data.loyaltyCardNumber && (
-                <p className="mt-1 text-sm text-[#4a4034]">
-                  Carte fidélité : {data.loyaltyCardNumber}
-                </p>
-              )}
-            </div>
+            )}
+            {data.loyaltyCardNumber && (
+              <p className="mt-1 text-sm" style={{ color: NATUS_BRAND.inkSoft }}>
+                Carte fidélité : {data.loyaltyCardNumber}
+              </p>
+            )}
           </div>
         </div>
 
         {/* Tableau */}
-        <div className="natus-invoice-table-wrap w-full overflow-visible">
+        <div className="natus-invoice-table-wrap relative z-[1] w-full overflow-visible">
           <table className="w-full table-fixed border-collapse text-sm print:text-xs">
             <colgroup>
               <col className="w-[44%]" />
@@ -104,7 +176,10 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
               <col className="w-[22%]" />
             </colgroup>
             <thead>
-              <tr className="bg-[#c9b896] text-[11px] font-semibold uppercase tracking-wider text-white print:text-[10px]">
+              <tr
+                className="text-[11px] font-semibold uppercase tracking-wider text-white print:text-[10px]"
+                style={{ background: NATUS_BRAND_GRADIENTS.goldStrip }}
+              >
                 <th className="px-3 py-3 text-left print:px-2 print:py-2">Description</th>
                 <th className="px-2 py-3 text-center print:px-1 print:py-2">Qté</th>
                 <th className="px-2 py-3 text-right print:px-1 print:py-2">Prix HT</th>
@@ -118,7 +193,12 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
                 return (
                   <tr
                     key={i}
-                    className="border-b border-[#e8dfd0] bg-white text-[#2c2418] last:border-b-0"
+                    className="border-b last:border-b-0"
+                    style={{
+                      borderColor: NATUS_BRAND.borderSoft,
+                      background: i % 2 === 0 ? "rgba(255,253,249,0.92)" : "rgba(255,246,236,0.65)",
+                      color: NATUS_BRAND.ink,
+                    }}
                   >
                     <td className="break-words px-3 py-3.5 font-medium print:px-2 print:py-2">
                       {item.name}
@@ -139,36 +219,57 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
           </table>
         </div>
 
-        {/* Totaux — style inspiration */}
-        <div className="mt-0 border border-t-0 border-[#e8dfd0] bg-white">
+        {/* Totaux */}
+        <div
+          className="relative z-[1] mt-0 overflow-hidden border border-t-0"
+          style={{ borderColor: NATUS_BRAND.borderSoft }}
+        >
           <div className="ml-auto w-full max-w-sm space-y-0 text-sm">
             {data.subtotal != null && (data.loyaltyDiscount || data.promoDiscount) ? (
-              <div className="flex justify-between border-b border-[#f0ebe3] px-4 py-2 text-[#4a4034]">
+              <div
+                className="flex justify-between border-b px-4 py-2"
+                style={{ borderColor: NATUS_BRAND.borderSoft, color: NATUS_BRAND.inkSoft }}
+              >
                 <span>Sous-total articles</span>
                 <span className="tabular-nums">{formatCurrency(data.subtotal)}</span>
               </div>
             ) : null}
             {data.loyaltyDiscount ? (
-              <div className="flex justify-between border-b border-[#f0ebe3] px-4 py-2 text-[#4a4034]">
+              <div
+                className="flex justify-between border-b px-4 py-2"
+                style={{ borderColor: NATUS_BRAND.borderSoft, color: NATUS_BRAND.inkSoft }}
+              >
                 <span>Réduction fidélité</span>
                 <span className="tabular-nums">-{formatCurrency(data.loyaltyDiscount)}</span>
               </div>
             ) : null}
             {data.promoDiscount ? (
-              <div className="flex justify-between border-b border-[#f0ebe3] px-4 py-2 text-[#4a4034]">
+              <div
+                className="flex justify-between border-b px-4 py-2"
+                style={{ borderColor: NATUS_BRAND.borderSoft, color: NATUS_BRAND.inkSoft }}
+              >
                 <span>Promo {data.promoCode}</span>
                 <span className="tabular-nums">-{formatCurrency(data.promoDiscount)}</span>
               </div>
             ) : null}
-            <div className="flex justify-between px-4 py-2.5 text-[#4a4034]">
+            <div
+              className="flex justify-between px-4 py-2.5"
+              style={{ background: "rgba(255,253,249,0.95)", color: NATUS_BRAND.inkSoft }}
+            >
               <span className="font-medium">Total HT :</span>
               <span className="font-semibold tabular-nums">{formatCurrency(ht)}</span>
             </div>
-            <div className="flex justify-between px-4 py-2 text-[#4a4034]">
+            <div
+              className="flex justify-between px-4 py-2"
+              style={{ background: "rgba(255,253,249,0.95)", color: NATUS_BRAND.inkSoft }}
+            >
               <span>TVA ({tvaPercent} %) :</span>
               <span className="tabular-nums">{formatCurrency(tva)}</span>
             </div>
-            <div className="flex items-center justify-between bg-[#c9b896] px-4 py-3.5 font-semibold text-white">
+            <div
+              className="flex items-center justify-between px-4 py-3.5 font-semibold text-white"
+              style={{ background: NATUS_BRAND_GRADIENTS.goldStrip }}
+            >
               <span className="text-sm uppercase tracking-wide">Total TTC :</span>
               <span className="text-xl font-bold tabular-nums">{formatCurrency(ttc)}</span>
             </div>
@@ -176,19 +277,28 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
         </div>
 
         {/* Pied de page */}
-        <div className="mt-10 border-t border-[#ddd0bc] pt-8">
-          <div className="text-sm text-[#4a4034]">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#2c2418]">
+        <div
+          className="relative z-[1] mt-10 border-t pt-8"
+          style={{ borderColor: NATUS_BRAND.border }}
+        >
+          <div className="text-sm" style={{ color: NATUS_BRAND.inkSoft }}>
+            <p
+              className="text-xs font-bold uppercase tracking-[0.12em]"
+              style={{ color: NATUS_BRAND.ink }}
+            >
               Mode de paiement : {paymentLabel.toUpperCase()}
             </p>
-            <p className="mt-2 text-[#4a4034]">Caissier : {data.cashierName}</p>
-            <p className="mt-4 text-[11px] leading-relaxed text-[#8a7350]">
+            <p className="mt-2">Caissier : {data.cashierName}</p>
+            <p className="mt-4 text-[11px] leading-relaxed" style={{ color: NATUS_BRAND.goldDeep }}>
               {NATUS_INVOICE_COMPANY.legalMention}
             </p>
           </div>
         </div>
 
-        <div className="mt-8 border-t border-[#ddd0bc] bg-[#f0ebe3] py-3 text-center text-sm font-medium text-[#8a7350] print:bg-[#f0ebe3]">
+        <div
+          className="relative z-[1] mt-8 py-3 text-center text-sm font-medium text-white"
+          style={{ background: NATUS_BRAND_GRADIENTS.goldStrip }}
+        >
           {NATUS_INVOICE_COMPANY.website}
         </div>
       </div>

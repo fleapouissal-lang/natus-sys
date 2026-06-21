@@ -478,17 +478,27 @@ textarea:focus {
     position: static;
     width: 100%;
     max-width: none;
-    background: white !important;
     padding: 0 !important;
     margin: 0;
     overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  body[data-print-doc="invoice"] .natus-invoice > div {
+  body[data-print-doc="invoice"] .natus-invoice,
+  body[data-print-doc="invoice"] .natus-invoice-sheet {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-sheet {
     border: none !important;
-    background: white !important;
     padding-top: 4mm !important;
     overflow: visible !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-monogram {
+    opacity: 0.07 !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-table-wrap {

@@ -1,3 +1,4 @@
+import { NATUS_BRAND, NATUS_BRAND_SERIF } from "@/lib/constants/natus-brand";
 import { cn } from "@/lib/utils";
 
 /** Logo texte — fiable à l'impression (pas de Next/Image ni SVG externe). */
@@ -14,12 +15,16 @@ export function NatusDocumentBrand({
   return (
     <div
       className={cn(
-        "flex shrink-0 flex-col items-center justify-center text-center text-[#b38c4a]",
-        variant === "invoice" && "h-[88px] w-[88px] rounded-full border-2 border-[#d4c4a8] bg-white",
+        "flex shrink-0 flex-col items-center justify-center text-center",
+        variant === "invoice" && "h-[88px] w-[88px] rounded-full border-2 bg-white",
         isInvoiceLogo && "items-end text-right",
         isTicket && "py-1",
         className
       )}
+      style={{
+        color: NATUS_BRAND.gold,
+        ...(variant === "invoice" ? { borderColor: NATUS_BRAND.border } : {}),
+      }}
       aria-hidden
     >
       <span
@@ -27,9 +32,9 @@ export function NatusDocumentBrand({
           "font-semibold leading-none tracking-tight",
           isInvoiceLogo ? "text-[2.5rem]" : isTicket ? "text-[20px]" : "text-[26px]"
         )}
-        style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+        style={{ fontFamily: NATUS_BRAND_SERIF }}
       >
-        natus
+        {isInvoiceLogo ? "Natus" : "natus"}
       </span>
       {!isInvoiceLogo && (
         <span
