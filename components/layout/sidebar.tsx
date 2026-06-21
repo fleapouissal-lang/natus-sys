@@ -23,6 +23,7 @@ import {
   Gift,
   AlertTriangle,
   MessageSquare,
+  FileText,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
@@ -37,6 +38,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub") {
       { href: "/hub/stock", label: "Stock magasins", icon: Warehouse },
       { href: "/hub/hub-stock", label: "Entrepôt hub", icon: Boxes },
       { href: "/hub/activity", label: "Activité", icon: ClipboardList },
+      { href: "/hub/invoices", label: "Factures magasins", icon: FileText },
     ];
   }
 
@@ -50,6 +52,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub") {
     { href: `${basePath}/reclamations`, label: "Réclamations", icon: AlertTriangle },
     { href: `${basePath}/loyalty`, label: "Fidélité", icon: Gift },
     { href: `${basePath}/sales`, label: "Ventes", icon: Receipt },
+    { href: `${basePath}/invoices`, label: "Factures", icon: FileText },
     { href: `${basePath}/users`, label: "Utilisateurs", icon: Users },
     { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
   ];
@@ -78,6 +81,7 @@ const cashierLinks = [
   { href: "/cashier/customers", label: "Clients fidélité", icon: Gift },
   { href: "/cashier/returns", label: "Retours magasin", icon: RotateCcw },
   { href: "/cashier/sales", label: "Mes ventes", icon: History },
+  { href: "/cashier/invoices", label: "Factures", icon: FileText },
 ];
 
 const livreurLinks = [

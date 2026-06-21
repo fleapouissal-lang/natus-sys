@@ -195,6 +195,7 @@ export function ShopifyOrdersManager({
   const [pending, startTransition] = useTransition();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [detailOrder, setDetailOrder] = useState<ShopifyOrder | null>(null);
   const [transferOrder, setTransferOrder] = useState<ShopifyOrder | null>(null);
   const [returnNoteOrder, setReturnNoteOrder] = useState<{
@@ -318,16 +319,28 @@ export function ShopifyOrdersManager({
 
   function handleCodPaid(orderId: string) {
     setMessage(null);
+    setSuccessMessage(null);
     setActiveId(orderId);
     startTransition(async () => {
       const result = await markShopifyCodPaid(orderId);
       if ("error" in result) {
         setMessage(result.error);
       } else {
+        const order = orders.find((o) => o.id === orderId);
+        setSuccessMessage(
+          order
+            ? `Commande ${order.order_number} encaissée — ${formatCurrency(Number(order.total))} ajouté au chiffre du jour.`
+            : "Commande encaissée et ajoutée au chiffre du jour."
+        );
         setOrders((prev) =>
           prev.map((o) =>
             o.id === orderId
-              ? { ...o, workflow_status: "paid", financial_status: "paid" }
+              ? {
+                  ...o,
+                  workflow_status: "paid",
+                  financial_status: "paid",
+                  paid_at: new Date().toISOString(),
+                }
               : o
           )
         );
@@ -358,6 +371,11 @@ export function ShopifyOrdersManager({
 
   return (
     <>
+      {successMessage && (
+        <p className="rounded-lg bg-success/10 px-4 py-3 text-sm text-success">
+          {successMessage}
+        </p>
+      )}
       {message && (
         <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{message}</p>
       )}
@@ -501,10 +519,8 @@ export function ShopifyOrdersManager({
                   !livreurMode &&
                   isCod &&
                   Boolean(order.fulfilled_at) &&
-                  !order.sale_id &&
                   order.financial_status !== "paid" &&
-                  (order.workflow_status === "delivered" ||
-                    order.workflow_status === "shipping");
+                  order.workflow_status === "delivered";
                 const loading = pending && activeId === order.id;
                 const canEditReturnNote =
                   returnsPageMode &&
@@ -675,7 +691,7 @@ export function ShopifyOrdersManager({
                         )}
                         {!cashierReturnsMode && isCod && canMarkCodPaid && (
                           <IconAction
-                            label="Marquer COD payé"
+                            label="Encaisser en caisse"
                             onClick={() => handleCodPaid(order.id)}
                             loading={loading}
                           >

@@ -54,7 +54,7 @@ export function DashboardShell({
         >
           {scope && !isPos && (
             <>
-              <div className="mb-4 flex shrink-0 justify-end">
+              <div className="mb-4 flex shrink-0 justify-end overflow-visible">
                 <CashierNotificationBell />
               </div>
               <CashierNotificationBar />

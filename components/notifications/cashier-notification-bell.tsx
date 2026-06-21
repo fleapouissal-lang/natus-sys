@@ -31,6 +31,8 @@ export function CashierNotificationBell({
     markAllRead,
   } = ctx;
 
+  const totalCount = notifications.length;
+
   function handleSelect(notification: CashierNotification) {
     openNotification(notification.id);
     onSelect?.(notification);
@@ -45,8 +47,16 @@ export function CashierNotificationBell({
           setOpenPanel(!openPanel);
         }}
         className="relative inline-flex h-9 w-9 items-center justify-center overflow-visible rounded-md border-0 bg-champagne text-primary hover:brightness-95 cursor-pointer"
-        aria-label="Notifications"
-        title="Notifications"
+        aria-label={
+          unreadCount > 0
+            ? `Notifications, ${unreadCount} non lue${unreadCount > 1 ? "s" : ""}`
+            : "Notifications"
+        }
+        title={
+          unreadCount > 0
+            ? `${unreadCount} notification${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`
+            : "Notifications"
+        }
       >
         <Bell className="h-4 w-4 text-primary" />
         <CountBadge count={unreadCount} className="-right-1 -top-1" />
@@ -69,11 +79,24 @@ export function CashierNotificationBell({
           <div className="absolute right-0 top-full z-[70] mt-2 w-80 max-w-[calc(100vw-2rem)] bg-surface shadow-lg">
             <div className="flex items-center justify-between px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-foreground">Notifications</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-foreground">Notifications</p>
+                  {unreadCount > 0 && (
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold leading-none text-white">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted">
                   {unreadCount > 0
-                    ? `${unreadCount} info${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`
-                    : "Aucune nouvelle info"}
+                    ? `${unreadCount} non lue${unreadCount > 1 ? "s" : ""}${
+                        totalCount > unreadCount
+                          ? ` · ${totalCount} au total`
+                          : ""
+                      }`
+                    : totalCount > 0
+                      ? `${totalCount} notification${totalCount > 1 ? "s" : ""} lue${totalCount > 1 ? "s" : ""}`
+                      : "Aucune notification"}
                 </p>
               </div>
               {unreadCount > 0 && (

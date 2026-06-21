@@ -1,22 +1,28 @@
 "use client";
 
-import { FileText, Receipt } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, FileText, Receipt } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import type { SaleDocumentData } from "@/components/pos/sale-document-types";
 import { PosInvoice } from "@/components/pos/pos-invoice";
 import { printSaleDocument } from "@/components/pos/print-sale-document";
+import { invoiceDetailPath } from "@/lib/sales/invoice-routes";
 import { Ticket } from "@/components/pos/ticket";
 
 export function SaleDocumentsModal({
   data,
   onClose,
   closeLabel,
+  invoicesPath = "/cashier/invoices",
 }: {
   data: SaleDocumentData;
   onClose: () => void;
   closeLabel: string;
+  invoicesPath?: string;
 }) {
+  const invoiceHref = invoiceDetailPath(invoicesPath, data.saleId);
+
   return (
     <Modal onClose={onClose} size="md" scrollable={false}>
       <div className="mb-4 text-center">
@@ -28,7 +34,6 @@ export function SaleDocumentsModal({
         <Ticket data={data} />
       </div>
 
-      {/* Facture hors écran — utilisée uniquement pour l'impression PDF */}
       <div className="natus-invoice-print-only" aria-hidden>
         <PosInvoice data={data} />
       </div>
@@ -42,6 +47,13 @@ export function SaleDocumentsModal({
           <FileText className="h-4 w-4" />
           Imprimer facture
         </Button>
+        <Link
+          href={invoiceHref}
+          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-natus)] px-4 py-2 text-sm font-medium text-muted transition-colors hover:bg-black/5 hover:text-foreground"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Ouvrir la facture
+        </Link>
         <Button type="button" variant="ghost" onClick={onClose}>
           {closeLabel}
         </Button>

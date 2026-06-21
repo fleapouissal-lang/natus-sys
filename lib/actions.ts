@@ -914,7 +914,11 @@ export async function completeShopifyOrderSale(
     return { error: "Accès refusé" };
   }
 
-  if (order.fulfilled_at || order.sale_id) {
+  if (order.fulfilled_at) {
+    return { error: "Commande déjà préparée en caisse" };
+  }
+
+  if (order.sale_id && order.payment_type !== "cod") {
     return { error: "Commande déjà préparée en caisse" };
   }
 
@@ -930,7 +934,11 @@ export async function completeShopifyOrderSale(
   );
 
   if (fulfillError) return { error: fulfillError.message };
-  if (!saleId) return { error: "Erreur création facture commande" };
+
+  const isCod = order.payment_type === "cod";
+  if (!isCod && !saleId) {
+    return { error: "Erreur création facture commande" };
+  }
 
   const now = new Date().toISOString();
 
@@ -968,7 +976,7 @@ export async function completeShopifyOrderSale(
   revalidatePath("/director/hub");
   revalidatePath("/livreur/orders");
 
-  return { success: true, saleId: saleId as string };
+  return { success: true, saleId: (saleId as string | null) ?? undefined };
 }
 
 export async function prepareShopifyOrderForPos(
@@ -1577,12 +1585,18 @@ export async function markShopifyCodPaid(
     return { error: "Cette commande n'est pas en COD" };
   }
 
-  if (order.financial_status === "paid" || order.sale_id) {
-    return { error: "Commande déjà payée en caisse" };
+  if (order.financial_status === "paid") {
+    return { error: "Commande déjà encaissée en caisse" };
   }
 
   if (!order.fulfilled_at) {
     return { error: "Préparez la commande en caisse avant d'encaisser le COD" };
+  }
+
+  if (order.workflow_status !== "delivered") {
+    return {
+      error: "La commande doit être marquée livrée par le livreur avant encaissement",
+    };
   }
 
   const products = await getProductCatalog();
@@ -1593,7 +1607,12 @@ export async function markShopifyCodPaid(
   const now = new Date().toISOString();
   let saleId = order.sale_id;
 
-  if (!saleId) {
+  if (saleId) {
+    const { error: assignError } = await supabase.rpc("assign_cod_sale_to_cashier", {
+      p_sale_id: saleId,
+    });
+    if (assignError) return { error: assignError.message };
+  } else {
     const { data: newSaleId, error: saleError } = await supabase.rpc("record_cod_payment", {
       p_items: mapped.items,
       p_store_id: order.store_id || null,
@@ -1632,13 +1651,15 @@ export async function markShopifyCodPaid(
   );
   await syncShopifyWorkflowStatus(order.shopify_order_id, "paid");
 
-  revalidatePath("/director/orders");
-  revalidatePath("/director/hub");
-  revalidatePath("/manager/orders");
   revalidatePath("/cashier/orders");
   revalidatePath("/cashier/sales");
+  revalidatePath("/cashier/invoices");
+  revalidatePath("/manager/orders");
   revalidatePath("/manager/sales");
+  revalidatePath("/manager/invoices");
+  revalidatePath("/director/orders");
   revalidatePath("/director/sales");
+  revalidatePath("/director/invoices");
 
   return { success: true };
 }

@@ -3,6 +3,7 @@
 import { Bell, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
+import { CountBadge } from "@/components/ui/count-badge";
 import {
   formatNotificationMeta,
   notificationHeadline,
@@ -21,7 +22,7 @@ export function CashierNotificationBar({
   const ctx = useCashierNotifications();
   if (!ctx?.barVisible || !ctx.latestUnread) return null;
 
-  const { latestUnread, openNotification, dismissBar } = ctx;
+  const { latestUnread, openNotification, dismissBar, unreadCount } = ctx;
   const meta = formatNotificationMeta(latestUnread);
 
   function handleView() {
@@ -45,13 +46,18 @@ export function CashierNotificationBar({
         onClick={handleView}
         className="flex min-w-0 flex-1 items-center gap-3 text-left hover:opacity-95 cursor-pointer"
       >
-        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20">
+        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-visible rounded-full bg-white/20">
           <Bell className="h-4 w-4" />
-          <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-champagne ring-2 ring-primary" />
+          <CountBadge count={unreadCount} className="-right-1 -top-1" />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold">
             {notificationHeadline(latestUnread.kind)}
+            {unreadCount > 1 && (
+              <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1.5 text-[10px] font-bold">
+                {unreadCount}
+              </span>
+            )}
           </p>
           <p className="truncate text-sm text-white/90">
             {latestUnread.title}
@@ -63,6 +69,11 @@ export function CashierNotificationBar({
         </div>
       </button>
       <div className="flex shrink-0 items-center gap-2">
+        {unreadCount > 1 && (
+          <span className="hidden text-xs text-white/90 sm:inline">
+            {unreadCount} notifications
+          </span>
+        )}
         <button
           type="button"
           onClick={handleView}

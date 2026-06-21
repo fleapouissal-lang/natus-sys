@@ -456,6 +456,24 @@ export function PosTerminal({
       return;
     }
 
+    const wasShopifyOrder = !!activeShopifyOrder;
+    const wasCodShopifyOrder = activeShopifyOrder?.paymentType === "cod";
+
+    if (wasCodShopifyOrder) {
+      setCart([]);
+      setActiveShopifyOrder(null);
+      setLoyaltyCustomer(null);
+      setPointsToRedeem(0);
+      setAppliedPromo(null);
+      setValidatedQty({});
+      setMissingShopifyProducts([]);
+      setLoading(false);
+      setLastAddedProduct(null);
+      router.replace("/cashier/orders");
+      router.refresh();
+      return;
+    }
+
     if (orderNotifications?.reportStockChanges && defaultStoreId) {
       const soldByProduct = new Map<
         string,
@@ -526,7 +544,6 @@ export function PosTerminal({
     });
 
     setCart([]);
-    const wasShopifyOrder = !!activeShopifyOrder;
     setActiveShopifyOrder(null);
     setLoyaltyCustomer(null);
     setPointsToRedeem(0);
@@ -713,23 +730,25 @@ export function PosTerminal({
                       </Button>
                     )}
                     {orderNotifications && (
-                      <CashierNotificationBell
-                        onSelect={(notification) => {
-                          if (notification.kind === "hub_transfer") {
-                            router.push(
-                              notificationHref(notification.kind, notification.audience)
-                            );
-                            return;
-                          }
-                          if (
-                            notification.kind === "stock_low" ||
-                            notification.kind === "stock_out"
-                          ) {
-                            return;
-                          }
-                          setShowOrdersPanel(true);
-                        }}
-                      />
+                      <div className="relative overflow-visible">
+                        <CashierNotificationBell
+                          onSelect={(notification) => {
+                            if (notification.kind === "hub_transfer") {
+                              router.push(
+                                notificationHref(notification.kind, notification.audience)
+                              );
+                              return;
+                            }
+                            if (
+                              notification.kind === "stock_low" ||
+                              notification.kind === "stock_out"
+                            ) {
+                              return;
+                            }
+                            setShowOrdersPanel(true);
+                          }}
+                        />
+                      </div>
                     )}
                     {isManagementUser && (
                       <div className="flex rounded-md border border-border bg-surface p-1">
