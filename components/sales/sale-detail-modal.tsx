@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cancelSale } from "@/lib/actions";
+import { saleInvoiceCustomerName, saleInvoiceCustomerPhone } from "@/lib/sales/invoice-customer";
 import { formatCurrency, formatDate, formatPaymentMethod } from "@/lib/utils";
 import type { Sale } from "@/lib/types";
 
@@ -36,6 +37,8 @@ export function SaleDetailModal({
 
   const items = sale.sale_items || [];
   const cashierName = sale.profiles?.full_name || sale.profiles?.email || "—";
+  const invoiceCustomerName = saleInvoiceCustomerName(sale);
+  const invoiceCustomerPhone = saleInvoiceCustomerPhone(sale);
   const subtotal = lineSubtotal(sale);
   const loyaltyDiscount = Number(sale.loyalty_discount || 0);
   const promoDiscount = Number(sale.promo_discount || 0);
@@ -104,11 +107,12 @@ export function SaleDetailModal({
           <div>
             <p className="text-xs text-muted">Caissier</p>
             <p className="font-medium">{cashierName}</p>
-            {sale.customers?.full_name && (
-              <p className="mt-1 text-xs text-muted">
-                Client : {sale.customers.full_name}
-                {sale.customers.card_number ? ` · ${sale.customers.card_number}` : ""}
-              </p>
+            <p className="mt-1 text-xs text-muted">
+              Client facture : {invoiceCustomerName}
+              {sale.customers?.card_number ? ` · ${sale.customers.card_number}` : ""}
+            </p>
+            {invoiceCustomerPhone && (
+              <p className="text-xs text-muted">Tél. : {invoiceCustomerPhone}</p>
             )}
           </div>
         </div>

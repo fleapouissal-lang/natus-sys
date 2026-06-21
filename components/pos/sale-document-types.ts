@@ -1,0 +1,30 @@
+import type { PaymentMethod } from "@/lib/types";
+
+export interface SaleDocumentData {
+  saleId: string;
+  total: number;
+  subtotal?: number;
+  loyaltyDiscount?: number;
+  promoCode?: string;
+  promoDiscount?: number;
+  pointsEarned?: number;
+  pointsRedeemed?: number;
+  loyaltyCardNumber?: string;
+  paymentMethod: PaymentMethod;
+  cashierName: string;
+  items: {
+    name: string;
+    quantity: number;
+    unitPrice: number;
+  }[];
+  createdAt: string;
+  shopifyOrderNumber?: string;
+  customerName?: string;
+  customerPhone?: string;
+  paymentLabel?: string;
+  storeName?: string;
+}
+
+export function saleDocumentNumber(saleId: string): string {
+  return saleId.slice(0, 8).toUpperCase();
+}

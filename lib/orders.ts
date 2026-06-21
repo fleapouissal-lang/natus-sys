@@ -11,6 +11,7 @@ export interface ShopifyOrderPosContext {
   orderNumber: string;
   paymentType: ShopifyOrder["payment_type"];
   customerName: string | null;
+  customerPhone: string | null;
   defaultPayment: "cash" | "card";
   workflowStatus: ShopifyOrder["workflow_status"];
 }
@@ -208,6 +209,7 @@ export async function loadShopifyOrderForPos(
         orderNumber: order.order_number,
         paymentType: order.payment_type,
         customerName: order.customer_name,
+        customerPhone: order.customer_phone,
         defaultPayment: order.payment_type === "cod" ? "cash" : "card",
         workflowStatus,
       },

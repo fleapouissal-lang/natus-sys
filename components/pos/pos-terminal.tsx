@@ -22,8 +22,9 @@ import { Badge } from "@/components/ui/badge";
 import { ProductImage } from "@/components/pos/product-image";
 import { ManagerScanPanel } from "@/components/pos/manager-scan-panel";
 import { PosOrdersPanel } from "@/components/pos/pos-orders-panel";
-import { Modal } from "@/components/ui/modal";
-import { Receipt, printReceipt, type ReceiptData } from "@/components/pos/receipt";
+import type { SaleDocumentData } from "@/components/pos/sale-document-types";
+import { SaleDocumentsModal } from "@/components/pos/sale-documents-modal";
+import { printSaleDocument } from "@/components/pos/print-sale-document";
 import { ProductCatalog } from "@/components/pos/product-catalog";
 import { PosCheckoutPanel } from "@/components/pos/pos-checkout-panel";
 import {
@@ -34,6 +35,7 @@ import { CashierNotificationBell } from "@/components/notifications/cashier-noti
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
 import { completeSale, completeShopifyOrderSale, prepareShopifyOrderForPos, lookupLoyaltyCustomerByScan } from "@/lib/actions";
+import { INVOICE_CLIENT_DIVERS } from "@/lib/constants/invoice";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
 import { shopifyOrderToPosContext } from "@/lib/shopify/order-pos";
@@ -104,7 +106,7 @@ export function PosTerminal({
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
   const [managerMode, setManagerMode] = useState<ManagerMode>("sale");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
-  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [receipt, setReceipt] = useState<SaleDocumentData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(null);
@@ -461,8 +463,14 @@ export function PosTerminal({
       })),
       createdAt: new Date().toISOString(),
       shopifyOrderNumber: activeShopifyOrder?.orderNumber,
-      customerName: loyaltyCustomer?.full_name || activeShopifyOrder?.customerName || undefined,
+      customerName:
+        loyaltyCustomer?.full_name ||
+        activeShopifyOrder?.customerName ||
+        INVOICE_CLIENT_DIVERS,
+      customerPhone:
+        loyaltyCustomer?.phone || activeShopifyOrder?.customerPhone || undefined,
       loyaltyCardNumber: loyaltyCustomer?.card_number,
+      storeName,
     });
 
     setCart([]);
@@ -480,7 +488,7 @@ export function PosTerminal({
       router.refresh();
     }
 
-    setTimeout(() => printReceipt(), 300);
+    setTimeout(() => printSaleDocument("ticket"), 300);
   }
 
   function closeReceipt() {
@@ -738,13 +746,13 @@ export function PosTerminal({
               </div>
             </div>
 
-            {/* Colonne droite 35% — facture / panier */}
+            {/* Colonne droite 35% — panier */}
             <div className="flex h-full min-h-0 w-full min-w-0 flex-col bg-page md:flex-[35] md:border-l md:border-border">
               <div className="flex h-full min-h-0 flex-col">
                 <div className="shrink-0 px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h2 className="text-lg font-bold text-primary">Facture</h2>
+                      <h2 className="text-lg font-bold text-primary">Panier</h2>
                       <p className="text-xs text-muted">
                         {cart.length} article{cart.length !== 1 ? "s" : ""}
                       </p>
@@ -999,7 +1007,7 @@ export function PosTerminal({
                     loading={loading}
                   >
                     <Printer className="h-4 w-4" />
-                    {isShopifyOrderCheckout ? "Imprimer le ticket" : "Imprimer la facture"}
+                    Imprimer ticket
                   </Button>
                 </div>
               </div>
@@ -1031,20 +1039,15 @@ export function PosTerminal({
       )}
 
       {receipt && (
-        <Modal onClose={closeReceipt} size="md" scrollable={false}>
-          <Receipt data={receipt} />
-          <div className="mt-4 flex justify-center gap-3 print:hidden">
-            <Button onClick={() => printReceipt()}>
-              <Printer className="h-4 w-4" />
-              Imprimer
-            </Button>
-            <Button variant="secondary" onClick={closeReceipt}>
-              {initialShopifyOrder || shopifyOrders.length > 0
-                ? "Retour aux commandes"
-                : "Nouvelle vente"}
-            </Button>
-          </div>
-        </Modal>
+        <SaleDocumentsModal
+          data={receipt}
+          onClose={closeReceipt}
+          closeLabel={
+            initialShopifyOrder || shopifyOrders.length > 0
+              ? "Retour aux commandes"
+              : "Nouvelle vente"
+          }
+        />
       )}
 
       <PosScanAlertModal

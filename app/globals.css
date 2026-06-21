@@ -440,26 +440,95 @@ textarea:focus {
   animation: fade-in 0.3s ease-out;
 }
 
+.natus-invoice-print-only {
+  position: fixed;
+  left: -99999px;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 @media print {
   body * {
     visibility: hidden;
   }
 
-  #receipt-print,
-  #receipt-print * {
+  #ticket-print,
+  #ticket-print *,
+  #invoice-print,
+  #invoice-print * {
     visibility: visible;
   }
 
-  #receipt-print {
+  #ticket-print,
+  #invoice-print {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
   }
 
-  @page {
-    size: 80mm auto;
-    margin: 4mm;
+  body[data-print-doc="invoice"] #ticket-print {
+    display: none !important;
+  }
+
+  body[data-print-doc="invoice"] #invoice-print {
+    position: static;
+    width: 100%;
+    max-width: none;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0;
+    overflow: visible !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice > div {
+    border: none !important;
+    background: white !important;
+    padding-top: 4mm !important;
+    overflow: visible !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-table-wrap {
+    overflow: visible !important;
+    max-width: 100%;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-table-wrap table {
+    width: 100% !important;
+    max-width: 100%;
+    table-layout: fixed;
+  }
+
+  body[data-print-doc="ticket"] #invoice-print {
+    display: none !important;
+  }
+
+  body[data-print-doc="ticket"] #ticket-print {
+    position: static;
+    width: 100%;
+    max-width: 80mm;
+    margin: 0 auto;
+    background: white !important;
+    padding: 0 !important;
+  }
+
+  body[data-print-doc="ticket"] .natus-ticket > div {
+    border-color: #d4c4a8 !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-print-only {
+    position: static;
+    left: auto;
+    width: auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  body[data-print-doc="ticket"] .natus-invoice-print-only {
+    display: none !important;
   }
 }
 

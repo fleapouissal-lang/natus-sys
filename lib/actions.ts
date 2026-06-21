@@ -919,12 +919,18 @@ export async function completeShopifyOrderSale(
   }
 
   const supabase = await createClient();
-  const { error: fulfillError } = await supabase.rpc("fulfill_shopify_order", {
-    p_items: items,
-    p_store_id: storeId || order.store_id || null,
-  });
+  const { data: saleId, error: fulfillError } = await supabase.rpc(
+    "fulfill_shopify_order_sale",
+    {
+      p_shopify_order_id: shopifyOrderId,
+      p_items: items,
+      p_store_id: storeId || order.store_id || null,
+      p_payment_method: _paymentMethod,
+    }
+  );
 
   if (fulfillError) return { error: fulfillError.message };
+  if (!saleId) return { error: "Erreur création facture commande" };
 
   const now = new Date().toISOString();
 
@@ -962,7 +968,7 @@ export async function completeShopifyOrderSale(
   revalidatePath("/director/hub");
   revalidatePath("/livreur/orders");
 
-  return { success: true, saleId: null };
+  return { success: true, saleId: saleId as string };
 }
 
 export async function prepareShopifyOrderForPos(
@@ -1584,15 +1590,24 @@ export async function markShopifyCodPaid(
   if ("error" in mapped) return { error: mapped.error };
 
   const supabase = await createClient();
-  const { data: saleId, error: saleError } = await supabase.rpc("record_cod_payment", {
-    p_items: mapped.items,
-    p_store_id: order.store_id || null,
-  });
-
-  if (saleError) return { error: saleError.message };
-  if (!saleId) return { error: "Erreur enregistrement caisse" };
-
   const now = new Date().toISOString();
+  let saleId = order.sale_id;
+
+  if (!saleId) {
+    const { data: newSaleId, error: saleError } = await supabase.rpc("record_cod_payment", {
+      p_items: mapped.items,
+      p_store_id: order.store_id || null,
+      p_customer_name: order.customer_name?.trim() || "Divers",
+      p_customer_phone: order.customer_phone || null,
+      p_customer_email: order.customer_email || null,
+      p_shopify_order_id: orderId,
+    });
+
+    if (saleError) return { error: saleError.message };
+    if (!newSaleId) return { error: "Erreur enregistrement caisse" };
+    saleId = newSaleId as string;
+  }
+
   const { error } = await supabase
     .from("shopify_orders")
     .update({

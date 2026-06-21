@@ -82,6 +82,10 @@ export interface Sale {
   payment_method: PaymentMethod;
   store_id: string | null;
   customer_id: string | null;
+  customer_name: string;
+  customer_phone: string | null;
+  customer_email: string | null;
+  shopify_order_id: string | null;
   loyalty_discount: number;
   loyalty_points_redeemed: number;
   loyalty_points_earned: number;
