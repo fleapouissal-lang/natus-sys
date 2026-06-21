@@ -1,3 +1,5 @@
+import { toLocalDateKey } from "@/lib/utils";
+
 export type StoreTrackingPreset = "today" | "week" | "month" | "quarter" | "custom";
 
 export const STORE_TRACKING_PRESETS: { id: StoreTrackingPreset; label: string }[] = [
@@ -26,6 +28,14 @@ function startOfWeekMonday(d: Date): Date {
   const diff = day === 0 ? -6 : 1 - day;
   x.setDate(x.getDate() + diff);
   return x;
+}
+
+/** Lundi → aujourd'hui (clés fr-CA pour filtres commandes). */
+export function weekToTodayDateKeys(now = new Date()): { from: string; to: string } {
+  return {
+    from: toLocalDateKey(startOfWeekMonday(now)),
+    to: toLocalDateKey(now),
+  };
 }
 
 function startOfMonth(d: Date): Date {

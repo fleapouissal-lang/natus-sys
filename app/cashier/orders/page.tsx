@@ -43,7 +43,7 @@ export default async function CashierOrdersPage() {
         editable
         enablePosCheckout
         products={products}
-        defaultDateToday
+        defaultDateThisWeek
         enableLivreurHandoff
         enableOrderTransfer
         transferTargets={transferTargets}

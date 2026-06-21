@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { DateInputField } from "@/components/ui/date-input-field";
 import { formatCurrency, formatDate, toLocalDateKey, cn } from "@/lib/utils";
+import { weekToTodayDateKeys } from "@/lib/store-tracking-period";
 import { canPrepareOrderForPos } from "@/lib/shopify/order-pos";
 import { paymentTypeLabel, workflowStatusLabel } from "@/lib/shopify/order-status";
 import type { ShopifyOrder } from "@/lib/types";
@@ -21,10 +22,10 @@ export function PosOrdersPanel({
   onClose: () => void;
   onSelectOrder: (order: ShopifyOrder) => void;
 }) {
-  const today = toLocalDateKey(new Date());
+  const weekRange = weekToTodayDateKeys();
   const [search, setSearch] = useState("");
-  const [dateFrom, setDateFrom] = useState(today);
-  const [dateTo, setDateTo] = useState(today);
+  const [dateFrom, setDateFrom] = useState(weekRange.from);
+  const [dateTo, setDateTo] = useState(weekRange.to);
 
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -88,7 +89,7 @@ export function PosOrdersPanel({
 
       <p className="mb-3 text-xs text-muted">
         {filteredOrders.length} commande{filteredOrders.length !== 1 ? "s" : ""}
-        {dateFrom === today && dateTo === today ? " — aujourd'hui" : ""}
+        {dateFrom === weekRange.from && dateTo === weekRange.to ? " — cette semaine" : ""}
       </p>
 
       {filteredOrders.length === 0 ? (

@@ -15,6 +15,7 @@ import { SelectMenu } from "@/components/ui/select-menu";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { DateInputField } from "@/components/ui/date-input-field";
 import { formatCurrency, formatDate, cn, toLocalDateKey } from "@/lib/utils";
+import { weekToTodayDateKeys } from "@/lib/store-tracking-period";
 import {
   shopifyOrderStatusFilterOptions,
   shopifyPaymentTypeFilterOptions,
@@ -160,7 +161,7 @@ export function ShopifyOrdersManager({
   enablePosCheckout = false,
   products = [],
   posCheckoutPath = "/cashier/pos",
-  defaultDateToday = false,
+  defaultDateThisWeek = false,
   livreurMode = false,
   returnsPageMode = false,
   cashierReturnsMode = false,
@@ -179,7 +180,7 @@ export function ShopifyOrdersManager({
   enablePosCheckout?: boolean;
   products?: import("@/lib/shopify/order-cart").ProductLineLookup[];
   posCheckoutPath?: string;
-  defaultDateToday?: boolean;
+  defaultDateThisWeek?: boolean;
   livreurMode?: boolean;
   returnsPageMode?: boolean;
   cashierReturnsMode?: boolean;
@@ -191,9 +192,9 @@ export function ShopifyOrdersManager({
   enableConfirmationFollowUp?: boolean;
 }) {
   const router = useRouter();
-  const today = toLocalDateKey(new Date());
-  const defaultDateFrom = defaultDateToday ? today : "";
-  const defaultDateTo = defaultDateToday ? today : "";
+  const weekRange = weekToTodayDateKeys();
+  const defaultDateFrom = defaultDateThisWeek ? weekRange.from : "";
+  const defaultDateTo = defaultDateThisWeek ? weekRange.to : "";
   const [orders, setOrders] = useState(initialOrders);
   const [pending, startTransition] = useTransition();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -233,8 +234,8 @@ export function ShopifyOrdersManager({
     });
   }, [orders, search, dateFrom, dateTo, paymentFilter, statusFilter]);
 
-  const hasDateFilter = defaultDateToday
-    ? dateFrom !== today || dateTo !== today
+  const hasDateFilter = defaultDateThisWeek
+    ? dateFrom !== weekRange.from || dateTo !== weekRange.to
     : Boolean(dateFrom || dateTo);
 
   const hasFilters = Boolean(
@@ -388,7 +389,11 @@ export function ShopifyOrdersManager({
                 {filteredOrders.length}
               </span>{" "}
               commande{filteredOrders.length !== 1 ? "s" : ""}
-              {dateFrom === today && dateTo === today ? " — aujourd'hui" : ""}
+              {defaultDateThisWeek &&
+              dateFrom === weekRange.from &&
+              dateTo === weekRange.to
+                ? " — cette semaine"
+                : ""}
             </p>
           </div>
         </div>

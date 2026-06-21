@@ -43,7 +43,7 @@ export function LoginForm() {
     const normalizedEmail = String(formData.get("email") ?? email)
       .trim()
       .toLowerCase();
-    const submittedPassword = password;
+    const submittedPassword = String(formData.get("password") ?? password);
 
     if (!normalizedEmail || !submittedPassword) {
       setError("Veuillez saisir votre email et mot de passe");
@@ -59,7 +59,9 @@ export function LoginForm() {
     });
 
     if (authError) {
-      console.error("Login error:", authError.message, authError.code);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Login error:", authError.message, authError.code);
+      }
       setError(getLoginErrorMessage(authError.code, authError.message));
       setLoading(false);
       return;
@@ -119,7 +121,6 @@ export function LoginForm() {
               label="Mot de passe"
               name="password"
               inputSize="lg"
-              maskWithAsterisk
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="********"

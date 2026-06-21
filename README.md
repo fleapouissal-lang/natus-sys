@@ -55,7 +55,7 @@ app/
 ├── commande/         # Suivi commande Shopify (public)
 ├── carte/            # Carte fidélité client (public)
 ├── avis-google/      # Avis Google (public)
-├── api/cron/         # Win-back, feedback livraison, sync Shopify
+├── api/cron/         # Win-back, feedback livraison, sync Shopify, vidage cache
 lib/
 ├── kapso/            # WhatsApp bot, notifications
 ├── marketing/        # Promo, win-back, cross-sell, avis
