@@ -15,6 +15,7 @@ export default async function ManagerLayout({
       role="manager"
       userName={profile.full_name || profile.email}
       cityLabel={profile.city || undefined}
+      city={profile.city}
     >
       {children}
     </DashboardShell>

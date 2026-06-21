@@ -3,24 +3,37 @@
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
-import { formatCurrency, cn } from "@/lib/utils";
+import {
+  formatNotificationMeta,
+  notificationHeadline,
+  notificationHref,
+} from "@/lib/notifications/display";
+import { formatTimeAgo } from "@/lib/notifications/format-time-ago";
+import type { CashierNotification } from "@/lib/notifications/types";
+import { cn } from "@/lib/utils";
+import { CountBadge } from "@/components/ui/count-badge";
 
 export function CashierNotificationBell({
   onSelect,
 }: {
-  /** Sur la caisse : ouvrir le panneau commandes au lieu de naviguer */
-  onSelect?: () => void;
+  /** Sur la caisse : action personnalisée (ex. panneau commandes) */
+  onSelect?: (notification: CashierNotification) => void;
 }) {
   const ctx = useCashierNotifications();
   if (!ctx) return null;
 
-  const { unreadCount, notifications, openPanel, setOpenPanel, markRead, markAllRead } =
-    ctx;
+  const {
+    unreadCount,
+    notifications,
+    openPanel,
+    setOpenPanel,
+    openNotification,
+    markAllRead,
+  } = ctx;
 
-  function handleSelect(notificationId: string) {
-    markRead(notificationId);
-    setOpenPanel(false);
-    onSelect?.();
+  function handleSelect(notification: CashierNotification) {
+    openNotification(notification.id);
+    onSelect?.(notification);
   }
 
   return (
@@ -31,14 +44,16 @@ export function CashierNotificationBell({
           e.stopPropagation();
           setOpenPanel(!openPanel);
         }}
-        className="relative inline-flex h-9 items-center justify-center gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-primary-light/40 cursor-pointer"
-        aria-label="Notifications commandes"
-        title="Notifications commandes"
+        className="relative inline-flex h-9 w-9 items-center justify-center overflow-visible rounded-md border-0 bg-champagne text-primary hover:brightness-95 cursor-pointer"
+        aria-label="Notifications"
+        title="Notifications"
       >
         <Bell className="h-4 w-4 text-primary" />
+        <CountBadge count={unreadCount} className="-right-1 -top-1" />
         {unreadCount > 0 && (
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-[11px] font-bold text-white">
-            {unreadCount > 9 ? "9+" : unreadCount}
+          <span className="sr-only">
+            {unreadCount} notification{unreadCount > 1 ? "s" : ""} non lue
+            {unreadCount > 1 ? "s" : ""}
           </span>
         )}
       </button>
@@ -53,7 +68,14 @@ export function CashierNotificationBell({
           />
           <div className="absolute right-0 top-full z-[70] mt-2 w-80 max-w-[calc(100vw-2rem)] bg-surface shadow-lg">
             <div className="flex items-center justify-between px-4 py-3">
-              <p className="text-sm font-semibold text-foreground">Notifications</p>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Notifications</p>
+                <p className="text-xs text-muted">
+                  {unreadCount > 0
+                    ? `${unreadCount} info${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`
+                    : "Aucune nouvelle info"}
+                </p>
+              </div>
               {unreadCount > 0 && (
                 <button
                   type="button"
@@ -67,7 +89,7 @@ export function CashierNotificationBell({
             <ul className="max-h-72 overflow-y-auto">
               {notifications.length === 0 ? (
                 <li className="px-4 py-6 text-center text-sm text-muted">
-                  Aucune notification
+                  Alertes commandes, réceptions hub et stock faible / rupture.
                 </li>
               ) : (
                 notifications.map((n) => (
@@ -78,15 +100,15 @@ export function CashierNotificationBell({
                     {onSelect ? (
                       <button
                         type="button"
-                        onClick={() => handleSelect(n.id)}
+                        onClick={() => handleSelect(n)}
                         className="block w-full px-4 py-3 text-left hover:bg-primary-light/30 cursor-pointer"
                       >
                         <NotificationItemContent notification={n} />
                       </button>
                     ) : (
                       <Link
-                        href="/cashier/orders"
-                        onClick={() => handleSelect(n.id)}
+                        href={notificationHref(n.kind, n.audience ?? "store")}
+                        onClick={() => handleSelect(n)}
                         className="block px-4 py-3 hover:bg-primary-light/30"
                       >
                         <NotificationItemContent notification={n} />
@@ -106,23 +128,30 @@ export function CashierNotificationBell({
 function NotificationItemContent({
   notification: n,
 }: {
-  notification: {
-    kind: "new" | "transferred";
-    orderNumber: string;
-    customerName: string | null;
-    total: number;
-  };
+  notification: CashierNotification;
 }) {
+  const meta = formatNotificationMeta(n);
+
   return (
-    <>
-      <p className="text-sm font-medium text-foreground">
-        {n.kind === "transferred" ? "Commande transférée" : "Nouvelle commande"}
-      </p>
-      <p className="text-sm text-muted">
-        {n.orderNumber}
-        {n.customerName ? ` — ${n.customerName}` : ""}
-      </p>
-      <p className="mt-0.5 text-xs text-muted">{formatCurrency(n.total)}</p>
-    </>
+    <div className="flex items-start gap-2">
+      {!n.read && (
+        <span
+          className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary"
+          aria-hidden
+        />
+      )}
+      <div className={cn("min-w-0 flex-1", n.read && "pl-4")}>
+        <p className="text-sm font-medium text-foreground">
+          {notificationHeadline(n.kind, true)}
+        </p>
+        <p className="text-sm text-muted">
+          {n.title}
+          {n.subtitle ? ` — ${n.subtitle}` : ""}
+        </p>
+        <p className="mt-0.5 text-xs text-muted">
+          {[meta, formatTimeAgo(n.receivedAt)].filter(Boolean).join(" · ")}
+        </p>
+      </div>
+    </div>
   );
 }

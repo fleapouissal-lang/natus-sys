@@ -90,7 +90,7 @@ export function ConfirmationFollowUpModal({
       {order.customer_phone && status !== "confirmed" && (
         <a
           href={phoneTelHref(order.customer_phone)}
-          className="mb-4 inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+          className="mb-4 inline-flex items-center gap-2 border border-primary/30 bg-champagne px-3 py-2 text-sm font-medium text-black hover:brightness-95"
         >
           <Phone className="h-4 w-4" />
           Appeler {order.customer_phone}

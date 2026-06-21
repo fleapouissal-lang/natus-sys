@@ -5,12 +5,12 @@ import Link from "next/link";
 import { Search, UserPlus, ExternalLink, Eye, Gift } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
 import { LoyaltyCardQrForCashier } from "@/components/loyalty/loyalty-card-client-view";
 import { CreateLoyaltyCustomerModal } from "@/components/loyalty/create-customer-modal";
-import { loyaltyTierFromPoints, loyaltyTierLabel } from "@/lib/loyalty/tiers";
+import { loyaltyTierFromPoints } from "@/lib/loyalty/tiers";
+import { LoyaltyTierBadge } from "@/components/loyalty/loyalty-tier-badge";
 import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
@@ -105,9 +105,7 @@ export function CashierCustomersManager({
                     </td>
                     <td className="px-6 py-4 font-mono text-sm">{customer.card_number}</td>
                     <td className="px-6 py-4">
-                      <Badge variant={tier === "gold" ? "warning" : "default"}>
-                        {loyaltyTierLabel(tier)}
-                      </Badge>
+                      <LoyaltyTierBadge tier={tier} />
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-primary">
                       {customer.loyalty_points}

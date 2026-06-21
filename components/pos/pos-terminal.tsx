@@ -34,11 +34,13 @@ import {
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
+import { notificationHref } from "@/lib/notifications/display";
+import { CountBadge } from "@/components/ui/count-badge";
 import { completeSale, completeShopifyOrderSale, prepareShopifyOrderForPos, lookupLoyaltyCustomerByScan } from "@/lib/actions";
 import { INVOICE_CLIENT_DIVERS } from "@/lib/constants/invoice";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { mapShopifyLineItemsToCart } from "@/lib/shopify/order-cart";
-import { shopifyOrderToPosContext } from "@/lib/shopify/order-pos";
+import { canPrepareOrderForPos, shopifyOrderToPosContext } from "@/lib/shopify/order-pos";
 import { workflowStatusLabel } from "@/lib/shopify/order-status";
 import { formatCurrency } from "@/lib/utils";
 import { computeTvaBreakdown, TVA_RATE } from "@/lib/constants/sales";
@@ -118,6 +120,10 @@ export function PosTerminal({
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const orderNotifications = useCashierNotifications();
+  const preparableOrderCount = useMemo(
+    () => shopifyOrders.filter(canPrepareOrderForPos).length,
+    [shopifyOrders]
+  );
 
   const isManagementUser =
     role === "manager" || role === "directeur" || role === "admin";
@@ -135,6 +141,24 @@ export function PosTerminal({
     if (!activeShopifyOrder) return;
     setPaymentMethod(activeShopifyOrder.defaultPayment);
   }, [activeShopifyOrder]);
+
+  useEffect(() => {
+    if (!orderNotifications) return;
+    orderNotifications.setNotificationOpenHandler((notification) => {
+      if (notification.kind === "hub_transfer") {
+        router.push(notificationHref(notification.kind, notification.audience));
+        return;
+      }
+      if (
+        notification.kind === "stock_low" ||
+        notification.kind === "stock_out"
+      ) {
+        return;
+      }
+      setShowOrdersPanel(true);
+    });
+    return () => orderNotifications.setNotificationOpenHandler(null);
+  }, [orderNotifications, router]);
 
   const addToCart = useCallback((product: Product, qty: number) => {
     if (activeShopifyOrder) return;
@@ -432,6 +456,34 @@ export function PosTerminal({
       return;
     }
 
+    if (orderNotifications?.reportStockChanges && defaultStoreId) {
+      const soldByProduct = new Map<
+        string,
+        { product: Product; quantity: number }
+      >();
+      for (const item of cart) {
+        const existing = soldByProduct.get(item.product.id);
+        if (existing) {
+          existing.quantity += item.quantity;
+        } else {
+          soldByProduct.set(item.product.id, {
+            product: item.product,
+            quantity: item.quantity,
+          });
+        }
+      }
+
+      orderNotifications.reportStockChanges(
+        [...soldByProduct.values()].map(({ product, quantity }) => ({
+          storeId: defaultStoreId,
+          productId: product.id,
+          productName: product.name,
+          previousStock: product.stock,
+          nextStock: Math.max(0, product.stock - quantity),
+        }))
+      );
+    }
+
     const subtotal = cart.reduce(
       (sum, item) => sum + item.product.price * item.quantity,
       0
@@ -619,7 +671,25 @@ export function PosTerminal({
           <div className="flex min-h-0 flex-1 flex-col md:flex-row">
             {/* Colonne gauche 65% — catalogue produits */}
             <div className="flex min-h-0 w-full min-w-0 flex-col md:flex-[65]">
-              {orderNotifications && <CashierNotificationBar />}
+              {orderNotifications && (
+                <CashierNotificationBar
+                  onViewNotification={(notification) => {
+                    if (notification.kind === "hub_transfer") {
+                      router.push(
+                        notificationHref(notification.kind, notification.audience)
+                      );
+                      return;
+                    }
+                    if (
+                      notification.kind === "stock_low" ||
+                      notification.kind === "stock_out"
+                    ) {
+                      return;
+                    }
+                    setShowOrdersPanel(true);
+                  }}
+                />
+              )}
               <div className="shrink-0 px-4 py-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -629,20 +699,36 @@ export function PosTerminal({
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    {(shopifyOrders.length > 0 || orderNotifications) && (
+                    {preparableOrderCount > 0 && (
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="primary"
                         size="sm"
+                        className="relative overflow-visible"
                         onClick={() => setShowOrdersPanel(true)}
                       >
                         <ClipboardList className="h-4 w-4" />
                         Commandes
+                        <CountBadge count={preparableOrderCount} />
                       </Button>
                     )}
                     {orderNotifications && (
                       <CashierNotificationBell
-                        onSelect={() => setShowOrdersPanel(true)}
+                        onSelect={(notification) => {
+                          if (notification.kind === "hub_transfer") {
+                            router.push(
+                              notificationHref(notification.kind, notification.audience)
+                            );
+                            return;
+                          }
+                          if (
+                            notification.kind === "stock_low" ||
+                            notification.kind === "stock_out"
+                          ) {
+                            return;
+                          }
+                          setShowOrdersPanel(true);
+                        }}
                       />
                     )}
                     {isManagementUser && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { loyaltyTierFromPoints, loyaltyTierLabel } from "@/lib/loyalty/tiers";
+import { loyaltyTierFromPoints, loyaltyTierLabel, LOYALTY_TIER_BADGE_COLORS } from "@/lib/loyalty/tiers";
 import {
   formatLoyaltyCardNumber,
   formatMemberSinceLuxury,
@@ -50,14 +50,19 @@ function TierBadge({
   compact: boolean;
 }) {
   const label = loyaltyTierLabel(tier);
+  const colors = LOYALTY_TIER_BADGE_COLORS[tier];
 
   return (
     <div
       className={cn(
-        "shrink-0 rounded-full px-2.5 py-0.5 font-bold uppercase text-black",
+        "shrink-0 rounded-full border px-2.5 py-0.5 font-bold uppercase",
         compact ? "text-[7px] tracking-[0.08em]" : "text-[8px] tracking-[0.1em]"
       )}
-      style={{ backgroundColor: "#FFF6EC" }}
+      style={{
+        backgroundColor: colors.bg,
+        color: colors.text,
+        borderColor: colors.border,
+      }}
     >
       {label}
     </div>
@@ -207,7 +212,17 @@ function NoirCardBack({
           </div>
           <div className="text-right">
             <p className="text-[6px] uppercase tracking-[0.14em] opacity-55">Statut</p>
-            <p className={cn("mt-0.5 font-bold uppercase", compact ? "text-[9px]" : "text-[10px]")}>
+            <p
+              className={cn(
+                "mt-0.5 inline-block rounded-full border px-1.5 py-0.5 font-bold uppercase",
+                compact ? "text-[9px]" : "text-[10px]"
+              )}
+              style={{
+                backgroundColor: LOYALTY_TIER_BADGE_COLORS[tier].bg,
+                color: LOYALTY_TIER_BADGE_COLORS[tier].text,
+                borderColor: LOYALTY_TIER_BADGE_COLORS[tier].border,
+              }}
+            >
               {loyaltyTierLabel(tier)}
             </p>
           </div>

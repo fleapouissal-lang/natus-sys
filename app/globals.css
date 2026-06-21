@@ -79,6 +79,22 @@
   overflow: hidden;
 }
 
+.order-status-display {
+  background-color: var(--champagne) !important;
+  color: #000 !important;
+}
+
+.order-action-icon {
+  background-color: transparent !important;
+  border-color: #B38C4A !important;
+  color: #B38C4A !important;
+}
+
+.order-action-icon:hover {
+  background-color: rgba(179, 140, 74, 0.1) !important;
+  filter: none;
+}
+
 /* Page publique carte fidélité */
 .loyalty-carte-page {
   min-height: 100vh;
@@ -450,6 +466,16 @@ textarea:focus {
   pointer-events: none;
 }
 
+.natus-sales-report-print-only {
+  position: fixed;
+  left: -99999px;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 @media print {
   body * {
     visibility: hidden;
@@ -458,12 +484,15 @@ textarea:focus {
   #ticket-print,
   #ticket-print *,
   #invoice-print,
-  #invoice-print * {
+  #invoice-print *,
+  #cashier-sales-report-print,
+  #cashier-sales-report-print * {
     visibility: visible;
   }
 
   #ticket-print,
-  #invoice-print {
+  #invoice-print,
+  #cashier-sales-report-print {
     position: absolute;
     left: 0;
     top: 0;
@@ -538,6 +567,28 @@ textarea:focus {
   }
 
   body[data-print-doc="ticket"] .natus-invoice-print-only {
+    display: none !important;
+  }
+
+  body[data-print-doc="sales-report"] #cashier-sales-report-print {
+    position: static;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report-print-only {
+    position: static;
+    left: auto;
+    width: auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  body[data-print-doc="invoice"] #cashier-sales-report-print,
+  body[data-print-doc="ticket"] #cashier-sales-report-print {
     display: none !important;
   }
 }

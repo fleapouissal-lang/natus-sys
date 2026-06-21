@@ -1,24 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
+import { fetchCashierSales } from "@/lib/sales/fetch-cashier-sales";
 import { CashierSalesHistory } from "@/components/sales/cashier-sales-history";
-import type { Sale } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
 
 export default async function CashierSalesPage() {
   const profile = await getCurrentProfile();
   const supabase = await createClient();
 
-  const { data } = profile
-    ? await supabase
-        .from("sales")
-        .select(
-          "*, profiles(full_name, email), stores(name, city), customers(full_name, card_number, phone), sale_items(id, quantity, unit_price, products(name, barcode))"
-        )
-        .eq("cashier_id", profile.id)
-        .order("created_at", { ascending: false })
-        .limit(300)
-    : { data: [] };
-
-  const sales = (data || []) as Sale[];
+  const { sales, error } = profile
+    ? await fetchCashierSales(supabase, profile.id)
+    : { sales: [], error: null };
 
   return (
     <div className="animate-fade-in">
@@ -29,7 +22,17 @@ export default async function CashierSalesPage() {
         </p>
       </div>
 
-      <CashierSalesHistory sales={sales} />
+      {error && (
+        <p className="mb-4 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+          Impossible de charger les ventes : {error}
+        </p>
+      )}
+
+      <CashierSalesHistory
+        initialSales={sales}
+        cashierId={profile?.id}
+        cashierName={profile?.full_name || profile?.email || undefined}
+      />
     </div>
   );
 }

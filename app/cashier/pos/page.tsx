@@ -47,9 +47,23 @@ export default async function PosPage({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {showStoreFilter && stores.length > 0 && (
-        <div className="shrink-0 border-b border-border px-4 py-3">
+        <div className="shrink-0 border-b border-border px-4 py-2.5">
           <Suspense fallback={null}>
-            <StoreFilterBar stores={stores} selectedStoreId={storeId} />
+            <StoreFilterBar
+              stores={stores}
+              selectedStoreId={storeId}
+              layout={
+                profile?.role === "directeur" || profile?.role === "admin"
+                  ? "compact"
+                  : "default"
+              }
+              title="Magasin"
+              className={
+                profile?.role === "directeur" || profile?.role === "admin"
+                  ? "p-0"
+                  : undefined
+              }
+            />
           </Suspense>
         </div>
       )}

@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Search, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { loyaltyTierFromPoints, loyaltyTierLabel } from "@/lib/loyalty/tiers";
+import { loyaltyTierFromPoints } from "@/lib/loyalty/tiers";
+import { LoyaltyTierBadge } from "@/components/loyalty/loyalty-tier-badge";
 import { formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
@@ -85,9 +85,7 @@ export function LoyaltyCustomersList({
                     </td>
                     <td className="px-6 py-4 font-mono">{customer.card_number}</td>
                     <td className="px-6 py-4">
-                      <Badge variant={tier === "gold" ? "warning" : "default"}>
-                        {loyaltyTierLabel(tier)}
-                      </Badge>
+                      <LoyaltyTierBadge tier={tier} />
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-primary">
                       {customer.loyalty_points}

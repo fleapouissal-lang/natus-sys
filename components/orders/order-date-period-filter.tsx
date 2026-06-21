@@ -5,6 +5,7 @@ import {
   ORDER_DATE_PRESETS,
   type OrderDatePreset,
 } from "@/lib/store-tracking-period";
+import { natusFilterChipClass } from "@/components/ui/natus-filter-chip";
 
 export function OrderDatePeriodFilter({
   activePreset,
@@ -22,12 +23,7 @@ export function OrderDatePeriodFilter({
           key={id}
           type="button"
           onClick={() => onPresetChange(id)}
-          className={cn(
-            "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-            activePreset === id
-              ? "border-primary bg-primary text-black"
-              : "border-border bg-surface text-foreground hover:border-primary/50"
-          )}
+          className={natusFilterChipClass(activePreset === id)}
         >
           {label}
         </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { DateInputField } from "@/components/ui/date-input-field";
-import { cn } from "@/lib/utils";
+import { natusFilterChipClass } from "@/components/ui/natus-filter-chip";
 import {
   STORE_TRACKING_PRESETS,
   type StoreTrackingPreset,
@@ -37,12 +37,7 @@ export function StoreTrackingPeriodFilter({
             key={id}
             type="button"
             onClick={() => onPresetChange(id)}
-            className={cn(
-              "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-              preset === id
-                ? "border-primary bg-primary text-black"
-                : "border-border bg-surface text-foreground hover:border-primary/50"
-            )}
+            className={natusFilterChipClass(preset === id)}
           >
             {label}
           </button>

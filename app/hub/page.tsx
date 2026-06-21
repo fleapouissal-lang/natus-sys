@@ -110,7 +110,7 @@ export default async function HubDashboardPage() {
           </div>
           <Link
             href="/hub/hub-stock"
-            className="inline-flex items-center gap-2 rounded-md border border-primary bg-surface px-4 py-2 text-sm font-medium hover:bg-primary-light"
+            className="inline-flex items-center gap-2 rounded-md border border-primary bg-champagne px-4 py-2 text-sm font-medium text-black hover:brightness-95"
           >
             <Warehouse className="h-4 w-4" />
             Gérer le stock hub

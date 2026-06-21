@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { MapPin } from "lucide-react";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { DateInputField } from "@/components/ui/date-input-field";
@@ -39,6 +40,10 @@ export function SalesAgendaFilter({
   stores,
   selectedStoreId,
   onStoreChange,
+  periodFilter,
+  periodHint,
+  extraActions,
+  hasActiveFilters,
 }: {
   dateFrom: string;
   dateTo: string;
@@ -52,15 +57,21 @@ export function SalesAgendaFilter({
   stores?: Store[];
   selectedStoreId?: string;
   onStoreChange?: (storeId: string) => void;
+  periodFilter?: ReactNode;
+  periodHint?: string;
+  extraActions?: ReactNode;
+  /** Si défini, remplace la détection automatique des filtres actifs. */
+  hasActiveFilters?: boolean;
 }) {
-  const hasFilters = dateFrom || dateTo || paymentFilter;
+  const hasFilters =
+    hasActiveFilters ?? Boolean(dateFrom || dateTo || paymentFilter);
   const showStore = stores && stores.length > 0 && onStoreChange;
 
   return (
     <div className={cn("natus-filter-bar overflow-visible p-4", className)}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-medium text-primary">Filtrer les ventes</p>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {hasFilters && (
             <button
               type="button"
@@ -70,12 +81,16 @@ export function SalesAgendaFilter({
               Tout effacer
             </button>
           )}
+          {extraActions}
           <p className="text-sm text-muted">
             <span className="font-semibold text-foreground">{resultCount}</span>{" "}
             transaction{resultCount !== 1 ? "s" : ""}
+            {periodHint ? ` — ${periodHint}` : ""}
           </p>
         </div>
       </div>
+
+      {periodFilter ? <div className="mb-4">{periodFilter}</div> : null}
 
       <div
         className={cn(

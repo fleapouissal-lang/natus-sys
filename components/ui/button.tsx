@@ -19,9 +19,9 @@ export function Button({
     primary:
       "bg-champagne text-black hover:brightness-95 shadow-sm disabled:opacity-50",
     secondary:
-      "bg-surface border border-primary text-foreground hover:bg-primary-light",
+      "bg-champagne border border-primary text-black hover:brightness-95 disabled:opacity-50",
     danger: "bg-danger text-white hover:opacity-90",
-    ghost: "text-muted hover:text-foreground hover:bg-primary-light",
+    ghost: "text-muted hover:text-foreground hover:bg-champagne/60",
   };
 
   const sizes = {

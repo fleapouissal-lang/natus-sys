@@ -7,10 +7,8 @@ import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { ManagerSalesHistory } from "@/components/sales/manager-sales-history";
 import { Card } from "@/components/ui/card";
+import { SALE_HISTORY_SELECT } from "@/lib/sales/sale-select";
 import type { Sale } from "@/lib/types";
-
-const SALE_SELECT =
-  "*, profiles(full_name, email), stores(name, city), customers(full_name, card_number, phone), sale_items(id, quantity, unit_price, products(name, barcode))";
 
 export default async function SalesPage({
   searchParams,
@@ -28,7 +26,7 @@ export default async function SalesPage({
   const { data } = storeId
     ? await supabase
         .from("sales")
-        .select(SALE_SELECT)
+        .select(SALE_HISTORY_SELECT)
         .eq("store_id", storeId)
         .order("created_at", { ascending: false })
         .limit(300)

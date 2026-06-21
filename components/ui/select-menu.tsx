@@ -57,7 +57,7 @@ function OptionIcon({
       className={cn(
         "select-menu-icon-box flex shrink-0 items-center justify-center",
         compact ? "h-6 w-6" : "h-9 w-9",
-        active ? "bg-primary/15 text-primary" : "bg-primary-light text-primary"
+        active ? "bg-champagne text-black" : "bg-champagne text-black"
       )}
     >
       <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} strokeWidth={2} />
@@ -314,8 +314,8 @@ export function SelectMenu({
                       className={cn(
                         "flex w-full items-center text-left transition-colors cursor-pointer",
                         showIcons ? "gap-3 px-2 py-2.5 text-sm" : "px-2.5 py-1.5 text-xs",
-                        (active || highlighted) && "bg-primary-light text-foreground",
-                        !active && !highlighted && "hover:bg-primary-light/70"
+                        (active || highlighted) && "bg-champagne text-black",
+                        !active && !highlighted && "hover:bg-champagne/80"
                       )}
                     >
                       {showIcons && (

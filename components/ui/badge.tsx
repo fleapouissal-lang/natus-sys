@@ -8,11 +8,11 @@ interface BadgeProps {
 
 export function Badge({ children, variant = "default", className }: BadgeProps) {
   const variants = {
-    default: "bg-primary-light text-primary-dark",
-    success: "bg-success/10 text-success",
-    warning: "bg-primary/15 text-primary-dark",
-    danger: "bg-danger/10 text-danger",
-    accent: "bg-primary text-black",
+    default: "bg-champagne text-black",
+    success: "bg-success/12 text-success",
+    warning: "bg-champagne text-[#8F6B38]",
+    danger: "bg-danger/12 text-danger",
+    accent: "bg-primary/15 text-primary-dark",
   };
 
   return (

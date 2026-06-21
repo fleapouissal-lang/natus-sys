@@ -14,6 +14,7 @@ export function StoreFilterBar({
   allowAll = false,
   title = "Filtrer par magasin",
   showHeader = true,
+  layout = "default",
 }: {
   stores: Store[];
   selectedStoreId: string;
@@ -21,6 +22,8 @@ export function StoreFilterBar({
   allowAll?: boolean;
   title?: string;
   showHeader?: boolean;
+  /** Caisse / barre fine : titre à gauche, select à droite */
+  layout?: "default" | "compact";
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -40,6 +43,43 @@ export function StoreFilterBar({
   }
 
   const selected = stores.find((s) => s.id === selectedStoreId);
+
+  const select = (
+    <SelectMenu
+      label={layout === "default" ? "Magasin" : undefined}
+      value={selectedStoreId}
+      onChange={handleChange}
+      options={storeOptions(stores, {
+        allLabel: "Tous les magasins",
+        includeAll: allowAll,
+      })}
+      placeholder="Sélectionner un magasin"
+      defaultIcon={MapPin}
+      size="sm"
+      searchable={stores.length > 6}
+      searchPlaceholder="Rechercher un magasin..."
+      className={cn(layout === "compact" && "w-full sm:w-[min(100%,16rem)]")}
+      triggerClassName={cn(layout === "compact" && "min-w-[12rem]")}
+    />
+  );
+
+  if (layout === "compact") {
+    return (
+      <div
+        className={cn(
+          "natus-filter-bar flex flex-wrap items-center justify-between gap-3 overflow-visible",
+          className
+        )}
+      >
+        {title ? (
+          <p className="text-sm font-medium text-primary">{title}</p>
+        ) : (
+          <span className="sr-only">Filtrer par magasin</span>
+        )}
+        <div className="ml-auto w-full shrink-0 sm:w-auto">{select}</div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("natus-filter-bar overflow-visible p-4", className)}>
@@ -63,18 +103,7 @@ export function StoreFilterBar({
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-end">
-        <SelectMenu
-          label="Magasin"
-          value={selectedStoreId}
-          onChange={handleChange}
-          options={storeOptions(stores, {
-            allLabel: "Tous les magasins",
-            includeAll: allowAll,
-          })}
-          placeholder="Sélectionner un magasin"
-          defaultIcon={MapPin}
-          size="sm"
-        />
+        {select}
       </div>
     </div>
   );

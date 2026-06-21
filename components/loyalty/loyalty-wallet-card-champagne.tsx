@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { loyaltyTierFromPoints, loyaltyTierLabel } from "@/lib/loyalty/tiers";
+import { loyaltyTierFromPoints, loyaltyTierLabel, LOYALTY_TIER_BADGE_COLORS } from "@/lib/loyalty/tiers";
 import {
   formatLoyaltyCardNumber,
   formatLoyaltyCardExpiry,
@@ -262,10 +262,15 @@ function LoyaltyCardBack({
             </p>
             <p
               className={cn(
-                "mt-0.5 font-bold uppercase",
+                "mt-0.5 inline-block rounded-md border px-1.5 py-0.5 font-bold uppercase",
                 compact ? "text-[9px]" : "text-[10px]"
               )}
-              style={{ fontFamily: SERIF }}
+              style={{
+                fontFamily: SERIF,
+                backgroundColor: LOYALTY_TIER_BADGE_COLORS[tier].bg,
+                color: LOYALTY_TIER_BADGE_COLORS[tier].text,
+                borderColor: LOYALTY_TIER_BADGE_COLORS[tier].border,
+              }}
             >
               {loyaltyTierLabel(tier)}
             </p>

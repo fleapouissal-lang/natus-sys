@@ -5,7 +5,8 @@ import { ArrowLeft, ExternalLink, Gift } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
-import { loyaltyTierFromPoints, loyaltyTierLabel } from "@/lib/loyalty/tiers";
+import { loyaltyTierFromPoints } from "@/lib/loyalty/tiers";
+import { LoyaltyTierBadge } from "@/components/loyalty/loyalty-tier-badge";
 import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
 import { loyaltyCardVariantLabel } from "@/lib/loyalty/card-variant";
 import { canRedeemLoyaltyPoints, pointsUntilRedemption } from "@/lib/loyalty/points";
@@ -48,9 +49,7 @@ export function LoyaltyCustomerDetailView({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={tier === "gold" ? "warning" : "default"}>
-            {loyaltyTierLabel(tier)}
-          </Badge>
+          <LoyaltyTierBadge tier={tier} />
           <Badge variant="default">
             {loyaltyCardVariantLabel(customer.card_variant ?? "champagne")}
           </Badge>

@@ -22,6 +22,8 @@ import {
   type OrderDatePreset,
 } from "@/lib/store-tracking-period";
 import { OrderDatePeriodFilter } from "@/components/orders/order-date-period-filter";
+import { OrderAgeBadge } from "@/components/orders/order-age-badge";
+import { orderCreatedAt } from "@/lib/shopify/order-age-urgency";
 import {
   shopifyOrderStatusFilterOptions,
   shopifyPaymentTypeFilterOptions,
@@ -53,16 +55,7 @@ const STATUS_CELL_WIDTH = "w-[172px]";
 const ACTION_COLOR = "#B38C4A";
 
 function OrderStatusDisplay({ status }: { status: ShopifyWorkflowStatus }) {
-  const variant = statusVariant(status);
-
-  const tone =
-    variant === "success"
-      ? "border-success/30 bg-success/5 text-success"
-      : variant === "danger"
-        ? "border-danger/30 bg-danger/5 text-danger"
-        : variant === "warning"
-          ? "border-primary/30 bg-primary/5 text-foreground"
-          : "border-primary/30 bg-surface text-foreground";
+  const tone = "border-primary/30 bg-champagne text-black";
 
   return (
     <div
@@ -114,9 +107,7 @@ function IconStatus({
       aria-label={label}
       className={cn(
         "order-action-icon flex h-8 w-8 shrink-0 items-center justify-center border",
-        tone === "paid"
-          ? "border-success/40 bg-success/5 text-success"
-          : "border-primary/30 bg-page text-muted"
+        "border-[#B38C4A] bg-transparent text-[#B38C4A] hover:bg-[#B38C4A]/10"
       )}
     >
       {children}
@@ -146,7 +137,7 @@ function IconAction({
       disabled={disabled || loading}
       title={label}
       aria-label={label}
-      className="order-action-icon flex h-8 w-8 shrink-0 items-center justify-center !p-0 border bg-transparent hover:bg-[#B38C4A]/10"
+      className="order-action-icon flex h-8 w-8 shrink-0 items-center justify-center !p-0 border border-[#B38C4A] bg-transparent text-[#B38C4A] hover:bg-[#B38C4A]/10"
       style={{ borderColor: COD_ACTION_BORDER, color: ACTION_COLOR }}
     >
       {loading ? (
@@ -536,9 +527,14 @@ export function ShopifyOrdersManager({
                   <tr key={order.id} className="border-b border-border">
                     <td className="px-6 py-4 font-medium">{order.order_number}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {order.shopify_created_at
-                        ? formatDate(order.shopify_created_at)
-                        : formatDate(order.created_at)}
+                      <div className="flex flex-col items-start gap-1.5">
+                        <span>
+                          {order.shopify_created_at
+                            ? formatDate(order.shopify_created_at)
+                            : formatDate(order.created_at)}
+                        </span>
+                        <OrderAgeBadge createdAt={orderCreatedAt(order)} />
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <p>{order.customer_name || "—"}</p>
@@ -637,7 +633,7 @@ export function ShopifyOrdersManager({
                                 onClick={() =>
                                   setReturnNoteOrder({ order, mode: "edit" })
                                 }
-                                className="order-action-icon flex h-8 w-8 shrink-0 items-center justify-center border border-primary/30 bg-page text-primary hover:bg-primary-light cursor-pointer"
+                                className="order-action-icon flex h-8 w-8 shrink-0 items-center justify-center border border-[#B38C4A] bg-transparent text-[#B38C4A] hover:bg-[#B38C4A]/10 cursor-pointer"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>

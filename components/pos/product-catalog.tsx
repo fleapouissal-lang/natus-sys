@@ -123,13 +123,43 @@ function ProductCard({
   const inOrder = cartQty > 0;
   const orderValidated = validatedQty >= cartQty;
 
+  function handleCardClick() {
+    if (outOfStock) return;
+    if (orderMode) {
+      if (inOrder && validatedQty < cartQty) {
+        onAddToCart(product, 1);
+      }
+      return;
+    }
+    if (cartQty >= product.stock) return;
+    onAddToCart(product, 1);
+  }
+
+  const cardClickable =
+    !outOfStock &&
+    (orderMode ? inOrder && validatedQty < cartQty : cartQty < product.stock);
+
   return (
     <div
+      role={cardClickable ? "button" : undefined}
+      tabIndex={cardClickable ? 0 : undefined}
+      onClick={cardClickable ? handleCardClick : undefined}
+      onKeyDown={
+        cardClickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleCardClick();
+              }
+            }
+          : undefined
+      }
       className={cn(
-        "flex h-full flex-col overflow-hidden border bg-surface transition-colors hover:border-primary",
+        "flex h-full flex-col overflow-hidden border bg-surface transition-colors",
         highlighted
           ? "border-success ring-2 ring-success/30"
-          : "border-border"
+          : "border-border",
+        cardClickable && "cursor-pointer hover:border-primary"
       )}
     >
       <div className="relative aspect-[4/3] w-full shrink-0 bg-page">
@@ -140,6 +170,14 @@ function ProductCard({
           className="object-cover"
           unoptimized
         />
+        {!outOfStock && (
+          <span
+            className="absolute right-1.5 top-1.5 z-[1] min-w-[1.25rem] rounded-md border-0 bg-champagne px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-black shadow-sm"
+            title={`${product.stock} en stock`}
+          >
+            {product.stock}
+          </span>
+        )}
         {outOfStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
             <Badge variant="danger">Rupture</Badge>
@@ -159,7 +197,11 @@ function ProductCard({
 
         {orderMode ? (
           inOrder ? (
-            <div className="mt-auto flex flex-col items-center gap-1.5">
+            <div
+              className="mt-auto flex flex-col items-center gap-1.5"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
               <p className="text-center text-xs text-muted">
                 {cartQty} commandé{cartQty !== 1 ? "s" : ""}
                 {orderValidated ? " · validé" : ""}
@@ -192,7 +234,11 @@ function ProductCard({
             <p className="mt-auto text-center text-xs text-muted">Hors commande</p>
           )
         ) : (
-        <div className="mt-auto flex items-center justify-center">
+        <div
+          className="mt-auto flex items-center justify-center"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center rounded-full bg-page px-1 py-0.5">
             <button
               type="button"

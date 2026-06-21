@@ -101,6 +101,20 @@ export async function getProductCatalog(): Promise<
   return data || [];
 }
 
+export async function getStoreStockMap(storeId: string): Promise<Record<string, number>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("store_inventory")
+    .select("product_id, stock")
+    .eq("store_id", storeId);
+
+  const map: Record<string, number> = {};
+  for (const row of data || []) {
+    map[row.product_id as string] = row.stock as number;
+  }
+  return map;
+}
+
 export async function getStoreInventory(storeId: string) {
   const supabase = await createClient();
   const { data } = await supabase

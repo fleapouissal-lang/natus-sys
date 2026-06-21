@@ -13,6 +13,8 @@ import {
   type OrderDatePreset,
 } from "@/lib/store-tracking-period";
 import { OrderDatePeriodFilter } from "@/components/orders/order-date-period-filter";
+import { OrderAgeBadge } from "@/components/orders/order-age-badge";
+import { orderCreatedAt } from "@/lib/shopify/order-age-urgency";
 import { canPrepareOrderForPos } from "@/lib/shopify/order-pos";
 import { paymentTypeLabel, workflowStatusLabel } from "@/lib/shopify/order-status";
 import type { ShopifyOrder } from "@/lib/types";
@@ -138,6 +140,10 @@ export function PosOrdersPanel({
                 <p className="text-xs text-muted">
                   {formatDate(order.shopify_created_at || order.created_at)}
                 </p>
+                <OrderAgeBadge
+                  createdAt={orderCreatedAt(order)}
+                  className="mt-1"
+                />
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <Badge variant={order.payment_type === "cod" ? "warning" : "success"}>

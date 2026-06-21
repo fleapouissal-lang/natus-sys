@@ -54,8 +54,8 @@ export function StoreOverviewChart({
               onClick={() => selectStore(row.storeId)}
               className={`w-full rounded-lg border p-4 text-left transition-colors cursor-pointer ${
                 selected
-                  ? "border-primary bg-primary/10"
-                  : "border-border bg-surface hover:border-primary/50 hover:bg-primary/5"
+                  ? "border-primary bg-champagne"
+                  : "border-border bg-champagne hover:border-primary/50 hover:brightness-95"
               }`}
             >
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

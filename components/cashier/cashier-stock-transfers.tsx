@@ -17,10 +17,12 @@ export function CashierStockTransfers({
   transfers,
   storeName,
   productsById,
+  storeStockByProductId,
 }: {
   transfers: HubStockTransfer[];
   storeName: string;
   productsById: Record<string, Pick<Product, "id" | "name" | "barcode" | "image_url" | "category">>;
+  storeStockByProductId: Record<string, number>;
 }) {
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -72,7 +74,19 @@ export function CashierStockTransfers({
         </Card>
       ) : (
         <div className="space-y-4">
-          {paginatedTransfers.map((transfer) => (
+          {paginatedTransfers.map((transfer) => {
+            const transferTotals = transfer.items.reduce(
+              (acc, item) => {
+                const inStore = storeStockByProductId[item.product_id] ?? 0;
+                acc.inStore += inStore;
+                acc.received += item.quantity;
+                acc.total += inStore + item.quantity;
+                return acc;
+              },
+              { inStore: 0, received: 0, total: 0 }
+            );
+
+            return (
             <Card key={transfer.id} padding={false}>
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-4">
                 <div>
@@ -86,6 +100,9 @@ export function CashierStockTransfers({
                   <p className="mt-1 text-sm text-muted">
                     {formatDate(transfer.sent_at)}
                     {transfer.creator_name ? ` · ${transfer.creator_name}` : ""}
+                    {" · "}
+                    {transfer.items.length} produit{transfer.items.length !== 1 ? "s" : ""},{" "}
+                    +{transfer.total_units} unité{transfer.total_units !== 1 ? "s" : ""} à recevoir
                   </p>
                   {transfer.notes && (
                     <p className="mt-1 text-sm text-muted">{transfer.notes}</p>
@@ -106,12 +123,21 @@ export function CashierStockTransfers({
                   <thead>
                     <tr className="border-b border-border bg-primary-light/30">
                       <th className="px-6 py-3 text-left font-medium text-muted">Produit</th>
-                      <th className="px-6 py-3 text-right font-medium text-muted">Quantité</th>
+                      <th className="px-6 py-3 text-right font-medium text-muted">
+                        En magasin
+                      </th>
+                      <th className="px-6 py-3 text-right font-medium text-muted">Reçu</th>
+                      <th className="px-6 py-3 text-right font-medium text-muted">
+                        Total magasin
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {transfer.items.map((item) => {
                       const product = productsById[item.product_id];
+                      const inStore = storeStockByProductId[item.product_id] ?? 0;
+                      const received = item.quantity;
+                      const totalInStore = inStore + received;
                       return (
                         <tr key={item.id} className="border-b border-border last:border-b-0">
                           <td className="px-6 py-4">
@@ -127,17 +153,38 @@ export function CashierStockTransfers({
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-right font-medium">
-                            +{item.quantity}
+                          <td className="px-6 py-4 text-right tabular-nums text-muted">
+                            {inStore}
+                          </td>
+                          <td className="px-6 py-4 text-right tabular-nums font-semibold text-primary">
+                            +{received}
+                          </td>
+                          <td className="px-6 py-4 text-right tabular-nums font-bold">
+                            {totalInStore}
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
+                  <tfoot>
+                    <tr className="border-t border-border bg-champagne/30 font-semibold">
+                      <td className="px-6 py-3 text-left">Total envoi</td>
+                      <td className="px-6 py-3 text-right tabular-nums text-muted">
+                        {transferTotals.inStore}
+                      </td>
+                      <td className="px-6 py-3 text-right tabular-nums text-primary">
+                        +{transferTotals.received}
+                      </td>
+                      <td className="px-6 py-3 text-right tabular-nums">
+                        {transferTotals.total}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
