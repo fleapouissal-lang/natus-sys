@@ -88,6 +88,7 @@ function ManagerDashboardTabsInner({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const activityBase = pathname.startsWith("/director") ? "/director" : "/manager";
   const tabParam = searchParams.get("tab");
   const activeTab: DashboardTab =
     tabParam === "stats" || tabParam === "suivi" ? tabParam : "suivi";
@@ -120,17 +121,24 @@ function ManagerDashboardTabsInner({
       </div>
 
       {activeTab === "suivi" && (
-        <StoreTrackingView
-          storeSnapshots={storeSnapshots}
-          overviewByStore={overviewByStore}
-          selectedStoreId={selectedStoreId}
-          onStoreSelect={(storeId) => {
-            const params = new URLSearchParams(searchParams.toString());
-            params.set("store", storeId);
-            params.set("tab", "stats");
-            router.push(`${pathname}?${params.toString()}`);
-          }}
-        />
+        <div className="space-y-6">
+          <Suspense fallback={null}>
+            <StoreFilterBar stores={stores} selectedStoreId={selectedStoreId} />
+          </Suspense>
+
+          {selectedStoreId ? (
+            <StoreTrackingView
+              storeSnapshots={storeSnapshots}
+              overviewByStore={overviewByStore}
+              selectedStoreId={selectedStoreId}
+              selectedStoreLabel={selectedStoreLabel}
+            />
+          ) : (
+            <Card className="py-12 text-center text-muted">
+              Sélectionnez un magasin pour voir le suivi
+            </Card>
+          )}
+        </div>
       )}
 
       {activeTab === "stats" && (
@@ -187,7 +195,7 @@ function ManagerDashboardTabsInner({
               activities={storeActivities}
               title="Activité du magasin"
               description={selectedStoreLabel}
-              viewAllHref={`/manager/activity?store=${selectedStoreId}`}
+              viewAllHref={`${activityBase}/activity?store=${selectedStoreId}`}
               limit={8}
             />
           )}

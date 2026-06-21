@@ -2,9 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { AlertTriangle, ShoppingCart } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { StoreTrackingPeriodFilter } from "@/components/dashboard/store-tracking-period-filter";
-import { StoreOverviewChart } from "@/components/dashboard/store-overview-chart";
 import { StoreSnapshotsPanel } from "@/components/dashboard/store-snapshots-panel";
 import { formatCurrency, toLocalDateKey } from "@/lib/utils";
 import type { StoreOverviewRow, StoreSnapshot } from "@/lib/types";
@@ -63,17 +62,22 @@ export function StoreTrackingView({
   storeSnapshots,
   overviewByStore,
   selectedStoreId,
-  onStoreSelect,
+  selectedStoreLabel = "",
 }: {
   storeSnapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
   selectedStoreId: string;
-  onStoreSelect: (storeId: string) => void;
+  selectedStoreLabel?: string;
 }) {
   const today = toLocalDateKey(new Date());
   const [preset, setPreset] = useState<StoreTrackingPreset>("week");
   const [customFrom, setCustomFrom] = useState(today);
   const [customTo, setCustomTo] = useState(today);
+
+  const scopedSnapshots = useMemo(() => {
+    if (!selectedStoreId) return storeSnapshots;
+    return storeSnapshots.filter((snapshot) => snapshot.storeId === selectedStoreId);
+  }, [selectedStoreId, storeSnapshots]);
 
   const { from, to, label: periodLabel } = useMemo(
     () => resolveStoreTrackingRange(preset, customFrom, customTo),
@@ -81,13 +85,13 @@ export function StoreTrackingView({
   );
 
   const trackingRows = useMemo(
-    () => buildStoreTrackingRows(storeSnapshots, overviewByStore, from, to),
-    [storeSnapshots, overviewByStore, from, to]
+    () => buildStoreTrackingRows(scopedSnapshots, overviewByStore, from, to),
+    [scopedSnapshots, overviewByStore, from, to]
   );
 
   const filteredSnapshots = useMemo(
-    () => storeSnapshots.map((s) => filterStoreSnapshot(s, from, to)),
-    [storeSnapshots, from, to]
+    () => scopedSnapshots.map((s) => filterStoreSnapshot(s, from, to)),
+    [scopedSnapshots, from, to]
   );
 
   if (storeSnapshots.length === 0) {
@@ -96,8 +100,27 @@ export function StoreTrackingView({
     );
   }
 
+  if (selectedStoreId && scopedSnapshots.length === 0) {
+    return (
+      <Card className="py-12 text-center text-muted">
+        Magasin introuvable ou sans activité récente
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {selectedStoreLabel && (
+        <Card padding={false}>
+          <div className="p-6">
+            <CardHeader
+              title="Suivi du magasin"
+              description={selectedStoreLabel}
+            />
+          </div>
+        </Card>
+      )}
+
       <StoreTrackingPeriodFilter
         preset={preset}
         customFrom={customFrom}
@@ -109,13 +132,6 @@ export function StoreTrackingView({
       />
 
       <StoreTrackingSummaryCards rows={trackingRows} periodLabel={periodLabel} />
-
-      <StoreOverviewChart
-        rows={trackingRows}
-        periodLabel={periodLabel}
-        selectedStoreId={selectedStoreId}
-        onStoreSelect={onStoreSelect}
-      />
 
       <StoreSnapshotsPanel
         snapshots={filteredSnapshots}

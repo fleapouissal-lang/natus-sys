@@ -447,12 +447,6 @@ export function ProductsManager({
                 className="natus-filter-inline-input w-full min-w-0 cursor-default border-0 bg-transparent py-0 text-sm font-mono outline-none placeholder:text-muted"
                 autoComplete="off"
               />
-              <Badge
-                variant={scannerActive ? "accent" : "default"}
-                className={cn("shrink-0", !scannerActive && "bg-page text-muted")}
-              >
-                {scannerActive ? "Actif" : "Inactif"}
-              </Badge>
             </div>
           </div>
           <div className="flex-1">
@@ -535,7 +529,8 @@ export function ProductsManager({
         )}
         {!modalOpen && (
           <p className="mt-2 text-xs text-muted">
-            Scanner actif — {filteredProducts.length} produit(s) affiché(s)
+            {filteredProducts.length} produit{filteredProducts.length !== 1 ? "s" : ""} affiché
+            {filteredProducts.length !== 1 ? "s" : ""}
           </p>
         )}
       </Card>
