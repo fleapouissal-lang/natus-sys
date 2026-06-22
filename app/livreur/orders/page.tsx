@@ -23,15 +23,24 @@ export default async function LivreurOrdersPage() {
   const scopeLabel = getOrdersScopeLabel(profile, { storeName: store?.name });
 
   return (
-    <div className="animate-fade-in space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Mes livraisons</h1>
-        <p className="mt-1 text-muted">
-          En livraison : marquez livré ou retour (note obligatoire). Les retours sont listés dans{" "}
-          <a href="/livreur/returns" className="font-medium text-primary underline-offset-2 hover:underline">
+    <div className="animate-fade-in space-y-4 md:space-y-6">
+      <div className="rounded-2xl border border-primary/20 bg-surface p-4 md:border-0 md:bg-transparent md:p-0">
+        <h1 className="font-heading text-xl font-bold tracking-tight text-primary md:text-2xl">
+          Mes livraisons
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          Marquez livré ou retour (note obligatoire).{" "}
+          <a
+            href="/livreur/returns"
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
             Mes retours
           </a>
-          {store ? ` — ${store.name}, ${store.city}` : ""}
+          {store ? (
+            <span className="mt-1 block text-xs md:inline md:mt-0">
+              — {store.name}, {store.city}
+            </span>
+          ) : null}
         </p>
       </div>
 

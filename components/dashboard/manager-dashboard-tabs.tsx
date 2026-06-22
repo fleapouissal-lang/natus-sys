@@ -14,6 +14,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { StoreTrackingView } from "@/components/dashboard/store-tracking-view";
 import { RecentActivityPanel } from "@/components/activity/recent-activity-panel";
+import { MobileStatCard, MobileStatGrid, DesktopStatGrid } from "@/components/dashboard/mobile-stat-card";
 import { formatCurrency, cn } from "@/lib/utils";
 import type {
   ActivityEntry,
@@ -117,22 +118,23 @@ function ManagerDashboardTabsInner({
   ) : null;
 
   return (
-    <div className="space-y-6">
-      <div className="inline-flex w-full border border-primary/30 bg-background p-1 sm:w-auto">
+    <div className="space-y-4 md:space-y-6">
+      <div className="natus-mobile-tab-bar inline-flex w-full rounded-2xl border border-primary/25 bg-surface/80 p-1 shadow-[0_4px_20px_rgba(179,140,74,0.08)] backdrop-blur-sm sm:w-auto">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
             onClick={() => setTab(id)}
             className={cn(
-              "flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer sm:flex-initial sm:px-6",
+              "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all cursor-pointer sm:flex-initial sm:gap-2 sm:px-6",
               activeTab === id
-                ? "bg-champagne text-black"
+                ? "bg-champagne text-black shadow-sm"
                 : "text-muted hover:text-foreground"
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            {label}
+            <span className="md:hidden">{id === "suivi" ? "Suivi" : "Stats"}</span>
+            <span className="hidden md:inline">{label}</span>
           </button>
         ))}
       </div>
@@ -189,33 +191,62 @@ function ManagerDashboardTabsInner({
             </div>
 
             {stats && selectedStoreId ? (
-              <div className="grid gap-4 p-6 pt-0 sm:grid-cols-2 lg:grid-cols-4">
-                <StatCard
-                  title="Ventes aujourd'hui"
-                  value={String(stats.todaySales)}
-                  subtitle={formatCurrency(stats.todayRevenue)}
-                  icon={TrendingUp}
-                />
-                <StatCard
-                  title="Chiffre d'affaires total"
-                  value={formatCurrency(stats.totalRevenue)}
-                  subtitle={`${stats.totalSales} ventes`}
-                  icon={ShoppingBag}
-                  accent="bg-primary"
-                />
-                <StatCard
-                  title="Produits en catalogue"
-                  value={String(stats.totalProducts)}
-                  icon={Package}
-                />
-                <StatCard
-                  title="Stock faible"
-                  value={String(stats.lowStockCount)}
-                  subtitle="Produits < 10 unités"
-                  icon={AlertTriangle}
-                  accent={stats.lowStockCount > 0 ? "bg-primary/30" : undefined}
-                />
-              </div>
+              <>
+                <MobileStatGrid className="p-4 pt-0">
+                  <MobileStatCard
+                    label="Ventes"
+                    value={String(stats.todaySales)}
+                    subtitle={formatCurrency(stats.todayRevenue)}
+                    icon={TrendingUp}
+                    variant="gold"
+                  />
+                  <MobileStatCard
+                    label="CA total"
+                    value={formatCurrency(stats.totalRevenue)}
+                    subtitle={`${stats.totalSales} ventes`}
+                    icon={ShoppingBag}
+                  />
+                  <MobileStatCard
+                    label="Catalogue"
+                    value={String(stats.totalProducts)}
+                    icon={Package}
+                  />
+                  <MobileStatCard
+                    label="Stock faible"
+                    value={String(stats.lowStockCount)}
+                    subtitle="< 10 unités"
+                    icon={AlertTriangle}
+                    variant={stats.lowStockCount > 0 ? "warning" : "success"}
+                  />
+                </MobileStatGrid>
+                <DesktopStatGrid className="p-6 pt-0">
+                  <StatCard
+                    title="Ventes aujourd'hui"
+                    value={String(stats.todaySales)}
+                    subtitle={formatCurrency(stats.todayRevenue)}
+                    icon={TrendingUp}
+                  />
+                  <StatCard
+                    title="Chiffre d'affaires total"
+                    value={formatCurrency(stats.totalRevenue)}
+                    subtitle={`${stats.totalSales} ventes`}
+                    icon={ShoppingBag}
+                    accent="bg-primary"
+                  />
+                  <StatCard
+                    title="Produits en catalogue"
+                    value={String(stats.totalProducts)}
+                    icon={Package}
+                  />
+                  <StatCard
+                    title="Stock faible"
+                    value={String(stats.lowStockCount)}
+                    subtitle="Produits < 10 unités"
+                    icon={AlertTriangle}
+                    accent={stats.lowStockCount > 0 ? "bg-primary/30" : undefined}
+                  />
+                </DesktopStatGrid>
+              </>
             ) : (
               <p className="px-6 pb-12 text-center text-muted">
                 Sélectionnez un magasin pour voir les statistiques

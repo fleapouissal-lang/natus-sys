@@ -58,26 +58,26 @@ function CategoryStrip({
 }) {
   return (
     <div className="shrink-0">
-      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-primary">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary md:text-xs md:tracking-wide">
         Catégories
       </p>
-      <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-natus">
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-natus md:gap-3">
         <button
           type="button"
           onClick={() => onSelect(null)}
-          className="flex shrink-0 flex-col items-center gap-1.5 cursor-pointer"
+          className="flex shrink-0 flex-col items-center gap-1 cursor-pointer md:gap-1.5"
         >
           <span
             className={cn(
-              "avatar-round flex h-14 w-14 items-center justify-center border-2 bg-surface transition-colors",
+              "flex h-11 w-11 items-center justify-center rounded-full border-2 bg-surface transition-colors md:h-14 md:w-14",
               selected === null
                 ? "border-primary bg-champagne/40"
                 : "border-border hover:border-primary/50"
             )}
           >
-            <LayoutGrid className="h-5 w-5 text-black" />
+            <LayoutGrid className="h-4 w-4 text-black md:h-5 md:w-5" />
           </span>
-          <span className="max-w-[4.5rem] truncate text-center text-[10px] font-medium text-black">
+          <span className="max-w-[3.5rem] truncate text-center text-[9px] font-medium text-black md:max-w-[4.5rem] md:text-[10px]">
             Tous
           </span>
         </button>
@@ -90,19 +90,19 @@ function CategoryStrip({
               key={cat}
               type="button"
               onClick={() => onSelect(active ? null : cat)}
-              className="flex shrink-0 flex-col items-center gap-1.5 cursor-pointer"
+              className="flex shrink-0 flex-col items-center gap-1 cursor-pointer md:gap-1.5"
             >
               <span
                 className={cn(
-                  "avatar-round flex h-14 w-14 items-center justify-center border-2 bg-surface transition-colors",
+                  "flex h-11 w-11 items-center justify-center rounded-full border-2 bg-surface transition-colors md:h-14 md:w-14",
                   active
                     ? "border-primary bg-champagne/40"
                     : "border-border hover:border-primary/50"
                 )}
               >
-                <Icon className="h-5 w-5 text-black" />
+                <Icon className="h-4 w-4 text-black md:h-5 md:w-5" />
               </span>
-              <span className="max-w-[4.5rem] truncate text-center text-[10px] font-medium text-black">
+              <span className="max-w-[3.5rem] truncate text-center text-[9px] font-medium text-black md:max-w-[4.5rem] md:text-[10px]">
                 {cat}
               </span>
             </button>
@@ -122,6 +122,7 @@ function ProductCard({
   onView,
   highlighted,
   orderMode = false,
+  luxuryMobile = false,
 }: {
   product: Product;
   cartQty: number;
@@ -131,6 +132,7 @@ function ProductCard({
   onView: (product: Product) => void;
   highlighted?: boolean;
   orderMode?: boolean;
+  luxuryMobile?: boolean;
 }) {
   const outOfStock = product.stock <= 0;
   const inOrder = cartQty > 0;
@@ -162,6 +164,291 @@ function ProductCard({
     orderMode
       ? !outOfStock && inOrder && validatedQty < cartQty
       : true;
+
+  if (luxuryMobile) {
+    const luxuryCard = (
+      <div
+        role={cardClickable ? "button" : undefined}
+        tabIndex={cardClickable ? 0 : undefined}
+        onClick={cardClickable ? handleCardClick : undefined}
+        onKeyDown={
+          cardClickable
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleCardClick();
+                }
+              }
+            : undefined
+        }
+        className={cn(
+          "natus-card flex h-full flex-col overflow-hidden !p-0 transition-colors",
+          highlighted && "ring-2 ring-success/30",
+          cardClickable && "cursor-pointer"
+        )}
+      >
+        <div className="relative aspect-square w-full shrink-0 bg-page">
+          <Image
+            src={getProductImageUrl(product)}
+            alt={product.name}
+            fill
+            className="object-cover"
+            unoptimized
+          />
+          {cartQty > 0 && (
+            <span className="absolute right-1.5 top-1.5 z-[2] min-w-[1.25rem] rounded-md border-0 bg-champagne px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-black shadow-sm">
+              {orderMode ? `${validatedQty}/${cartQty}` : cartQty}
+            </span>
+          )}
+          {!outOfStock && cartQty === 0 && (
+            <span
+              className="absolute right-1.5 top-1.5 z-[1] min-w-[1.25rem] rounded-md border-0 bg-champagne px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-black shadow-sm"
+              title={`${product.stock} en stock`}
+            >
+              {product.stock}
+            </span>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(product);
+            }}
+            title="Voir le produit"
+            aria-label="Voir le produit"
+            className="absolute left-1.5 top-1.5 z-[2] flex h-8 w-8 shrink-0 items-center justify-center !p-0 border bg-white/95 hover:bg-[#B38C4A]/10 shadow-sm"
+            style={{ borderColor: PRODUCT_VIEW_ACTION_COLOR, color: PRODUCT_VIEW_ACTION_COLOR }}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+          {outOfStock && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+              <Badge variant="danger" className="text-[10px]">
+                Rupture
+              </Badge>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-1 flex-col p-2.5 md:p-3">
+          <p className="line-clamp-2 flex-1 text-[11px] font-semibold leading-snug md:text-sm">
+            {displayName}
+          </p>
+          <p className="mt-1 text-sm font-bold text-primary">
+            {formatCurrency(product.price)}
+          </p>
+
+          {cartQty > 0 && !orderMode && (
+            <div
+              className="mt-2 flex items-center justify-center rounded-full bg-page px-1 py-0.5"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => onUpdateQuantity(product.id, -1)}
+                disabled={cartQty <= 0}
+                className="flex h-7 w-8 items-center justify-center text-primary disabled:opacity-40"
+                aria-label="Retirer"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <span className="min-w-[1.25rem] text-center text-xs font-bold">{cartQty}</span>
+              <button
+                type="button"
+                onClick={() => onAddToCart(product, 1)}
+                disabled={outOfStock || cartQty >= product.stock}
+                className="flex h-7 w-8 items-center justify-center text-primary disabled:opacity-40"
+                aria-label="Ajouter"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          {orderMode && inOrder && (
+            <div
+              className="mt-2 flex items-center justify-center rounded-full bg-page px-1 py-0.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => onUpdateQuantity(product.id, -1)}
+                disabled={validatedQty <= 0}
+                className="flex h-7 w-8 items-center justify-center text-primary disabled:opacity-40"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <span className="min-w-[2rem] text-center text-[10px] font-bold">
+                {validatedQty}/{cartQty}
+              </span>
+              <button
+                type="button"
+                onClick={() => onAddToCart(product, 1)}
+                disabled={validatedQty >= cartQty}
+                className="flex h-7 w-8 items-center justify-center text-primary disabled:opacity-40"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+
+    const desktopCard = (
+      <div
+        role={cardClickable ? "button" : undefined}
+        tabIndex={cardClickable ? 0 : undefined}
+        onClick={cardClickable ? handleCardClick : undefined}
+        onKeyDown={
+          cardClickable
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleCardClick();
+                }
+              }
+            : undefined
+        }
+        className={cn(
+          "flex h-full flex-col overflow-hidden border bg-surface transition-colors",
+          highlighted
+            ? "border-success ring-2 ring-success/30"
+            : "border-border",
+          cardClickable && "cursor-pointer hover:border-primary"
+        )}
+      >
+        <div className="relative aspect-[4/3] w-full shrink-0 bg-page">
+          <Image
+            src={getProductImageUrl(product)}
+            alt={product.name}
+            fill
+            className="object-cover"
+            unoptimized
+          />
+          {!outOfStock && (
+            <span
+              className="absolute right-1.5 top-1.5 z-[1] min-w-[1.25rem] rounded-md border-0 bg-champagne px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-black shadow-sm"
+              title={`${product.stock} en stock`}
+            >
+              {product.stock}
+            </span>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(product);
+            }}
+            title="Voir le produit"
+            aria-label="Voir le produit"
+            className="absolute left-1.5 top-1.5 z-[2] flex h-8 w-8 shrink-0 items-center justify-center !p-0 border bg-white/95 hover:bg-[#B38C4A]/10 shadow-sm"
+            style={{ borderColor: PRODUCT_VIEW_ACTION_COLOR, color: PRODUCT_VIEW_ACTION_COLOR }}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+          {outOfStock && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+              <Badge variant="danger">Rupture</Badge>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-1 flex-col p-3">
+          <div className="mb-2 flex items-start justify-between gap-2">
+            <p className="line-clamp-2 flex-1 text-sm font-semibold leading-snug">
+              {displayName}
+            </p>
+            <p className="shrink-0 text-sm font-bold text-primary">
+              {formatCurrency(product.price)}
+            </p>
+          </div>
+
+          {orderMode ? (
+            inOrder ? (
+              <div
+                className="mt-auto flex flex-col items-center gap-1.5"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <p className="text-center text-xs text-muted">
+                  {cartQty} commandé{cartQty !== 1 ? "s" : ""}
+                  {orderValidated ? " · validé" : ""}
+                </p>
+                <div className="flex items-center rounded-full bg-page px-1 py-0.5">
+                  <button
+                    type="button"
+                    onClick={() => onUpdateQuantity(product.id, -1)}
+                    disabled={validatedQty <= 0}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-foreground transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                    aria-label="Retirer une validation"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="min-w-[2.75rem] text-center text-sm font-semibold">
+                    {validatedQty}/{cartQty}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onAddToCart(product, 1)}
+                    disabled={validatedQty >= cartQty}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-foreground transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                    aria-label="Valider une unité"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-auto text-center text-xs text-muted">Hors commande</p>
+            )
+          ) : (
+            <div
+              className="mt-auto flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center rounded-full bg-page px-1 py-0.5">
+                <button
+                  type="button"
+                  onClick={() => onUpdateQuantity(product.id, -1)}
+                  disabled={outOfStock || cartQty <= 0}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-foreground transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                  aria-label="Retirer du panier"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="min-w-[2rem] text-center text-sm font-semibold">
+                  {cartQty}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onAddToCart(product, 1)}
+                  disabled={outOfStock || cartQty >= product.stock}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-foreground transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                  aria-label="Ajouter au panier"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="h-full">
+        <div className="h-full md:hidden">{luxuryCard}</div>
+        <div className="hidden h-full md:block">{desktopCard}</div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -319,6 +606,7 @@ export function ProductCatalog({
   scannerEnabled = true,
   orderMode = false,
   compact = false,
+  luxuryMobile = false,
 }: {
   products: Product[];
   onAddToCart: (product: Product, qty: number) => void;
@@ -330,6 +618,7 @@ export function ProductCatalog({
   scannerEnabled?: boolean;
   orderMode?: boolean;
   compact?: boolean;
+  luxuryMobile?: boolean;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -406,7 +695,7 @@ export function ProductCatalog({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 md:space-y-4">
       <CategoryStrip
         categories={categories}
         selected={selectedCategory}
@@ -480,7 +769,7 @@ export function ProductCatalog({
       {filtered.length === 0 ? (
         <p className="py-12 text-center text-muted">Aucun produit ne correspond au filtre</p>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+        <div className="grid grid-cols-2 gap-3 pb-2 md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] md:gap-4 md:pb-0">
           {filtered.map((product) => (
             <ProductCard
               key={product.id}
@@ -492,6 +781,7 @@ export function ProductCatalog({
               onView={setViewProduct}
               highlighted={lastAddedProduct?.id === product.id}
               orderMode={orderMode}
+              luxuryMobile={luxuryMobile}
             />
           ))}
         </div>

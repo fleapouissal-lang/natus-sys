@@ -76,7 +76,7 @@ export function CashierMyScheduleMobile({ shifts, weekStart, offDate }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-champagne/50 to-surface p-4 shadow-sm">
+      <div className="rounded-2xl border border-primary/20 bg-surface p-4 shadow-sm">
         <div className="flex items-center justify-between gap-2">
           <Button
             type="button"

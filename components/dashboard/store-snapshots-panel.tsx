@@ -1,13 +1,14 @@
 "use client";
 
-import { MapPin, Package, ShoppingBag, ShoppingCart } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, MapPin, Package, ShoppingBag, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import {
   paymentTypeLabel,
   workflowStatusLabel,
 } from "@/lib/shopify/order-status";
-import { formatCurrency, formatDate, formatPaymentMethod } from "@/lib/utils";
+import { formatCurrency, formatDate, formatPaymentMethod, cn } from "@/lib/utils";
 import type { StoreOverviewRow, StoreSnapshot } from "@/lib/types";
 
 function MiniList<T>({
@@ -16,24 +17,71 @@ function MiniList<T>({
   emptyLabel,
   items,
   renderItem,
+  mobileCollapsible = false,
+  defaultOpen = false,
 }: {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   emptyLabel: string;
   items: T[];
   renderItem: (item: T) => React.ReactNode;
+  mobileCollapsible?: boolean;
+  defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  const content = (
+    <>
+      {items.length === 0 ? (
+        <p className="py-4 text-center text-xs text-muted">{emptyLabel}</p>
+      ) : (
+        <div className="space-y-2">{items.map(renderItem)}</div>
+      )}
+    </>
+  );
+
+  if (mobileCollapsible) {
+    return (
+      <>
+        <div className="hidden rounded-xl border border-border bg-background/50 p-3 lg:block">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon className="h-4 w-4 text-primary" />
+            <p className="text-sm font-semibold">{title}</p>
+          </div>
+          {content}
+        </div>
+        <div className="overflow-hidden rounded-xl border border-primary/15 bg-surface lg:hidden">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+          >
+            <span className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-champagne/50">
+                <Icon className="h-4 w-4 text-primary" />
+              </span>
+              <span className="text-sm font-semibold">{title}</span>
+            </span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 shrink-0 text-primary transition-transform",
+                open && "rotate-180"
+              )}
+            />
+          </button>
+          {open ? <div className="border-t border-primary/10 px-4 pb-3">{content}</div> : null}
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className="border border-border bg-background/50 p-3">
       <div className="mb-2 flex items-center gap-2">
         <Icon className="h-4 w-4 text-primary" />
         <p className="text-sm font-semibold">{title}</p>
       </div>
-      {items.length === 0 ? (
-        <p className="py-4 text-center text-xs text-muted">{emptyLabel}</p>
-      ) : (
-        <div className="space-y-2">{items.map(renderItem)}</div>
-      )}
+      {content}
     </div>
   );
 }
@@ -55,14 +103,16 @@ function StoreSnapshotCard({
   const stockShown = snapshot.recentStockAdds.slice(0, displayLimit);
 
   return (
-    <Card padding={false} className="overflow-hidden">
-      <div className="border-b border-primary/15 bg-primary/8 px-5 py-4">
+    <Card padding={false} className="overflow-hidden rounded-2xl md:rounded-lg">
+      <div className="border-b border-primary/15 bg-champagne/30 px-4 py-4 md:bg-primary/8 md:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-2">
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+              <MapPin className="h-4 w-4 text-primary" />
+            </span>
             <div>
-              <h3 className="font-semibold">{snapshot.storeName}</h3>
-              <p className="mt-1 text-xs text-muted">
+              <h3 className="font-heading text-base font-bold md:text-lg">{snapshot.storeName}</h3>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted md:text-xs">
                 {periodLabel}
                 {" · "}
                 {snapshot.recentSales.length} vente
@@ -70,13 +120,12 @@ function StoreSnapshotCard({
                 {" · "}
                 {formatCurrency(periodRevenue)}
                 {" · "}
-                {snapshot.recentOrders.length} commande
-                {snapshot.recentOrders.length !== 1 ? "s" : ""}
+                {snapshot.recentOrders.length} cmd
                 {overview ? (
                   <>
                     {" · "}
                     {overview.lowStockCount} alerte
-                    {overview.lowStockCount !== 1 ? "s" : ""} stock
+                    {overview.lowStockCount !== 1 ? "s" : ""}
                   </>
                 ) : null}
               </p>
@@ -84,18 +133,20 @@ function StoreSnapshotCard({
           </div>
           {overview && (
             <Badge variant={overview.lowStockCount > 0 ? "warning" : "success"}>
-              {overview.totalUnits} unités
+              {overview.totalUnits} u.
             </Badge>
           )}
         </div>
       </div>
 
-      <div className="grid gap-4 p-4 lg:grid-cols-3">
+      <div className="grid gap-3 p-3 md:gap-4 md:p-4 lg:grid-cols-3">
         <MiniList
           title={`Ventes (${snapshot.recentSales.length})`}
           icon={ShoppingBag}
           emptyLabel="Aucune vente sur cette période"
           items={salesShown}
+          mobileCollapsible
+          defaultOpen
           renderItem={(sale) => (
             <div
               key={sale.id}
@@ -120,6 +171,7 @@ function StoreSnapshotCard({
           icon={ShoppingCart}
           emptyLabel="Aucune commande sur cette période"
           items={ordersShown}
+          mobileCollapsible
           renderItem={(order) => (
             <div
               key={order.id}
@@ -148,6 +200,7 @@ function StoreSnapshotCard({
           icon={Package}
           emptyLabel="Aucune action stock sur cette période"
           items={stockShown}
+          mobileCollapsible
           renderItem={(item) => (
             <div
               key={item.id}
@@ -186,13 +239,15 @@ export function StoreSnapshotsPanel({
   if (snapshots.length === 0) return null;
 
   return (
-    <div className="space-y-4">
-      <CardHeader
-        title="Vue détaillée par magasin"
-        description={`Ventes, commandes et stock — ${periodLabel}`}
-      />
+    <div className="space-y-3 md:space-y-4">
+      <div className="px-1 md:px-0">
+        <CardHeader
+          title="Vue détaillée par magasin"
+          description={`Ventes, commandes et stock — ${periodLabel}`}
+        />
+      </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 md:space-y-4">
         {snapshots.map((snapshot) => (
           <StoreSnapshotCard
             key={snapshot.storeId}

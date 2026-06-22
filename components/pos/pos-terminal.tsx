@@ -15,6 +15,7 @@ import {
   CreditCard,
   ClipboardList,
   CheckCircle2,
+  ChevronLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -61,6 +62,7 @@ import {
   promoDiscountAmount,
   type AppliedPosPromo,
 } from "@/lib/marketing/pos-promo";
+import { PosLuxuryCartFab } from "@/components/pos/pos-luxury-cart-fab";
 import type { ShopifyOrderPosContext } from "@/lib/orders";
 
 type ManagerMode = "stock" | "sale";
@@ -122,6 +124,7 @@ export function PosTerminal({
   const [appliedPromo, setAppliedPromo] = useState<AppliedPosPromo | null>(null);
   const [scanAlert, setScanAlert] = useState<PosScanAlert | null>(null);
   const [scanListening, setScanListening] = useState(true);
+  const [mobilePosView, setMobilePosView] = useState<"catalog" | "cart">("catalog");
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const orderNotifications = useCashierNotifications();
@@ -172,6 +175,7 @@ export function PosTerminal({
       return;
     }
     setError("");
+    let added = false;
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
@@ -184,7 +188,7 @@ export function PosTerminal({
           });
           return prev;
         }
-        setLastAddedProduct(product);
+        added = true;
         return prev.map((item) =>
           item.product.id === product.id ? { ...item, quantity: newQty } : item
         );
@@ -197,9 +201,13 @@ export function PosTerminal({
         });
         return prev;
       }
-      setLastAddedProduct(product);
+      added = true;
       return [...prev, { product, quantity: qty }];
     });
+    if (added) {
+      setLastAddedProduct(product);
+      setMobilePosView("cart");
+    }
   }, [activeShopifyOrder]);
 
   const adjustOrderValidation = useCallback(
@@ -713,8 +721,47 @@ export function PosTerminal({
 
         {!isStockScan && (
           <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-            {/* Colonne gauche 65% — catalogue produits */}
-            <div className="flex min-h-0 w-full min-w-0 flex-col md:flex-[65]">
+            {/* Onglets mobile — Produits / Panier */}
+            <div className="natus-pos-mobile-tabs-shell shrink-0 px-3 pt-2 md:hidden">
+              <div className="natus-pos-mobile-tabs flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => setMobilePosView("catalog")}
+                  className={cn(
+                    "natus-pos-mobile-tab flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm font-semibold",
+                    mobilePosView === "catalog" && "natus-pos-mobile-tab--active"
+                  )}
+                >
+                  <ScanBarcode className="h-4 w-4" />
+                  Produits
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobilePosView("cart")}
+                  className={cn(
+                    "relative flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm font-semibold",
+                    mobilePosView === "cart" && "natus-pos-mobile-tab--active",
+                    mobilePosView !== "cart" && "natus-pos-mobile-tab"
+                  )}
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  Panier
+                  {cart.length > 0 && (
+                    <span className="absolute right-3 top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
+                      {cart.reduce((s, i) => s + i.quantity, 0)}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Colonne gauche — catalogue produits */}
+            <div
+              className={cn(
+                "flex min-h-0 flex-1 w-full min-w-0 flex-col md:flex-[65]",
+                mobilePosView !== "catalog" && "max-md:hidden"
+              )}
+            >
               {orderNotifications && (
                 <CashierNotificationBar
                   onViewNotification={(notification) => {
@@ -734,12 +781,17 @@ export function PosTerminal({
                   }}
                 />
               )}
-              <div className="shrink-0 px-4 py-3">
+              <div className="natus-pos-luxury-header shrink-0 border-b border-primary/10 px-4 py-4 md:py-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <h1 className="text-xl font-bold tracking-tight text-primary">Caisse</h1>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-primary/70 md:hidden">
+                      Natus
+                    </p>
+                    <h1 className="font-heading text-2xl font-bold tracking-tight text-primary md:text-2xl">
+                      Caisse
+                    </h1>
                     {storeName && (
-                      <p className="mt-0.5 truncate text-sm text-muted">{storeName}</p>
+                      <p className="mt-0.5 truncate text-xs text-muted md:text-sm">{storeName}</p>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -850,7 +902,7 @@ export function PosTerminal({
                 )}
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-natus">
+              <div className="natus-pos-luxury-catalog min-h-0 flex-1 overflow-y-auto px-3 py-3 pb-28 scrollbar-natus md:px-4 md:py-4 md:pb-4">
                 <ProductCatalog
                   products={products}
                   onAddToCart={(product, qty) => {
@@ -874,20 +926,39 @@ export function PosTerminal({
                   scannerEnabled={!receipt && (!isStockScan || !scannedProduct)}
                   orderMode={isOrderMode}
                   compact
+                  luxuryMobile
                 />
               </div>
             </div>
 
-            {/* Colonne droite 35% — panier */}
-            <div className="flex h-full min-h-0 w-full min-w-0 flex-col bg-page md:flex-[35] md:border-l md:border-border">
+            {/* Colonne droite — panier */}
+            <div
+              className={cn(
+                "flex min-h-0 flex-1 w-full min-w-0 flex-col bg-page",
+                mobilePosView !== "cart" && "max-md:hidden",
+                "md:flex md:flex-[35] md:border-l md:border-border"
+              )}
+            >
               <div className="flex h-full min-h-0 flex-col">
-                <div className="shrink-0 px-4 py-4">
+                <div className="shrink-0 border-b border-primary/10 px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-lg font-bold text-primary">Panier</h2>
-                      <p className="text-xs text-muted">
-                        {cart.length} article{cart.length !== 1 ? "s" : ""}
-                      </p>
+                    <div className="flex min-w-0 items-start gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setMobilePosView("catalog")}
+                        className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-surface text-primary md:hidden"
+                        aria-label="Retour au catalogue"
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+                      <div className="min-w-0">
+                        <h2 className="font-heading text-xl font-bold text-primary md:text-lg">
+                          Panier
+                        </h2>
+                        <p className="text-xs text-muted">
+                          {cart.length} article{cart.length !== 1 ? "s" : ""}
+                        </p>
+                      </div>
                     </div>
                     <div className="flex shrink-0 items-center justify-end">
                       <Button
@@ -1152,6 +1223,14 @@ export function PosTerminal({
                 </div>
               </div>
             </div>
+
+            {mobilePosView === "catalog" && cart.length > 0 && (
+              <PosLuxuryCartFab
+                itemCount={cart.reduce((s, i) => s + i.quantity, 0)}
+                totalLabel={formatCurrency(totalTtc)}
+                onClick={() => setMobilePosView("cart")}
+              />
+            )}
           </div>
         )}
 

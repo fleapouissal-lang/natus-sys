@@ -82,13 +82,15 @@ export function DashboardShell({
       ? `Caissier : ${posOperatorName}`
       : cityLabel || null;
 
-  const showMobileTopBar = isPersonalCashier || !mobileStorePosGate;
+  const showMobileTopBar =
+    (isPersonalCashier || !mobileStorePosGate) && !isPos;
 
-  const showMobileBottomNav = isMobileBottomNavVisible({
-    isStorePos,
-    isPersonalCashier,
-    hasPosOperator,
-  });
+  const showMobileBottomNav =
+    isMobileBottomNavVisible({
+      isStorePos,
+      isPersonalCashier,
+      hasPosOperator,
+    }) && !isPos;
 
   const shell = (
     <>
@@ -127,7 +129,7 @@ export function DashboardShell({
               isPos && !mobilePlanningOnly
                 ? "flex min-h-0 flex-col overflow-hidden p-0 md:p-0"
                 : "overflow-y-auto p-4 md:p-8",
-              showMobileBottomNav && "max-md:natus-main-mobile-nav",
+              showMobileBottomNav && "natus-main-mobile-nav",
               mobileStorePosGate && "max-md:p-0 max-md:!pb-0"
             )}
           >
@@ -146,7 +148,12 @@ export function DashboardShell({
                 {children}
               </div>
             ) : (
-              children
+              <>
+                {children}
+                {showMobileBottomNav && (
+                  <div className="natus-mobile-nav-spacer" aria-hidden />
+                )}
+              </>
             )}
           </main>
         </div>

@@ -5,6 +5,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Banknote, Eye, Loader2, MessageSquare, Phone, RotateCcw, Search, ShoppingCart, Truck, Wallet, PackageCheck, ArrowRightLeft, Pencil } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
+import { OrderMobileCard } from "@/components/orders/order-mobile-card";
+import { MobileStatCard, MobileStatGrid } from "@/components/dashboard/mobile-stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShopifyOrderDetailModal } from "@/components/orders/shopify-order-detail-modal";
@@ -381,7 +383,22 @@ export function ShopifyOrdersManager({
         <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{message}</p>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <MobileStatGrid>
+        <MobileStatCard
+          label="Commandes"
+          value={String(filteredOrders.length)}
+          subtitle={hasFilters ? `sur ${orders.length}` : undefined}
+          icon={ShoppingCart}
+          variant="gold"
+        />
+        <MobileStatCard
+          label="Montant"
+          value={formatCurrency(filteredRevenue)}
+          icon={Wallet}
+        />
+      </MobileStatGrid>
+
+      <div className="hidden gap-4 md:grid md:grid-cols-2">
         <Card>
           <p className="text-sm text-muted">Commandes Shopify</p>
           <p className="mt-1 text-2xl font-bold">{filteredOrders.length}</p>
@@ -464,11 +481,53 @@ export function ShopifyOrdersManager({
       </div>
       </FilterTogglePanel>
 
-      <Card padding={false}>
-        <div className="p-6">
+      <Card padding={false} className="overflow-hidden rounded-2xl md:rounded-lg">
+        <div className="p-4 md:p-6">
           <CardHeader title="Commandes en ligne" description={scopeLabel} />
         </div>
-        <div className="overflow-x-auto">
+
+        <div className="space-y-3 px-3 pb-4 md:hidden">
+          {paginatedOrders.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted">
+              {orders.length === 0
+                ? "Aucune commande Shopify pour cette sélection"
+                : "Aucune commande ne correspond aux filtres"}
+            </p>
+          ) : (
+            paginatedOrders.map((order) => {
+              const canLivreurClose =
+                livreurMode &&
+                !returnsPageMode &&
+                order.workflow_status === "shipping";
+              const loading = pending && activeId === order.id;
+              const canFollowUpConfirmation =
+                enableConfirmationFollowUp &&
+                !cashierReturnsMode &&
+                Boolean(order.whatsapp_confirmation_sent_at) &&
+                !isConfirmationFollowUpResolved(order);
+              const confirmationOverdue = isConfirmationCallOverdue(order);
+
+              return (
+                <OrderMobileCard
+                  key={order.id}
+                  order={order}
+                  loading={loading}
+                  showStore={showStore}
+                  livreurMode={livreurMode}
+                  canLivreurClose={canLivreurClose}
+                  onDeliver={() => handleStatusChange(order.id, "delivered")}
+                  onReturn={() => setReturnNoteOrder({ order, mode: "create" })}
+                  onView={() => setDetailOrder(order)}
+                  showCallFollowUp={canFollowUpConfirmation}
+                  callOverdue={confirmationOverdue}
+                  onCallFollowUp={() => setConfirmationFollowUpOrder(order)}
+                />
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-y border-border bg-primary-light/50">
@@ -802,6 +861,7 @@ export function ShopifyOrdersManager({
             rangeEnd={ordersRangeEnd}
             totalItems={ordersTotalItems}
             onPageChange={setOrdersPage}
+            className="border-t border-border"
           />
         )}
       </Card>

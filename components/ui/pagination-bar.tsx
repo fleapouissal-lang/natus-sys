@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function PaginationBar({
   page,
@@ -23,11 +24,17 @@ export function PaginationBar({
   if (totalItems === 0) return null;
 
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-3 ${className}`}>
-      <p className="text-sm text-muted">
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center gap-3 text-center",
+        "md:flex-row md:flex-wrap md:items-center md:justify-between md:text-left",
+        className
+      )}
+    >
+      <p className="w-full text-sm text-muted md:w-auto">
         {rangeStart}–{rangeEnd} sur {totalItems}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-center gap-2 md:w-auto">
         <Button
           type="button"
           size="sm"

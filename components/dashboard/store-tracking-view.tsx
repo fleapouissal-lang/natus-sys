@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, ShoppingCart } from "lucide-react";
+import { AlertTriangle, ShoppingCart, ShoppingBag, TrendingUp } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StoreTrackingPeriodFilter } from "@/components/dashboard/store-tracking-period-filter";
 import { StoreSnapshotsPanel } from "@/components/dashboard/store-snapshots-panel";
+import { MobileStatCard, MobileStatGrid, DesktopStatGrid } from "@/components/dashboard/mobile-stat-card";
 import { formatCurrency, toLocalDateKey } from "@/lib/utils";
 import type { StoreOverviewRow, StoreSnapshot } from "@/lib/types";
 import {
@@ -31,30 +32,48 @@ function StoreTrackingSummaryCards({
   const lowStock = rows.reduce((s, r) => s + r.lowStockCount, 0);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <p className="text-sm text-muted">CA — {periodLabel}</p>
-        <p className="mt-1 text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
-      </Card>
-      <Card>
-        <p className="text-sm text-muted">Ventes POS</p>
-        <p className="mt-1 text-2xl font-bold">{totalSales}</p>
-      </Card>
-      <Card>
-        <p className="flex items-center gap-1.5 text-sm text-muted">
-          <ShoppingCart className="h-4 w-4" />
-          Commandes web
-        </p>
-        <p className="mt-1 text-2xl font-bold">{totalOrders}</p>
-      </Card>
-      <Card>
-        <p className="flex items-center gap-1.5 text-sm text-muted">
-          <AlertTriangle className="h-4 w-4" />
-          Alertes stock faible
-        </p>
-        <p className="mt-1 text-2xl font-bold">{lowStock}</p>
-      </Card>
-    </div>
+    <>
+      <MobileStatGrid>
+        <MobileStatCard
+          label={`CA · ${periodLabel}`}
+          value={formatCurrency(totalRevenue)}
+          icon={TrendingUp}
+          variant="gold"
+        />
+        <MobileStatCard label="Ventes POS" value={String(totalSales)} icon={ShoppingBag} />
+        <MobileStatCard label="Commandes web" value={String(totalOrders)} icon={ShoppingCart} />
+        <MobileStatCard
+          label="Stock faible"
+          value={String(lowStock)}
+          icon={AlertTriangle}
+          variant={lowStock > 0 ? "warning" : "success"}
+        />
+      </MobileStatGrid>
+      <DesktopStatGrid>
+        <Card>
+          <p className="text-sm text-muted">CA — {periodLabel}</p>
+          <p className="mt-1 text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
+        </Card>
+        <Card>
+          <p className="text-sm text-muted">Ventes POS</p>
+          <p className="mt-1 text-2xl font-bold">{totalSales}</p>
+        </Card>
+        <Card>
+          <p className="flex items-center gap-1.5 text-sm text-muted">
+            <ShoppingCart className="h-4 w-4" />
+            Commandes web
+          </p>
+          <p className="mt-1 text-2xl font-bold">{totalOrders}</p>
+        </Card>
+        <Card>
+          <p className="flex items-center gap-1.5 text-sm text-muted">
+            <AlertTriangle className="h-4 w-4" />
+            Alertes stock faible
+          </p>
+          <p className="mt-1 text-2xl font-bold">{lowStock}</p>
+        </Card>
+      </DesktopStatGrid>
+    </>
   );
 }
 

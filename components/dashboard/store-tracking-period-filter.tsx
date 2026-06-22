@@ -25,7 +25,7 @@ export function StoreTrackingPeriodFilter({
   onCustomToChange: (value: string) => void;
 }) {
   return (
-    <div className="natus-filter-bar overflow-visible p-4">
+    <div className="natus-filter-bar overflow-visible rounded-2xl p-4 md:rounded-lg">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-medium text-primary">Période de suivi</p>
         <p className="text-sm text-muted">{periodLabel}</p>

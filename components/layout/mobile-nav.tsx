@@ -45,28 +45,35 @@ export function MobileTopBar({
   return (
     <header
       className={cn(
-        "natus-mobile-topbar flex shrink-0 items-center justify-between gap-3 border-b border-black/10 bg-sidebar px-4 py-3",
+        "natus-mobile-topbar-shell shrink-0",
         !alwaysVisible && "md:hidden"
       )}
     >
-      <div className="min-w-0 flex-1">
-        <p className="font-heading text-xl font-bold leading-tight text-primary">Natus</p>
-        {subtitle ? (
-          <p className="mt-0.5 truncate text-[11px] text-black/55">{subtitle}</p>
-        ) : null}
-      </div>
+      <div className="natus-mobile-topbar-pill">
+        <div className="min-w-0 flex-1 pl-1">
+          <p className="font-heading text-lg font-bold leading-none text-primary">Natus</p>
+          {subtitle ? (
+            <p className="mt-0.5 truncate text-[10px] font-medium text-muted">{subtitle}</p>
+          ) : null}
+        </div>
 
-      <div className="flex shrink-0 items-center gap-2">
-        <UserAvatar name={userName} title={userName} />
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-black text-champagne"
-          aria-label="Déconnexion"
-          title="Déconnexion"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <UserAvatar
+            name={userName}
+            title={userName}
+            size="sm"
+            className="natus-mobile-topbar-avatar border-primary/25 bg-champagne/60 text-primary"
+          />
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="natus-mobile-topbar-action"
+            aria-label="Déconnexion"
+            title="Déconnexion"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </header>
   );
