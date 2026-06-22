@@ -8,6 +8,7 @@ import { canCreateRole, canCreateStoreInCity, canManageStore } from "@/lib/permi
 import { NATUS_CITIES } from "@/lib/constants/cities";
 import { getStoreById } from "@/lib/inventory";
 import { PRODUCT_BRAND, PRODUCT_CATEGORIES } from "@/lib/constants/products";
+import { buildParentBarcode } from "@/lib/products/product-utils";
 import { uploadProductImage } from "@/lib/storage";
 import type { Profile } from "@/lib/types";
 
@@ -91,6 +92,24 @@ async function assertStoreAccess(profile: Profile, storeId: string) {
   return { store };
 }
 
+function parseCategories(formData: FormData): string[] | null {
+  const raw = formData
+    .getAll("categories")
+    .map((value) => (value as string).trim())
+    .filter(Boolean);
+
+  const unique = [...new Set(raw)];
+  if (unique.length === 0) return null;
+
+  for (const category of unique) {
+    if (!PRODUCT_CATEGORIES.includes(category as (typeof PRODUCT_CATEGORIES)[number])) {
+      return null;
+    }
+  }
+
+  return unique;
+}
+
 function parseCategory(value: FormDataEntryValue | null): string | null {
   const category = (value as string)?.trim();
   if (!category) return null;
@@ -133,19 +152,56 @@ export async function createProduct(formData: FormData) {
   const profile = await requireRole([...MANAGEMENT]);
   if (!profile) return { error: "Non autorisé" };
 
+  const productKind = ((formData.get("product_kind") as string) || "simple").trim();
+  if (!["simple", "parent"].includes(productKind)) {
+    return { error: "Type de produit invalide" };
+  }
+
+  const categories = parseCategories(formData);
+  if (!categories) return { error: "Veuillez sélectionner au moins une catégorie" };
+
+  const primaryCategory = categories[0];
+  const supabase = await createClient();
+  const storeStocks = parseStoreStocks(formData);
+
+  if (productKind === "parent") {
+    const imageResult = await resolveProductImageUrl(
+      supabase,
+      formData,
+      primaryCategory,
+      true
+    );
+    if ("error" in imageResult && imageResult.error) return { error: imageResult.error };
+    if (!imageResult.url) return { error: "L'image du produit est obligatoire" };
+
+    const { data: product, error } = await supabase
+      .from("products")
+      .insert({
+        name: formData.get("name") as string,
+        barcode: buildParentBarcode(),
+        description: (formData.get("description") as string) || null,
+        price: 0,
+        stock: 0,
+        categories,
+        product_kind: "parent",
+        brand: PRODUCT_BRAND,
+        image_url: imageResult.url,
+      })
+      .select("*")
+      .single();
+
+    if (error || !product) return { error: error?.message || "Erreur création produit parent" };
+
+    revalidateManagement();
+    return { success: true, productId: product.id, product };
+  }
+
   const barcode = ((formData.get("barcode") as string) || "").trim();
   if (!barcode) return { error: "Code-barres requis" };
 
-  const category = parseCategory(formData.get("category"));
-  if (!category) return { error: "Veuillez sélectionner une catégorie" };
-
-  const storeStocks = parseStoreStocks(formData);
-
-  const supabase = await createClient();
-
   const { data: existing } = await supabase
     .from("products")
-    .select("id, name, barcode, price, category, stock, image_url, description, brand")
+    .select("id, name, barcode, price, category, categories, stock, image_url, description, brand, product_kind, parent_id")
     .eq("barcode", barcode)
     .maybeSingle();
 
@@ -156,7 +212,7 @@ export async function createProduct(formData: FormData) {
     };
   }
 
-  const imageResult = await resolveProductImageUrl(supabase, formData, category, true);
+  const imageResult = await resolveProductImageUrl(supabase, formData, primaryCategory, true);
   if ("error" in imageResult && imageResult.error) return { error: imageResult.error };
   if (!imageResult.url) return { error: "L'image du produit est obligatoire" };
 
@@ -168,7 +224,8 @@ export async function createProduct(formData: FormData) {
       description: (formData.get("description") as string) || null,
       price: parseFloat(formData.get("price") as string),
       stock: 0,
-      category,
+      categories,
+      product_kind: "simple",
       brand: PRODUCT_BRAND,
       image_url: imageResult.url,
     })
@@ -198,7 +255,99 @@ export async function createProduct(formData: FormData) {
   }
 
   revalidateManagement();
-  return { success: true };
+  return { success: true, productId: product.id };
+}
+
+export async function createProductVariant(parentId: string, formData: FormData) {
+  const profile = await requireRole([...MANAGEMENT]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+
+  const { data: parent, error: parentError } = await supabase
+    .from("products")
+    .select("id, name, categories, category, image_url, product_kind")
+    .eq("id", parentId)
+    .maybeSingle();
+
+  if (parentError || !parent) return { error: "Produit parent introuvable" };
+  if (parent.product_kind !== "parent") {
+    return { error: "Ce produit n'est pas un parent" };
+  }
+
+  const barcode = ((formData.get("barcode") as string) || "").trim();
+  if (!barcode) return { error: "Code-barres requis" };
+
+  const { data: existing } = await supabase
+    .from("products")
+    .select("id")
+    .eq("barcode", barcode)
+    .maybeSingle();
+
+  if (existing) {
+    return { error: "Ce code-barres est déjà utilisé" };
+  }
+
+  const categories =
+    parseCategories(formData) ||
+    (parent.categories?.length ? parent.categories : parent.category ? [parent.category] : null);
+
+  if (!categories?.length) {
+    return { error: "Le produit parent doit avoir au moins une catégorie" };
+  }
+
+  const primaryCategory = categories[0];
+  const storeStocks = parseStoreStocks(formData);
+
+  const imageResult = await resolveProductImageUrl(
+    supabase,
+    formData,
+    primaryCategory,
+    false
+  );
+  if ("error" in imageResult && imageResult.error) return { error: imageResult.error };
+
+  const { data: product, error } = await supabase
+    .from("products")
+    .insert({
+      name: formData.get("name") as string,
+      barcode,
+      description: (formData.get("description") as string) || null,
+      price: parseFloat(formData.get("price") as string),
+      stock: 0,
+      categories,
+      product_kind: "variant",
+      parent_id: parentId,
+      brand: PRODUCT_BRAND,
+      image_url: imageResult.url || parent.image_url,
+    })
+    .select("id")
+    .single();
+
+  if (error || !product) return { error: error?.message || "Erreur création variante" };
+
+  for (const row of storeStocks) {
+    const access = await assertStoreAccess(profile, row.store_id);
+    if (access.error) return { error: access.error };
+
+    const { error: invError } = await supabase.from("store_inventory").upsert(
+      { store_id: row.store_id, product_id: product.id, stock: row.quantity },
+      { onConflict: "store_id,product_id" }
+    );
+    if (invError) return { error: invError.message };
+
+    await supabase.from("stock_movements").insert({
+      product_id: product.id,
+      quantity: row.quantity,
+      type: "add",
+      notes: `Stock initial variante — ${parent.name}`,
+      created_by: profile.id,
+      store_id: row.store_id,
+    });
+  }
+
+  revalidateManagement();
+  return { success: true, productId: product.id };
 }
 
 export async function updateProduct(id: string, formData: FormData) {
@@ -209,7 +358,7 @@ export async function updateProduct(id: string, formData: FormData) {
 
   const { data: existingProduct, error: existingError } = await supabase
     .from("products")
-    .select("barcode")
+    .select("barcode, product_kind, parent_id")
     .eq("id", id)
     .maybeSingle();
 
@@ -217,39 +366,48 @@ export async function updateProduct(id: string, formData: FormData) {
     return { error: "Produit introuvable" };
   }
 
+  const isParent = existingProduct.product_kind === "parent";
+
   const submittedBarcode = ((formData.get("barcode") as string) || "").trim();
-  const barcode =
-    profile.role === "directeur"
+  const barcode = isParent
+    ? existingProduct.barcode
+    : profile.role === "directeur"
       ? submittedBarcode
       : existingProduct.barcode;
 
-  if (!barcode) return { error: "Code-barres requis" };
+  if (!isParent && !barcode) return { error: "Code-barres requis" };
 
-  const category = parseCategory(formData.get("category"));
-  if (!category) return { error: "Catégorie invalide" };
+  const categories = parseCategories(formData);
+  if (!categories) return { error: "Veuillez sélectionner au moins une catégorie" };
 
-  const { data: duplicate } = await supabase
-    .from("products")
-    .select("id")
-    .eq("barcode", barcode)
-    .neq("id", id)
-    .maybeSingle();
+  if (!isParent && barcode) {
+    const { data: duplicate } = await supabase
+      .from("products")
+      .select("id")
+      .eq("barcode", barcode)
+      .neq("id", id)
+      .maybeSingle();
 
-  if (duplicate) {
-    return { error: "Ce code-barres est déjà utilisé par un autre produit" };
+    if (duplicate) {
+      return { error: "Ce code-barres est déjà utilisé par un autre produit" };
+    }
   }
 
-  const imageResult = await resolveProductImageUrl(supabase, formData, category, false);
+  const primaryCategory = categories[0];
+  const imageResult = await resolveProductImageUrl(supabase, formData, primaryCategory, false);
   if ("error" in imageResult && imageResult.error) return { error: imageResult.error };
 
   const updatePayload: Record<string, unknown> = {
     name: formData.get("name") as string,
-    barcode,
     description: (formData.get("description") as string) || null,
-    price: parseFloat(formData.get("price") as string),
-    category,
+    categories,
     brand: PRODUCT_BRAND,
   };
+
+  if (!isParent) {
+    updatePayload.barcode = barcode;
+    updatePayload.price = parseFloat(formData.get("price") as string);
+  }
 
   if (imageResult.url) {
     updatePayload.image_url = imageResult.url;

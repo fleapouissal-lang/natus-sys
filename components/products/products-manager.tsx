@@ -6,279 +6,130 @@ import {
   Plus,
   Pencil,
   Trash2,
-  X,
   ScanBarcode,
   Search,
   Warehouse,
+  GitBranchPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { SelectMenu } from "@/components/ui/select-menu";
-import { categoryOptions } from "@/lib/select-options";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BarcodeInput } from "@/components/products/barcode-input";
+import { ProductForm } from "@/components/products/product-form";
+import { VariantForm } from "@/components/products/variant-form";
 import { StockEditModal } from "@/components/products/stock-edit-modal";
-import { StoreStockAllocation } from "@/components/products/store-stock-allocation";
 import { ProductInfoCard } from "@/components/products/product-info-card";
 import { ProductImage } from "@/components/pos/product-image";
-import { ImageUploadInput } from "@/components/ui/image-upload-input";
+import { ProductKindBadgeForProduct } from "@/components/products/product-kind-badge";
 import { Modal } from "@/components/ui/modal";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
-import {
-  createProduct,
-  updateProduct,
-  deleteProduct,
-} from "@/lib/actions";
+import { deleteProduct } from "@/lib/actions";
 import { PRODUCT_BRAND, PRODUCT_CATEGORIES } from "@/lib/constants/products";
+import { categoryOptions } from "@/lib/select-options";
 import { formatCurrency } from "@/lib/utils";
+import {
+  getProductCategories,
+  groupProductsForList,
+  productDisplayName,
+  productHasCategory,
+} from "@/lib/products/product-utils";
 import { cn } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, Store } from "@/lib/types";
 
-function ProductForm({
-  product,
-  stores,
-  existingProducts,
-  initialBarcode = "",
-  canEditBarcode = false,
-  onClose,
-  onExistingProduct,
-}: {
-  product?: Product;
-  stores: Store[];
-  existingProducts: Product[];
-  initialBarcode?: string;
-  canEditBarcode?: boolean;
-  onClose: () => void;
-  onExistingProduct?: (product: Product) => void;
-}) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [barcode, setBarcode] = useState(product?.barcode || initialBarcode);
-  const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url || null);
-
-  const isEdit = !!product;
-  const barcodeEditable = !isEdit || canEditBarcode;
-
-  const duplicateProduct = useMemo(() => {
-    if (product) return null;
-    const code = barcode.trim();
-    if (!code) return null;
-    return existingProducts.find((p) => p.barcode === code) ?? null;
-  }, [barcode, existingProducts, product]);
-
-  const handleBarcodeScan = useCallback(
-    (code: string) => {
-      const trimmed = code.trim();
-      if (!trimmed || !barcodeEditable) return;
-      setBarcode(trimmed);
-      if (!product) {
-        const found = existingProducts.find((p) => p.barcode === trimmed);
-        if (found) onExistingProduct?.(found);
-      }
-    },
-    [barcodeEditable, existingProducts, onExistingProduct, product]
-  );
-
-  useEffect(() => {
-    if (isEdit && !canEditBarcode && product) {
-      setBarcode(product.barcode);
-    }
-  }, [isEdit, canEditBarcode, product]);
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    if (duplicateProduct) {
-      setError("Ce produit est déjà ajouté dans le catalogue");
-      setLoading(false);
-      return;
-    }
-
-    const formData = new FormData(e.currentTarget);
-    formData.set(
-      "barcode",
-      isEdit && !canEditBarcode ? product!.barcode : barcode.trim()
-    );
-
-    if (!product) {
-      const imageFile = formData.get("image") as File | null;
-      if (!imageFile || imageFile.size === 0) {
-        setError("L'image du produit est obligatoire");
-        setLoading(false);
-        return;
-      }
-    }
-
-    const result = product
-      ? await updateProduct(product.id, formData)
-      : await createProduct(formData);
-
-    if (result.error) {
-      setError(result.error);
-      if ("existingProduct" in result && result.existingProduct) {
-        onExistingProduct?.(result.existingProduct as Product);
-      }
-      setLoading(false);
-      return;
-    }
-
-    router.refresh();
-    onClose();
-  }
-
-  return (
-    <Modal onClose={onClose} size="lg">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">
-            {product ? "Modifier le produit" : "Nouveau produit"}
-          </h3>
-          <button onClick={onClose} className="text-muted hover:text-foreground cursor-pointer">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <BarcodeInput
-            value={barcode}
-            onChange={setBarcode}
-            onScan={handleBarcodeScan}
-            autoFocus={barcodeEditable}
-            required
-            disabled={isEdit && !canEditBarcode}
-            replaceOnScan={isEdit && canEditBarcode}
-            helperText={
-              isEdit && !canEditBarcode
-                ? "Modification du code-barres réservée au directeur"
-                : isEdit && canEditBarcode
-                  ? "Chaque scan remplace le code-barres — scannez à nouveau pour le modifier"
-                  : "Passez le code-barres devant le lecteur pour remplissage auto"
-            }
-          />
-
-          {duplicateProduct && (
-            <div className="rounded-lg border border-warning/40 bg-warning/5 p-4">
-              <p className="mb-3 text-sm font-medium text-warning">
-                Ce produit est déjà ajouté — impossible de créer un doublon
-              </p>
-              <ProductInfoCard product={duplicateProduct} compact />
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="mt-3"
-                onClick={() => onExistingProduct?.(duplicateProduct)}
-              >
-                Voir le produit
-              </Button>
-            </div>
-          )}
-          <Input label="Nom" name="name" defaultValue={product?.name} required />
-          <Input
-            label="Prix (DH)"
-            name="price"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={product?.price}
-            required
-          />
-          {!product && <StoreStockAllocation stores={stores} />}
-          <Select
-            label="Catégorie"
-            name="category"
-            options={PRODUCT_CATEGORIES}
-            defaultValue={product?.category || ""}
-            required
-          />
-          <p className="text-sm text-muted">
-            Marque : <span className="font-medium text-foreground">{PRODUCT_BRAND}</span>
-          </p>
-          <Input
-            label="Description"
-            name="description"
-            defaultValue={product?.description || ""}
-          />
-          <ImageUploadInput
-            label={product ? "Nouvelle image" : "Joindre une photo"}
-            required={!product}
-            optional={!!product}
-            previewUrl={imagePreview}
-            onPreviewChange={setImagePreview}
-            onError={setError}
-          />
-
-          {error && <p className="text-sm text-danger">{error}</p>}
-
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button type="submit" loading={loading} disabled={!!duplicateProduct}>
-              {product ? "Enregistrer" : "Créer"}
-            </Button>
-          </div>
-        </form>
-    </Modal>
-  );
-}
-
 function ProductDetailModal({
   product,
+  parent,
+  variants,
   onClose,
   onEdit,
   onEditStock,
+  onAddVariant,
   canEditStockTotal,
 }: {
   product: Product;
+  parent?: Product | null;
+  variants: Product[];
   onClose: () => void;
   onEdit: () => void;
   onEditStock: () => void;
+  onAddVariant: () => void;
   canEditStockTotal: boolean;
 }) {
+  const categories = getProductCategories(product);
+  const displayName = productDisplayName(product, parent);
+
   return (
     <Modal onClose={onClose} size="md">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Détail produit</h3>
-          <button onClick={onClose} className="text-muted hover:text-foreground cursor-pointer">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Détail produit</h3>
+        <button onClick={onClose} className="text-muted hover:text-foreground cursor-pointer">
+          ×
+        </button>
+      </div>
 
-        <div className="flex flex-col items-center gap-4 mb-6">
-          <ProductImage product={product} size="lg" />
-          <div className="text-center">
-            <p className="text-xl font-semibold">{product.name}</p>
-            <p className="text-sm text-muted">{PRODUCT_BRAND} · {product.category}</p>
+      <div className="mb-6 flex flex-col items-center gap-4">
+        <ProductImage product={product} size="lg" />
+        <div className="text-center">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <p className="text-xl font-semibold">{displayName}</p>
+            <ProductKindBadgeForProduct product={product} />
+          </div>
+          <p className="text-sm text-muted">
+            {PRODUCT_BRAND}
+            {categories.length > 0 ? ` · ${categories.join(", ")}` : ""}
+          </p>
+          {product.barcode && (
             <p className="mt-1 font-mono text-xs text-muted">{product.barcode}</p>
+          )}
+          {product.product_kind !== "parent" && (
             <p className="mt-2 text-lg font-bold text-primary">
               {formatCurrency(product.price)}
             </p>
-          </div>
+          )}
+        </div>
+        {product.product_kind !== "parent" && (
           <Badge variant={product.stock < 10 ? "warning" : "success"}>
             Stock : {product.stock}
           </Badge>
-        </div>
+        )}
+      </div>
 
-        <div className="flex flex-col gap-2">
+      {product.product_kind === "parent" && variants.length > 0 && (
+        <div className="mb-4 rounded-lg border border-border p-3">
+          <p className="mb-2 text-sm font-medium">Variantes ({variants.length})</p>
+          <ul className="space-y-1 text-sm text-muted">
+            {variants.map((variant) => (
+              <li key={variant.id}>
+                {product.name} — {variant.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {product.product_kind === "parent" && (
+          <Button onClick={onAddVariant}>
+            <GitBranchPlus className="h-4 w-4" />
+            Ajouter une variante
+          </Button>
+        )}
+        {product.product_kind !== "parent" && (
           <Button onClick={onEditStock}>
             <Warehouse className="h-4 w-4" />
             {canEditStockTotal ? "Modifier le stock" : "Ajouter du stock"}
           </Button>
-          <Button variant="secondary" onClick={onEdit}>
-            <Pencil className="h-4 w-4" />
-            Modifier le produit
-          </Button>
-          <Button variant="secondary" onClick={onClose}>
-            Fermer
-          </Button>
-        </div>
+        )}
+        <Button variant="secondary" onClick={onEdit}>
+          <Pencil className="h-4 w-4" />
+          Modifier
+        </Button>
+        <Button variant="secondary" onClick={onClose}>
+          Fermer
+        </Button>
+      </div>
     </Modal>
   );
 }
@@ -304,6 +155,7 @@ export function ProductsManager({
   const [showForm, setShowForm] = useState(false);
   const [formBarcode, setFormBarcode] = useState("");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [variantParent, setVariantParent] = useState<Product | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [stockProduct, setStockProduct] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -314,8 +166,33 @@ export function ProductsManager({
   const [duplicatePreview, setDuplicatePreview] = useState<Product | null>(null);
   const [scanHint, setScanHint] = useState("");
 
+  const parentById = useMemo(() => {
+    const map = new Map<string, Product>();
+    for (const product of products) {
+      if (product.product_kind === "parent") {
+        map.set(product.id, product);
+      }
+    }
+    return map;
+  }, [products]);
+
+  const variantsByParent = useMemo(() => {
+    const map = new Map<string, Product[]>();
+    for (const product of products) {
+      if (product.product_kind !== "variant" || !product.parent_id) continue;
+      const list = map.get(product.parent_id) ?? [];
+      list.push(product);
+      map.set(product.parent_id, list);
+    }
+    return map;
+  }, [products]);
+
   const modalOpen =
-    showForm || !!editingProduct || (!!selectedProduct && !scannedPreview) || !!stockProduct;
+    showForm ||
+    !!editingProduct ||
+    !!variantParent ||
+    (!!selectedProduct && !scannedPreview) ||
+    !!stockProduct;
 
   const handleSearchScan = useCallback(
     (code: string) => {
@@ -327,7 +204,11 @@ export function ProductsManager({
       if (found) {
         setScannedPreview(found);
         setSelectedProduct(null);
-        setScanHint("");
+        setScanHint(
+          found.product_kind === "parent"
+            ? "Produit parent — scannez une variante pour la vente"
+            : ""
+        );
         setScanQuery("");
       } else {
         setScannedPreview(null);
@@ -367,15 +248,22 @@ export function ProductsManager({
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
     return products.filter((p) => {
-      const matchCategory = !categoryFilter || p.category === categoryFilter;
+      const matchCategory = !categoryFilter || productHasCategory(p, categoryFilter);
       if (!q) return matchCategory;
+      const parent = p.parent_id ? parentById.get(p.parent_id) : null;
+      const displayName = productDisplayName(p, parent).toLowerCase();
       const matchSearch =
-        p.name.toLowerCase().includes(q) ||
-        p.barcode.includes(q) ||
-        (p.category?.toLowerCase().includes(q) ?? false);
+        displayName.includes(q) ||
+        (p.barcode?.includes(q) ?? false) ||
+        getProductCategories(p).some((c) => c.toLowerCase().includes(q));
       return matchSearch && matchCategory;
     });
-  }, [products, search, categoryFilter]);
+  }, [products, search, categoryFilter, parentById]);
+
+  const groupedProducts = useMemo(
+    () => groupProductsForList(filteredProducts),
+    [filteredProducts]
+  );
 
   const productsFilterToken = `${search}|${categoryFilter}`;
   const {
@@ -386,7 +274,7 @@ export function ProductsManager({
     rangeStart: productsRangeStart,
     rangeEnd: productsRangeEnd,
     totalItems: productsTotalItems,
-  } = usePagination(filteredProducts, DEFAULT_PAGE_SIZE, productsFilterToken);
+  } = usePagination(groupedProducts, DEFAULT_PAGE_SIZE, productsFilterToken);
 
   async function handleDelete(id: string) {
     if (!confirm("Supprimer ce produit ?")) return;
@@ -399,20 +287,18 @@ export function ProductsManager({
   function handleExistingProductFound(found: Product) {
     setDuplicatePreview(found);
     setShowForm(false);
+    setVariantParent(null);
     setScannedPreview(found);
     setScanQuery("");
     setScanHint("");
   }
 
-  function handleAddWithScan() {
-    setFormBarcode("");
-    setDuplicatePreview(null);
-    setShowForm(true);
+  function resolveParent(product: Product) {
+    return product.parent_id ? parentById.get(product.parent_id) ?? null : null;
   }
 
   return (
     <>
-      {/* Barre recherche + scan */}
       <Card className="natus-filter-bar mb-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
           <div className="flex-1">
@@ -485,7 +371,14 @@ export function ProductsManager({
           </div>
         </div>
         {scanHint && (
-          <p className="mt-3 text-sm text-danger">{scanHint}</p>
+          <p
+            className={cn(
+              "mt-3 text-sm",
+              scannedPreview?.product_kind === "parent" ? "text-warning" : "text-danger"
+            )}
+          >
+            {scanHint}
+          </p>
         )}
         {scannedPreview && (
           <Card className="mt-4 border-primary/40 bg-primary/5">
@@ -494,33 +387,54 @@ export function ProductsManager({
                 ? "Produit déjà ajouté"
                 : "Produit scanné"}
             </p>
-            <ProductInfoCard product={scannedPreview} />
-            <div className="mt-4 flex gap-2">
-              <Button
-                size="sm"
-                onClick={() => {
-                  setStockProduct(scannedPreview);
-                  setScannedPreview(null);
-                }}
-              >
-                <Warehouse className="h-4 w-4" />
-                {canEditStockTotal ? "Modifier le stock" : "Ajouter du stock"}
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  setEditingProduct(scannedPreview);
-                  setScannedPreview(null);
-                }}
-              >
-                <Pencil className="h-4 w-4" />
-                Modifier
-              </Button>
+            <ProductInfoCard
+              product={scannedPreview}
+              parent={resolveParent(scannedPreview)}
+            />
+            <div className="mt-4 flex flex-wrap gap-2">
+              {scannedPreview.product_kind === "parent" ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setVariantParent(scannedPreview);
+                    setScannedPreview(null);
+                  }}
+                >
+                  <GitBranchPlus className="h-4 w-4" />
+                  Ajouter une variante
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setStockProduct(scannedPreview);
+                      setScannedPreview(null);
+                    }}
+                  >
+                    <Warehouse className="h-4 w-4" />
+                    {canEditStockTotal ? "Modifier le stock" : "Ajouter du stock"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setEditingProduct(scannedPreview);
+                      setScannedPreview(null);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Modifier
+                  </Button>
+                </>
+              )}
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setScannedPreview(null)}
+                onClick={() => {
+                  setScannedPreview(null);
+                  setScanHint("");
+                }}
               >
                 Fermer
               </Button>
@@ -545,7 +459,13 @@ export function ProductsManager({
                 : `${filteredProducts.length} sur ${products.length} produit(s)`
             }
             action={
-              <Button onClick={handleAddWithScan}>
+              <Button
+                onClick={() => {
+                  setFormBarcode("");
+                  setDuplicatePreview(null);
+                  setShowForm(true);
+                }}
+              >
                 <Plus className="h-4 w-4" />
                 Ajouter
               </Button>
@@ -558,8 +478,9 @@ export function ProductsManager({
             <thead>
               <tr className="border-y border-border bg-primary-light/50">
                 <th className="px-6 py-3 text-left font-medium text-muted">Produit</th>
+                <th className="px-6 py-3 text-left font-medium text-muted">Type</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Code-barres</th>
-                <th className="px-6 py-3 text-left font-medium text-muted">Catégorie</th>
+                <th className="px-6 py-3 text-left font-medium text-muted">Catégories</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">Prix</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">
                   Stock{selectedStoreName ? ` (${selectedStoreName})` : ""}
@@ -568,69 +489,113 @@ export function ProductsManager({
               </tr>
             </thead>
             <tbody>
-              {paginatedProducts.map((product) => (
-                <tr
-                  key={product.id}
-                  onClick={() => setSelectedProduct(product)}
-                  className={cn(
-                    "border-b border-border cursor-pointer transition-colors hover:bg-primary/5",
-                    (selectedProduct?.id === product.id || scannedPreview?.id === product.id) &&
-                      "bg-primary/10"
-                  )}
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <ProductImage product={product} size="sm" />
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-xs text-muted">{PRODUCT_BRAND}</p>
+              {paginatedProducts.map((product) => {
+                const parent = resolveParent(product);
+                const isVariantRow = product.product_kind === "variant";
+                const displayName = productDisplayName(product, parent);
+                const categories = getProductCategories(product);
+
+                return (
+                  <tr
+                    key={product.id}
+                    onClick={() => setSelectedProduct(product)}
+                    className={cn(
+                      "border-b border-border cursor-pointer transition-colors hover:bg-primary/5",
+                      (selectedProduct?.id === product.id ||
+                        scannedPreview?.id === product.id) &&
+                        "bg-primary/10"
+                    )}
+                  >
+                    <td className="px-6 py-4">
+                      <div
+                        className={cn(
+                          "flex items-center gap-3",
+                          isVariantRow && "pl-4"
+                        )}
+                      >
+                        <ProductImage product={product} size="sm" />
+                        <div>
+                          <p className="font-medium">{displayName}</p>
+                          <p className="text-xs text-muted">{PRODUCT_BRAND}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-mono text-xs">{product.barcode}</td>
-                  <td className="px-6 py-4">
-                    {product.category && <Badge>{product.category}</Badge>}
-                  </td>
-                  <td className="px-6 py-4 text-right font-medium">
-                    {formatCurrency(product.price)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <Badge variant={product.stock < 10 ? "warning" : "success"}>
-                      {product.stock}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setStockProduct(product)}
-                        title={canEditStockTotal ? "Modifier le stock" : "Ajouter du stock"}
-                      >
-                        <Warehouse className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingProduct(product)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(product.id)}
-                        loading={deleting === product.id}
-                      >
-                        <Trash2 className="h-4 w-4 text-danger" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4">
+                      <ProductKindBadgeForProduct product={product} />
+                    </td>
+                    <td className="px-6 py-4 font-mono text-xs">
+                      {product.barcode || "—"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {categories.map((category) => (
+                          <Badge key={category}>{category}</Badge>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium">
+                      {product.product_kind === "parent"
+                        ? "—"
+                        : formatCurrency(product.price)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {product.product_kind === "parent" ? (
+                        <span className="text-muted">—</span>
+                      ) : (
+                        <Badge variant={product.stock < 10 ? "warning" : "success"}>
+                          {product.stock}
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-end gap-2">
+                        {product.product_kind === "parent" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Ajouter une variante"
+                            onClick={() => setVariantParent(product)}
+                          >
+                            <GitBranchPlus className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {product.product_kind !== "parent" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setStockProduct(product)}
+                            title={
+                              canEditStockTotal
+                                ? "Modifier le stock"
+                                : "Ajouter du stock"
+                            }
+                          >
+                            <Warehouse className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingProduct(product)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(product.id)}
+                          loading={deleting === product.id}
+                        >
+                          <Trash2 className="h-4 w-4 text-danger" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {paginatedProducts.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted">
+                  <td colSpan={7} className="px-6 py-12 text-center text-muted">
                     Aucun produit trouvé
                   </td>
                 </tr>
@@ -658,6 +623,10 @@ export function ProductsManager({
           canEditBarcode={canEditBarcode}
           onClose={() => setShowForm(false)}
           onExistingProduct={handleExistingProductFound}
+          onCreatedParent={(parent) => {
+            setVariantParent(parent);
+            router.refresh();
+          }}
         />
       )}
       {editingProduct && (
@@ -669,9 +638,20 @@ export function ProductsManager({
           onClose={() => setEditingProduct(null)}
         />
       )}
+      {variantParent && (
+        <VariantForm
+          parent={variantParent}
+          stores={allStores}
+          existingProducts={products}
+          onClose={() => setVariantParent(null)}
+          onExistingProduct={handleExistingProductFound}
+        />
+      )}
       {selectedProduct && !stockProduct && (
         <ProductDetailModal
           product={selectedProduct}
+          parent={resolveParent(selectedProduct)}
+          variants={variantsByParent.get(selectedProduct.id) ?? []}
           canEditStockTotal={canEditStockTotal}
           onClose={() => setSelectedProduct(null)}
           onEdit={() => {
@@ -680,6 +660,10 @@ export function ProductsManager({
           }}
           onEditStock={() => {
             setStockProduct(selectedProduct);
+            setSelectedProduct(null);
+          }}
+          onAddVariant={() => {
+            setVariantParent(selectedProduct);
             setSelectedProduct(null);
           }}
         />

@@ -135,7 +135,7 @@ export function categoryOptions(categories: readonly string[]): SelectMenuOption
 }
 
 export function productPickOptions(
-  products: { id: string; name: string; stock: number; barcode?: string }[]
+  products: { id: string; name: string; stock: number; barcode?: string | null }[]
 ): SelectMenuOption[] {
   return [
     { value: "", label: "Sélectionner un produit", icon: Package },

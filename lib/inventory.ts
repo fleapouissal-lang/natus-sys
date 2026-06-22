@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CashierSummary, Product, Store, StoreWithStats } from "@/lib/types";
+import { isSellableProduct } from "@/lib/products/product-utils";
 
 export async function getActiveStores(city?: string | null): Promise<Store[]> {
   const supabase = await createClient();
@@ -37,7 +38,10 @@ export async function getCashiersByStore(): Promise<Record<string, CashierSummar
   return map;
 }
 
-export async function getProductsWithStoreStock(storeId: string): Promise<Product[]> {
+export async function getProductsWithStoreStock(
+  storeId: string,
+  options?: { includeParents?: boolean }
+): Promise<Product[]> {
   const supabase = await createClient();
 
   const [{ data: products }, { data: inventory }] = await Promise.all([
@@ -52,10 +56,25 @@ export async function getProductsWithStoreStock(storeId: string): Promise<Produc
     (inventory || []).map((row) => [row.product_id, row.stock as number])
   );
 
-  return (products || []).map((product) => ({
-    ...product,
-    stock: stockMap.get(product.id) ?? 0,
-  }));
+  const allProducts = products || [];
+  const parentById = new Map(
+    allProducts
+      .filter((product) => product.product_kind === "parent")
+      .map((product) => [product.id, product] as const)
+  );
+
+  const list = options?.includeParents
+    ? allProducts
+    : allProducts.filter(isSellableProduct);
+
+  return list.map((product) => {
+    const parent = product.parent_id ? parentById.get(product.parent_id) : null;
+    return {
+      ...product,
+      stock: stockMap.get(product.id) ?? 0,
+      parent_name: parent?.name ?? null,
+    };
+  });
 }
 
 /** Stock total par produit, agrégé sur tous les magasins actifs (optionnellement filtrés par ville). */

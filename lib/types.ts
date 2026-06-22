@@ -61,14 +61,20 @@ export interface Profile {
   stores?: Pick<Store, "name" | "city"> | null;
 }
 
+export type ProductKind = "simple" | "parent" | "variant";
+
 export interface Product {
   id: string;
   name: string;
-  barcode: string;
+  barcode: string | null;
   description: string | null;
   price: number;
   stock: number;
   category: string | null;
+  categories?: string[];
+  product_kind?: ProductKind;
+  parent_id?: string | null;
+  parent_name?: string | null;
   brand: string | null;
   image_url: string | null;
   created_at: string;

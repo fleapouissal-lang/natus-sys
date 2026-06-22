@@ -24,6 +24,12 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { getProductImageUrl } from "@/lib/product-image";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
+import { ProductKindBadgeForProduct } from "@/components/products/product-kind-badge";
+import {
+  getProductCategories,
+  productDisplayName,
+  productHasCategory,
+} from "@/lib/products/product-utils";
 import type { Product } from "@/lib/types";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -122,6 +128,10 @@ function ProductCard({
   const outOfStock = product.stock <= 0;
   const inOrder = cartQty > 0;
   const orderValidated = validatedQty >= cartQty;
+  const displayName = productDisplayName(
+    product,
+    product.parent_name ? ({ name: product.parent_name } as Product) : null
+  );
 
   function handleCardClick() {
     if (outOfStock) {
@@ -194,9 +204,12 @@ function ProductCard({
 
       <div className="flex flex-1 flex-col p-3">
         <div className="mb-2 flex items-start justify-between gap-2">
-          <p className="line-clamp-2 flex-1 text-sm font-semibold leading-snug">
-            {product.name}
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 text-sm font-semibold leading-snug">
+              {displayName}
+            </p>
+            <ProductKindBadgeForProduct product={product} className="mt-1" />
+          </div>
           <p className="shrink-0 text-sm font-bold text-primary">
             {formatCurrency(product.price)}
           </p>
@@ -305,7 +318,9 @@ export function ProductCatalog({
   const categories = useMemo(() => {
     const fromProducts = new Set<string>();
     for (const p of products) {
-      if (p.category) fromProducts.add(p.category);
+      for (const category of getProductCategories(p)) {
+        fromProducts.add(category);
+      }
     }
     return PRODUCT_CATEGORIES.filter((c) => fromProducts.has(c));
   }, [products]);
@@ -346,15 +361,20 @@ export function ProductCatalog({
   const filtered = useMemo(() => {
     let list = products;
     if (selectedCategory) {
-      list = list.filter((p) => p.category === selectedCategory);
+      list = list.filter((p) => productHasCategory(p, selectedCategory));
     }
     const q = searchQuery.trim().toLowerCase();
     if (q) {
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.barcode.toLowerCase().includes(q)
-      );
+      list = list.filter((p) => {
+        const displayName = productDisplayName(
+          p,
+          p.parent_name ? ({ name: p.parent_name } as Product) : null
+        ).toLowerCase();
+        return (
+          displayName.includes(q) ||
+          (p.barcode?.toLowerCase().includes(q) ?? false)
+        );
+      });
     }
     return list;
   }, [products, searchQuery, selectedCategory]);
@@ -422,7 +442,15 @@ export function ProductCatalog({
             <p className="text-xs font-medium uppercase tracking-wide text-success">
               Dernier produit ajouté
             </p>
-            <p className="truncate font-semibold">{lastAddedProduct.name}</p>
+            <p className="truncate font-semibold">
+              {productDisplayName(
+                lastAddedProduct,
+                lastAddedProduct.parent_name
+                  ? ({ name: lastAddedProduct.parent_name } as Product)
+                  : null
+              )}
+            </p>
+            <ProductKindBadgeForProduct product={lastAddedProduct} className="mt-1" />
           </div>
           <p className="shrink-0 font-bold text-primary">
             {formatCurrency(lastAddedProduct.price)}

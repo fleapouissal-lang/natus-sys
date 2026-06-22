@@ -190,7 +190,7 @@ function StoreCard({
       if (!q) return true;
       return (
         product.name.toLowerCase().includes(q) ||
-        product.barcode.toLowerCase().includes(q) ||
+        (product.barcode?.toLowerCase().includes(q) ?? false) ||
         (product.category?.toLowerCase().includes(q) ?? false)
       );
     });

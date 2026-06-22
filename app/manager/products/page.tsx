@@ -18,7 +18,9 @@ export default async function ProductsPage({
   const allStores = await getActiveStores(city);
   const storeId = resolveSelectedStoreId(stores, storeParam);
   const selectedStore = getSelectedStore(stores, storeId);
-  const products = storeId ? await getProductsWithStoreStock(storeId) : [];
+  const products = storeId
+    ? await getProductsWithStoreStock(storeId, { includeParents: true })
+    : [];
 
   return (
     <div className="animate-fade-in space-y-4">
