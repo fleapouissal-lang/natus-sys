@@ -63,6 +63,11 @@ import {
   type AppliedPosPromo,
 } from "@/lib/marketing/pos-promo";
 import { PosLuxuryCartFab } from "@/components/pos/pos-luxury-cart-fab";
+import {
+  PosMobileCartStepBar,
+  resolveMobileCartSteps,
+  type PosMobileCartStep,
+} from "@/components/pos/pos-mobile-cart-step-bar";
 import type { ShopifyOrderPosContext } from "@/lib/orders";
 
 type ManagerMode = "stock" | "sale";
@@ -125,6 +130,7 @@ export function PosTerminal({
   const [scanAlert, setScanAlert] = useState<PosScanAlert | null>(null);
   const [scanListening, setScanListening] = useState(true);
   const [mobilePosView, setMobilePosView] = useState<"catalog" | "cart">("catalog");
+  const [mobileCartStep, setMobileCartStep] = useState<PosMobileCartStep>("loyalty");
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const orderNotifications = useCashierNotifications();
@@ -138,6 +144,30 @@ export function PosTerminal({
   const isStockScan = isManagementUser && managerMode === "stock";
   const isOrderMode = !!activeShopifyOrder && !isStockScan;
   const isShopifyOrderCheckout = !!activeShopifyOrder;
+  const mobileCartSteps = useMemo(
+    () => resolveMobileCartSteps(isShopifyOrderCheckout || isStockScan),
+    [isShopifyOrderCheckout, isStockScan]
+  );
+
+  function openMobileCart(step: PosMobileCartStep = mobileCartSteps[0]) {
+    setMobileCartStep(step);
+    setMobilePosView("cart");
+  }
+
+  function goToNextCartStep() {
+    const index = mobileCartSteps.indexOf(mobileCartStep);
+    if (index >= 0 && index < mobileCartSteps.length - 1) {
+      setMobileCartStep(mobileCartSteps[index + 1]);
+    }
+  }
+
+  function goToPrevCartStep() {
+    const index = mobileCartSteps.indexOf(mobileCartStep);
+    if (index > 0) {
+      setMobileCartStep(mobileCartSteps[index - 1]);
+    }
+  }
+
   const shopifyPaymentLabel =
     activeShopifyOrder?.paymentType === "cod"
       ? "COD — à la livraison"
@@ -206,9 +236,9 @@ export function PosTerminal({
     });
     if (added) {
       setLastAddedProduct(product);
-      setMobilePosView("cart");
+      openMobileCart("products");
     }
-  }, [activeShopifyOrder]);
+  }, [activeShopifyOrder, mobileCartSteps]);
 
   const adjustOrderValidation = useCallback(
     (productId: string, delta: number) => {
@@ -613,6 +643,12 @@ export function PosTerminal({
   const cashPaymentReady = cashReceived >= totalTtc;
 
   useEffect(() => {
+    if (!mobileCartSteps.includes(mobileCartStep)) {
+      setMobileCartStep(mobileCartSteps[0]);
+    }
+  }, [mobileCartSteps, mobileCartStep]);
+
+  useEffect(() => {
     setCashReceivedInput("");
   }, [totalTtc]);
 
@@ -621,6 +657,243 @@ export function PosTerminal({
       setCashReceivedInput("");
     }
   }, [paymentMethod]);
+
+  function renderCartItems() {
+    if (cart.length === 0) {
+      return <p className="py-12 text-center text-sm text-muted">Panier vide</p>;
+    }
+
+    return (
+      <div className="space-y-4">
+        {cart.map((item) => {
+          const validated = validatedQty[item.product.id] ?? 0;
+          const isItemValidated = validated >= item.quantity;
+
+          return (
+            <div key={item.product.id} className="relative pt-2.5 pr-2.5">
+              {!isOrderMode && (
+                <button
+                  type="button"
+                  onClick={() => removeFromCart(item.product.id)}
+                  className="avatar-round absolute right-0 top-0 z-10 flex h-9 w-9 rotate-12 items-center justify-center bg-danger text-white shadow-md ring-2 ring-surface transition-transform hover:scale-110 hover:rotate-0 cursor-pointer"
+                  aria-label="Supprimer"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+
+              <div
+                className={cn(
+                  "relative flex min-h-[7.5rem] items-stretch overflow-hidden border bg-surface",
+                  isOrderMode && isItemValidated
+                    ? "border-success/50 ring-1 ring-success/30"
+                    : "border-border"
+                )}
+              >
+                <ProductImage product={item.product} strip />
+
+                <div className="flex min-w-0 flex-1 items-center gap-4 py-3 pl-4 pr-4">
+                  <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
+                    <p className="line-clamp-2 text-base font-bold leading-tight">
+                      {item.product.name}
+                    </p>
+
+                    <p className="text-sm text-muted">
+                      {item.quantity} x {formatCurrency(item.product.price)}
+                    </p>
+
+                    {isOrderMode ? (
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <Badge variant={isItemValidated ? "success" : "warning"}>
+                          {isItemValidated ? (
+                            <span className="inline-flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Validé {validated}/{item.quantity}
+                            </span>
+                          ) : (
+                            `${validated}/${item.quantity} validé${validated !== 1 ? "s" : ""}`
+                          )}
+                        </Badge>
+                        <div className="avatar-round flex items-center gap-0.5 border border-border bg-page px-1 py-0.5">
+                          <button
+                            type="button"
+                            onClick={() => adjustOrderValidation(item.product.id, -1)}
+                            disabled={validated <= 0}
+                            className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                            aria-label="Retirer une validation"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="min-w-[1.5rem] text-center text-sm font-bold">
+                            {validated}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => adjustOrderValidation(item.product.id, 1)}
+                            disabled={validated >= item.quantity}
+                            className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                            aria-label="Valider une unité"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="avatar-round mt-1 flex w-fit items-center gap-0.5 border border-border bg-page px-1 py-0.5">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.product.id, -1)}
+                          className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 cursor-pointer"
+                          aria-label="Diminuer"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="min-w-[1.5rem] text-center text-sm font-bold">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.product.id, 1)}
+                          className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 cursor-pointer"
+                          aria-label="Augmenter"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="shrink-0 text-lg font-bold text-primary">
+                    {formatCurrency(item.product.price * item.quantity)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderPaymentFooter(showPrintButton: boolean) {
+    return (
+      <>
+        <div className="space-y-2 text-sm">
+          {(loyaltyDiscount > 0 || promoDiscount > 0) && (
+            <>
+              <div className="flex items-center justify-between text-muted">
+                <span>Sous-total</span>
+                <span>{formatCurrency(subtotal)}</span>
+              </div>
+              {loyaltyDiscount > 0 && (
+                <div className="flex items-center justify-between text-success">
+                  <span>Points fidélité</span>
+                  <span>-{formatCurrency(loyaltyDiscount)}</span>
+                </div>
+              )}
+              {promoDiscount > 0 && appliedPromo && (
+                <div className="flex items-center justify-between text-success">
+                  <span>Code {appliedPromo.code}</span>
+                  <span>-{formatCurrency(promoDiscount)}</span>
+                </div>
+              )}
+            </>
+          )}
+          <div className="flex items-center justify-between text-muted">
+            <span>Total HT</span>
+            <span>{formatCurrency(totalHt)}</span>
+          </div>
+          <div className="flex items-center justify-between text-muted">
+            <span>TVA ({tvaPercent} %)</span>
+            <span>{formatCurrency(totalTva)}</span>
+          </div>
+          <div className="border-t border-dashed border-border" />
+          <div className="flex items-center justify-between">
+            <span className="text-base font-semibold">Total TTC</span>
+            <span className="text-2xl font-bold text-primary">
+              {formatCurrency(totalTtc)}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          {isShopifyOrderCheckout ? (
+            <div className="rounded-lg border border-primary/30 bg-champagne/20 px-3 py-3">
+              <p className="text-xs font-medium text-muted">Paiement commande web</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {shopifyPaymentLabel}
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                Le ticket s&apos;imprime directement — pas de choix espèces/carte
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="mb-2 text-sm font-semibold text-foreground">Mode de paiement</p>
+              <div className="grid grid-cols-2 gap-2">
+                {PAYMENT_OPTIONS.map(({ id, label, icon: Icon }) => {
+                  const selected = paymentMethod === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setPaymentMethod(id)}
+                      disabled={cart.length === 0}
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 border bg-page px-3 py-3 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
+                        selected
+                          ? "border-primary bg-champagne/30"
+                          : "border-border hover:border-primary/60"
+                      )}
+                    >
+                      <Icon className="h-5 w-5 text-primary" />
+                      <span className="text-xs font-semibold">{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {showCashCalculator && (
+                <CashChangeCalculator
+                  total={totalTtc}
+                  value={cashReceivedInput}
+                  onChange={setCashReceivedInput}
+                />
+              )}
+            </>
+          )}
+          {isOrderMode && !orderFullyValidated && (
+            <p className="mt-2 text-xs text-warning">
+              Validez tous les produits ({orderValidationDone}/{orderValidationTotal}) — scan ou +
+            </p>
+          )}
+        </div>
+
+        {showPrintButton && (
+          <Button
+            className="mt-4 w-full"
+            size="lg"
+            onClick={() =>
+              void handlePay(
+                isShopifyOrderCheckout
+                  ? activeShopifyOrder!.defaultPayment
+                  : paymentMethod
+              )
+            }
+            disabled={
+              cart.length === 0 ||
+              loading ||
+              (isOrderMode && !orderFullyValidated) ||
+              (showCashCalculator && !cashPaymentReady)
+            }
+            loading={loading}
+          >
+            <Printer className="h-4 w-4" />
+            Imprimer ticket
+          </Button>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -737,7 +1010,7 @@ export function PosTerminal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMobilePosView("cart")}
+                  onClick={() => openMobileCart()}
                   className={cn(
                     "relative flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm font-semibold",
                     mobilePosView === "cart" && "natus-pos-mobile-tab--active",
@@ -975,7 +1248,7 @@ export function PosTerminal({
                   </div>
 
                   {!isShopifyOrderCheckout && !isStockScan && (
-                    <div className="mt-4">
+                    <div className="mt-4 hidden md:block">
                       <PosCheckoutPanel
                         subtotal={subtotal}
                         storeId={defaultStoreId || undefined}
@@ -991,235 +1264,104 @@ export function PosTerminal({
                   )}
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-natus">
-                  {cart.length === 0 ? (
-                    <p className="py-12 text-center text-sm text-muted">Panier vide</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {cart.map((item) => {
-                        const validated = validatedQty[item.product.id] ?? 0;
-                        const isItemValidated = validated >= item.quantity;
+                {/* Mobile — étapes Fidélité → Produits → Paiement */}
+                <div className="flex min-h-0 flex-1 flex-col md:hidden">
+                  <PosMobileCartStepBar
+                    step={mobileCartStep}
+                    steps={mobileCartSteps}
+                    onStepChange={setMobileCartStep}
+                  />
 
-                        return (
-                        <div key={item.product.id} className="relative pt-2.5 pr-2.5">
-                          {!isOrderMode && (
-                            <button
-                              type="button"
-                              onClick={() => removeFromCart(item.product.id)}
-                              className="avatar-round absolute right-0 top-0 z-10 flex h-9 w-9 rotate-12 items-center justify-center bg-danger text-white shadow-md ring-2 ring-surface transition-transform hover:scale-110 hover:rotate-0 cursor-pointer"
-                              aria-label="Supprimer"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-
-                          <div
-                            className={cn(
-                              "relative flex min-h-[7.5rem] items-stretch overflow-hidden border bg-surface",
-                              isOrderMode && isItemValidated
-                                ? "border-success/50 ring-1 ring-success/30"
-                                : "border-border"
-                            )}
-                          >
-                            <ProductImage product={item.product} strip />
-
-                            <div className="flex min-w-0 flex-1 items-center gap-4 py-3 pl-4 pr-4">
-                            <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
-                              <p className="line-clamp-2 text-base font-bold leading-tight">
-                                {item.product.name}
-                              </p>
-
-                              <p className="text-sm text-muted">
-                                {item.quantity} x {formatCurrency(item.product.price)}
-                              </p>
-
-                              {isOrderMode ? (
-                                <div className="mt-1 flex flex-wrap items-center gap-2">
-                                  <Badge variant={isItemValidated ? "success" : "warning"}>
-                                    {isItemValidated ? (
-                                      <span className="inline-flex items-center gap-1">
-                                        <CheckCircle2 className="h-3 w-3" />
-                                        Validé {validated}/{item.quantity}
-                                      </span>
-                                    ) : (
-                                      `${validated}/${item.quantity} validé${validated !== 1 ? "s" : ""}`
-                                    )}
-                                  </Badge>
-                                  <div className="avatar-round flex items-center gap-0.5 border border-border bg-page px-1 py-0.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => adjustOrderValidation(item.product.id, -1)}
-                                      disabled={validated <= 0}
-                                      className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-                                      aria-label="Retirer une validation"
-                                    >
-                                      <Minus className="h-4 w-4" />
-                                    </button>
-                                    <span className="min-w-[1.5rem] text-center text-sm font-bold">
-                                      {validated}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => adjustOrderValidation(item.product.id, 1)}
-                                      disabled={validated >= item.quantity}
-                                      className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-                                      aria-label="Valider une unité"
-                                    >
-                                      <Plus className="h-4 w-4" />
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                              <div className="avatar-round mt-1 flex w-fit items-center gap-0.5 border border-border bg-page px-1 py-0.5">
-                                <button
-                                  type="button"
-                                  onClick={() => updateQuantity(item.product.id, -1)}
-                                  className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 cursor-pointer"
-                                  aria-label="Diminuer"
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </button>
-                                <span className="min-w-[1.5rem] text-center text-sm font-bold">
-                                  {item.quantity}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => updateQuantity(item.product.id, 1)}
-                                  className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 cursor-pointer"
-                                  aria-label="Augmenter"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </button>
-                              </div>
-                              )}
-                            </div>
-
-                            <p className="shrink-0 text-lg font-bold text-primary">
-                              {formatCurrency(item.product.price * item.quantity)}
-                            </p>
-                          </div>
-                          </div>
-                        </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="shrink-0 bg-surface px-4 py-4">
-                  <div className="space-y-2 text-sm">
-                    {(loyaltyDiscount > 0 || promoDiscount > 0) && (
-                      <>
-                        <div className="flex items-center justify-between text-muted">
-                          <span>Sous-total</span>
-                          <span>{formatCurrency(subtotal)}</span>
-                        </div>
-                        {loyaltyDiscount > 0 && (
-                          <div className="flex items-center justify-between text-success">
-                            <span>Points fidélité</span>
-                            <span>-{formatCurrency(loyaltyDiscount)}</span>
-                          </div>
-                        )}
-                        {promoDiscount > 0 && appliedPromo && (
-                          <div className="flex items-center justify-between text-success">
-                            <span>Code {appliedPromo.code}</span>
-                            <span>-{formatCurrency(promoDiscount)}</span>
-                          </div>
-                        )}
-                      </>
+                  <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-natus">
+                    {mobileCartStep === "loyalty" && !isShopifyOrderCheckout && !isStockScan && (
+                      <PosCheckoutPanel
+                        subtotal={subtotal}
+                        storeId={defaultStoreId || undefined}
+                        customer={loyaltyCustomer}
+                        pointsToRedeem={pointsToRedeem}
+                        promo={appliedPromo}
+                        onCustomerChange={setLoyaltyCustomer}
+                        onPointsToRedeemChange={setPointsToRedeem}
+                        onPromoChange={setAppliedPromo}
+                        loyaltySettings={loyaltySettings}
+                      />
                     )}
-                    <div className="flex items-center justify-between text-muted">
-                      <span>Total HT</span>
-                      <span>{formatCurrency(totalHt)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-muted">
-                      <span>TVA ({tvaPercent} %)</span>
-                      <span>{formatCurrency(totalTva)}</span>
-                    </div>
-                    <div className="border-t border-dashed border-border" />
-                    <div className="flex items-center justify-between">
-                      <span className="text-base font-semibold">Total TTC</span>
-                      <span className="text-2xl font-bold text-primary">
-                        {formatCurrency(totalTtc)}
-                      </span>
-                    </div>
+                    {mobileCartStep === "products" && renderCartItems()}
+                    {mobileCartStep === "payment" && renderPaymentFooter(false)}
                   </div>
 
-                  <div className="mt-4">
-                    {isShopifyOrderCheckout ? (
-                      <div className="rounded-lg border border-primary/30 bg-champagne/20 px-3 py-3">
-                        <p className="text-xs font-medium text-muted">Paiement commande web</p>
-                        <p className="mt-1 text-sm font-semibold text-foreground">
-                          {shopifyPaymentLabel}
-                        </p>
-                        <p className="mt-1 text-xs text-muted">
-                          Le ticket s&apos;imprime directement — pas de choix espèces/carte
-                        </p>
+                  <div className="shrink-0 border-t border-primary/10 bg-surface px-4 py-3">
+                    {mobileCartStep === "payment" ? (
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={goToPrevCartStep}
+                          disabled={mobileCartSteps.indexOf(mobileCartStep) === 0}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Retour
+                        </Button>
+                        <Button
+                          className="w-full"
+                          size="lg"
+                          onClick={() =>
+                            void handlePay(
+                              isShopifyOrderCheckout
+                                ? activeShopifyOrder!.defaultPayment
+                                : paymentMethod
+                            )
+                          }
+                          disabled={
+                            cart.length === 0 ||
+                            loading ||
+                            (isOrderMode && !orderFullyValidated) ||
+                            (showCashCalculator && !cashPaymentReady)
+                          }
+                          loading={loading}
+                        >
+                          <Printer className="h-4 w-4" />
+                          Imprimer ticket
+                        </Button>
                       </div>
                     ) : (
-                      <>
-                        <p className="mb-2 text-sm font-semibold text-foreground">
-                          Mode de paiement
-                        </p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {PAYMENT_OPTIONS.map(({ id, label, icon: Icon }) => {
-                            const selected = paymentMethod === id;
-                            return (
-                              <button
-                                key={id}
-                                type="button"
-                                onClick={() => setPaymentMethod(id)}
-                                disabled={cart.length === 0}
-                                className={cn(
-                                  "flex flex-col items-center gap-1.5 border bg-page px-3 py-3 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
-                                  selected
-                                    ? "border-primary bg-champagne/30"
-                                    : "border-border hover:border-primary/60"
-                                )}
-                              >
-                                <Icon className="h-5 w-5 text-primary" />
-                                <span className="text-xs font-semibold">{label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        {showCashCalculator && (
-                          <CashChangeCalculator
-                            total={totalTtc}
-                            value={cashReceivedInput}
-                            onChange={setCashReceivedInput}
-                          />
-                        )}
-                      </>
-                    )}
-                    {isOrderMode && !orderFullyValidated && (
-                      <p className="mt-2 text-xs text-warning">
-                        Validez tous les produits ({orderValidationDone}/{orderValidationTotal}) — scan ou +
-                      </p>
+                      <div className="flex gap-2">
+                        {mobileCartSteps.indexOf(mobileCartStep) > 0 ? (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="flex-1"
+                            onClick={goToPrevCartStep}
+                          >
+                            Retour
+                          </Button>
+                        ) : null}
+                        {mobileCartStep === "loyalty" ? (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="flex-1"
+                            onClick={goToNextCartStep}
+                          >
+                            Passer
+                          </Button>
+                        ) : null}
+                        <Button type="button" className="flex-1" onClick={goToNextCartStep}>
+                          Suivant
+                        </Button>
+                      </div>
                     )}
                   </div>
+                </div>
 
-                  <Button
-                    className="mt-4 w-full"
-                    size="lg"
-                    onClick={() =>
-                      void handlePay(
-                        isShopifyOrderCheckout
-                          ? activeShopifyOrder!.defaultPayment
-                          : paymentMethod
-                      )
-                    }
-                    disabled={
-                      cart.length === 0 ||
-                      loading ||
-                      (isOrderMode && !orderFullyValidated) ||
-                      (showCashCalculator && !cashPaymentReady)
-                    }
-                    loading={loading}
-                  >
-                    <Printer className="h-4 w-4" />
-                    Imprimer ticket
-                  </Button>
+                {/* Desktop — panier complet */}
+                <div className="hidden min-h-0 flex-1 flex-col md:flex">
+                  <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-natus">
+                    {renderCartItems()}
+                  </div>
+                  <div className="shrink-0 bg-surface px-4 py-4">
+                    {renderPaymentFooter(true)}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1228,7 +1370,7 @@ export function PosTerminal({
               <PosLuxuryCartFab
                 itemCount={cart.reduce((s, i) => s + i.quantity, 0)}
                 totalLabel={formatCurrency(totalTtc)}
-                onClick={() => setMobilePosView("cart")}
+                onClick={() => openMobileCart("products")}
               />
             )}
           </div>

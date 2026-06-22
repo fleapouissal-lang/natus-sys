@@ -71,7 +71,7 @@ export function ManagerSalesHistory({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         <Card>
           <p className="text-sm text-muted">Ventes affichées</p>
           <p className="mt-1 text-2xl font-bold">{stats.count}</p>
@@ -111,7 +111,7 @@ export function ManagerSalesHistory({
       />
 
       <Card padding={false}>
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           <CardHeader
             title="Historique des ventes"
             description={storeLabel}

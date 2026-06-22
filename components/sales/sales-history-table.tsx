@@ -62,7 +62,60 @@ export function SalesHistoryTable({
 
   return (
     <>
-      <div className="overflow-x-auto">
+      <div className="grid grid-cols-2 gap-3 px-3 pb-4 md:hidden">
+        {paginated.length === 0 ? (
+          <p className="col-span-2 py-12 text-center text-sm text-muted">
+            Aucune vente pour ces filtres
+          </p>
+        ) : (
+          paginated.map((sale) => (
+            <button
+              key={sale.id}
+              type="button"
+              onClick={() => onViewSale(sale)}
+              className={cn(
+                "natus-card flex h-full min-h-[7.5rem] flex-col !p-3 text-left transition-opacity",
+                sale.cancelled_at && "opacity-60"
+              )}
+            >
+              <p className="text-[10px] text-muted">{formatDate(sale.created_at)}</p>
+              <p
+                className={cn(
+                  "mt-1 font-heading text-lg font-bold leading-tight text-primary",
+                  sale.cancelled_at && "text-muted line-through"
+                )}
+              >
+                {formatCurrency(Number(sale.total))}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                <Badge variant={paymentVariant(sale.payment_method)} className="text-[10px]">
+                  {formatPaymentMethod(sale.payment_method)}
+                </Badge>
+                {sale.cancelled_at && (
+                  <Badge variant="danger" className="text-[10px]">
+                    Annulée
+                  </Badge>
+                )}
+              </div>
+              {showStore && sale.stores?.name && (
+                <p className="mt-auto pt-2 text-[10px] text-muted line-clamp-1">
+                  {sale.stores.name}
+                </p>
+              )}
+              {showCashier && (
+                <p className="mt-auto pt-2 text-[10px] text-muted line-clamp-1">
+                  {sale.profiles?.full_name || sale.profiles?.email || "—"}
+                </p>
+              )}
+              <p className="mt-1 text-[10px] font-medium text-muted">
+                Réf. {sale.id.slice(0, 8)}
+              </p>
+            </button>
+          ))
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-y border-border bg-primary-light/50">

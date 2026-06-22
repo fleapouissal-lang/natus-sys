@@ -391,6 +391,23 @@ h1, h2, h3, h4, h5, h6,
   box-shadow: 0 2px 8px rgba(250, 234, 161, 0.45);
 }
 
+.natus-pos-cart-steps {
+  border-bottom: 1px solid rgba(179, 140, 74, 0.12);
+}
+
+.natus-pos-cart-step {
+  color: var(--muted);
+}
+
+.natus-pos-cart-step--active {
+  background: rgba(250, 234, 161, 0.35);
+  color: #000;
+}
+
+.natus-pos-cart-step--done {
+  color: var(--primary);
+}
+
 /* Caisse mobile luxe — FAB panier */
 .natus-pos-luxury-fab {
   right: 1rem;

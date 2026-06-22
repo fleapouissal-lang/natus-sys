@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, MoreHorizontal } from "lucide-react";
@@ -92,6 +92,35 @@ export function MobileBottomNav({
 }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const moreSheetRef = useRef<HTMLDivElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+
+    function closeMore() {
+      setMoreOpen(false);
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (moreSheetRef.current?.contains(target)) return;
+      if (moreButtonRef.current?.contains(target)) return;
+      closeMore();
+    }
+
+    window.addEventListener("scroll", closeMore, true);
+    document.addEventListener("pointerdown", handlePointerDown, true);
+
+    return () => {
+      window.removeEventListener("scroll", closeMore, true);
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+    };
+  }, [moreOpen]);
 
   const allLinks = resolveNavLinks({
     role,
@@ -119,6 +148,7 @@ export function MobileBottomNav({
 
       {moreOpen && overflowLinks.length > 0 && (
         <div
+          ref={moreSheetRef}
           className="natus-mobile-nav-more-sheet fixed bottom-[calc(var(--natus-mobile-nav-height)+var(--natus-mobile-nav-shell-padding)+var(--natus-mobile-nav-gap)+env(safe-area-inset-bottom,0px)+0.5rem)] left-4 right-4 z-50 p-2 md:hidden"
         >
           <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-primary">
@@ -182,6 +212,7 @@ export function MobileBottomNav({
             {overflowLinks.length > 0 && (
               <li className="min-w-0 flex-1">
                 <button
+                  ref={moreButtonRef}
                   type="button"
                   onClick={() => setMoreOpen((open) => !open)}
                   className={cn(
