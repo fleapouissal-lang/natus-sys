@@ -175,18 +175,15 @@ function SidebarUserProfile({
   userName,
   roleLabel,
   cityLabel,
-  onToggleCollapsed,
 }: {
   collapsed: boolean;
   userName: string;
   roleLabel: string;
   cityLabel?: string;
-  onToggleCollapsed: () => void;
 }) {
   if (collapsed) {
     return (
       <div className="flex w-full flex-col items-center gap-2 border-b border-black/10 px-2 py-3">
-        <SidebarToggle onToggle={onToggleCollapsed} className="mx-auto" />
         <UserAvatar
           name={userName}
           title={[userName, roleLabel, cityLabel].filter(Boolean).join(" · ")}
@@ -200,9 +197,6 @@ function SidebarUserProfile({
 
   return (
     <div className="border-b border-black/10 px-4 py-4">
-      <div className="mb-3 flex justify-end">
-        <SidebarToggle onToggle={onToggleCollapsed} />
-      </div>
       <div className="flex items-center gap-3 px-1 py-1">
         <UserAvatar name={userName} />
         <div className="min-w-0">
@@ -273,12 +267,14 @@ export function Sidebar({
       title={collapsed ? "Double-clic pour agrandir" : "Double-clic pour réduire"}
     >
       {collapsed ? (
-        <div className="flex shrink-0 flex-col items-center border-b border-black/10 px-2 py-3">
+        <div className="flex shrink-0 items-center justify-between gap-1 border-b border-black/10 px-2 py-3">
           <SidebarBrand collapsed />
+          <SidebarToggle onToggle={toggleCollapsed} />
         </div>
       ) : (
-        <div className="relative shrink-0 border-b border-black/10 px-4 py-5">
+        <div className="relative flex shrink-0 items-center justify-between border-b border-black/10 px-4 py-5">
           <SidebarBrand />
+          <SidebarToggle onToggle={toggleCollapsed} />
         </div>
       )}
 
@@ -287,7 +283,6 @@ export function Sidebar({
         userName={userName}
         roleLabel={roleLabel}
         cityLabel={cityLabel}
-        onToggleCollapsed={toggleCollapsed}
       />
 
       <nav

@@ -22,7 +22,7 @@ export function CashierNotificationBar({
   const ctx = useCashierNotifications();
   if (!ctx?.barVisible || !ctx.latestUnread) return null;
 
-  const { latestUnread, openNotification, dismissBar, unreadCount } = ctx;
+  const { latestUnread, openNotification, dismissBar, badgeCount } = ctx;
   const meta = formatNotificationMeta(latestUnread);
 
   function handleView() {
@@ -48,14 +48,14 @@ export function CashierNotificationBar({
       >
         <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-visible rounded-full bg-white/20">
           <Bell className="h-4 w-4" />
-          <CountBadge count={unreadCount} className="-right-1 -top-1" />
+          <CountBadge count={badgeCount} className="-right-1 -top-1" />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold">
             {notificationHeadline(latestUnread.kind)}
-            {unreadCount > 1 && (
+            {badgeCount > 1 && (
               <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1.5 text-[10px] font-bold">
-                {unreadCount}
+                {badgeCount}
               </span>
             )}
           </p>
@@ -69,9 +69,9 @@ export function CashierNotificationBar({
         </div>
       </button>
       <div className="flex shrink-0 items-center gap-2">
-        {unreadCount > 1 && (
+        {badgeCount > 1 && (
           <span className="hidden text-xs text-white/90 sm:inline">
-            {unreadCount} notifications
+            {badgeCount} alertes actives
           </span>
         )}
         <button

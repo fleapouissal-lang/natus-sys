@@ -212,6 +212,7 @@ export function CashierSalesHistory({
         createPortal(
           <div className="natus-sales-report-print-only" aria-hidden>
             <CashierSalesReport
+              key={`${dateFrom}|${dateTo}|${paymentFilter}|${filtered.length}`}
               sales={filtered}
               stats={stats}
               dateFrom={dateFrom}

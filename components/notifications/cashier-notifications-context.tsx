@@ -31,10 +31,24 @@ import {
 } from "@/lib/notifications/show-browser-notification";
 import { evaluateStockChange, type StockChangeInput } from "@/lib/notifications/process-stock-change";
 import {
+  mergeActiveStockAlerts,
+  stockAlertsChanged,
+} from "@/lib/notifications/sync-stock-alerts";
+import {
   stockInventoryKey,
 } from "@/lib/notifications/stock-alert";
-import type { CashierNotification } from "@/lib/notifications/types";
+import {
+  computeNotificationCounts,
+  hasNotificationAttention,
+  isStockAlertNotification,
+  latestAttentionNotification,
+} from "@/lib/notifications/notification-counts";
 import { CashierNotificationToasts } from "@/components/notifications/cashier-notification-toasts";
+
+import type {
+  CashierNotification,
+  NotificationAudience,
+} from "@/lib/notifications/types";
 
 export type { CashierNotification, CashierOrderNotification } from "@/lib/notifications/types";
 
@@ -45,6 +59,8 @@ interface CashierNotificationsContextValue {
   notifications: CashierNotification[];
   toasts: CashierNotification[];
   unreadCount: number;
+  badgeCount: number;
+  stockAlertCount: number;
   latestUnread: CashierNotification | null;
   markAllRead: () => void;
   markRead: (id: string) => void;
@@ -168,20 +184,20 @@ export function CashierNotificationsProvider({
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const resolveStockAlertsRead = useCallback(
+  const clearStockAlerts = useCallback(
     (storeId: string, productId: string) => {
       setNotifications((prev) => {
-        const next = prev.map((n) =>
-          (n.kind === "stock_low" || n.kind === "stock_out") &&
-          n.storeId === storeId &&
-          n.productId === productId
-            ? { ...n, read: true }
-            : n
+        const next = prev.filter(
+          (n) =>
+            !(
+              isStockAlertNotification(n) &&
+              n.storeId === storeId &&
+              n.productId === productId
+            )
         );
-        if (next.every((n, i) => n.read === prev[i]?.read)) return prev;
+        if (next.length === prev.length) return prev;
         persist(next);
-        const stillUnread = next.some((n) => !n.read);
-        setBarVisible(stillUnread);
+        setBarVisible(hasNotificationAttention(next));
         return next;
       });
     },
@@ -250,7 +266,7 @@ export function CashierNotificationsProvider({
       lastStockRef.current.set(result.inventoryKey, input.nextStock);
 
       if (result.shouldResolve) {
-        resolveStockAlertsRead(input.storeId, input.productId);
+        clearStockAlerts(input.storeId, input.productId);
         return;
       }
 
@@ -258,7 +274,7 @@ export function CashierNotificationsProvider({
         pushNotification(result.notification);
       }
     },
-    [pushNotification, resolveStockAlertsRead, scope.mode]
+    [pushNotification, clearStockAlerts, scope.mode]
   );
 
   const reportStockChanges = useCallback(
@@ -331,7 +347,7 @@ export function CashierNotificationsProvider({
       }
     }
     setNotifications(stored);
-    setBarVisible(stored.some((n) => !n.read));
+    setBarVisible(hasNotificationAttention(stored));
   }, [storageKey]);
 
   useEffect(() => {
@@ -361,6 +377,45 @@ export function CashierNotificationsProvider({
   useEffect(() => {
     const supabase = createClient();
     let cancelled = false;
+
+    async function syncStockAlertsFromRows(
+      rows: { store_id: string; product_id: string; stock: number }[],
+      audience: NotificationAudience
+    ) {
+      if (cancelled || rows.length === 0) return;
+
+      const productIds = [...new Set(rows.map((r) => r.product_id))];
+      const { data: products } = await supabase
+        .from("products")
+        .select("id, name")
+        .in("id", productIds);
+
+      if (cancelled) return;
+
+      const nameById = new Map(
+        (products || []).map((p) => [p.id as string, p.name as string])
+      );
+
+      const inventory = rows.map((row) => ({
+        storeId: row.store_id,
+        productId: row.product_id,
+        stock: Number(row.stock) || 0,
+        productName: nameById.get(row.product_id) || "Produit",
+        storeName: storeNamesRef.current.get(row.store_id) ?? null,
+      }));
+
+      setNotifications((prev) => {
+        const next = mergeActiveStockAlerts({
+          notifications: prev,
+          inventory,
+          audience,
+        });
+        if (!stockAlertsChanged(prev, next)) return prev;
+        persist(next);
+        setBarVisible(hasNotificationAttention(next));
+        return next;
+      });
+    }
 
     async function bootstrapInventoryBaseline() {
       if (scope.mode === "city") {
@@ -392,6 +447,15 @@ export function CashierNotificationsProvider({
             Number(row.stock) || 0
           );
         }
+
+        await syncStockAlertsFromRows(
+          (rows || []).map((row) => ({
+            store_id: row.store_id as string,
+            product_id: row.product_id as string,
+            stock: Number(row.stock) || 0,
+          })),
+          "city"
+        );
         return;
       }
 
@@ -406,6 +470,15 @@ export function CashierNotificationsProvider({
           Number(row.stock) || 0
         );
       }
+
+      await syncStockAlertsFromRows(
+        (rows || []).map((row) => ({
+          store_id: row.store_id as string,
+          product_id: row.product_id as string,
+          stock: Number(row.stock) || 0,
+        })),
+        "store"
+      );
     }
 
     void bootstrapInventoryBaseline();
@@ -535,16 +608,22 @@ export function CashierNotificationsProvider({
     };
   }, [scope, pushNotification, router, handleInventoryRow]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const latestUnread = notifications.find((n) => !n.read) ?? null;
+  const { badgeCount, otherUnreadCount, stockAlertCount } = useMemo(
+    () => computeNotificationCounts(notifications),
+    [notifications]
+  );
+  const unreadCount = otherUnreadCount;
+  const latestUnread = latestAttentionNotification(notifications);
 
   const markAllRead = useCallback(() => {
     setNotifications((prev) => {
-      const next = prev.map((n) => ({ ...n, read: true }));
+      const next = prev.map((n) =>
+        isStockAlertNotification(n) ? n : { ...n, read: true }
+      );
       persist(next);
+      setBarVisible(hasNotificationAttention(next));
       return next;
     });
-    setBarVisible(false);
     setToasts([]);
     for (const timer of toastTimersRef.current.values()) {
       clearTimeout(timer);
@@ -555,10 +634,12 @@ export function CashierNotificationsProvider({
   const markRead = useCallback(
     (id: string) => {
       setNotifications((prev) => {
+        const target = prev.find((n) => n.id === id);
+        if (!target || isStockAlertNotification(target)) return prev;
+
         const next = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
         persist(next);
-        const stillUnread = next.some((n) => !n.read);
-        setBarVisible(stillUnread);
+        setBarVisible(hasNotificationAttention(next));
         return next;
       });
       dismissToast(id);
@@ -571,11 +652,15 @@ export function CashierNotificationsProvider({
       const notification = notifications.find((n) => n.id === id);
       if (!notification) return;
 
-      markRead(id);
+      if (!isStockAlertNotification(notification)) {
+        markRead(id);
+      } else {
+        dismissToast(id);
+      }
       setOpenPanel(false);
       openHandlerRef.current?.(notification);
     },
-    [markRead, notifications]
+    [dismissToast, markRead, notifications]
   );
 
   const dismissBar = useCallback(() => {
@@ -594,6 +679,8 @@ export function CashierNotificationsProvider({
       notifications,
       toasts,
       unreadCount,
+      badgeCount,
+      stockAlertCount,
       latestUnread,
       markAllRead,
       markRead,
@@ -610,6 +697,8 @@ export function CashierNotificationsProvider({
       notifications,
       toasts,
       unreadCount,
+      badgeCount,
+      stockAlertCount,
       latestUnread,
       markAllRead,
       markRead,

@@ -4,7 +4,6 @@ import { NatusDocumentBrand } from "@/components/pos/natus-document-brand";
 import { NATUS_INVOICE_COMPANY } from "@/lib/constants/company";
 import {
   NATUS_BRAND,
-  NATUS_BRAND_GRADIENTS,
   NATUS_BRAND_SERIF,
 } from "@/lib/constants/natus-brand";
 import { formatSalesReportPeriodLabel } from "@/lib/sales/cashier-report";
@@ -18,7 +17,7 @@ import type { PaymentMethod, Sale } from "@/lib/types";
 function ReportMonogram() {
   return (
     <span
-      className="pointer-events-none absolute bottom-[-4%] right-[-1%] select-none leading-none"
+      className="pointer-events-none absolute bottom-[-4%] right-[-1%] select-none leading-none print:hidden"
       style={{
         fontFamily: NATUS_BRAND_SERIF,
         fontSize: "16rem",
@@ -63,20 +62,13 @@ export function CashierSalesReport({
   return (
     <div
       id="cashier-sales-report-print"
-      className="natus-sales-report relative mx-auto w-full max-w-[210mm] text-sm shadow-sm print:max-w-none print:shadow-none"
-      style={{
-        background: NATUS_BRAND_GRADIENTS.creamBg,
-        color: NATUS_BRAND.ink,
-      }}
+      className="natus-sales-report relative mx-auto w-full max-w-[210mm] bg-white text-sm text-black shadow-sm print:max-w-none print:shadow-none"
     >
-      <div
-        className="relative overflow-hidden px-8 py-8 print:overflow-visible print:px-[12mm] print:py-[10mm]"
-        style={{ background: NATUS_BRAND_GRADIENTS.creamBg }}
-      >
+      <div className="relative overflow-hidden bg-white px-8 py-8 print:overflow-visible print:bg-white print:px-[12mm] print:py-[10mm] print:text-black">
         <ReportMonogram />
 
         <header
-          className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b pb-5"
+          className="natus-sales-report-report-header mb-6 flex flex-wrap items-start justify-between gap-4 border-b pb-5"
           style={{ borderColor: NATUS_BRAND.border }}
         >
           <div className="min-w-0 flex-1">
@@ -119,7 +111,7 @@ export function CashierSalesReport({
           <NatusDocumentBrand variant="invoice" />
         </header>
 
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="natus-sales-report-stats mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             { label: "Ventes", value: String(stats.count) },
             { label: "Total CA", value: formatCurrency(stats.total) },
@@ -177,11 +169,9 @@ export function CashierSalesReport({
                   </td>
                 </tr>
               )}
-            </tbody>
-            {activeSales.length > 0 && (
-              <tfoot>
+              {activeSales.length > 0 && (
                 <tr
-                  className="border-t-2 font-semibold"
+                  className="border-t-2 font-semibold print:break-inside-avoid"
                   style={{ borderColor: NATUS_BRAND.gold, background: "rgba(255,246,236,0.9)" }}
                 >
                   <td className="px-3 py-2.5" colSpan={3}>
@@ -192,8 +182,8 @@ export function CashierSalesReport({
                   </td>
                   <td />
                 </tr>
-              </tfoot>
-            )}
+              )}
+            </tbody>
           </table>
         </div>
 

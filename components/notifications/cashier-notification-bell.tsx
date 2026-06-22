@@ -9,6 +9,7 @@ import {
   notificationHref,
 } from "@/lib/notifications/display";
 import { formatTimeAgo } from "@/lib/notifications/format-time-ago";
+import { notificationNeedsAttention } from "@/lib/notifications/notification-counts";
 import type { CashierNotification } from "@/lib/notifications/types";
 import { cn } from "@/lib/utils";
 import { CountBadge } from "@/components/ui/count-badge";
@@ -23,7 +24,9 @@ export function CashierNotificationBell({
   if (!ctx) return null;
 
   const {
+    badgeCount,
     unreadCount,
+    stockAlertCount,
     notifications,
     openPanel,
     setOpenPanel,
@@ -32,6 +35,28 @@ export function CashierNotificationBell({
   } = ctx;
 
   const totalCount = notifications.length;
+
+  function panelSubtitle() {
+    if (badgeCount === 0) {
+      return totalCount > 0
+        ? `${totalCount} notification${totalCount > 1 ? "s" : ""} lue${totalCount > 1 ? "s" : ""}`
+        : "Aucune notification";
+    }
+
+    const parts: string[] = [];
+    if (stockAlertCount > 0) {
+      parts.push(
+        `${stockAlertCount} rupture${stockAlertCount > 1 ? "s" : ""} active${stockAlertCount > 1 ? "s" : ""}`
+      );
+    }
+    if (unreadCount > 0) {
+      parts.push(`${unreadCount} non lue${unreadCount > 1 ? "s" : ""}`);
+    }
+    if (totalCount > badgeCount) {
+      parts.push(`${totalCount} au total`);
+    }
+    return parts.join(" · ");
+  }
 
   function handleSelect(notification: CashierNotification) {
     openNotification(notification.id);
@@ -48,22 +73,22 @@ export function CashierNotificationBell({
         }}
         className="relative inline-flex h-9 w-9 items-center justify-center overflow-visible rounded-md border-0 bg-champagne text-primary hover:brightness-95 cursor-pointer"
         aria-label={
-          unreadCount > 0
-            ? `Notifications, ${unreadCount} non lue${unreadCount > 1 ? "s" : ""}`
+          badgeCount > 0
+            ? `Notifications, ${badgeCount} alerte${badgeCount > 1 ? "s" : ""} active${badgeCount > 1 ? "s" : ""}`
             : "Notifications"
         }
         title={
-          unreadCount > 0
-            ? `${unreadCount} notification${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`
+          badgeCount > 0
+            ? `${badgeCount} alerte${badgeCount > 1 ? "s" : ""} active${badgeCount > 1 ? "s" : ""}`
             : "Notifications"
         }
       >
         <Bell className="h-4 w-4 text-primary" />
-        <CountBadge count={unreadCount} className="-right-1 -top-1" />
-        {unreadCount > 0 && (
+        <CountBadge count={badgeCount} className="-right-1 -top-1" />
+        {badgeCount > 0 && (
           <span className="sr-only">
-            {unreadCount} notification{unreadCount > 1 ? "s" : ""} non lue
-            {unreadCount > 1 ? "s" : ""}
+            {badgeCount} alerte{badgeCount > 1 ? "s" : ""} active
+            {badgeCount > 1 ? "s" : ""}
           </span>
         )}
       </button>
@@ -81,23 +106,13 @@ export function CashierNotificationBell({
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-foreground">Notifications</p>
-                  {unreadCount > 0 && (
+                  {badgeCount > 0 && (
                     <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold leading-none text-white">
-                      {unreadCount > 99 ? "99+" : unreadCount}
+                      {badgeCount > 99 ? "99+" : badgeCount}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted">
-                  {unreadCount > 0
-                    ? `${unreadCount} non lue${unreadCount > 1 ? "s" : ""}${
-                        totalCount > unreadCount
-                          ? ` · ${totalCount} au total`
-                          : ""
-                      }`
-                    : totalCount > 0
-                      ? `${totalCount} notification${totalCount > 1 ? "s" : ""} lue${totalCount > 1 ? "s" : ""}`
-                      : "Aucune notification"}
-                </p>
+                <p className="text-xs text-muted">{panelSubtitle()}</p>
               </div>
               {unreadCount > 0 && (
                 <button
@@ -118,7 +133,9 @@ export function CashierNotificationBell({
                 notifications.map((n) => (
                   <li
                     key={n.id}
-                    className={cn(!n.read && "bg-primary-light/40")}
+                    className={cn(
+                      notificationNeedsAttention(n) && "bg-primary-light/40"
+                    )}
                   >
                     {onSelect ? (
                       <button
@@ -154,16 +171,17 @@ function NotificationItemContent({
   notification: CashierNotification;
 }) {
   const meta = formatNotificationMeta(n);
+  const active = notificationNeedsAttention(n);
 
   return (
     <div className="flex items-start gap-2">
-      {!n.read && (
+      {active && (
         <span
           className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary"
           aria-hidden
         />
       )}
-      <div className={cn("min-w-0 flex-1", n.read && "pl-4")}>
+      <div className={cn("min-w-0 flex-1", !active && "pl-4")}>
         <p className="text-sm font-medium text-foreground">
           {notificationHeadline(n.kind, true)}
         </p>

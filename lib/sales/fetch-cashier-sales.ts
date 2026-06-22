@@ -5,7 +5,7 @@ import type { Sale } from "@/lib/types";
 export async function fetchCashierSales(
   supabase: SupabaseClient,
   cashierId: string,
-  limit = 300
+  limit = 1000
 ): Promise<{ sales: Sale[]; error: string | null }> {
   const { data, error } = await supabase
     .from("sales")

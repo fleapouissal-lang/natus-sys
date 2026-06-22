@@ -30,11 +30,18 @@ function startOfWeekMonday(d: Date): Date {
   return x;
 }
 
-/** Lundi → aujourd'hui (clés fr-CA pour filtres commandes). */
+function endOfWeekSunday(d: Date): Date {
+  const start = startOfWeekMonday(d);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return endOfDay(end);
+}
+
+/** Lundi → dimanche de la semaine calendaire (clés fr-CA). */
 export function weekToTodayDateKeys(now = new Date()): { from: string; to: string } {
   return {
     from: toLocalDateKey(startOfWeekMonday(now)),
-    to: toLocalDateKey(now),
+    to: toLocalDateKey(endOfWeekSunday(now)),
   };
 }
 

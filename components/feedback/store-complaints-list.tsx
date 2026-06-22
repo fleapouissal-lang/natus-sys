@@ -2,12 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Phone, CheckCircle2, Search, Mail, ExternalLink, ImageIcon } from "lucide-react";
+import { Phone, CheckCircle2, Search, Mail, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { PaginationBar } from "@/components/ui/pagination-bar";
+import { StoreComplaintDetailModal } from "@/components/feedback/store-complaint-detail-modal";
 import { formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import { resolveStoreComplaint } from "@/lib/actions";
@@ -37,6 +38,8 @@ const SOURCE_OPTIONS = [
   { value: "web_other", label: "Autre (web)" },
 ];
 
+const ACTION_COLOR = "#B38C4A";
+
 export function StoreComplaintsList({
   complaints,
   canResolve = true,
@@ -52,6 +55,7 @@ export function StoreComplaintsList({
   const [statusFilter, setStatusFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [storeFilter, setStoreFilter] = useState("");
+  const [detailComplaint, setDetailComplaint] = useState<StoreComplaint | null>(null);
 
   const storeOptions = useMemo(() => {
     const byId = new Map<string, string>();
@@ -190,9 +194,7 @@ export function StoreComplaintsList({
                 <th className="px-6 py-3 text-left font-medium text-muted">Client</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Message</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Réf.</th>
-                {canResolve && (
-                  <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
-                )}
+                <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -239,51 +241,45 @@ export function StoreComplaintsList({
                     <p className="line-clamp-2 text-foreground" title={complaint.message}>
                       {complaint.message}
                     </p>
-                    {complaint.photo_url && (
-                      <a
-                        href={complaint.photo_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                      >
-                        <ImageIcon className="h-3 w-3" />
-                        Voir la photo
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-muted">
                     {complaint.shopify_orders?.order_number ||
                       (complaint.order_number ? `#${complaint.order_number.replace(/^#/, "")}` : "—")}
                   </td>
-                  {canResolve && (
-                    <td className="px-6 py-4">
-                      <div className="flex justify-end">
-                        {complaint.status === "new" ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="gap-1.5"
-                            disabled={pending}
-                            onClick={() => handleResolve(complaint.id)}
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                            Traiter
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted">—</span>
-                        )}
-                      </div>
-                    </td>
-                  )}
+                  <td className="px-6 py-4">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setDetailComplaint(complaint)}
+                        title="Voir la réclamation"
+                        aria-label="Voir la réclamation"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center !p-0 border bg-transparent hover:bg-[#B38C4A]/10"
+                        style={{ borderColor: ACTION_COLOR, color: ACTION_COLOR }}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      {canResolve && complaint.status === "new" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={pending}
+                          onClick={() => handleResolve(complaint.id)}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Traiter
+                        </Button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
               {paginated.length === 0 && (
                 <tr>
                   <td
-                    colSpan={
-                      (showStoreColumn ? 1 : 0) + (canResolve ? 1 : 0) + 6
-                    }
+                    colSpan={7 + (showStoreColumn ? 1 : 0)}
                     className="px-6 py-12 text-center text-muted"
                   >
                     {complaints.length === 0
@@ -307,6 +303,13 @@ export function StoreComplaintsList({
           />
         )}
       </Card>
+
+      {detailComplaint && (
+        <StoreComplaintDetailModal
+          complaint={detailComplaint}
+          onClose={() => setDetailComplaint(null)}
+        />
+      )}
     </div>
   );
 }

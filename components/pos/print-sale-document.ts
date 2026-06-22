@@ -1,26 +1,23 @@
+import {
+  runAfterPrintLayout,
+  setPrintPageLayout,
+  type PrintPageLayout,
+} from "@/lib/print/page-size";
+
 export type SalePrintTarget = "ticket" | "invoice";
 
-const PAGE_STYLE_ID = "natus-print-page-size";
-
-function setPrintPageSize(target: SalePrintTarget) {
-  let el = document.getElementById(PAGE_STYLE_ID) as HTMLStyleElement | null;
-  if (!el) {
-    el = document.createElement("style");
-    el.id = PAGE_STYLE_ID;
-    document.head.appendChild(el);
-  }
-
-  el.textContent =
-    target === "invoice"
-      ? "@media print { @page { size: A4 portrait; margin: 18mm 14mm 14mm 14mm; } }"
-      : "@media print { @page { size: 80mm auto; margin: 4mm; } }";
-}
+const TARGET_LAYOUT: Record<SalePrintTarget, PrintPageLayout> = {
+  invoice: "a4",
+  ticket: "ticket",
+};
 
 export function printSaleDocument(target: SalePrintTarget) {
-  setPrintPageSize(target);
+  setPrintPageLayout(TARGET_LAYOUT[target]);
   document.body.dataset.printDoc = target;
-  window.print();
-  window.requestAnimationFrame(() => {
-    delete document.body.dataset.printDoc;
+  runAfterPrintLayout(() => {
+    window.print();
+    window.requestAnimationFrame(() => {
+      delete document.body.dataset.printDoc;
+    });
   });
 }

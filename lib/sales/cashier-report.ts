@@ -1,4 +1,5 @@
 import type { OrderDatePreset } from "@/lib/store-tracking-period";
+import { runAfterPrintLayout, setPrintPageLayout } from "@/lib/print/page-size";
 
 export function salesReportPrintLabel(preset: OrderDatePreset | "custom"): string {
   switch (preset) {
@@ -38,12 +39,18 @@ function formatFrDate(isoKey: string): string {
 }
 
 export function printCashierSalesReport() {
+  setPrintPageLayout("a4");
   document.body.dataset.printDoc = "sales-report";
-  window.print();
+
   const cleanup = () => {
     delete document.body.dataset.printDoc;
     window.removeEventListener("afterprint", cleanup);
   };
-  window.addEventListener("afterprint", cleanup);
-  window.setTimeout(cleanup, 2000);
+
+  window.addEventListener("afterprint", cleanup, { once: true });
+
+  runAfterPrintLayout(() => {
+    window.print();
+    window.setTimeout(cleanup, 3000);
+  });
 }
