@@ -75,14 +75,14 @@ export function SalesHistoryTable({
               onClick={() => onViewSale(sale)}
               className={cn(
                 "natus-card flex h-full min-h-[7.5rem] flex-col !p-3 text-left transition-opacity",
-                sale.cancelled_at && "opacity-60"
+                sale.cancelled_at ? "opacity-60" : undefined
               )}
             >
               <p className="text-[10px] text-muted">{formatDate(sale.created_at)}</p>
               <p
                 className={cn(
                   "mt-1 font-heading text-lg font-bold leading-tight text-primary",
-                  sale.cancelled_at && "text-muted line-through"
+                  sale.cancelled_at ? "text-muted line-through" : undefined
                 )}
               >
                 {formatCurrency(Number(sale.total))}
