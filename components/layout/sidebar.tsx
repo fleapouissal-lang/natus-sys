@@ -25,6 +25,7 @@ import {
   MessageSquare,
   FileText,
   CalendarClock,
+  Newspaper,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
@@ -39,6 +40,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub") {
       { href: "/hub/stock", label: "Stock magasins", icon: Warehouse },
       { href: "/hub/hub-stock", label: "Entrepôt hub", icon: Boxes },
       { href: "/hub/activity", label: "Activité", icon: ClipboardList },
+      { href: "/hub/actualites", label: "Actualités", icon: Newspaper },
       { href: "/hub/invoices", label: "Factures magasins", icon: FileText },
     ];
   }
@@ -55,6 +57,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub") {
     { href: `${basePath}/sales`, label: "Ventes", icon: Receipt },
     { href: `${basePath}/invoices`, label: "Factures", icon: FileText },
     { href: `${basePath}/planning`, label: "Planning", icon: CalendarClock },
+    { href: `${basePath}/actualites`, label: "Actualités", icon: Newspaper },
     { href: `${basePath}/users`, label: "Utilisateurs", icon: Users },
     { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
   ];
@@ -78,6 +81,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub") {
 const cashierLinks = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
   { href: "/cashier/planning", label: "Mon planning", icon: CalendarClock },
+  { href: "/cashier/actualites", label: "Actualités", icon: Newspaper },
   { href: "/cashier/orders", label: "Commandes", icon: ShoppingBag },
   { href: "/cashier/notes", label: "Notes commandes", icon: MessageSquare },
   { href: "/cashier/transfers", label: "Réceptions hub", icon: Boxes },
@@ -89,6 +93,7 @@ const cashierLinks = [
 
 const livreurLinks = [
   { href: "/livreur/orders", label: "Mes livraisons", icon: Truck },
+  { href: "/livreur/actualites", label: "Actualités", icon: Newspaper },
   { href: "/livreur/returns", label: "Mes retours", icon: RotateCcw },
 ];
 

@@ -85,6 +85,36 @@ export async function uploadComplaintPhoto(
   return { url: data.publicUrl };
 }
 
+const NEWS_IMAGES_BUCKET = "news-images";
+
+export async function uploadNewsImage(
+  supabase: SupabaseClient,
+  file: File,
+  fileBaseName: string
+): Promise<{ url?: string; error?: string }> {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { error: "Format d'image non supporté (JPG, PNG, WebP, GIF)" };
+  }
+
+  if (file.size > MAX_SIZE) {
+    return { error: "Image trop volumineuse (max 5 Mo)" };
+  }
+
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${sanitizeFileName(fileBaseName)}-${Date.now()}.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error } = await supabase.storage.from(NEWS_IMAGES_BUCKET).upload(path, buffer, {
+    contentType: file.type,
+    upsert: false,
+  });
+
+  if (error) return { error: error.message };
+
+  const { data } = supabase.storage.from(NEWS_IMAGES_BUCKET).getPublicUrl(path);
+  return { url: data.publicUrl };
+}
+
 export async function deleteProductImage(
   supabase: SupabaseClient,
   category: string,
