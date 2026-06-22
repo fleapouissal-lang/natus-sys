@@ -20,6 +20,7 @@ export async function getCashiersByStore(): Promise<Record<string, CashierSummar
     .from("profiles")
     .select("id, full_name, email, is_active, store_id")
     .eq("role", "cashier")
+    .eq("is_store_pos", false)
     .not("store_id", "is", null);
 
   const map: Record<string, CashierSummary[]> = {};

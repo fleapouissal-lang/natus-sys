@@ -6,8 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { getHomePath } from "@/lib/permissions";
 import { touchSessionActivity } from "@/components/auth/session-guard";
+import { resolveStaffHomePath } from "@/lib/cashier/access";
 
 function getLoginErrorMessage(code?: string, message?: string): string {
   switch (code) {
@@ -69,7 +69,7 @@ export function LoginForm() {
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("role, is_active")
+      .select("role, is_active, is_store_pos, store_id")
       .eq("id", data.user.id)
       .single();
 
@@ -89,7 +89,7 @@ export function LoginForm() {
 
     touchSessionActivity();
 
-    router.push(getHomePath(profile.role));
+    router.push(await resolveStaffHomePath(supabase, profile));
     router.refresh();
   }
 

@@ -79,6 +79,10 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub") {
   return links;
 }
 
+const personalCashierLinks = [
+  { href: "/cashier/planning", label: "Mon planning", icon: CalendarClock },
+];
+
 const cashierLinks = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
   { href: "/cashier/planning", label: "Mon planning", icon: CalendarClock },
@@ -224,11 +228,17 @@ export function Sidebar({
   userName,
   cityLabel,
   isStorePos = false,
+  isPersonalCashier = false,
+  hasPosOperator = false,
+  posOperatorName,
 }: {
   role: UserRole;
   userName: string;
   cityLabel?: string;
   isStorePos?: boolean;
+  isPersonalCashier?: boolean;
+  hasPosOperator?: boolean;
+  posOperatorName?: string | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -239,7 +249,13 @@ export function Sidebar({
     role === "livreur"
       ? livreurLinks
       : role === "cashier"
-        ? cashierLinks
+        ? isPersonalCashier
+          ? personalCashierLinks
+          : isStorePos
+            ? hasPosOperator
+              ? cashierLinks
+              : cashierLinks.filter((link) => link.href !== "/cashier/planning")
+            : cashierLinks
         : basePath
           ? buildManagementLinks(basePath)
           : cashierLinks;

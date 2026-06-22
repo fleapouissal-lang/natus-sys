@@ -35,6 +35,7 @@ export async function getCityCashiers(storeIds: string[]): Promise<CashierWithSt
     .from("profiles")
     .select("id, full_name, email, is_active, store_id, stores(name)")
     .eq("role", "cashier")
+    .eq("is_store_pos", false)
     .in("store_id", storeIds)
     .order("full_name");
 

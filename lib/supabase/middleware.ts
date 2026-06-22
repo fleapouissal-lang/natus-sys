@@ -3,6 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getHomePath } from "@/lib/permissions";
 import { applySecurityHeaders } from "@/lib/security/headers";
 import { asSessionCookieOptions } from "@/lib/supabase/session-cookies";
+import {
+  CASHIER_PLANNING_PATH,
+  isCashierPlanningRoute,
+  isPersonalCashierPlanningMode,
+  resolveStaffHomePath,
+} from "@/lib/cashier/access";
 import type { UserRole } from "@/lib/types";
 
 const STAFF_ROLES: UserRole[] = ["cashier", "manager", "directeur", "admin", "hub"];
@@ -61,15 +67,15 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, is_active, city")
+      .select("role, is_active, city, is_store_pos, store_id")
       .eq("id", user.id)
       .single();
 
     const role = profile?.role as UserRole | undefined;
 
-    if (isAuthRoute && role) {
+    if (isAuthRoute && role && profile) {
       const url = request.nextUrl.clone();
-      url.pathname = getHomePath(role);
+      url.pathname = await resolveStaffHomePath(supabase, profile);
       return applySecurityHeaders(NextResponse.redirect(url));
     }
 
@@ -121,6 +127,17 @@ export async function updateSession(request: NextRequest) {
       if (!role || !STAFF_ROLES.includes(role)) {
         const url = request.nextUrl.clone();
         url.pathname = "/login";
+        return applySecurityHeaders(NextResponse.redirect(url));
+      }
+
+      if (
+        role === "cashier" &&
+        profile &&
+        (await isPersonalCashierPlanningMode(supabase, profile)) &&
+        !isCashierPlanningRoute(pathname)
+      ) {
+        const url = request.nextUrl.clone();
+        url.pathname = CASHIER_PLANNING_PATH;
         return applySecurityHeaders(NextResponse.redirect(url));
       }
     }

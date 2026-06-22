@@ -2142,7 +2142,7 @@ async function assertCashierCanWorkAtStore(
 ): Promise<{ error?: string }> {
   const { data } = await supabase
     .from("profiles")
-    .select("id, role, store_id")
+    .select("id, role, store_id, is_store_pos")
     .eq("id", cashierId)
     .eq("role", "cashier")
     .eq("is_active", true)
@@ -2150,6 +2150,10 @@ async function assertCashierCanWorkAtStore(
 
   if (!data?.store_id || !cityStoreIds.includes(data.store_id)) {
     return { error: "Caissier invalide pour cette ville" };
+  }
+
+  if (data.is_store_pos) {
+    return { error: "Le compte caisse magasin ne peut pas avoir de créneau" };
   }
 
   if (data.store_id === storeId) return {};
@@ -2596,12 +2600,15 @@ export async function setCashierWeekOff(input: {
   const supabase = await createClient();
   const { data: cashier } = await supabase
     .from("profiles")
-    .select("id, store_id")
+    .select("id, store_id, is_store_pos")
     .eq("id", input.cashierId)
     .eq("role", "cashier")
     .maybeSingle();
 
   if (!cashier?.store_id) return { error: "Caissier introuvable" };
+  if (cashier.is_store_pos) {
+    return { error: "Le compte caisse magasin ne peut pas avoir de jour de repos" };
+  }
 
   const access = await assertStoreAccess(profile, cashier.store_id);
   if (access.error) return { error: access.error };

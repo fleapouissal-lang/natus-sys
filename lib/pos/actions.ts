@@ -44,7 +44,9 @@ async function startOperatorSession(
 
   if (error) return { error: error.message };
 
+  revalidatePath("/cashier", "layout");
   revalidatePath("/cashier/pos");
+  revalidatePath("/cashier/planning");
   redirect("/cashier/pos");
 }
 
@@ -192,7 +194,9 @@ export async function signOutPosOperator(): Promise<{ success?: true; error?: st
 
   if (error) return { error: error.message };
 
+  revalidatePath("/cashier", "layout");
   revalidatePath("/cashier/pos");
+  revalidatePath("/cashier/planning");
   return { success: true };
 }
 

@@ -28,6 +28,9 @@ export function DashboardShell({
   storeId,
   city,
   isStorePos = false,
+  isPersonalCashier = false,
+  hasPosOperator = false,
+  posOperatorName,
   children,
 }: {
   role: UserRole;
@@ -37,11 +40,17 @@ export function DashboardShell({
   /** Ville du gérant — alertes stock multi-magasins */
   city?: string | null;
   isStorePos?: boolean;
+  /** Caissier personnel — accès lecture seule au planning uniquement */
+  isPersonalCashier?: boolean;
+  /** Caissier identifié sur le terminal magasin */
+  hasPosOperator?: boolean;
+  posOperatorName?: string | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const isPos = isCashierPosRoute(pathname);
-  const scope = resolveNotificationScope(role, storeId, city ?? cityLabel);
+  const scope =
+    isPersonalCashier ? null : resolveNotificationScope(role, storeId, city ?? cityLabel);
 
   const shell = (
     <>
@@ -52,6 +61,9 @@ export function DashboardShell({
           userName={userName}
           cityLabel={cityLabel}
           isStorePos={isStorePos}
+          isPersonalCashier={isPersonalCashier}
+          hasPosOperator={hasPosOperator}
+          posOperatorName={posOperatorName}
         />
         <main
           className={cn(
