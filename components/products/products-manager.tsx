@@ -10,6 +10,7 @@ import {
   Search,
   Warehouse,
   GitBranchPlus,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SelectMenu } from "@/components/ui/select-menu";
@@ -21,7 +22,7 @@ import { StockEditModal } from "@/components/products/stock-edit-modal";
 import { ProductInfoCard } from "@/components/products/product-info-card";
 import { ProductImage } from "@/components/pos/product-image";
 import { ProductKindBadgeForProduct } from "@/components/products/product-kind-badge";
-import { Modal } from "@/components/ui/modal";
+import { ProductViewModal, PRODUCT_VIEW_ACTION_COLOR } from "@/components/products/product-view-modal";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { deleteProduct } from "@/lib/actions";
@@ -57,80 +58,33 @@ function ProductDetailModal({
   onAddVariant: () => void;
   canEditStockTotal: boolean;
 }) {
-  const categories = getProductCategories(product);
-  const displayName = productDisplayName(product, parent);
-
   return (
-    <Modal onClose={onClose} size="md">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Détail produit</h3>
-        <button onClick={onClose} className="text-muted hover:text-foreground cursor-pointer">
-          ×
-        </button>
-      </div>
-
-      <div className="mb-6 flex flex-col items-center gap-4">
-        <ProductImage product={product} size="lg" />
-        <div className="text-center">
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <p className="text-xl font-semibold">{displayName}</p>
-            <ProductKindBadgeForProduct product={product} />
-          </div>
-          <p className="text-sm text-muted">
-            {PRODUCT_BRAND}
-            {categories.length > 0 ? ` · ${categories.join(", ")}` : ""}
-          </p>
-          {product.barcode && (
-            <p className="mt-1 font-mono text-xs text-muted">{product.barcode}</p>
+    <ProductViewModal
+      product={product}
+      parent={parent}
+      variants={variants}
+      onClose={onClose}
+      footer={
+        <>
+          {product.product_kind === "parent" && (
+            <Button onClick={onAddVariant}>
+              <GitBranchPlus className="h-4 w-4" />
+              Ajouter une variante
+            </Button>
           )}
           {product.product_kind !== "parent" && (
-            <p className="mt-2 text-lg font-bold text-primary">
-              {formatCurrency(product.price)}
-            </p>
+            <Button onClick={onEditStock}>
+              <Warehouse className="h-4 w-4" />
+              {canEditStockTotal ? "Modifier le stock" : "Ajouter du stock"}
+            </Button>
           )}
-        </div>
-        {product.product_kind !== "parent" && (
-          <Badge variant={product.stock < 10 ? "warning" : "success"}>
-            Stock : {product.stock}
-          </Badge>
-        )}
-      </div>
-
-      {product.product_kind === "parent" && variants.length > 0 && (
-        <div className="mb-4 rounded-lg border border-border p-3">
-          <p className="mb-2 text-sm font-medium">Variantes ({variants.length})</p>
-          <ul className="space-y-1 text-sm text-muted">
-            {variants.map((variant) => (
-              <li key={variant.id}>
-                {product.name} — {variant.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-2">
-        {product.product_kind === "parent" && (
-          <Button onClick={onAddVariant}>
-            <GitBranchPlus className="h-4 w-4" />
-            Ajouter une variante
+          <Button variant="secondary" onClick={onEdit}>
+            <Pencil className="h-4 w-4" />
+            Modifier
           </Button>
-        )}
-        {product.product_kind !== "parent" && (
-          <Button onClick={onEditStock}>
-            <Warehouse className="h-4 w-4" />
-            {canEditStockTotal ? "Modifier le stock" : "Ajouter du stock"}
-          </Button>
-        )}
-        <Button variant="secondary" onClick={onEdit}>
-          <Pencil className="h-4 w-4" />
-          Modifier
-        </Button>
-        <Button variant="secondary" onClick={onClose}>
-          Fermer
-        </Button>
-      </div>
-    </Modal>
+        </>
+      }
+    />
   );
 }
 
@@ -549,6 +503,21 @@ export function ProductsManager({
                     </td>
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedProduct(product)}
+                          title="Voir le produit"
+                          aria-label="Voir le produit"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center !p-0 border bg-transparent hover:bg-[#B38C4A]/10"
+                          style={{
+                            borderColor: PRODUCT_VIEW_ACTION_COLOR,
+                            color: PRODUCT_VIEW_ACTION_COLOR,
+                          }}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
                         {product.product_kind === "parent" && (
                           <Button
                             variant="ghost"

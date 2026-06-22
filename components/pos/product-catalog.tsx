@@ -15,16 +15,21 @@ import {
   Gift,
   Plus,
   Minus,
+  Eye,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProductImage } from "@/components/pos/product-image";
+import {
+  ProductViewModal,
+  PRODUCT_VIEW_ACTION_COLOR,
+} from "@/components/products/product-view-modal";
 import { formatCurrency, cn } from "@/lib/utils";
 import { getProductImageUrl } from "@/lib/product-image";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
-import { ProductKindBadgeForProduct } from "@/components/products/product-kind-badge";
 import {
   getProductCategories,
   productDisplayName,
@@ -114,6 +119,7 @@ function ProductCard({
   validatedQty = 0,
   onAddToCart,
   onUpdateQuantity,
+  onView,
   highlighted,
   orderMode = false,
 }: {
@@ -122,6 +128,7 @@ function ProductCard({
   validatedQty?: number;
   onAddToCart: (product: Product, qty: number) => void;
   onUpdateQuantity: (productId: string, delta: number) => void;
+  onView: (product: Product) => void;
   highlighted?: boolean;
   orderMode?: boolean;
 }) {
@@ -195,6 +202,21 @@ function ProductCard({
             {product.stock}
           </span>
         )}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            onView(product);
+          }}
+          title="Voir le produit"
+          aria-label="Voir le produit"
+          className="absolute left-1.5 top-1.5 z-[2] flex h-8 w-8 shrink-0 items-center justify-center !p-0 border bg-white/95 hover:bg-[#B38C4A]/10 shadow-sm"
+          style={{ borderColor: PRODUCT_VIEW_ACTION_COLOR, color: PRODUCT_VIEW_ACTION_COLOR }}
+        >
+          <Eye className="h-3.5 w-3.5" />
+        </Button>
         {outOfStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
             <Badge variant="danger">Rupture</Badge>
@@ -204,12 +226,9 @@ function ProductCard({
 
       <div className="flex flex-1 flex-col p-3">
         <div className="mb-2 flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-sm font-semibold leading-snug">
-              {displayName}
-            </p>
-            <ProductKindBadgeForProduct product={product} className="mt-1" />
-          </div>
+          <p className="line-clamp-2 flex-1 text-sm font-semibold leading-snug">
+            {displayName}
+          </p>
           <p className="shrink-0 text-sm font-bold text-primary">
             {formatCurrency(product.price)}
           </p>
@@ -314,6 +333,7 @@ export function ProductCatalog({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
 
   const categories = useMemo(() => {
     const fromProducts = new Set<string>();
@@ -450,7 +470,6 @@ export function ProductCatalog({
                   : null
               )}
             </p>
-            <ProductKindBadgeForProduct product={lastAddedProduct} className="mt-1" />
           </div>
           <p className="shrink-0 font-bold text-primary">
             {formatCurrency(lastAddedProduct.price)}
@@ -470,11 +489,24 @@ export function ProductCatalog({
               validatedQty={validatedQuantities?.[product.id] ?? 0}
               onAddToCart={onAddToCart}
               onUpdateQuantity={onUpdateQuantity}
+              onView={setViewProduct}
               highlighted={lastAddedProduct?.id === product.id}
               orderMode={orderMode}
             />
           ))}
         </div>
+      )}
+
+      {viewProduct && (
+        <ProductViewModal
+          product={viewProduct}
+          parent={
+            viewProduct.parent_name
+              ? ({ name: viewProduct.parent_name } as Product)
+              : null
+          }
+          onClose={() => setViewProduct(null)}
+        />
       )}
     </div>
   );

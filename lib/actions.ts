@@ -2101,10 +2101,12 @@ function parseShiftTime(value: string): string | null {
   return trimmed.length === 5 ? `${trimmed}:00` : trimmed;
 }
 
-async function assertCashierInStores(
+async function assertCashierCanWorkAtStore(
   supabase: Awaited<ReturnType<typeof createClient>>,
   cashierId: string,
-  storeIds: string[]
+  storeId: string,
+  shiftDate: string,
+  cityStoreIds: string[]
 ): Promise<{ error?: string }> {
   const { data } = await supabase
     .from("profiles")
@@ -2114,8 +2116,30 @@ async function assertCashierInStores(
     .eq("is_active", true)
     .maybeSingle();
 
-  if (!data?.store_id || !storeIds.includes(data.store_id)) {
+  if (!data?.store_id || !cityStoreIds.includes(data.store_id)) {
     return { error: "Caissier invalide pour cette ville" };
+  }
+
+  if (data.store_id === storeId) return {};
+
+  const admin = createAdminClient();
+  const { data: transfer } = await admin
+    .from("cashier_store_transfers")
+    .select("id, kind, start_date, end_date")
+    .eq("cashier_id", cashierId)
+    .eq("to_store_id", storeId)
+    .lte("start_date", shiftDate)
+    .order("start_date", { ascending: false })
+    .limit(5);
+
+  const active = (transfer || []).find((row) => {
+    if (shiftDate < (row.start_date as string)) return false;
+    if (!row.end_date) return true;
+    return shiftDate <= (row.end_date as string);
+  });
+
+  if (!active) {
+    return { error: "Ce caissier n'est pas affecté à ce magasin pour cette date" };
   }
 
   return {};
@@ -2213,7 +2237,13 @@ export async function createCashierShift(input: {
     .eq("city", access.store!.city);
   const storeIds = (cityStores || []).map((s) => s.id);
 
-  const cashierCheck = await assertCashierInStores(supabase, input.cashierId, storeIds);
+  const cashierCheck = await assertCashierCanWorkAtStore(
+    supabase,
+    input.cashierId,
+    input.storeId,
+    shiftDate,
+    storeIds
+  );
   if (cashierCheck.error) return { error: cashierCheck.error };
 
   const weekStart = normalizeWeekStart(shiftDate);
@@ -2275,6 +2305,232 @@ export async function deleteCashierShift(
   revalidatePath("/director/planning");
   revalidatePath("/cashier/planning");
   return { success: true };
+}
+
+export async function createCashierStoreTransfer(input: {
+  cashierId: string;
+  toStoreId: string;
+  kind: "permanent" | "temporary";
+  startDate: string;
+  endDate?: string | null;
+}): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const startDate = input.startDate.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    return { error: "Date de début invalide" };
+  }
+
+  if (input.kind === "temporary") {
+    const endDate = input.endDate?.trim();
+    if (!endDate || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      return { error: "Date de fin requise pour un transfert temporaire" };
+    }
+    if (endDate < startDate) {
+      return { error: "La date de fin doit être après le début" };
+    }
+  }
+
+  const supabase = await createClient();
+  const { data: cashier } = await supabase
+    .from("profiles")
+    .select("id, store_id, role")
+    .eq("id", input.cashierId)
+    .eq("role", "cashier")
+    .maybeSingle();
+
+  if (!cashier?.store_id) return { error: "Caissier introuvable" };
+  if (cashier.store_id === input.toStoreId) {
+    return { error: "Le caissier est déjà affecté à ce magasin" };
+  }
+
+  const fromAccess = await assertStoreAccess(profile, cashier.store_id);
+  if (fromAccess.error) return { error: fromAccess.error };
+
+  const toAccess = await assertStoreAccess(profile, input.toStoreId);
+  if (toAccess.error) return { error: toAccess.error };
+
+  const admin = createAdminClient();
+
+  const { error: insertError } = await admin.from("cashier_store_transfers").insert({
+    cashier_id: input.cashierId,
+    from_store_id: cashier.store_id,
+    to_store_id: input.toStoreId,
+    kind: input.kind,
+    start_date: startDate,
+    end_date: input.kind === "temporary" ? input.endDate!.trim() : null,
+    created_by: profile.id,
+  });
+
+  if (insertError) return { error: insertError.message };
+
+  if (input.kind === "permanent") {
+    const { error: updateError } = await admin
+      .from("profiles")
+      .update({ store_id: input.toStoreId })
+      .eq("id", input.cashierId);
+
+    if (updateError) return { error: updateError.message };
+    revalidateManagement();
+  }
+
+  revalidatePath("/manager/planning");
+  revalidatePath("/director/planning");
+  revalidatePath("/cashier/planning");
+  return { success: true };
+}
+
+export async function planCashierWeek(input: {
+  storeId: string;
+  weekStart: string;
+  startTime: string;
+  endTime: string;
+}): Promise<{ success: true; created: number; skipped: number } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const access = await assertStoreAccess(profile, input.storeId);
+  if (access.error) return { error: access.error };
+
+  const weekStart = normalizeWeekStart(input.weekStart);
+  const startTime = parseShiftTime(input.startTime);
+  const endTime = parseShiftTime(input.endTime);
+  if (!startTime || !endTime) return { error: "Horaires invalides" };
+  if (endTime <= startTime) return { error: "L'heure de fin doit être après le début" };
+
+  const supabase = await createClient();
+  const { data: cityStores } = await supabase
+    .from("stores")
+    .select("id")
+    .eq("city", access.store!.city);
+  const storeIds = (cityStores || []).map((s) => s.id);
+
+  const { data: cashierRows } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, is_active, store_id, stores(name)")
+    .eq("role", "cashier")
+    .in("store_id", storeIds);
+
+  const allCashiers = (cashierRows || []).map((row) => {
+    const storeRel = row.stores as unknown;
+    const storeRow = Array.isArray(storeRel)
+      ? (storeRel[0] as { name?: string } | undefined)
+      : (storeRel as { name?: string } | null);
+    return {
+      id: row.id as string,
+      full_name: row.full_name as string | null,
+      email: row.email as string,
+      is_active: row.is_active as boolean,
+      store_id: row.store_id as string,
+      store_name: storeRow?.name || "—",
+    };
+  });
+
+  const { getCashierStoreTransfers } = await import("@/lib/scheduling/transfers");
+  const { getPlanningCashiersForStore, cashierWorksAtStoreOnDate } = await import(
+    "@/lib/scheduling/transfer-utils"
+  );
+
+  const transfers = await getCashierStoreTransfers({ weekStart, storeIds });
+  const planningCashiers = getPlanningCashiersForStore({
+    storeId: input.storeId,
+    weekStart,
+    allCashiers,
+    transfers,
+  });
+
+  const admin = createAdminClient();
+  const weekEnd = (() => {
+    const d = new Date(`${weekStart}T12:00:00`);
+    d.setDate(d.getDate() + 6);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  const [{ data: weekOffRows }, { data: shiftRows }] = await Promise.all([
+    admin
+      .from("cashier_week_offs")
+      .select("cashier_id, off_date")
+      .eq("week_start", weekStart)
+      .in(
+        "cashier_id",
+        planningCashiers.map((c) => c.id)
+      ),
+    admin
+      .from("cashier_shifts")
+      .select("cashier_id, shift_date")
+      .gte("shift_date", weekStart)
+      .lte("shift_date", weekEnd)
+      .in(
+        "cashier_id",
+        planningCashiers.map((c) => c.id)
+      ),
+  ]);
+
+  const weekDays = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(`${weekStart}T12:00:00`);
+    d.setDate(d.getDate() + i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  });
+
+  let created = 0;
+  let skipped = 0;
+
+  for (const cashier of planningCashiers) {
+    if (!cashier.is_active) {
+      skipped += weekDays.length;
+      continue;
+    }
+
+    for (const day of weekDays) {
+      if (
+        !cashierWorksAtStoreOnDate({
+          cashier,
+          storeId: input.storeId,
+          date: day,
+          transfers,
+        })
+      ) {
+        skipped += 1;
+        continue;
+      }
+
+      if (weekOffRows?.some((o) => o.cashier_id === cashier.id && o.off_date === day)) {
+        skipped += 1;
+        continue;
+      }
+
+      if (shiftRows?.some((s) => s.cashier_id === cashier.id && s.shift_date === day)) {
+        skipped += 1;
+        continue;
+      }
+
+      const { error } = await admin.from("cashier_shifts").insert({
+        store_id: input.storeId,
+        cashier_id: cashier.id,
+        shift_date: day,
+        start_time: startTime,
+        end_time: endTime,
+        notes: null,
+        created_by: profile.id,
+      });
+
+      if (error) {
+        skipped += 1;
+        continue;
+      }
+
+      created += 1;
+    }
+  }
+
+  revalidatePath("/manager/planning");
+  revalidatePath("/director/planning");
+  revalidatePath("/cashier/planning");
+  return { success: true, created, skipped };
 }
 
 export async function setCashierWeekOff(input: {

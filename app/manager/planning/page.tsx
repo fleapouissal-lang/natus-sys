@@ -4,31 +4,27 @@ import { getCityFilter } from "@/lib/permissions";
 import { getActiveStores } from "@/lib/inventory";
 import { getCityCashiers, getCashierShifts } from "@/lib/scheduling/shifts";
 import { getCashierWeekOffs } from "@/lib/scheduling/week-offs";
+import {
+  getCashierStoreTransfers,
+} from "@/lib/scheduling/transfers";
+import {
+  getPlanningCashiersForStore,
+} from "@/lib/scheduling/transfer-utils";
 import { parseWeekParam } from "@/lib/scheduling/week";
 import { CashierScheduleManager } from "@/components/scheduling/cashier-schedule-manager";
 import type { Store } from "@/lib/types";
 
 function resolvePlanningStoreId(stores: Store[], storeParam?: string | null): string {
-  if (storeParam === "") return "";
   if (storeParam && stores.some((s) => s.id === storeParam)) return storeParam;
-  return "";
-}
-
-function resolvePlanningCashierId(
-  cashiers: { id: string }[],
-  cashierParam?: string | null
-): string {
-  if (cashierParam === "") return "";
-  if (cashierParam && cashiers.some((c) => c.id === cashierParam)) return cashierParam;
-  return "";
+  return stores[0]?.id || "";
 }
 
 export default async function ManagerPlanningPage({
   searchParams,
 }: {
-  searchParams: Promise<{ store?: string; cashier?: string; week?: string }>;
+  searchParams: Promise<{ store?: string; week?: string }>;
 }) {
-  const { store: storeParam, cashier: cashierParam, week: weekParam } = await searchParams;
+  const { store: storeParam, week: weekParam } = await searchParams;
   const profile = await getCurrentProfile();
   const city = profile ? getCityFilter(profile) : null;
   const stores = await getActiveStores(city);
@@ -37,21 +33,11 @@ export default async function ManagerPlanningPage({
   const weekStart = parseWeekParam(weekParam);
 
   const allCashiers = await getCityCashiers(storeIds);
-  const selectedCashierId = resolvePlanningCashierId(allCashiers, cashierParam);
 
-  let cashiers = allCashiers;
-  if (selectedStoreId) {
-    cashiers = cashiers.filter((c) => c.store_id === selectedStoreId);
-  }
-  if (selectedCashierId) {
-    cashiers = cashiers.filter((c) => c.id === selectedCashierId);
-  }
-
-  const [shifts, allShifts, weekOffs] = await Promise.all([
+  const [shifts, allShifts, weekOffs, transfers] = await Promise.all([
     getCashierShifts({
       weekStart,
       storeId: selectedStoreId || null,
-      cashierId: selectedCashierId || null,
       storeIds,
     }),
     getCashierShifts({
@@ -62,29 +48,37 @@ export default async function ManagerPlanningPage({
       weekStart,
       cashierIds: allCashiers.map((c) => c.id),
     }),
+    getCashierStoreTransfers({ weekStart, storeIds }),
   ]);
+
+  const planningCashiers = selectedStoreId
+    ? getPlanningCashiersForStore({
+        storeId: selectedStoreId,
+        weekStart,
+        allCashiers,
+        transfers,
+      })
+    : [];
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Planning caissiers</h1>
         <p className="mt-1 text-muted">
-          Affectez les caissiers aux magasins · un jour de repos par caissier · un seul créneau par
-          jour
+          Grille par magasin · un créneau par jour · transfert temporaire ou définitif
         </p>
       </div>
 
       <Suspense fallback={null}>
         <CashierScheduleManager
           stores={stores}
-          allCashiers={allCashiers}
-          cashiers={cashiers}
+          planningCashiers={planningCashiers}
           shifts={shifts}
           allShifts={allShifts}
           weekOffs={weekOffs}
+          transfers={transfers}
           weekStart={weekStart}
           selectedStoreId={selectedStoreId}
-          selectedCashierId={selectedCashierId}
         />
       </Suspense>
     </div>

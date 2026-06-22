@@ -1,6 +1,5 @@
 import { ProductImage } from "@/components/pos/product-image";
 import { Badge } from "@/components/ui/badge";
-import { ProductKindBadgeForProduct } from "@/components/products/product-kind-badge";
 import { formatCurrency } from "@/lib/utils";
 import { PRODUCT_BRAND } from "@/lib/constants/products";
 import {
@@ -25,12 +24,9 @@ export function ProductInfoCard({
     <div className={`flex gap-4 ${compact ? "items-center" : "flex-col sm:flex-row sm:items-center"}`}>
       <ProductImage product={product} size={compact ? "sm" : "md"} />
       <div className="flex-1 min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className={`font-semibold text-foreground ${compact ? "text-base" : "text-lg"}`}>
-            {displayName}
-          </p>
-          <ProductKindBadgeForProduct product={product} />
-        </div>
+        <p className={`font-semibold text-foreground ${compact ? "text-base" : "text-lg"}`}>
+          {displayName}
+        </p>
         <p className="text-sm text-muted">{PRODUCT_BRAND}</p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {categories.map((category) => (

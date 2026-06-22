@@ -1,24 +1,27 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
+  ArrowRightLeft,
   CalendarOff,
   CalendarPlus,
+  CalendarRange,
   ChevronLeft,
   ChevronRight,
   Clock,
-  MapPin,
+  Plus,
   Trash2,
-  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Badge } from "@/components/ui/badge";
 import { PlanningFilterBar } from "@/components/scheduling/planning-filter-bar";
+import { CashierTransferModal } from "@/components/scheduling/cashier-transfer-modal";
+import { WeekPlanModal } from "@/components/scheduling/week-plan-modal";
 import {
   clearCashierWeekOff,
   createCashierShift,
@@ -32,61 +35,60 @@ import {
   formatWeekRangeLabel,
   getWeekDays,
 } from "@/lib/scheduling/week";
+import { isCashierOffOnDate } from "@/lib/scheduling/week-off-utils";
+import type { CashierWeekOff } from "@/lib/scheduling/week-off-utils";
 import {
-  isCashierOffOnDate,
-  weekOffsForDate,
-  type CashierWeekOff,
-} from "@/lib/scheduling/week-off-utils";
-import {
-  findCashierShiftOnDate,
-  shiftConflictMessage,
-} from "@/lib/scheduling/shift-utils";
+  availableCashiersForShift,
+  type CashierStoreTransfer,
+} from "@/lib/scheduling/transfer-utils";
 import type { CashierShift, CashierWithStore } from "@/lib/scheduling/shifts";
 import type { Store } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type Props = {
   stores: Store[];
-  allCashiers: CashierWithStore[];
-  cashiers: CashierWithStore[];
+  planningCashiers: CashierWithStore[];
   shifts: CashierShift[];
   allShifts: CashierShift[];
   weekOffs: CashierWeekOff[];
+  transfers: CashierStoreTransfer[];
   weekStart: string;
   selectedStoreId: string;
-  selectedCashierId: string;
 };
 
 export function CashierScheduleManager({
   stores,
-  allCashiers,
-  cashiers,
+  planningCashiers,
   shifts,
   allShifts,
   weekOffs,
+  transfers,
   weekStart,
   selectedStoreId,
-  selectedCashierId,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
-  const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
   const [weekOffError, setWeekOffError] = useState("");
 
-  const [cashierId, setCashierId] = useState(cashiers[0]?.id || "");
-  const [storeId, setStoreId] = useState(selectedStoreId || stores[0]?.id || "");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [weekPlanOpen, setWeekPlanOpen] = useState(false);
+  const [transferCashier, setTransferCashier] = useState<CashierWithStore | null>(null);
+
+  const [cashierId, setCashierId] = useState("");
   const [shiftDate, setShiftDate] = useState(weekStart);
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("15:00");
   const [notes, setNotes] = useState("");
 
   const weekDays = useMemo(() => getWeekDays(weekStart), [weekStart]);
+  const selectedStore = stores.find((s) => s.id === selectedStoreId);
 
   const dayOffOptions = useMemo(
     () => [
-      { value: "", label: "Choisir le jour de repos", icon: CalendarOff },
+      { value: "", label: "Pas de repos", icon: CalendarOff },
       ...weekDays.map((d) => ({
         value: d,
         label: formatShiftDate(d),
@@ -96,15 +98,13 @@ export function CashierScheduleManager({
     [weekDays]
   );
 
-  const shiftsByDay = useMemo(() => {
-    const map = new Map<string, CashierShift[]>();
-    for (const day of weekDays) map.set(day, []);
+  const shiftByCashierDay = useMemo(() => {
+    const map = new Map<string, CashierShift>();
     for (const shift of shifts) {
-      const list = map.get(shift.shift_date);
-      if (list) list.push(shift);
+      map.set(`${shift.cashier_id}:${shift.shift_date}`, shift);
     }
     return map;
-  }, [shifts, weekDays]);
+  }, [shifts]);
 
   const weekOffByCashier = useMemo(() => {
     const map = new Map<string, string>();
@@ -112,43 +112,36 @@ export function CashierScheduleManager({
     return map;
   }, [weekOffs]);
 
-  const cashiersWithoutOff = useMemo(
-    () => cashiers.filter((c) => !weekOffByCashier.has(c.id)),
-    [cashiers, weekOffByCashier]
+  const availableForModal = useMemo(
+    () =>
+      selectedStoreId
+        ? availableCashiersForShift({
+            storeId: selectedStoreId,
+            shiftDate,
+            cashiers: planningCashiers,
+            allShifts,
+            weekOffs,
+            transfers,
+          })
+        : [],
+    [selectedStoreId, shiftDate, planningCashiers, allShifts, weekOffs, transfers]
   );
 
   const cashierOptions = useMemo(
     () =>
-      cashiers.map((c) => ({
+      availableForModal.map((c) => ({
         value: c.id,
         label: c.full_name || c.email,
         description: c.store_name,
-        icon: User,
       })),
-    [cashiers]
+    [availableForModal]
   );
 
-  const storeOptions = useMemo(
-    () =>
-      stores.map((s) => ({
-        value: s.id,
-        label: s.name,
-        description: s.city,
-        icon: MapPin,
-      })),
-    [stores]
-  );
-
-  const selectedCashierOff = isCashierOffOnDate(weekOffs, cashierId, shiftDate);
-
-  const existingShiftOnDate = useMemo(
-    () => findCashierShiftOnDate(allShifts, cashierId, shiftDate),
-    [allShifts, cashierId, shiftDate]
-  );
-
-  const shiftConflict = existingShiftOnDate
-    ? shiftConflictMessage(existingShiftOnDate)
-    : null;
+  useEffect(() => {
+    if (!cashierId || !availableForModal.some((c) => c.id === cashierId)) {
+      setCashierId(availableForModal[0]?.id || "");
+    }
+  }, [availableForModal, cashierId]);
 
   function pushQuery(next: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -160,11 +153,11 @@ export function CashierScheduleManager({
     router.push(q ? `${pathname}?${q}` : pathname);
   }
 
-  function openAddModal(date?: string) {
+  function openAddModal(cId?: string, date?: string) {
+    if (!selectedStoreId) return;
     setError("");
-    setCashierId(cashiers[0]?.id || "");
-    setStoreId(selectedStoreId || stores[0]?.id || "");
     setShiftDate(date || weekStart);
+    setCashierId(cId || planningCashiers[0]?.id || "");
     setStartTime("10:00");
     setEndTime("15:00");
     setNotes("");
@@ -173,19 +166,15 @@ export function CashierScheduleManager({
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    if (!selectedStoreId) return;
     setError("");
     if (isCashierOffOnDate(weekOffs, cashierId, shiftDate)) {
       setError("Ce jour est le jour de repos de ce caissier");
       return;
     }
-    const existing = findCashierShiftOnDate(allShifts, cashierId, shiftDate);
-    if (existing) {
-      setError(shiftConflictMessage(existing));
-      return;
-    }
     startTransition(async () => {
       const result = await createCashierShift({
-        storeId,
+        storeId: selectedStoreId,
         cashierId,
         shiftDate,
         startTime,
@@ -205,11 +194,8 @@ export function CashierScheduleManager({
     if (!confirm("Supprimer ce créneau ?")) return;
     startTransition(async () => {
       const result = await deleteCashierShift(shiftId);
-      if ("error" in result) {
-        setError(result.error);
-        return;
-      }
-      router.refresh();
+      if ("error" in result) setError(result.error);
+      else router.refresh();
     });
   }
 
@@ -227,6 +213,8 @@ export function CashierScheduleManager({
       else router.refresh();
     });
   }
+
+  const cashiersWithoutOff = planningCashiers.filter((c) => !weekOffByCashier.has(c.id));
 
   return (
     <div className="space-y-6">
@@ -253,173 +241,178 @@ export function CashierScheduleManager({
           </Button>
         </div>
 
-        <Button type="button" onClick={() => openAddModal()} disabled={cashiers.length === 0}>
-          <CalendarPlus className="h-4 w-4" />
-          Ajouter un créneau
+        <Button
+          type="button"
+          onClick={() => setWeekPlanOpen(true)}
+          disabled={!selectedStoreId || planningCashiers.length === 0}
+        >
+          <CalendarRange className="h-4 w-4" />
+          Planifier la semaine
         </Button>
       </div>
 
-      <PlanningFilterBar
-        stores={stores}
-        cashiers={allCashiers}
-        selectedStoreId={selectedStoreId}
-        selectedCashierId={selectedCashierId}
-      />
+      <PlanningFilterBar stores={stores} selectedStoreId={selectedStoreId} />
 
-      {cashiers.length > 0 && (
-        <Card>
-          <CardHeader
-            title="Jours de repos"
-            description="Un jour de repos obligatoire par caissier et par semaine"
-          />
-          {cashiersWithoutOff.length > 0 && (
-            <p className="mb-4 text-sm text-warning">
-              {cashiersWithoutOff.length} caissier(s) sans jour de repos défini cette semaine
-            </p>
-          )}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {cashiers.map((cashier) => (
-              <SelectMenu
-                key={cashier.id}
-                label={cashier.full_name || cashier.email}
-                value={weekOffByCashier.get(cashier.id) || ""}
-                onChange={(value) => handleWeekOffChange(cashier.id, value)}
-                options={dayOffOptions}
-                defaultIcon={CalendarOff}
-                disabled={pending}
-              />
-            ))}
-          </div>
-          {weekOffError && (
-            <p className="mt-3 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
-              {weekOffError}
-            </p>
-          )}
-        </Card>
-      )}
-
-      {allCashiers.length === 0 ? (
+      {!selectedStoreId ? (
         <Card className="py-10 text-center text-muted">
-          Aucun caissier actif dans vos magasins. Créez des comptes caissiers dans Utilisateurs.
+          Sélectionnez un magasin pour gérer le planning de ses caissiers.
         </Card>
-      ) : cashiers.length === 0 ? (
+      ) : planningCashiers.length === 0 ? (
         <Card className="py-10 text-center text-muted">
-          Aucun caissier ne correspond aux filtres sélectionnés.
+          Aucun caissier affecté à {selectedStore?.name}. Ajoutez des caissiers dans Utilisateurs
+          ou transférez-en depuis un autre magasin.
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          {weekDays.map((day) => {
-            const dayShifts = shiftsByDay.get(day) || [];
-            const dayOffs = weekOffsForDate(weekOffs, day);
-            return (
-              <Card key={day} padding={false} className="overflow-hidden">
-                <div className="flex items-center justify-between border-b border-border bg-primary-light/40 px-4 py-3">
-                  <p className="text-sm font-semibold text-foreground">{formatShiftDate(day)}</p>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => openAddModal(day)}>
-                    <CalendarPlus className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+        <>
+          {cashiersWithoutOff.length > 0 && (
+            <p className="text-sm text-warning">
+              {cashiersWithoutOff.length} caissier(s) sans jour de repos cette semaine
+            </p>
+          )}
 
-                {dayOffs.length > 0 && (
-                  <div className="border-b border-border bg-page/80 px-4 py-2">
-                    <p className="mb-1 text-xs font-medium text-muted">Repos</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {dayOffs.map((off) => (
-                        <Badge key={off.id} variant="default">
-                          <CalendarOff className="mr-1 h-3 w-3" />
-                          {off.profiles?.full_name || off.profiles?.email || "Caissier"}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <ul className="divide-y divide-border">
-                  {dayShifts.length === 0 ? (
-                    <li className="px-4 py-6 text-center text-xs text-muted">Aucun créneau</li>
-                  ) : (
-                    dayShifts.map((shift) => (
-                      <li key={shift.id} className="flex items-start gap-3 px-4 py-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-foreground">
-                            {shift.profiles?.full_name || shift.profiles?.email || "Caissier"}
-                          </p>
-                          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
-                            <MapPin className="h-3 w-3 shrink-0 text-primary" />
-                            {shift.stores?.name || "—"}
-                          </p>
-                          <p className="mt-1 flex items-center gap-1 text-xs font-medium text-primary">
-                            <Clock className="h-3 w-3" />
-                            {formatTimeLabel(shift.start_time)} – {formatTimeLabel(shift.end_time)}
-                          </p>
-                          {shift.notes && (
-                            <p className="mt-1 line-clamp-2 text-xs text-muted">{shift.notes}</p>
-                          )}
+          <Card padding={false} className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead>
+                <tr className="border-b border-border bg-primary-light/40">
+                  <th className="sticky left-0 z-10 bg-primary-light/95 px-4 py-3 text-left font-medium text-muted">
+                    Caissier
+                  </th>
+                  <th className="px-3 py-3 text-left font-medium text-muted">Repos</th>
+                  {weekDays.map((day) => (
+                    <th key={day} className="min-w-[7rem] px-2 py-3 text-center font-medium text-muted">
+                      {formatShiftDate(day)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {planningCashiers.map((cashier) => {
+                  const isBorrowed = cashier.store_id !== selectedStoreId;
+                  return (
+                    <tr key={cashier.id} className="border-b border-border last:border-b-0">
+                      <td className="sticky left-0 z-10 bg-surface px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{cashier.full_name || cashier.email}</p>
+                            {isBorrowed && (
+                              <p className="text-[10px] text-warning">Prêté · {cashier.store_name}</p>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="shrink-0"
+                            title="Transférer vers un autre magasin"
+                            onClick={() => setTransferCashier(cashier)}
+                          >
+                            <ArrowRightLeft className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="shrink-0 text-danger hover:bg-danger/10"
+                      </td>
+                      <td className="px-2 py-2">
+                        <SelectMenu
+                          value={weekOffByCashier.get(cashier.id) || ""}
+                          onChange={(value) => handleWeekOffChange(cashier.id, value)}
+                          options={dayOffOptions}
+                          defaultIcon={CalendarOff}
                           disabled={pending}
-                          onClick={() => handleDelete(shift.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </li>
-                    ))
-                  )}
-                </ul>
-              </Card>
-            );
-          })}
-        </div>
+                          size="sm"
+                        />
+                      </td>
+                      {weekDays.map((day) => {
+                        const shift = shiftByCashierDay.get(`${cashier.id}:${day}`);
+                        const isOff = weekOffByCashier.get(cashier.id) === day;
+                        const scheduledElsewhere = allShifts.find(
+                          (s) => s.cashier_id === cashier.id && s.shift_date === day && s.store_id !== selectedStoreId
+                        );
+
+                        if (isOff) {
+                          return (
+                            <td key={day} className="px-2 py-2 text-center">
+                              <Badge variant="default">Repos</Badge>
+                            </td>
+                          );
+                        }
+
+                        if (scheduledElsewhere) {
+                          return (
+                            <td key={day} className="px-2 py-2 text-center text-xs text-muted">
+                              Autre magasin
+                            </td>
+                          );
+                        }
+
+                        if (shift) {
+                          return (
+                            <td key={day} className="px-2 py-2">
+                              <div className="rounded-lg border border-primary/30 bg-primary/5 px-2 py-1.5 text-center">
+                                <p className="text-xs font-medium text-primary">
+                                  {formatTimeLabel(shift.start_time)} – {formatTimeLabel(shift.end_time)}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(shift.id)}
+                                  className="mt-1 inline-flex items-center gap-0.5 text-[10px] text-danger hover:underline cursor-pointer"
+                                  disabled={pending}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  Retirer
+                                </button>
+                              </div>
+                            </td>
+                          );
+                        }
+
+                        return (
+                          <td key={day} className="px-2 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => openAddModal(cashier.id, day)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border text-muted hover:border-primary hover:text-primary cursor-pointer"
+                              title="Ajouter un créneau"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </Card>
+        </>
       )}
 
-      {modalOpen && (
+      {weekOffError && (
+        <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{weekOffError}</p>
+      )}
+      {error && (
+        <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+      )}
+
+      {modalOpen && selectedStoreId && (
         <Modal onClose={() => setModalOpen(false)} size="md">
-          <h3 className="text-lg font-semibold">Nouveau créneau caissier</h3>
+          <h3 className="text-lg font-semibold">Nouveau créneau</h3>
           <p className="mt-1 text-sm text-muted">
-            Un seul créneau par caissier et par jour (magasin et horaires).
+            {selectedStore?.name} · {formatShiftDate(shiftDate)}
           </p>
 
           <form onSubmit={handleCreate} className="mt-5 space-y-4">
-            <SelectMenu
-              label="Caissier"
-              value={cashierId}
-              onChange={setCashierId}
-              options={cashierOptions}
-              defaultIcon={User}
-              searchable={cashiers.length > 6}
-            />
-
-            <SelectMenu
-              label="Magasin"
-              value={storeId}
-              onChange={setStoreId}
-              options={storeOptions}
-              defaultIcon={MapPin}
-            />
-
-            <Input
-              label="Date"
-              type="date"
-              value={shiftDate}
-              onChange={(e) => setShiftDate(e.target.value)}
-              required
-              className="w-full"
-            />
-
-            {selectedCashierOff && (
+            {cashierOptions.length === 0 ? (
               <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
-                Jour de repos pour ce caissier — choisissez une autre date.
+                Aucun caissier disponible ce jour (déjà planifié ou en repos).
               </p>
-            )}
-
-            {shiftConflict && (
-              <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
-                {shiftConflict}
-              </p>
+            ) : (
+              <SelectMenu
+                label="Caissier"
+                value={cashierId}
+                onChange={setCashierId}
+                options={cashierOptions}
+                searchable={cashierOptions.length > 6}
+              />
             )}
 
             <div className="grid grid-cols-2 gap-4">
@@ -445,7 +438,6 @@ export function CashierScheduleManager({
               label="Note (optionnel)"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ex. remplacement, formation…"
               className="w-full"
             />
 
@@ -453,11 +445,16 @@ export function CashierScheduleManager({
               <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
             )}
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
                 Annuler
               </Button>
-              <Button type="submit" loading={pending} disabled={selectedCashierOff || !!shiftConflict}>
+              <Button
+                type="submit"
+                loading={pending}
+                disabled={cashierOptions.length === 0 || !cashierId}
+              >
+                <CalendarPlus className="h-4 w-4" />
                 Enregistrer
               </Button>
             </div>
@@ -465,8 +462,23 @@ export function CashierScheduleManager({
         </Modal>
       )}
 
-      {error && !modalOpen && (
-        <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+      {weekPlanOpen && selectedStoreId && selectedStore && (
+        <WeekPlanModal
+          storeId={selectedStoreId}
+          storeName={selectedStore.name}
+          weekStart={weekStart}
+          cashierCount={planningCashiers.length}
+          onClose={() => setWeekPlanOpen(false)}
+        />
+      )}
+
+      {transferCashier && selectedStoreId && (
+        <CashierTransferModal
+          cashier={transferCashier}
+          stores={stores}
+          currentStoreId={selectedStoreId}
+          onClose={() => setTransferCashier(null)}
+        />
       )}
     </div>
   );
