@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Package, Search, Store } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { Badge } from "@/components/ui/badge";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
@@ -87,6 +88,10 @@ export function GlobalStockOverview({
       </div>
 
       <Card padding={false}>
+        <FilterTogglePanel
+          toggleLabel="Stock global"
+          summary={`${filteredProducts.length} produit${filteredProducts.length !== 1 ? "s" : ""}`}
+        >
         <div className="natus-filter-bar overflow-visible border-b border-border p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-medium text-primary">
@@ -139,6 +144,7 @@ export function GlobalStockOverview({
             />
           </div>
         </div>
+        </FilterTogglePanel>
 
         {filteredProducts.length === 0 ? (
           <p className="px-6 py-12 text-center text-sm text-muted">

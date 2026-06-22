@@ -20,6 +20,17 @@
   --warning: #B38C4A;
   --radius-natus: 8px;
   --font-serif: Georgia, "Times New Roman", Times, serif;
+  /** Hauteur barre navigation mobile (icônes + labels) */
+  --natus-mobile-nav-height: 4.25rem;
+  --natus-mobile-nav-gap: 0.75rem;
+  --natus-mobile-nav-shell-padding: 0.75rem;
+  --natus-mobile-nav-clearance: calc(
+    var(--natus-mobile-nav-height) +
+    var(--natus-mobile-nav-shell-padding) +
+    var(--natus-mobile-nav-gap) +
+    env(safe-area-inset-bottom, 0px) +
+    1.25rem
+  );
 }
 
 @theme inline {
@@ -273,6 +284,114 @@ h1, h2, h3, h4, h5, h6,
 
 .natus-content .natus-filter-bar p.text-sm {
   color: var(--primary);
+}
+
+/* Barre mobile — plat en haut, arrondi bas gauche / bas droit */
+.natus-mobile-topbar {
+  border-radius: 0 0 var(--radius-natus) var(--radius-natus) !important;
+}
+
+/* Contenu scrollable au-dessus de la barre du bas mobile */
+.natus-main-mobile-nav {
+  padding-bottom: var(--natus-mobile-nav-clearance) !important;
+  scroll-padding-bottom: var(--natus-mobile-nav-clearance);
+}
+
+.natus-mobile-nav-spacer {
+  flex-shrink: 0;
+  width: 100%;
+  height: var(--natus-mobile-nav-clearance);
+  pointer-events: none;
+}
+
+/* Barre du bas mobile — pilule flottante */
+.natus-mobile-bottom-nav-shell {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  padding: 0 0.875rem calc(env(safe-area-inset-bottom, 0px) + var(--natus-mobile-nav-shell-padding));
+  pointer-events: none;
+}
+
+.natus-mobile-bottom-nav {
+  pointer-events: auto;
+  min-height: var(--natus-mobile-nav-height);
+  border: 1px solid rgba(179, 140, 74, 0.28);
+  border-radius: 9999px !important;
+  background: rgba(255, 253, 249, 0.94);
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(179, 140, 74, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.natus-mobile-bottom-nav-list {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0.35rem 0.4rem;
+  list-style: none;
+}
+
+.natus-mobile-nav-link {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  border-radius: 9999px !important;
+  padding: 0.35rem 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: rgba(0, 0, 0, 0.55);
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+
+.natus-mobile-nav-link:active {
+  transform: scale(0.96);
+}
+
+.natus-mobile-nav-link--active {
+  color: #000;
+}
+
+.natus-mobile-nav-icon {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px !important;
+  transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.natus-mobile-nav-link--active .natus-mobile-nav-icon {
+  background: linear-gradient(145deg, var(--champagne) 0%, #f0d060 100%);
+  box-shadow: 0 3px 10px rgba(179, 140, 74, 0.35);
+  color: #000;
+}
+
+.natus-mobile-nav-link:not(.natus-mobile-nav-link--active) .natus-mobile-nav-icon {
+  background: rgba(179, 140, 74, 0.08);
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.natus-mobile-nav-more-sheet {
+  border-radius: 1.25rem !important;
+  border: 1px solid rgba(179, 140, 74, 0.2);
+  background: rgba(255, 253, 249, 0.98);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 /* Sidebar — actif comme référence (pilule gauche + coins inversés droite) */

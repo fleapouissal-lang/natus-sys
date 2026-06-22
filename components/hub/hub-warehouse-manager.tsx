@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRightLeft, Package, Search, Warehouse } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PaginationBar } from "@/components/ui/pagination-bar";
@@ -221,6 +222,10 @@ export function HubWarehouseManager({
           {success && <p className="mt-3 text-sm text-success">{success}</p>}
         </div>
 
+        <FilterTogglePanel
+          toggleLabel="Filtrer le stock"
+          summary={`${filteredProducts.length} produit${filteredProducts.length !== 1 ? "s" : ""}`}
+        >
         <div className="natus-filter-bar border-b border-border p-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:items-end">
             <div>
@@ -246,6 +251,7 @@ export function HubWarehouseManager({
             />
           </div>
         </div>
+        </FilterTogglePanel>
 
         {filteredProducts.length === 0 ? (
           <p className="px-6 py-12 text-center text-sm text-muted">Aucun produit</p>

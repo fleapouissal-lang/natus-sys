@@ -1,15 +1,19 @@
-import { redirect } from "next/navigation";
-import { getCurrentProfile } from "@/lib/auth";
-import { getMyCashierShifts } from "@/lib/scheduling/shifts";
-import { getCashierWeekOffs } from "@/lib/scheduling/week-offs";
-import { parseWeekParam } from "@/lib/scheduling/week";
+import type { Profile } from "@/lib/types";
 import { getActivePosOperator } from "@/lib/pos/operator-session";
 
-export async function resolvePlanningSubject(profile: NonNullable<Awaited<ReturnType<typeof getCurrentProfile>>>) {
+type PlanningRedirect = { redirectTo: "/cashier/pos" };
+type PlanningSubject = {
+  cashierId: string;
+  displayName: string;
+};
+
+export async function resolvePlanningSubject(
+  profile: Pick<Profile, "id" | "full_name" | "email" | "is_store_pos">
+): Promise<PlanningRedirect | PlanningSubject> {
   if (profile.is_store_pos) {
     const session = await getActivePosOperator(profile);
     if (!session?.operator_id) {
-      return { redirectTo: "/cashier/pos" as const };
+      return { redirectTo: "/cashier/pos" };
     }
 
     return {
@@ -23,4 +27,10 @@ export async function resolvePlanningSubject(profile: NonNullable<Awaited<Return
     cashierId: profile.id,
     displayName: profile.full_name || profile.email || "Caissier",
   };
+}
+
+export function isPlanningRedirect(
+  value: PlanningRedirect | PlanningSubject
+): value is PlanningRedirect {
+  return "redirectTo" in value;
 }

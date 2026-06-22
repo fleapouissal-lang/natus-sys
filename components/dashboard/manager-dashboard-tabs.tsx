@@ -88,7 +88,8 @@ function ManagerDashboardTabsInner({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activityBase = pathname.startsWith("/director") ? "/director" : "/manager";
+  const isDirector = pathname.startsWith("/director");
+  const activityBase = isDirector ? "/director" : "/manager";
   const tabParam = searchParams.get("tab");
   const activeTab: DashboardTab =
     tabParam === "stats" || tabParam === "suivi" ? tabParam : "suivi";
@@ -98,6 +99,22 @@ function ManagerDashboardTabsInner({
     params.set("tab", tab);
     router.push(`${pathname}?${params.toString()}`);
   }
+
+  const storeFilterProps = {
+    stores,
+    selectedStoreId,
+    hideSelectedOnMobile: isDirector,
+  };
+
+  const storeFilterMobile = isDirector ? (
+    <StoreFilterBar {...storeFilterProps} layout="compact" className="p-3" />
+  ) : (
+    <StoreFilterBar {...storeFilterProps} />
+  );
+
+  const storeFilterDesktop = isDirector ? (
+    <StoreFilterBar {...storeFilterProps} />
+  ) : null;
 
   return (
     <div className="space-y-6">
@@ -123,7 +140,14 @@ function ManagerDashboardTabsInner({
       {activeTab === "suivi" && (
         <div className="space-y-6">
           <Suspense fallback={null}>
-            <StoreFilterBar stores={stores} selectedStoreId={selectedStoreId} />
+            {isDirector ? (
+              <>
+                <div className="md:hidden">{storeFilterMobile}</div>
+                <div className="hidden md:block">{storeFilterDesktop}</div>
+              </>
+            ) : (
+              storeFilterMobile
+            )}
           </Suspense>
 
           {selectedStoreId ? (
@@ -132,6 +156,7 @@ function ManagerDashboardTabsInner({
               overviewByStore={overviewByStore}
               selectedStoreId={selectedStoreId}
               selectedStoreLabel={selectedStoreLabel}
+              hideStoreHeader={isDirector}
             />
           ) : (
             <Card className="py-12 text-center text-muted">
@@ -144,7 +169,14 @@ function ManagerDashboardTabsInner({
       {activeTab === "stats" && (
         <div className="space-y-6">
           <Suspense fallback={null}>
-            <StoreFilterBar stores={stores} selectedStoreId={selectedStoreId} />
+            {isDirector ? (
+              <>
+                <div className="md:hidden">{storeFilterMobile}</div>
+                <div className="hidden md:block">{storeFilterDesktop}</div>
+              </>
+            ) : (
+              storeFilterMobile
+            )}
           </Suspense>
 
           <Card padding={false}>
@@ -152,6 +184,7 @@ function ManagerDashboardTabsInner({
               <CardHeader
                 title="Statistiques du magasin"
                 description={selectedStoreLabel || "Sélectionnez un magasin"}
+                descriptionClassName={isDirector ? "hidden md:block" : undefined}
               />
             </div>
 
@@ -195,6 +228,7 @@ function ManagerDashboardTabsInner({
               activities={storeActivities}
               title="Activité du magasin"
               description={selectedStoreLabel}
+              descriptionClassName={isDirector ? "hidden md:block" : undefined}
               viewAllHref={`${activityBase}/activity?store=${selectedStoreId}`}
               limit={8}
             />

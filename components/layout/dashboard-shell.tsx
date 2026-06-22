@@ -2,7 +2,17 @@
 
 import { usePathname } from "next/navigation";
 import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
+import {
+  isMobilePlanningOnlyMode,
+  isMobileStorePosGateMode,
+  isMobileBottomNavVisible,
+} from "@/lib/layout/mobile-planning";
 import { Sidebar } from "@/components/layout/sidebar";
+import { MobileBottomNav, MobileTopBar } from "@/components/layout/mobile-nav";
+import {
+  MobilePlanningRedirect,
+  MobileStorePosGateRedirect,
+} from "@/components/layout/mobile-planning-redirect";
 import { SessionGuard } from "@/components/auth/session-guard";
 import { CashierNotificationsProvider } from "@/components/notifications/cashier-notifications-context";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
@@ -37,52 +47,116 @@ export function DashboardShell({
   userName: string;
   cityLabel?: string;
   storeId?: string | null;
-  /** Ville du gérant — alertes stock multi-magasins */
   city?: string | null;
   isStorePos?: boolean;
-  /** Caissier personnel — accès lecture seule au planning uniquement */
   isPersonalCashier?: boolean;
-  /** Caissier identifié sur le terminal magasin */
   hasPosOperator?: boolean;
   posOperatorName?: string | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const isPos = isCashierPosRoute(pathname);
+
+  const mobilePlanningOnly = isMobilePlanningOnlyMode({
+    isPersonalCashier,
+    isStorePos,
+    hasPosOperator,
+  });
+
+  const mobileStorePosGate = isMobileStorePosGateMode({
+    isStorePos,
+    hasPosOperator,
+  });
+
   const scope =
-    isPersonalCashier ? null : resolveNotificationScope(role, storeId, city ?? cityLabel);
+    isPersonalCashier || (isStorePos && hasPosOperator)
+      ? null
+      : resolveNotificationScope(role, storeId, city ?? cityLabel);
+
+  const topBarName =
+    isStorePos && hasPosOperator && posOperatorName ? posOperatorName : userName;
+
+  const mobileSubtitle = mobilePlanningOnly
+    ? "Planning · lecture seule"
+    : hasPosOperator && posOperatorName
+      ? `Caissier : ${posOperatorName}`
+      : cityLabel || null;
+
+  const showMobileTopBar = isPersonalCashier || !mobileStorePosGate;
+
+  const showMobileBottomNav = isMobileBottomNavVisible({
+    isStorePos,
+    isPersonalCashier,
+    hasPosOperator,
+  });
 
   const shell = (
     <>
       <SessionGuard disableIdleLogout={isPos && isStorePos} isStorePos={isStorePos} />
-      <div className="flex h-screen overflow-hidden bg-page">
-        <Sidebar
+      <MobileStorePosGateRedirect enabled={mobileStorePosGate} />
+      <MobilePlanningRedirect enabled={mobilePlanningOnly} />
+
+      <div className="flex h-[100dvh] overflow-hidden bg-page">
+        {!isPersonalCashier && (
+          <div className="hidden h-full shrink-0 md:flex">
+            <Sidebar
+              role={role}
+              userName={userName}
+              cityLabel={cityLabel}
+              isStorePos={isStorePos}
+              isPersonalCashier={isPersonalCashier}
+              hasPosOperator={hasPosOperator}
+              posOperatorName={posOperatorName}
+            />
+          </div>
+        )}
+
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {showMobileTopBar && (
+            <MobileTopBar
+              userName={topBarName}
+              subtitle={mobileSubtitle}
+              isStorePos={isStorePos}
+              alwaysVisible={isPersonalCashier}
+            />
+          )}
+
+          <main
+            className={cn(
+              "natus-content min-h-0 flex-1 bg-page",
+              isPos && !mobilePlanningOnly
+                ? "flex min-h-0 flex-col overflow-hidden p-0 md:p-0"
+                : "overflow-y-auto p-4 md:p-8",
+              showMobileBottomNav && "max-md:natus-main-mobile-nav",
+              mobileStorePosGate && "max-md:p-0 max-md:!pb-0"
+            )}
+          >
+            {scope && !isPos && (
+              <>
+                <div className="mb-4 hidden shrink-0 justify-end overflow-visible md:flex">
+                  <CashierNotificationBell />
+                </div>
+                <div className="hidden md:block">
+                  <CashierNotificationBar />
+                </div>
+              </>
+            )}
+            {isPos && !mobilePlanningOnly ? (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                {children}
+              </div>
+            ) : (
+              children
+            )}
+          </main>
+        </div>
+
+        <MobileBottomNav
           role={role}
-          userName={userName}
-          cityLabel={cityLabel}
           isStorePos={isStorePos}
           isPersonalCashier={isPersonalCashier}
           hasPosOperator={hasPosOperator}
-          posOperatorName={posOperatorName}
         />
-        <main
-          className={cn(
-            "natus-content flex min-h-0 min-w-0 flex-1 flex-col bg-page",
-            isPos ? "overflow-hidden p-0" : "overflow-y-auto p-8"
-          )}
-        >
-          {scope && !isPos && (
-            <>
-              <div className="mb-4 flex shrink-0 justify-end overflow-visible">
-                <CashierNotificationBell />
-              </div>
-              <CashierNotificationBar />
-            </>
-          )}
-          <div className={cn("min-h-0 flex-1", isPos && "flex flex-col overflow-hidden")}>
-            {children}
-          </div>
-        </main>
       </div>
     </>
   );

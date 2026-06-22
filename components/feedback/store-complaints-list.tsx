@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { StoreComplaintDetailModal } from "@/components/feedback/store-complaint-detail-modal";
 import { formatDate } from "@/lib/utils";
@@ -120,6 +121,10 @@ export function StoreComplaintsList({
 
   return (
     <div className="space-y-4">
+      <FilterTogglePanel
+        toggleLabel="Filtrer les réclamations"
+        summary={`${filtered.length} réclamation${filtered.length !== 1 ? "s" : ""}`}
+      >
       <div className="natus-filter-bar overflow-visible p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-medium text-primary">Filtrer les réclamations</p>
@@ -179,6 +184,7 @@ export function StoreComplaintsList({
           )}
         </div>
       </div>
+      </FilterTogglePanel>
 
       <Card padding={false}>
         <div className="overflow-x-auto">

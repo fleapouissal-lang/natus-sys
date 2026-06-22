@@ -12,6 +12,7 @@ import { OrderTransferModal } from "@/components/orders/order-transfer-modal";
 import { ReturnNoteModal } from "@/components/orders/return-note-modal";
 import { ConfirmationFollowUpModal } from "@/components/orders/confirmation-follow-up-modal";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { DateInputField } from "@/components/ui/date-input-field";
 import { formatCurrency, formatDate, cn, toLocalDateKey } from "@/lib/utils";
@@ -394,6 +395,12 @@ export function ShopifyOrdersManager({
         </Card>
       </div>
 
+      <FilterTogglePanel
+        toggleLabel="Filtrer les commandes"
+        summary={`${filteredOrders.length} commande${filteredOrders.length !== 1 ? "s" : ""}${
+          activeDatePreset !== "all" ? ` — ${orderDatePresetLabel(activeDatePreset)}` : ""
+        }`}
+      >
       <div className="natus-filter-bar overflow-visible p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-medium text-primary">Filtrer les commandes</p>
@@ -455,6 +462,7 @@ export function ShopifyOrdersManager({
           />
         </div>
       </div>
+      </FilterTogglePanel>
 
       <Card padding={false}>
         <div className="p-6">

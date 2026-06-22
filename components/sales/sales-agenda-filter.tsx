@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { MapPin } from "lucide-react";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { DateInputField } from "@/components/ui/date-input-field";
 import { paymentFilterOptions, storeOptions } from "@/lib/select-options";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,7 @@ export function SalesAgendaFilter({
   periodHint,
   extraActions,
   hasActiveFilters,
+  collapsible = true,
 }: {
   dateFrom: string;
   dateTo: string;
@@ -62,12 +64,21 @@ export function SalesAgendaFilter({
   extraActions?: ReactNode;
   /** Si défini, remplace la détection automatique des filtres actifs. */
   hasActiveFilters?: boolean;
+  collapsible?: boolean;
 }) {
   const hasFilters =
     hasActiveFilters ?? Boolean(dateFrom || dateTo || paymentFilter);
   const showStore = stores && stores.length > 0 && onStoreChange;
+  const summary = `${resultCount} transaction${resultCount !== 1 ? "s" : ""}${
+    periodHint ? ` — ${periodHint}` : ""
+  }`;
 
   return (
+    <FilterTogglePanel
+      toggleLabel="Filtrer les ventes"
+      summary={summary}
+      collapsible={collapsible}
+    >
     <div className={cn("natus-filter-bar overflow-visible p-4", className)}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-medium text-primary">Filtrer les ventes</p>
@@ -114,5 +125,6 @@ export function SalesAgendaFilter({
         <PaymentSelectField value={paymentFilter} onChange={onPaymentChange} />
       </div>
     </div>
+    </FilterTogglePanel>
   );
 }

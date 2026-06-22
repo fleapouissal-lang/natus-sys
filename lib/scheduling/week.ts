@@ -37,6 +37,20 @@ export function parseWeekParam(week?: string | null): string {
 }
 
 const DAY_NAMES = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
+const DAY_SHORT = ["DIM", "LUN", "MAR", "MER", "JEU", "VEN", "SAM"];
+
+export function isToday(dateStr: string): boolean {
+  return dateStr === toDateInputValue(new Date());
+}
+
+export function getShortDayLabel(dateStr: string): string {
+  const d = new Date(`${dateStr}T12:00:00`);
+  return DAY_SHORT[d.getDay()];
+}
+
+export function getDayNumber(dateStr: string): number {
+  return new Date(`${dateStr}T12:00:00`).getDate();
+}
 
 export function formatShiftDate(dateStr: string): string {
   const d = new Date(`${dateStr}T12:00:00`);

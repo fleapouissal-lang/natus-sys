@@ -13,6 +13,7 @@ import {
   Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -253,6 +254,7 @@ export function ProductsManager({
 
   return (
     <>
+      <FilterTogglePanel toggleLabel="Scanner un produit" summary="Recherche & scan">
       <Card className="natus-filter-bar mb-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
           <div className="flex-1">
@@ -402,6 +404,7 @@ export function ProductsManager({
           </p>
         )}
       </Card>
+      </FilterTogglePanel>
 
       <Card padding={false}>
         <div className="p-6">

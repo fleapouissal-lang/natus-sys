@@ -14,6 +14,7 @@ export function StoreFilterBar({
   allowAll = false,
   title = "Filtrer par magasin",
   showHeader = true,
+  hideSelectedOnMobile = false,
   layout = "default",
 }: {
   stores: Store[];
@@ -22,7 +23,7 @@ export function StoreFilterBar({
   allowAll?: boolean;
   title?: string;
   showHeader?: boolean;
-  /** Caisse / barre fine : titre à gauche, select à droite */
+  hideSelectedOnMobile?: boolean;
   layout?: "default" | "compact";
 }) {
   const router = useRouter();
@@ -86,7 +87,12 @@ export function StoreFilterBar({
       {showHeader && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-medium text-primary">{title}</p>
-          <p className="text-sm text-muted">
+          <p
+            className={cn(
+              "text-sm text-muted",
+              hideSelectedOnMobile && "hidden md:block"
+            )}
+          >
             {selected ? (
               <>
                 <span className="font-semibold text-foreground">{selected.name}</span>

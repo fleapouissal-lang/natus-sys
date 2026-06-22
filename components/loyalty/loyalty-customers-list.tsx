@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Search, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { loyaltyTierFromPoints } from "@/lib/loyalty/tiers";
 import { LoyaltyTierBadge } from "@/components/loyalty/loyalty-tier-badge";
@@ -45,6 +46,10 @@ export function LoyaltyCustomersList({
 
   return (
     <>
+      <FilterTogglePanel
+        toggleLabel="Filtrer les clients"
+        summary={`${filtered.length} client${filtered.length !== 1 ? "s" : ""}`}
+      >
       <div className="natus-filter-bar overflow-visible p-4">
         <div className="relative max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
@@ -60,6 +65,7 @@ export function LoyaltyCustomersList({
           {filtered.length} client{filtered.length !== 1 ? "s" : ""}
         </p>
       </div>
+      </FilterTogglePanel>
 
       <Card padding={false} className="mt-4">
         <div className="overflow-x-auto">

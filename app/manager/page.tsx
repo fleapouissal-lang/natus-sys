@@ -1,5 +1,5 @@
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter } from "@/lib/permissions";
+import { getCityFilter, isDirector } from "@/lib/permissions";
 import { getActiveStores, getStoresWithStats } from "@/lib/inventory";
 import { getDashboardStats, getStoreOverviewStats, getStoresSnapshots } from "@/lib/dashboard";
 import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store";
@@ -33,9 +33,11 @@ export default async function ManagerDashboard({
     ? `${selectedStore.name} — ${selectedStore.city}`
     : "";
 
+  const showPageHeader = !profile || !isDirector(profile);
+
   return (
-    <div className="animate-fade-in space-y-6">
-      <div>
+    <div className="animate-fade-in space-y-4 md:space-y-6">
+      <div className={showPageHeader ? undefined : "hidden md:block"}>
         <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
         <p className="mt-1 text-muted">
           Suivi multi-magasins et statistiques détaillées par point de vente

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, UserPlus, ExternalLink, Eye, Gift } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
@@ -56,6 +57,10 @@ export function CashierCustomersManager({
         </Card>
       </div>
 
+      <FilterTogglePanel
+        toggleLabel="Filtrer les clients"
+        summary={`${filtered.length} client${filtered.length !== 1 ? "s" : ""}`}
+      >
       <div className="natus-filter-bar mt-6 overflow-visible p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="relative min-w-[200px] flex-1 max-w-md">
@@ -77,6 +82,7 @@ export function CashierCustomersManager({
           {filtered.length} client{filtered.length !== 1 ? "s" : ""}
         </p>
       </div>
+      </FilterTogglePanel>
 
       <Card padding={false} className="mt-4">
         <div className="overflow-x-auto">

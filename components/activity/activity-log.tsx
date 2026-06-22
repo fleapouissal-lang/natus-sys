@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { activityRoleOptions, activityTypeOptions } from "@/lib/select-options";
 import {
   getActivityKindLabel,
@@ -107,6 +108,10 @@ export function ActivityLog({
 
   return (
     <div className="space-y-6">
+      <FilterTogglePanel
+        toggleLabel="Filtrer l'activité"
+        summary={`${filtered.length} action${filtered.length !== 1 ? "s" : ""}`}
+      >
       <div className="natus-filter-bar overflow-visible p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-medium text-primary">Filtrer l&apos;activité</p>
@@ -157,6 +162,7 @@ export function ActivityLog({
           />
         </div>
       </div>
+      </FilterTogglePanel>
 
       <Card padding={false}>
         <div className="p-6">

@@ -13,6 +13,7 @@ import {
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { ProductImage } from "@/components/pos/product-image";
 import { CreateStoreForm } from "@/components/stores/create-store-form";
@@ -124,6 +125,10 @@ function StoreProductFilter({
   const hasFilters = Boolean(search || category);
 
   return (
+    <FilterTogglePanel
+      toggleLabel="Rechercher un produit"
+      summary={`${resultCount} produit${resultCount !== 1 ? "s" : ""}`}
+    >
     <div className="natus-filter-bar overflow-visible border-b border-border p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-medium text-primary">Rechercher un produit</p>
@@ -167,6 +172,7 @@ function StoreProductFilter({
         />
       </div>
     </div>
+    </FilterTogglePanel>
   );
 }
 

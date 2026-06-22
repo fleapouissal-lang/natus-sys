@@ -17,10 +17,12 @@ export function Card({ children, className, padding = true }: CardProps) {
 export function CardHeader({
   title,
   description,
+  descriptionClassName,
   action,
 }: {
   title: string;
   description?: string;
+  descriptionClassName?: string;
   action?: React.ReactNode;
 }) {
   return (
@@ -28,7 +30,9 @@ export function CardHeader({
       <div>
         <h2 className="font-heading text-lg font-semibold text-primary">{title}</h2>
         {description && (
-          <p className="mt-1 text-sm text-muted">{description}</p>
+          <p className={cn("mt-1 text-sm text-muted", descriptionClassName)}>
+            {description}
+          </p>
         )}
       </div>
       {action}

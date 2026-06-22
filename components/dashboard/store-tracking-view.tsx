@@ -63,11 +63,13 @@ export function StoreTrackingView({
   overviewByStore,
   selectedStoreId,
   selectedStoreLabel = "",
+  hideStoreHeader = false,
 }: {
   storeSnapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
   selectedStoreId: string;
   selectedStoreLabel?: string;
+  hideStoreHeader?: boolean;
 }) {
   const today = toLocalDateKey(new Date());
   const [preset, setPreset] = useState<StoreTrackingPreset>("week");
@@ -110,7 +112,7 @@ export function StoreTrackingView({
 
   return (
     <div className="space-y-6">
-      {selectedStoreLabel && (
+      {selectedStoreLabel && !hideStoreHeader && (
         <Card padding={false}>
           <div className="p-6">
             <CardHeader

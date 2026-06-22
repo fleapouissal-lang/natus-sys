@@ -30,6 +30,7 @@ export function RecentActivityPanel({
   activities,
   title = "Activité récente",
   description,
+  descriptionClassName,
   viewAllHref,
   limit = 8,
   paginate = false,
@@ -38,6 +39,7 @@ export function RecentActivityPanel({
   activities: ActivityEntry[];
   title?: string;
   description?: string;
+  descriptionClassName?: string;
   viewAllHref?: string;
   /** Nombre d’entrées affichées sans pagination (défaut 8). */
   limit?: number;
@@ -60,7 +62,11 @@ export function RecentActivityPanel({
   return (
     <Card padding={false}>
       <div className="flex flex-wrap items-start justify-between gap-3 p-6">
-        <CardHeader title={title} description={description} />
+        <CardHeader
+          title={title}
+          description={description}
+          descriptionClassName={descriptionClassName}
+        />
         {viewAllHref && (
           <Link
             href={viewAllHref}

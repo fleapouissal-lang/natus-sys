@@ -44,7 +44,8 @@ export function PlanningFilterBar({
         <p className="text-sm text-muted">
           {selectedStore ? (
             <>
-              Planning de <span className="font-semibold text-foreground">{selectedStore.name}</span>
+              Planning de{" "}
+              <span className="font-semibold text-foreground">{selectedStore.name}</span>
             </>
           ) : (
             "Choisissez le magasin à planifier"

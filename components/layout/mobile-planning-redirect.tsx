@@ -1,0 +1,46 @@
+"use client";
+
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  CASHIER_PLANNING_PATH,
+  CASHIER_POS_PATH,
+} from "@/lib/layout/mobile-planning";
+import { isCashierPlanningRoute } from "@/lib/cashier/access";
+
+function isMobileViewport() {
+  return window.matchMedia("(max-width: 767px)").matches;
+}
+
+export function MobilePlanningRedirect({ enabled }: { enabled: boolean }) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (!isMobileViewport()) return;
+    if (isCashierPlanningRoute(pathname)) return;
+
+    router.replace(CASHIER_PLANNING_PATH);
+  }, [enabled, pathname, router]);
+
+  return null;
+}
+
+/** Compte magasin mobile sans caissier → caisse / connexion caissier */
+export function MobileStorePosGateRedirect({ enabled }: { enabled: boolean }) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (!isMobileViewport()) return;
+    if (pathname === CASHIER_POS_PATH || pathname.startsWith(`${CASHIER_POS_PATH}/`)) {
+      return;
+    }
+
+    router.replace(CASHIER_POS_PATH);
+  }, [enabled, pathname, router]);
+
+  return null;
+}

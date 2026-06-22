@@ -5,110 +5,19 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { sidebarCollapsedForRoute } from "@/lib/layout/sidebar-state";
 import {
-  LayoutDashboard,
-  Package,
-  Warehouse,
-  Store,
-  Receipt,
-  Users,
-  ShoppingCart,
-  History,
-  ClipboardList,
+  isNavLinkActive,
+  resolveNavLinks,
+} from "@/lib/layout/nav-links";
+import {
   LogOut,
-  ShoppingBag,
-  Truck,
   PanelLeftClose,
-  RotateCcw,
-  Boxes,
-  Gift,
-  AlertTriangle,
-  MessageSquare,
-  FileText,
-  CalendarClock,
-  Newspaper,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
 import { signOutPosOperator } from "@/lib/pos/actions";
 import { cn } from "@/lib/utils";
-import { getRoleLabel, getManagementBasePath } from "@/lib/permissions";
+import { getRoleLabel } from "@/lib/permissions";
 import type { UserRole } from "@/lib/types";
-
-function buildManagementLinks(basePath: "/director" | "/manager" | "/hub") {
-  if (basePath === "/hub") {
-    return [
-      { href: "/hub", label: "Tableau de bord", icon: LayoutDashboard },
-      { href: "/hub/stock", label: "Stock magasins", icon: Warehouse },
-      { href: "/hub/hub-stock", label: "Entrepôt hub", icon: Boxes },
-      { href: "/hub/activity", label: "Activité", icon: ClipboardList },
-      { href: "/hub/actualites", label: "Actualités", icon: Newspaper },
-      { href: "/hub/invoices", label: "Factures magasins", icon: FileText },
-    ];
-  }
-
-  const links = [
-    { href: basePath, label: "Tableau de bord", icon: LayoutDashboard },
-    { href: `${basePath}/products`, label: "Produits", icon: Package },
-    { href: `${basePath}/stores`, label: "Magasins", icon: Store },
-    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse },
-    { href: `${basePath}/activity`, label: "Activité", icon: ClipboardList },
-    { href: `${basePath}/orders`, label: "Commandes", icon: ShoppingBag },
-    { href: `${basePath}/reclamations`, label: "Réclamations", icon: AlertTriangle },
-    { href: `${basePath}/loyalty`, label: "Fidélité", icon: Gift },
-    { href: `${basePath}/sales`, label: "Ventes", icon: Receipt },
-    { href: `${basePath}/invoices`, label: "Factures", icon: FileText },
-    { href: `${basePath}/planning`, label: "Planning", icon: CalendarClock },
-    { href: `${basePath}/actualites`, label: "Actualités", icon: Newspaper },
-    { href: `${basePath}/users`, label: "Utilisateurs", icon: Users },
-    { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
-  ];
-
-  if (basePath === "/director") {
-    links.splice(6, 0, {
-      href: "/director/hub",
-      label: "Hub stock",
-      icon: Boxes,
-    });
-    links.splice(10, 0, {
-      href: "/director/hubs",
-      label: "Comptes hub",
-      icon: Users,
-    });
-  }
-
-  return links;
-}
-
-const personalCashierLinks = [
-  { href: "/cashier/planning", label: "Mon planning", icon: CalendarClock },
-];
-
-const cashierLinks = [
-  { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
-  { href: "/cashier/planning", label: "Mon planning", icon: CalendarClock },
-  { href: "/cashier/actualites", label: "Actualités", icon: Newspaper },
-  { href: "/cashier/orders", label: "Commandes", icon: ShoppingBag },
-  { href: "/cashier/notes", label: "Notes commandes", icon: MessageSquare },
-  { href: "/cashier/transfers", label: "Réceptions hub", icon: Boxes },
-  { href: "/cashier/customers", label: "Clients fidélité", icon: Gift },
-  { href: "/cashier/returns", label: "Retours magasin", icon: RotateCcw },
-  { href: "/cashier/sales", label: "Mes ventes", icon: History },
-  { href: "/cashier/invoices", label: "Factures", icon: FileText },
-];
-
-const livreurLinks = [
-  { href: "/livreur/orders", label: "Mes livraisons", icon: Truck },
-  { href: "/livreur/actualites", label: "Actualités", icon: Newspaper },
-  { href: "/livreur/returns", label: "Mes retours", icon: RotateCcw },
-];
-
-function isNavLinkActive(pathname: string, href: string): boolean {
-  if (href === "/manager" || href === "/director" || href === "/hub") {
-    return pathname === href;
-  }
-  if (pathname === href) return true;
-  return pathname.startsWith(`${href}/`);
-}
 
 function getInitials(name: string) {
   return name
@@ -244,21 +153,12 @@ export function Sidebar({
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(() => sidebarCollapsedForRoute(pathname));
 
-  const basePath = getManagementBasePath(role);
-  const links =
-    role === "livreur"
-      ? livreurLinks
-      : role === "cashier"
-        ? isPersonalCashier
-          ? personalCashierLinks
-          : isStorePos
-            ? hasPosOperator
-              ? cashierLinks
-              : cashierLinks.filter((link) => link.href !== "/cashier/planning")
-            : cashierLinks
-        : basePath
-          ? buildManagementLinks(basePath)
-          : cashierLinks;
+  const links = resolveNavLinks({
+    role,
+    isStorePos,
+    isPersonalCashier,
+    hasPosOperator,
+  });
   const roleLabel = getRoleLabel(role);
 
   useEffect(() => {

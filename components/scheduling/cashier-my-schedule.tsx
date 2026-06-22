@@ -14,6 +14,7 @@ import {
   getWeekDays,
 } from "@/lib/scheduling/week";
 import type { CashierShift } from "@/lib/scheduling/shifts";
+import { CashierMyScheduleMobile } from "@/components/scheduling/cashier-my-schedule-mobile";
 
 type Props = {
   shifts: CashierShift[];
@@ -43,7 +44,12 @@ export function CashierMySchedule({ shifts, weekStart, offDate }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="md:hidden">
+        <CashierMyScheduleMobile shifts={shifts} weekStart={weekStart} offDate={offDate} />
+      </div>
+
+      <div className="hidden space-y-6 md:block">
       <div className="flex flex-wrap items-center justify-center gap-2">
         <Button type="button" variant="secondary" size="sm" onClick={() => pushWeek(addWeeks(weekStart, -1))}>
           <ChevronLeft className="h-4 w-4" />
@@ -95,6 +101,7 @@ export function CashierMySchedule({ shifts, weekStart, offDate }: Props) {
           );
         })}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
