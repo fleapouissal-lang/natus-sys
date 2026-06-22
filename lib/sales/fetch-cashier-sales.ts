@@ -20,3 +20,22 @@ export async function fetchCashierSales(
 
   return { sales: (data || []) as Sale[], error: null };
 }
+
+export async function fetchStoreSales(
+  supabase: SupabaseClient,
+  storeId: string,
+  limit = 1000
+): Promise<{ sales: Sale[]; error: string | null }> {
+  const { data, error } = await supabase
+    .from("sales")
+    .select(SALE_HISTORY_SELECT)
+    .eq("store_id", storeId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    return { sales: [], error: error.message };
+  }
+
+  return { sales: (data || []) as Sale[], error: null };
+}

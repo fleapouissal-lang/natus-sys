@@ -12,7 +12,7 @@ import { SalesHistoryTable } from "@/components/sales/sales-history-table";
 import { CashierSalesReport } from "@/components/sales/cashier-sales-report";
 import { OrderDatePeriodFilter } from "@/components/orders/order-date-period-filter";
 import { createClient } from "@/lib/supabase/client";
-import { fetchCashierSales } from "@/lib/sales/fetch-cashier-sales";
+import { fetchCashierSales, fetchStoreSales } from "@/lib/sales/fetch-cashier-sales";
 import {
   detectOrderDatePreset,
   orderDatePresetLabel,
@@ -30,10 +30,14 @@ const DEFAULT_DATE_PRESET: OrderDatePreset = "today";
 
 export function CashierSalesHistory({
   initialSales,
+  mode = "personal",
+  storeId,
   cashierId,
   cashierName,
 }: {
   initialSales: Sale[];
+  mode?: "personal" | "store";
+  storeId?: string;
   cashierId?: string;
   cashierName?: string;
 }) {
@@ -56,13 +60,17 @@ export function CashierSalesHistory({
   }, [initialSales]);
 
   useEffect(() => {
-    if (!cashierId) return;
+    if (mode === "store" && !storeId) return;
+    if (mode === "personal" && !cashierId) return;
 
     let cancelled = false;
 
     async function refreshSales() {
       const supabase = createClient();
-      const { sales: rows, error } = await fetchCashierSales(supabase, cashierId!);
+      const { sales: rows, error } =
+        mode === "store" && storeId
+          ? await fetchStoreSales(supabase, storeId)
+          : await fetchCashierSales(supabase, cashierId!);
       if (cancelled) return;
       if (error) {
         setRefreshError(error);
@@ -78,7 +86,7 @@ export function CashierSalesHistory({
     return () => {
       cancelled = true;
     };
-  }, [cashierId, router]);
+  }, [mode, storeId, cashierId, router]);
 
   const activeDatePreset = useMemo(
     () => detectOrderDatePreset(dateFrom, dateTo),
@@ -229,15 +237,20 @@ export function CashierSalesHistory({
         <div className="p-6">
           <CardHeader
             title="Historique des ventes"
-            description={`${filtered.length} transaction(s) — vos ventes en caisse`}
+            description={
+              mode === "store"
+                ? `${filtered.length} transaction(s) — ventes du magasin par caissier`
+                : `${filtered.length} transaction(s) — vos ventes en caisse`
+            }
           />
         </div>
 
         <SalesHistoryTable
           sales={filtered}
-          showStore
+          showStore={mode !== "store"}
+          showCashier={mode === "store"}
           onViewSale={setDetailSale}
-          paginationKey={`${dateFrom}|${dateTo}|${paymentFilter}`}
+          paginationKey={`${mode}|${dateFrom}|${dateTo}|${paymentFilter}`}
         />
       </Card>
 

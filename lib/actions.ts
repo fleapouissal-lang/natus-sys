@@ -781,6 +781,10 @@ export async function completeSale(
 
   if (items.length === 0) return { error: "Panier vide" };
 
+  const { requirePosOperatorId } = await import("@/lib/pos/operator-session");
+  const operator = await requirePosOperatorId(profile);
+  if (operator.error) return { error: operator.error };
+
   if (storeId && profile.role !== "cashier") {
     const access = await assertStoreAccess(profile, storeId);
     if (access.error) return { error: access.error };
@@ -794,6 +798,7 @@ export async function completeSale(
     p_customer_id: loyalty?.customerId || null,
     p_points_to_redeem: loyalty?.pointsToRedeem || 0,
     p_promo_code: promoCode?.trim() || null,
+    p_operator_id: operator.operatorId,
   });
 
   if (error) return { error: error.message };
@@ -1075,6 +1080,14 @@ export async function completeShopifyOrderSale(
     return { error: "Accès refusé" };
   }
 
+  const { requirePosOperatorId, getEffectiveCashierId } = await import(
+    "@/lib/pos/operator-session"
+  );
+  const operator = await requirePosOperatorId(profile);
+  if (operator.error) return { error: operator.error };
+  const effective = await getEffectiveCashierId(profile);
+  if (effective.error) return { error: effective.error };
+
   if (order.fulfilled_at) {
     return { error: "Commande déjà préparée en caisse" };
   }
@@ -1091,6 +1104,7 @@ export async function completeShopifyOrderSale(
       p_items: items,
       p_store_id: storeId || order.store_id || null,
       p_payment_method: _paymentMethod,
+      p_operator_id: operator.operatorId,
     }
   );
 
@@ -1110,7 +1124,7 @@ export async function completeShopifyOrderSale(
 
   const updates: Record<string, unknown> = {
     fulfilled_at: now,
-    fulfilled_by: profile.id,
+    fulfilled_by: effective.cashierId,
     workflow_status: "ready",
     updated_at: now,
   };
@@ -1199,6 +1213,7 @@ export async function createUser(formData: FormData) {
   const role = formData.get("role") as "manager" | "cashier" | "livreur" | "hub";
   const city = ((formData.get("city") as string) || "").trim() || null;
   const storeId = (formData.get("store_id") as string) || null;
+  const isStorePos = formData.get("is_store_pos") === "on";
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { error: "Adresse email invalide" };
@@ -1231,6 +1246,20 @@ export async function createUser(formData: FormData) {
     if (!store) return { error: "Magasin introuvable" };
     if (!canManageStore(profile, store)) {
       return { error: "Ce magasin n'est pas dans votre périmètre" };
+    }
+    if (role === "cashier" && isStorePos) {
+      const supabaseCheck = await createClient();
+      const { data: existingPos } = await supabaseCheck
+        .from("profiles")
+        .select("id")
+        .eq("role", "cashier")
+        .eq("store_id", storeId)
+        .eq("is_store_pos", true)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (existingPos) {
+        return { error: "Ce magasin a déjà un compte caisse partagé actif" };
+      }
     }
     if (role === "livreur") {
       const supabaseCheck = await createClient();
@@ -1280,6 +1309,9 @@ export async function createUser(formData: FormData) {
       updates.store_id = storeId;
       const store = await getStoreById(storeId);
       updates.city = store?.city || null;
+      if (role === "cashier") {
+        updates.is_store_pos = isStorePos;
+      }
     }
 
     await admin.from("profiles").update(updates).eq("id", data.user.id);

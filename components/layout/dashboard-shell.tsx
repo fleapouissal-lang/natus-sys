@@ -27,6 +27,7 @@ export function DashboardShell({
   cityLabel,
   storeId,
   city,
+  isStorePos = false,
   children,
 }: {
   role: UserRole;
@@ -35,6 +36,7 @@ export function DashboardShell({
   storeId?: string | null;
   /** Ville du gérant — alertes stock multi-magasins */
   city?: string | null;
+  isStorePos?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -43,9 +45,14 @@ export function DashboardShell({
 
   const shell = (
     <>
-      <SessionGuard />
+      <SessionGuard disableIdleLogout={isPos && isStorePos} isStorePos={isStorePos} />
       <div className="flex h-screen overflow-hidden bg-page">
-        <Sidebar role={role} userName={userName} cityLabel={cityLabel} />
+        <Sidebar
+          role={role}
+          userName={userName}
+          cityLabel={cityLabel}
+          isStorePos={isStorePos}
+        />
         <main
           className={cn(
             "natus-content flex min-h-0 min-w-0 flex-1 flex-col bg-page",

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
+import { signOutPosOperator } from "@/lib/pos/actions";
 import { cn } from "@/lib/utils";
 import { getRoleLabel, getManagementBasePath } from "@/lib/permissions";
 import type { UserRole } from "@/lib/types";
@@ -140,7 +141,7 @@ function SidebarBrand({ collapsed }: { collapsed?: boolean }) {
   return (
     <span
       className={cn(
-        "font-heading font-bold tracking-tight text-primary",
+        "font-heading font-bold tracking-tight text-black",
         collapsed ? "text-lg" : "text-2xl"
       )}
     >
@@ -222,10 +223,12 @@ export function Sidebar({
   role,
   userName,
   cityLabel,
+  isStorePos = false,
 }: {
   role: UserRole;
   userName: string;
   cityLabel?: string;
+  isStorePos?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -255,6 +258,10 @@ export function Sidebar({
   }
 
   async function handleLogout() {
+    if (isStorePos) {
+      await signOutPosOperator();
+    }
+
     const supabase = createClient();
     await supabase.auth.signOut();
     localStorage.removeItem(SESSION_LAST_ACTIVITY_KEY);

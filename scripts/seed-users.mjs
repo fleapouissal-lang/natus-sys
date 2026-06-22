@@ -1,22 +1,19 @@
-import { readFileSync } from "fs";
-import { resolve } from "path";
+/**
+ * Seed utilisateurs — direction, gérants, 3 caissiers + caisse magasin par store, livreurs.
+ *
+ * Usage : node scripts/seed-users.mjs
+ * Mot de passe commun : Natus2026!
+ */
 import { createClient } from "@supabase/supabase-js";
+import { loadEnv } from "./lib/env.mjs";
 
-function loadEnv() {
-  const envPath = resolve(process.cwd(), ".env.local");
-  const content = readFileSync(envPath, "utf-8");
-  const env = {};
+const PASSWORD = "Natus2026!";
 
-  for (const line of content.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    env[trimmed.slice(0, eq)] = trimmed.slice(eq + 1);
-  }
-
-  return env;
-}
+const CASHIER_NAMES = [
+  ["Oussal", "Alami"],
+  ["Hajar", "Bennani"],
+  ["Sara", "Tazi"],
+];
 
 function storeEmailSlug(name) {
   return name
@@ -27,61 +24,107 @@ function storeEmailSlug(name) {
     .replace(/^\.+|\.+$/g, "");
 }
 
-const users = [
-  {
-    email: "admin@natus.ma",
-    password: "Natus2026!",
-    full_name: "Admin Dashboard",
-    role: "admin",
-    city: null,
-    store: null,
-  },
-  {
-    email: "directeur@natus.ma",
-    password: "Natus2026!",
-    full_name: "Directeur Natus",
-    role: "directeur",
-    city: null,
-    store: null,
-  },
-  {
-    email: "manager@natus.ma",
-    password: "Natus2026!",
-    full_name: "Gérant Marrakech",
-    role: "manager",
-    city: "Marrakech",
-    store: null,
-  },
-  {
-    email: "cashier@natus.ma",
-    password: "Natus2026!",
-    full_name: "Caissier Guéliz",
-    role: "cashier",
-    city: "Marrakech",
-    store: "Natus Guéliz",
-  },
-  {
-    email: "caissier2@natus.ma",
-    password: "Natus2026!",
-    full_name: "Caissier Médina",
-    role: "cashier",
-    city: "Marrakech",
-    store: "Natus Médina",
-  },
-];
+function citySlug(city) {
+  return city
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function buildUsers(stores) {
+  const users = [
+    {
+      email: "admin@natus.ma",
+      password: PASSWORD,
+      full_name: "Admin Dashboard",
+      role: "admin",
+      city: null,
+      store: null,
+      is_store_pos: false,
+    },
+    {
+      email: "directeur@natus.ma",
+      password: PASSWORD,
+      full_name: "Directeur Natus",
+      role: "directeur",
+      city: null,
+      store: null,
+      is_store_pos: false,
+    },
+  ];
+
+  const cities = [...new Set(stores.map((s) => s.city))].sort();
+  for (const city of cities) {
+    users.push({
+      email: `manager.${citySlug(city)}@natus.ma`,
+      password: PASSWORD,
+      full_name: `Gérant ${city}`,
+      role: "manager",
+      city,
+      store: null,
+      is_store_pos: false,
+    });
+
+    users.push({
+      email: `hub.${citySlug(city)}@natus.ma`,
+      password: PASSWORD,
+      full_name: `Hub stock ${city}`,
+      role: "hub",
+      city,
+      store: null,
+      is_store_pos: false,
+    });
+  }
+
+  for (const store of stores) {
+    const slug = storeEmailSlug(store.name);
+
+    users.push({
+      email: `caisse.${slug}@natus.ma`,
+      password: PASSWORD,
+      full_name: `Caisse ${store.name}`,
+      role: "cashier",
+      city: store.city,
+      store: store.name,
+      is_store_pos: true,
+    });
+
+    for (let i = 0; i < CASHIER_NAMES.length; i++) {
+      const [first, last] = CASHIER_NAMES[i];
+      users.push({
+        email: `${first.toLowerCase()}.${slug}@natus.ma`,
+        password: PASSWORD,
+        full_name: `${first} ${last}`,
+        role: "cashier",
+        city: store.city,
+        store: store.name,
+        is_store_pos: false,
+      });
+    }
+
+    users.push({
+      email: `livreur.${slug}@natus.ma`,
+      password: PASSWORD,
+      full_name: `Livreur ${store.name}`,
+      role: "livreur",
+      city: store.city,
+      store: store.name,
+      is_store_pos: false,
+    });
+  }
+
+  return users;
+}
 
 async function findUserByEmail(supabase, email) {
   let page = 1;
-  const perPage = 200;
-
   while (true) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
     if (error) throw error;
-
-    const found = data.users.find((u) => u.email === email);
+    const found = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
     if (found) return found;
-
-    if (data.users.length < perPage) return null;
+    if (data.users.length < 200) return null;
     page += 1;
   }
 }
@@ -89,6 +132,8 @@ async function findUserByEmail(supabase, email) {
 async function upsertUser(supabase, user, storeByName) {
   const storeId = user.store ? storeByName[user.store] : null;
   const existing = await findUserByEmail(supabase, user.email);
+
+  let userId = existing?.id;
 
   if (existing) {
     const { error: updateError } = await supabase.auth.admin.updateUserById(existing.id, {
@@ -101,58 +146,63 @@ async function upsertUser(supabase, user, storeByName) {
       },
       app_metadata: { provider: "email", providers: ["email"] },
     });
+    if (updateError) throw updateError;
+  } else {
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: user.email,
+      password: user.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: user.full_name,
+        role: user.role,
+        city: user.city || undefined,
+      },
+      app_metadata: { provider: "email", providers: ["email"] },
+    });
+    if (error) throw error;
+    userId = data.user?.id;
+  }
 
-    if (updateError) {
-      console.error(`❌ ${user.email} (update) : ${updateError.message}`);
-      return;
+  if (!userId) return;
+
+  const profileUpdate = {
+    full_name: user.full_name,
+    role: user.role,
+    is_active: true,
+    city: user.city,
+    store_id: storeId,
+    is_store_pos: user.role === "cashier" ? Boolean(user.is_store_pos) : false,
+  };
+
+  await supabase.from("profiles").update(profileUpdate).eq("id", userId);
+
+  const label = user.is_store_pos ? "caisse magasin" : user.role;
+  console.log(`✓  ${user.email} (${label})`);
+}
+
+async function assignHubManagers(supabase, stores) {
+  const cities = [...new Set(stores.map((s) => s.city))];
+  for (const city of cities) {
+    const { data: hub } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("role", "hub")
+      .eq("city", city)
+      .maybeSingle();
+
+    const { data: managers } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("role", "manager")
+      .eq("city", city);
+
+    if (hub?.id && managers?.length) {
+      await supabase.rpc("auto_assign_hub_managers", {
+        p_hub_user_id: hub.id,
+        p_city: city,
+      });
     }
-
-    await supabase
-      .from("profiles")
-      .update({
-        full_name: user.full_name,
-        role: user.role,
-        is_active: true,
-        city: user.city,
-        store_id: storeId,
-      })
-      .eq("id", existing.id);
-
-    console.log(`↻  Mis à jour : ${user.email} (${user.role})`);
-    return;
   }
-
-  const { data, error } = await supabase.auth.admin.createUser({
-    email: user.email,
-    password: user.password,
-    email_confirm: true,
-    user_metadata: {
-      full_name: user.full_name,
-      role: user.role,
-      city: user.city || undefined,
-    },
-    app_metadata: { provider: "email", providers: ["email"] },
-  });
-
-  if (error) {
-    console.error(`❌ ${user.email} : ${error.message}`);
-    return;
-  }
-
-  if (data.user) {
-    await supabase
-      .from("profiles")
-      .update({
-        full_name: user.full_name,
-        role: user.role,
-        is_active: true,
-        city: user.city,
-        store_id: storeId,
-      })
-      .eq("id", data.user.id);
-  }
-
-  console.log(`✓  Créé : ${user.email} (${user.role})`);
 }
 
 async function main() {
@@ -161,7 +211,7 @@ async function main() {
   const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !serviceKey) {
-    console.error("❌ NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY requis dans .env.local");
+    console.error("❌ NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY requis");
     process.exit(1);
   }
 
@@ -169,45 +219,35 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  console.log("🌱 Seed utilisateurs Natus POS\n");
+  console.log("🌱 Seed utilisateurs Natus\n");
 
-  const { data: storeRows } = await supabase
+  const { data: storeRows, error: storesError } = await supabase
     .from("stores")
     .select("id, name, city")
     .eq("is_active", true)
     .order("name");
 
-  const storeByName = Object.fromEntries((storeRows || []).map((s) => [s.name, s.id]));
+  if (storesError) throw storesError;
+  if (!storeRows?.length) {
+    console.error("❌ Aucun magasin actif — lancez npm run db:migrate");
+    process.exit(1);
+  }
+
+  const storeByName = Object.fromEntries(storeRows.map((s) => [s.name, s.id]));
+  const users = buildUsers(storeRows);
 
   for (const user of users) {
     await upsertUser(supabase, user, storeByName);
   }
 
-  for (const store of storeRows || []) {
-    const slug = storeEmailSlug(store.name);
-    const email = `livreur.${slug}@natus.ma`;
-    await upsertUser(
-      supabase,
-      {
-        email,
-        password: "Natus2026!",
-        full_name: `Livreur ${store.name}`,
-        role: "livreur",
-        city: store.city,
-        store: store.name,
-      },
-      storeByName
-    );
-  }
+  await assignHubManagers(supabase, storeRows);
 
-  console.log("\n✅ Terminé — mot de passe : Natus2026!");
-  console.log("\nComptes :");
-  console.log("  • admin@natus.ma        → Admin dashboard");
-  console.log("  • directeur@natus.ma    → Directeur");
-  console.log("  • manager@natus.ma      → Gérant Marrakech");
-  console.log("  • cashier@natus.ma      → Caissier Guéliz");
-  console.log("  • caissier2@natus.ma    → Caissier Médina");
-  console.log("  • livreur.<magasin>@natus.ma → 1 livreur par magasin actif");
+  console.log(`\n✅ ${users.length} comptes — mot de passe : ${PASSWORD}`);
+  console.log("\nExemple Guéliz :");
+  console.log("  • caisse.natus.gueliz@natus.ma → terminal caisse (login app)");
+  console.log("  • oussal.natus.gueliz@natus.ma → caissier 1 (connexion caisse)");
+  console.log("  • hajar.natus.gueliz@natus.ma  → caissier 2");
+  console.log("  • sara.natus.gueliz@natus.ma   → caissier 3");
 }
 
 main().catch((err) => {

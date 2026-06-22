@@ -9,6 +9,7 @@ import {
   SESSION_IDLE_TIMEOUT_MS,
   SESSION_LAST_ACTIVITY_KEY,
 } from "@/lib/auth/session-config";
+import { signOutPosOperator } from "@/lib/pos/actions";
 
 const ACTIVITY_EVENTS = [
   "mousedown",
@@ -29,17 +30,29 @@ export function touchSessionActivity() {
   localStorage.setItem(SESSION_LAST_ACTIVITY_KEY, String(Date.now()));
 }
 
-export function SessionGuard() {
+export function SessionGuard({
+  disableIdleLogout = false,
+  isStorePos = false,
+}: {
+  disableIdleLogout?: boolean;
+  isStorePos?: boolean;
+}) {
   const router = useRouter();
   const signingOut = useRef(false);
   const lastTouch = useRef(0);
 
   useEffect(() => {
+    if (disableIdleLogout) return;
+
     touchSessionActivity();
 
     async function logoutIdle() {
       if (signingOut.current) return;
       signingOut.current = true;
+
+      if (isStorePos) {
+        await signOutPosOperator();
+      }
 
       const supabase = createClient();
       await supabase.auth.signOut();
@@ -99,7 +112,7 @@ export function SessionGuard() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.clearInterval(intervalId);
     };
-  }, [router]);
+  }, [router, disableIdleLogout, isStorePos]);
 
   return null;
 }

@@ -56,6 +56,7 @@ export interface Profile {
   is_active: boolean;
   city: string | null;
   store_id: string | null;
+  is_store_pos?: boolean;
   created_at: string;
   updated_at: string;
   stores?: Pick<Store, "name" | "city"> | null;

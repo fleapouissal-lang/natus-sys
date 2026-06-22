@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { StoreSelect } from "@/components/stores/store-select";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { CashierNfcField } from "@/components/users/cashier-nfc-field";
 import { cityOptions, roleOptions, storeOptions } from "@/lib/select-options";
 import {
   createUser,
@@ -38,6 +39,7 @@ function CreateUserForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [role, setRole] = useState<"manager" | "cashier" | "livreur">("cashier");
+  const [isStorePos, setIsStorePos] = useState(false);
   const [city, setCity] = useState(
     isDirector(viewer) ? cities[0] || "" : viewer.city || ""
   );
@@ -54,6 +56,9 @@ function CreateUserForm({
 
     const formData = new FormData(e.currentTarget);
     formData.set("role", role);
+    if (role === "cashier" && isStorePos) {
+      formData.set("is_store_pos", "on");
+    }
     if (role === "manager" || isDirector(viewer)) {
       formData.set("city", city);
     }
@@ -127,6 +132,24 @@ function CreateUserForm({
             />
           )}
 
+          {role === "cashier" && (
+            <label className="flex items-start gap-2 rounded-lg border border-border bg-surface-2 p-3 text-sm">
+              <input
+                type="checkbox"
+                checked={isStorePos}
+                onChange={(e) => setIsStorePos(e.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-medium">Compte caisse partagé du magasin</span>
+                <span className="mt-1 block text-xs text-muted">
+                  Un seul par magasin. Les caissiers se connectent ensuite avec leur email,
+                  mot de passe ou carte NFC sur cette caisse.
+                </span>
+              </span>
+            </label>
+          )}
+
           {(role === "cashier" || role === "livreur") && storesForCity.length === 0 && (
             <p className="text-sm text-danger">
               Aucun magasin dans cette ville — créez-en un d&apos;abord
@@ -163,10 +186,12 @@ export function UsersManager({
   users,
   stores,
   viewer,
+  nfcByCashier = {},
 }: {
   users: Profile[];
   stores: Store[];
   viewer: Profile;
+  nfcByCashier?: Record<string, string>;
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -252,12 +277,21 @@ export function UsersManager({
                         )}
                       </p>
                       <p className="text-xs text-muted">{user.email}</p>
+                      {user.role === "cashier" && !user.is_store_pos && (
+                        <CashierNfcField
+                          cashierId={user.id}
+                          initialUid={nfcByCashier[user.id]}
+                        />
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <Badge variant={roleBadgeVariant(user.role)}>
                       {getRoleLabel(user.role)}
                     </Badge>
+                    {user.is_store_pos && (
+                      <p className="mt-1 text-xs text-accent">Caisse magasin</p>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-muted">
                     {user.role === "directeur" || user.role === "admin"

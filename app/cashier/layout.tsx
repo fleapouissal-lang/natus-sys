@@ -16,6 +16,7 @@ export default async function CashierLayout({
       userName={profile.full_name || profile.email}
       cityLabel={profile.city || undefined}
       storeId={profile.store_id}
+      isStorePos={profile.is_store_pos === true}
     >
       {children}
     </DashboardShell>

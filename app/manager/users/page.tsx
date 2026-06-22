@@ -17,11 +17,20 @@ export default async function UsersPage() {
     .select("*")
     .order("created_at", { ascending: false });
 
+  const { data: nfcCards } = await supabase
+    .from("cashier_nfc_cards")
+    .select("cashier_id, nfc_uid");
+
+  const nfcByCashier = Object.fromEntries(
+    (nfcCards || []).map((card) => [card.cashier_id, card.nfc_uid])
+  );
+
   return (
     <UsersManager
       users={users || []}
       stores={stores}
       viewer={profile}
+      nfcByCashier={nfcByCashier}
     />
   );
 }
