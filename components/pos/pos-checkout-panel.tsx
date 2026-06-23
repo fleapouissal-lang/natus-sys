@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, useEffect } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { lookupLoyaltyCustomer, validatePosPromoCode } from "@/lib/actions";
+import { lookupLoyaltyCustomer, validatePosPromoCode, fetchLoyaltyCustomerNotes } from "@/lib/actions";
 import {
   maxRedeemablePoints,
   discountFromPoints,
@@ -26,11 +26,12 @@ import {
   promoDiscountAmount,
   type AppliedPosPromo,
 } from "@/lib/marketing/pos-promo";
-import { formatLoyaltyEarnRule, formatLoyaltyRedeemRule } from "@/lib/loyalty/settings";
+import { formatLoyaltyEarnRule, formatLoyaltyRedeemRule, pointsValueInMad } from "@/lib/loyalty/settings";
 import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 import { formatCurrency } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
-import type { LoyaltyCustomer, LoyaltySettings } from "@/lib/types";
+import type { LoyaltyCustomer, LoyaltySettings, CustomerNote } from "@/lib/types";
+import { LoyaltyCustomerNotes } from "@/components/loyalty/loyalty-customer-notes";
 import { CreateLoyaltyCustomerModal } from "@/components/loyalty/create-customer-modal";
 import { LoyaltyCardQrForCashier } from "@/components/loyalty/loyalty-card-client-view";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
@@ -67,12 +68,32 @@ export function PosCheckoutPanel({
   const [pending, startTransition] = useTransition();
   const [showCreate, setShowCreate] = useState(false);
   const [qrCustomer, setQrCustomer] = useState<LoyaltyCustomer | null>(null);
+  const [customerNotes, setCustomerNotes] = useState<CustomerNote[]>([]);
   const [focused, setFocused] = useState(false);
   const [hidden, setHidden] = useState(false);
   const scanBufferRef = useRef("");
   const lastScanKeyRef = useRef(0);
 
   const hasBenefits = Boolean(customer || promo);
+
+  useEffect(() => {
+    if (customer) {
+      setHidden(true);
+    }
+  }, [customer?.id]);
+
+  useEffect(() => {
+    if (!customer) {
+      setCustomerNotes([]);
+      return;
+    }
+
+    void fetchLoyaltyCustomerNotes(customer.id).then((result) => {
+      if ("notes" in result) {
+        setCustomerNotes(result.notes);
+      }
+    });
+  }, [customer?.id]);
 
   function applyCard(raw?: string) {
     const trimmed = (raw ?? input).trim();
@@ -87,9 +108,10 @@ export function PosCheckoutPanel({
       }
       onCustomerChange(result.customer);
       onPointsToRedeemChange(0);
+      setCustomerNotes(result.notes);
       setInput("");
       scanBufferRef.current = "";
-      setHidden(false);
+      setHidden(true);
     });
   }
 
@@ -107,6 +129,7 @@ export function PosCheckoutPanel({
       onPromoChange(result.promo);
       setInput("");
       scanBufferRef.current = "";
+      setHidden(true);
     });
   }
 
@@ -130,33 +153,91 @@ export function PosCheckoutPanel({
   if (hidden && hasBenefits) {
     return (
       <>
-        <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-champagne/15 px-3 py-2 text-sm">
-          <div className="min-w-0 flex-1 truncate text-foreground">
-            {customer && (
-              <span className="font-medium">
-                {customer.full_name.split(/\s+/)[0]} · {customer.loyalty_points} pts
-              </span>
-            )}
-            {customer && promo && <span className="text-muted"> · </span>}
-            {promo && (
-              <span className="font-medium text-primary">
-                {promo.code} (-{formatCurrency(promoDiscount)})
-              </span>
-            )}
-            {!customer && promo && (
-              <span className="text-muted">{promo.label}</span>
-            )}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-champagne/15 px-3 py-2 text-sm">
+            <div className="min-w-0 flex-1 truncate text-foreground">
+              {customer && (
+                <span className="font-medium">
+                  {customer.full_name.split(/\s+/)[0]} · {customer.loyalty_points} pts
+                  {redeemEligible && (
+                    <span className="text-muted">
+                      {" "}
+                      (≈ {formatCurrency(pointsValueInMad(customer.loyalty_points, loyaltySettings))})
+                    </span>
+                  )}
+                </span>
+              )}
+              {customer && promo && <span className="text-muted"> · </span>}
+              {promo && (
+                <span className="font-medium text-primary">
+                  {promo.code} (-{formatCurrency(promoDiscount)})
+                </span>
+              )}
+              {!customer && promo && (
+                <span className="text-muted">{promo.label}</span>
+              )}
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setHidden(false)}
+              className="shrink-0 gap-1"
+            >
+              <ChevronDown className="h-4 w-4" />
+              Afficher
+            </Button>
           </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => setHidden(false)}
-            className="shrink-0 gap-1"
-          >
-            <ChevronDown className="h-4 w-4" />
-            Afficher
-          </Button>
+
+          {customer && redeemEligible && maxRedeem > 0 && (
+            <div className="rounded-lg border border-success/35 bg-success/5 p-3">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Utiliser les points</p>
+                  <p className="text-xs text-muted">
+                    {formatLoyaltyRedeemRule(loyaltySettings)} · max {maxRedeem} pts sur ce panier
+                  </p>
+                </div>
+                {pointsToRedeem > 0 && (
+                  <p className="text-sm font-bold text-success">
+                    -{formatCurrency(loyaltyDiscount)}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-end gap-2">
+                <div className="min-w-0 flex-1">
+                  <input
+                    type="number"
+                    min={0}
+                    max={maxRedeem}
+                    value={pointsToRedeem || ""}
+                    onChange={(e) =>
+                      onPointsToRedeemChange(
+                        Math.min(maxRedeem, Math.max(0, Number(e.target.value) || 0))
+                      )
+                    }
+                    placeholder={`${loyaltySettings.minPointsToRedeem} pts min`}
+                    className="natus-field w-full bg-surface px-3 py-2 text-sm"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => onPointsToRedeemChange(maxRedeem)}
+                >
+                  Max
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {customer && !redeemEligible && (
+            <p className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">
+              Paiement avec points dès {loyaltySettings.minPointsToRedeem} pts — encore{" "}
+              <span className="font-semibold text-primary">{pointsRemaining} pts</span>.
+            </p>
+          )}
         </div>
 
         {showCreate && (
@@ -167,7 +248,7 @@ export function PosCheckoutPanel({
               onPointsToRedeemChange(0);
               setShowCreate(false);
               setQrCustomer(c);
-              setHidden(false);
+              setHidden(true);
             }}
           />
         )}
@@ -334,6 +415,7 @@ export function PosCheckoutPanel({
                 onClick={() => {
                   onCustomerChange(null);
                   onPointsToRedeemChange(0);
+                  setCustomerNotes([]);
                   setHidden(false);
                 }}
                 className="absolute right-2 top-2 z-10 rounded-full bg-black/50 p-1 text-[#EBD4BA] hover:bg-black/70 cursor-pointer"
@@ -349,30 +431,51 @@ export function PosCheckoutPanel({
               <span className="font-semibold text-success">+{pointsToEarn} pts</span>
             </div>
 
+            <LoyaltyCustomerNotes notes={customerNotes} compact />
+
             {redeemEligible && maxRedeem > 0 && (
-              <div className="flex items-end gap-2">
-                <div className="min-w-0 flex-1">
-                  <label className="mb-1 block text-xs font-medium">
-                    Points (max {maxRedeem})
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={maxRedeem}
-                    value={pointsToRedeem || ""}
-                    onChange={(e) =>
-                      onPointsToRedeemChange(
-                        Math.min(maxRedeem, Math.max(0, Number(e.target.value) || 0))
-                      )
-                    }
-                    className="natus-field w-full bg-surface px-3 py-1.5 text-sm"
-                  />
+              <div className="rounded-lg border border-success/35 bg-success/5 p-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      Convertir les points en réduction
+                    </p>
+                    <p className="text-xs text-muted">
+                      {formatLoyaltyRedeemRule(loyaltySettings)} · max {maxRedeem} pts
+                    </p>
+                  </div>
+                  {pointsToRedeem > 0 && (
+                    <p className="text-sm font-bold text-success">
+                      -{formatCurrency(loyaltyDiscount)}
+                    </p>
+                  )}
                 </div>
-                {pointsToRedeem > 0 && (
-                  <p className="shrink-0 pb-2 text-xs text-success">
-                    -{formatCurrency(loyaltyDiscount)}
-                  </p>
-                )}
+                <div className="flex items-end gap-2">
+                  <div className="min-w-0 flex-1">
+                    <label className="mb-1 block text-xs font-medium">Points à utiliser</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={maxRedeem}
+                      value={pointsToRedeem || ""}
+                      onChange={(e) =>
+                        onPointsToRedeemChange(
+                          Math.min(maxRedeem, Math.max(0, Number(e.target.value) || 0))
+                        )
+                      }
+                      className="natus-field w-full bg-surface px-3 py-1.5 text-sm"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="mb-0.5"
+                    onClick={() => onPointsToRedeemChange(maxRedeem)}
+                  >
+                    Max
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -422,7 +525,7 @@ export function PosCheckoutPanel({
             onPointsToRedeemChange(0);
             setShowCreate(false);
             setQrCustomer(c);
-            setHidden(false);
+            setHidden(true);
           }}
         />
       )}

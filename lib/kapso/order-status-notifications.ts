@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getKapsoConfig } from "@/lib/kapso/config";
-import { sendKapsoTextMessage } from "@/lib/kapso/client";
+import { getKapsoConfig, getKapsoStatusTemplateConfig } from "@/lib/kapso/config";
+import { sendKapsoTemplateMessage, sendKapsoTextMessage } from "@/lib/kapso/client";
 import { resolveKapsoRecipient } from "@/lib/kapso/recipient";
 import { orderTrackingShortUrl } from "@/lib/short-url";
 import { clientFirstName } from "@/lib/kapso/whatsapp-bot/language";
@@ -55,6 +55,53 @@ function buildStatusMessage(
   return lines.join("\n");
 }
 
+function isOutsideMessagingWindow(error: string | undefined, status?: number): boolean {
+  if (status !== 422) return false;
+  const msg = error?.toLowerCase() ?? "";
+  return msg.includes("24-hour") || msg.includes("24 hour") || msg.includes("template");
+}
+
+async function dispatchStatusMessage(
+  recipient: string,
+  order: OrderNotifyRow,
+  status: ShopifyWorkflowStatus,
+  trackingUrl: string | null
+): Promise<{ ok: boolean; skipped?: boolean }> {
+  const config = getKapsoConfig();
+  if (!config) return { ok: false };
+
+  const statusTemplate = getKapsoStatusTemplateConfig();
+  const customerName =
+    clientFirstName(order.customer_name) || order.customer_name?.trim() || "Client";
+  const statusLabel = workflowStatusLabel(status);
+  const tracking = trackingUrl && status !== "delivered" ? trackingUrl : "—";
+
+  if (statusTemplate) {
+    const templateResult = await sendKapsoTemplateMessage(
+      config,
+      recipient,
+      statusTemplate.name,
+      statusTemplate.language,
+      [customerName, order.order_number, statusLabel, tracking]
+    );
+    if (templateResult.ok) return { ok: true };
+    if (isOutsideMessagingWindow(templateResult.error, templateResult.status)) {
+      return { ok: false, skipped: true };
+    }
+  }
+
+  const body = buildStatusMessage(order, status, trackingUrl);
+  const textResult = await sendKapsoTextMessage(config, recipient, body);
+  if (textResult.ok) return { ok: true };
+
+  if (isOutsideMessagingWindow(textResult.error, textResult.status)) {
+    return { ok: false, skipped: true };
+  }
+
+  console.error("[Kapso] notify status:", status, textResult.error);
+  return { ok: false };
+}
+
 export async function notifyShopifyOrderWorkflowStatus(
   orderId: string,
   newStatus: ShopifyWorkflowStatus,
@@ -89,12 +136,16 @@ export async function notifyShopifyOrderWorkflowStatus(
     ? await orderTrackingShortUrl(order.tracking_token)
     : null;
 
-  const body = buildStatusMessage(order, newStatus, trackingUrl);
-  const result = await sendKapsoTextMessage(config, recipient, body);
-  if (!result.ok) {
-    console.error("[Kapso] notify status:", newStatus, result.error);
+  const result = await dispatchStatusMessage(recipient, order, newStatus, trackingUrl);
+  if (result.skipped) {
+    console.warn(
+      "[Kapso] notification statut ignorée (hors fenêtre 24 h — configurez KAPSO_STATUS_TEMPLATE_NAME):",
+      newStatus,
+      order.order_number
+    );
     return;
   }
+  if (!result.ok) return;
 
   await admin
     .from("shopify_orders")

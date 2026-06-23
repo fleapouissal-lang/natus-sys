@@ -6,12 +6,15 @@ import {
   isMobilePlanningOnlyMode,
   isMobileStorePosGateMode,
   isMobileBottomNavVisible,
+  isMobilePosDesktopOnlyRole,
 } from "@/lib/layout/mobile-planning";
+import { useIsMobileViewport } from "@/lib/hooks/use-mobile-viewport";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileBottomNav, MobileTopBar } from "@/components/layout/mobile-nav";
 import {
   MobilePlanningRedirect,
   MobileStorePosGateRedirect,
+  MobileManagementPosRedirect,
 } from "@/components/layout/mobile-planning-redirect";
 import { SessionGuard } from "@/components/auth/session-guard";
 import { CashierNotificationsProvider } from "@/components/notifications/cashier-notifications-context";
@@ -55,35 +58,30 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const isMobile = useIsMobileViewport();
   const isPos = isCashierPosRoute(pathname);
 
   const mobilePlanningOnly = isMobilePlanningOnlyMode({
     isPersonalCashier,
     isStorePos,
-    hasPosOperator,
   });
+
+  const planningOnlyActive = isMobile && mobilePlanningOnly;
 
   const mobileStorePosGate = isMobileStorePosGateMode({
     isStorePos,
     hasPosOperator,
+    isMobile,
   });
 
-  const scope =
-    isPersonalCashier || (isStorePos && hasPosOperator)
-      ? null
-      : resolveNotificationScope(role, storeId, city ?? cityLabel);
+  const scope = planningOnlyActive
+    ? null
+    : resolveNotificationScope(role, storeId, city ?? cityLabel);
 
-  const topBarName =
-    isStorePos && hasPosOperator && posOperatorName ? posOperatorName : userName;
-
-  const mobileSubtitle = mobilePlanningOnly
-    ? "Planning · lecture seule"
-    : hasPosOperator && posOperatorName
-      ? `Caissier : ${posOperatorName}`
-      : cityLabel || null;
+  const mobileSubtitle = planningOnlyActive ? "Planning · lecture seule" : cityLabel || null;
 
   const showMobileTopBar =
-    (isPersonalCashier || !mobileStorePosGate) && !isPos;
+    (planningOnlyActive || !mobileStorePosGate) && !isPos;
 
   const showMobileBottomNav =
     isMobileBottomNavVisible({
@@ -92,41 +90,42 @@ export function DashboardShell({
       hasPosOperator,
     }) && !isPos;
 
+  const managementPosDesktopOnly = isMobile && isMobilePosDesktopOnlyRole(role);
+
   const shell = (
     <>
       <SessionGuard disableIdleLogout={isPos && isStorePos} isStorePos={isStorePos} />
       <MobileStorePosGateRedirect enabled={mobileStorePosGate} />
-      <MobilePlanningRedirect enabled={mobilePlanningOnly} />
+      <MobilePlanningRedirect enabled={planningOnlyActive} />
+      <MobileManagementPosRedirect enabled={managementPosDesktopOnly} role={role} />
 
       <div className="flex h-[100dvh] overflow-hidden bg-page">
-        {!isPersonalCashier && (
-          <div className="hidden h-full shrink-0 md:flex">
-            <Sidebar
-              role={role}
-              userName={userName}
-              cityLabel={cityLabel}
-              isStorePos={isStorePos}
-              isPersonalCashier={isPersonalCashier}
-              hasPosOperator={hasPosOperator}
-              posOperatorName={posOperatorName}
-            />
-          </div>
-        )}
+        <div className="hidden h-full shrink-0 md:flex">
+          <Sidebar
+            role={role}
+            userName={userName}
+            cityLabel={cityLabel}
+            isStorePos={isStorePos}
+            isPersonalCashier={isPersonalCashier}
+            hasPosOperator={hasPosOperator}
+            posOperatorName={posOperatorName}
+          />
+        </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {showMobileTopBar && (
             <MobileTopBar
-              userName={topBarName}
+              userName={userName}
               subtitle={mobileSubtitle}
               isStorePos={isStorePos}
-              alwaysVisible={isPersonalCashier}
+              alwaysVisible={planningOnlyActive}
             />
           )}
 
           <main
             className={cn(
               "natus-content min-h-0 flex-1 bg-page",
-              isPos && !mobilePlanningOnly
+              isPos && !planningOnlyActive
                 ? "flex min-h-0 flex-col overflow-hidden p-0 md:p-0"
                 : "overflow-y-auto p-4 md:p-8",
               showMobileBottomNav && "natus-main-mobile-nav",
@@ -143,7 +142,7 @@ export function DashboardShell({
                 </div>
               </>
             )}
-            {isPos && !mobilePlanningOnly ? (
+            {isPos && !planningOnlyActive ? (
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 {children}
               </div>

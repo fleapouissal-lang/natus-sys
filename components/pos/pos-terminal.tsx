@@ -36,6 +36,10 @@ import {
   CashChangeCalculator,
   parseCashReceived,
 } from "@/components/pos/cash-change-calculator";
+import {
+  PosPaymentModeSelector,
+  type PosPaymentOption,
+} from "@/components/pos/pos-payment-mode-selector";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
@@ -72,11 +76,7 @@ import type { ShopifyOrderPosContext } from "@/lib/orders";
 
 type ManagerMode = "stock" | "sale";
 
-const PAYMENT_OPTIONS: {
-  id: PaymentMethod;
-  label: string;
-  icon: typeof Banknote;
-}[] = [
+const PAYMENT_OPTIONS: PosPaymentOption[] = [
   { id: "cash", label: "Espèces", icon: Banknote },
   { id: "card", label: "TPE", icon: CreditCard },
 ];
@@ -133,6 +133,7 @@ export function PosTerminal({
   const [mobileCartStep, setMobileCartStep] = useState<PosMobileCartStep>("loyalty");
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cashCalculatorRef = useRef<HTMLDivElement>(null);
   const orderNotifications = useCashierNotifications();
   const preparableOrderCount = useMemo(
     () => shopifyOrders.filter(canPrepareOrderForPos).length,
@@ -655,8 +656,16 @@ export function PosTerminal({
   useEffect(() => {
     if (paymentMethod !== "cash") {
       setCashReceivedInput("");
+      return;
     }
-  }, [paymentMethod]);
+    if (cart.length === 0) return;
+
+    const timer = window.setTimeout(() => {
+      cashCalculatorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 100);
+
+    return () => window.clearTimeout(timer);
+  }, [paymentMethod, cart.length]);
 
   function renderCartItems() {
     if (cart.length === 0) {
@@ -775,123 +784,192 @@ export function PosTerminal({
     );
   }
 
-  function renderPaymentFooter(showPrintButton: boolean) {
+  function renderCartTotals(variant: "full" | "dock" = "full") {
+    const isDock = variant === "dock";
+
+    return (
+      <div className={cn("space-y-2", isDock ? "text-xs" : "text-sm")}>
+        {(loyaltyDiscount > 0 || promoDiscount > 0) && (
+          <>
+            <div className="flex items-center justify-between text-muted">
+              <span>Sous-total</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+            {loyaltyDiscount > 0 && (
+              <div className="flex items-center justify-between text-success">
+                <span>Points fidélité</span>
+                <span>-{formatCurrency(loyaltyDiscount)}</span>
+              </div>
+            )}
+            {promoDiscount > 0 && appliedPromo && (
+              <div className="flex items-center justify-between text-success">
+                <span>Code {appliedPromo.code}</span>
+                <span>-{formatCurrency(promoDiscount)}</span>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="flex items-center justify-between text-muted">
+          <span>Total HT</span>
+          <span className="font-medium text-foreground">{formatCurrency(totalHt)}</span>
+        </div>
+
+        <div className="border-t border-dashed border-border" />
+
+        <div className="flex items-center justify-between">
+          <span className={cn("font-semibold", isDock ? "text-sm" : "text-base")}>
+            Total TTC
+          </span>
+          <span
+            className={cn(
+              "font-bold text-primary",
+              isDock ? "text-xl" : "text-2xl"
+            )}
+          >
+            {formatCurrency(totalTtc)}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between border-t border-dashed border-border pt-2 text-muted">
+          <span>TVA ({tvaPercent} %)</span>
+          <span>{formatCurrency(totalTva)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  function renderPaymentModeSelector() {
+    if (isShopifyOrderCheckout) {
+      return (
+        <div className="rounded-2xl border border-primary/30 bg-champagne/20 px-4 py-3">
+          <p className="text-xs font-medium text-muted">Paiement commande web</p>
+          <p className="mt-1 text-sm font-semibold text-foreground">{shopifyPaymentLabel}</p>
+          <p className="mt-1 text-xs text-muted">
+            Le ticket s&apos;imprime directement — pas de choix espèces/carte
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <PosPaymentModeSelector
+        value={paymentMethod}
+        options={PAYMENT_OPTIONS}
+        onChange={setPaymentMethod}
+        disabled={cart.length === 0}
+      />
+    );
+  }
+
+  function renderCashCalculatorPanel(options?: { compact?: boolean; dense?: boolean }) {
+    if (!showCashCalculator) return null;
+
+    return (
+      <div ref={cashCalculatorRef} className="natus-pos-cash-calculator-panel">
+        <CashChangeCalculator
+          total={totalTtc}
+          value={cashReceivedInput}
+          onChange={setCashReceivedInput}
+          compact={options?.compact}
+          dense={options?.dense}
+          className={options?.compact || options?.dense ? "mt-0" : undefined}
+        />
+      </div>
+    );
+  }
+
+  function renderPaymentDetails(options?: {
+    includePaymentMode?: boolean;
+    includeCalculator?: boolean;
+    compactCalculator?: boolean;
+    denseCalculator?: boolean;
+  }) {
+    const includePaymentMode = options?.includePaymentMode ?? true;
+    const includeCalculator = options?.includeCalculator ?? true;
+
     return (
       <>
-        <div className="space-y-2 text-sm">
-          {(loyaltyDiscount > 0 || promoDiscount > 0) && (
-            <>
-              <div className="flex items-center justify-between text-muted">
-                <span>Sous-total</span>
-                <span>{formatCurrency(subtotal)}</span>
-              </div>
-              {loyaltyDiscount > 0 && (
-                <div className="flex items-center justify-between text-success">
-                  <span>Points fidélité</span>
-                  <span>-{formatCurrency(loyaltyDiscount)}</span>
-                </div>
-              )}
-              {promoDiscount > 0 && appliedPromo && (
-                <div className="flex items-center justify-between text-success">
-                  <span>Code {appliedPromo.code}</span>
-                  <span>-{formatCurrency(promoDiscount)}</span>
-                </div>
-              )}
-            </>
-          )}
-          <div className="flex items-center justify-between text-muted">
-            <span>Total HT</span>
-            <span>{formatCurrency(totalHt)}</span>
-          </div>
-          <div className="flex items-center justify-between text-muted">
-            <span>TVA ({tvaPercent} %)</span>
-            <span>{formatCurrency(totalTva)}</span>
-          </div>
-          <div className="border-t border-dashed border-border" />
-          <div className="flex items-center justify-between">
-            <span className="text-base font-semibold">Total TTC</span>
-            <span className="text-2xl font-bold text-primary">
-              {formatCurrency(totalTtc)}
-            </span>
-          </div>
-        </div>
+        {includePaymentMode && <div className="mb-4">{renderPaymentModeSelector()}</div>}
 
-        <div className="mt-4">
-          {isShopifyOrderCheckout ? (
-            <div className="rounded-lg border border-primary/30 bg-champagne/20 px-3 py-3">
-              <p className="text-xs font-medium text-muted">Paiement commande web</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">
-                {shopifyPaymentLabel}
-              </p>
-              <p className="mt-1 text-xs text-muted">
-                Le ticket s&apos;imprime directement — pas de choix espèces/carte
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="mb-2 text-sm font-semibold text-foreground">Mode de paiement</p>
-              <div className="grid grid-cols-2 gap-2">
-                {PAYMENT_OPTIONS.map(({ id, label, icon: Icon }) => {
-                  const selected = paymentMethod === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setPaymentMethod(id)}
-                      disabled={cart.length === 0}
-                      className={cn(
-                        "flex flex-col items-center gap-1.5 border bg-page px-3 py-3 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50",
-                        selected
-                          ? "border-primary bg-champagne/30"
-                          : "border-border hover:border-primary/60"
-                      )}
-                    >
-                      <Icon className="h-5 w-5 text-primary" />
-                      <span className="text-xs font-semibold">{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {showCashCalculator && (
-                <CashChangeCalculator
-                  total={totalTtc}
-                  value={cashReceivedInput}
-                  onChange={setCashReceivedInput}
-                />
-              )}
-            </>
-          )}
-          {isOrderMode && !orderFullyValidated && (
-            <p className="mt-2 text-xs text-warning">
-              Validez tous les produits ({orderValidationDone}/{orderValidationTotal}) — scan ou +
-            </p>
-          )}
-        </div>
+        {renderCartTotals()}
 
-        {showPrintButton && (
-          <Button
-            className="mt-4 w-full"
-            size="lg"
-            onClick={() =>
-              void handlePay(
-                isShopifyOrderCheckout
-                  ? activeShopifyOrder!.defaultPayment
-                  : paymentMethod
-              )
-            }
-            disabled={
-              cart.length === 0 ||
-              loading ||
-              (isOrderMode && !orderFullyValidated) ||
-              (showCashCalculator && !cashPaymentReady)
-            }
-            loading={loading}
-          >
-            <Printer className="h-4 w-4" />
-            Imprimer ticket
-          </Button>
+        {(includeCalculator || isOrderMode) && (
+          <div className="mt-4">
+            {includeCalculator &&
+              renderCashCalculatorPanel({
+                compact: options?.compactCalculator,
+                dense: options?.denseCalculator,
+              })}
+            {isOrderMode && !orderFullyValidated && (
+              <p className="mt-2 text-xs text-warning">
+                Validez tous les produits ({orderValidationDone}/{orderValidationTotal}) — scan ou +
+              </p>
+            )}
+          </div>
         )}
       </>
+    );
+  }
+
+  function renderDesktopCheckoutDock() {
+    return (
+      <div className="natus-pos-checkout-dock shrink-0">
+        <div className="space-y-0">
+          {!isShopifyOrderCheckout && (
+            <div className="border-b border-primary/10 px-4 pb-3 pt-3">
+              {renderPaymentModeSelector()}
+            </div>
+          )}
+
+          <div className="border-b border-primary/10 px-4 py-2.5">
+            {isShopifyOrderCheckout
+              ? renderPaymentModeSelector()
+              : renderCartTotals(showCashCalculator ? "dock" : "full")}
+          </div>
+
+          {showCashCalculator && (
+            <div className="border-b border-primary/10 px-4 py-2.5">
+              {renderCashCalculatorPanel({ dense: true })}
+            </div>
+          )}
+
+          <div className="space-y-2 px-4 py-3">
+            {isOrderMode && !orderFullyValidated && (
+              <p className="text-xs text-warning">
+                Validez tous les produits ({orderValidationDone}/{orderValidationTotal}) — scan ou +
+              </p>
+            )}
+            {renderPrintTicketButton()}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderPrintTicketButton() {
+    return (
+      <Button
+        className="w-full"
+        size="lg"
+        onClick={() =>
+          void handlePay(
+            isShopifyOrderCheckout
+              ? activeShopifyOrder!.defaultPayment
+              : paymentMethod
+          )
+        }
+        disabled={
+          cart.length === 0 ||
+          loading ||
+          (isOrderMode && !orderFullyValidated) ||
+          (showCashCalculator && !cashPaymentReady)
+        }
+        loading={loading}
+      >
+        <Printer className="h-4 w-4" />
+        Imprimer ticket
+      </Button>
     );
   }
 
@@ -1244,21 +1322,6 @@ export function PosTerminal({
                     </div>
                   </div>
 
-                  {!isShopifyOrderCheckout && !isStockScan && (
-                    <div className="mt-4 hidden md:block">
-                      <PosCheckoutPanel
-                        subtotal={subtotal}
-                        storeId={defaultStoreId || undefined}
-                        customer={loyaltyCustomer}
-                        pointsToRedeem={pointsToRedeem}
-                        promo={appliedPromo}
-                        onCustomerChange={setLoyaltyCustomer}
-                        onPointsToRedeemChange={setPointsToRedeem}
-                        onPromoChange={setAppliedPromo}
-                        loyaltySettings={loyaltySettings}
-                      />
-                    </div>
-                  )}
                 </div>
 
                 {/* Mobile — étapes Fidélité → Produits → Paiement */}
@@ -1289,7 +1352,8 @@ export function PosTerminal({
                       />
                     )}
                     {mobileCartStep === "products" && renderCartItems()}
-                    {mobileCartStep === "payment" && renderPaymentFooter(false)}
+                    {mobileCartStep === "payment" &&
+                      renderPaymentDetails({ denseCalculator: true })}
                   </div>
 
                   <div className="natus-pos-cart-mobile-footer shrink-0 border-t border-primary/10 bg-surface px-4 py-3 md:border-t md:border-primary/10">
@@ -1359,11 +1423,24 @@ export function PosTerminal({
                 {/* Desktop — panier complet */}
                 <div className="hidden min-h-0 flex-1 flex-col md:flex">
                   <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-natus">
+                    {!isShopifyOrderCheckout && !isStockScan && (
+                      <div className="mb-4">
+                        <PosCheckoutPanel
+                          subtotal={subtotal}
+                          storeId={defaultStoreId || undefined}
+                          customer={loyaltyCustomer}
+                          pointsToRedeem={pointsToRedeem}
+                          promo={appliedPromo}
+                          onCustomerChange={setLoyaltyCustomer}
+                          onPointsToRedeemChange={setPointsToRedeem}
+                          onPromoChange={setAppliedPromo}
+                          loyaltySettings={loyaltySettings}
+                        />
+                      </div>
+                    )}
                     {renderCartItems()}
                   </div>
-                  <div className="shrink-0 bg-surface px-4 py-4">
-                    {renderPaymentFooter(true)}
-                  </div>
+                  {renderDesktopCheckoutDock()}
                 </div>
               </div>
             </div>

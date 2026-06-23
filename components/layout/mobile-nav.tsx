@@ -16,7 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import type { UserRole } from "@/lib/types";
-import { isMobileBottomNavVisible } from "@/lib/layout/mobile-planning";
+import { isMobileBottomNavVisible, isMobilePosDesktopOnlyRole } from "@/lib/layout/mobile-planning";
 import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
 
 export function MobileTopBar({
@@ -130,6 +130,8 @@ export function MobileBottomNav({
     isStorePos,
     isPersonalCashier,
     hasPosOperator,
+    planningOnlyNav: isPersonalCashier || isStorePos,
+    hideMobilePos: isMobilePosDesktopOnlyRole(role),
   });
 
   if (

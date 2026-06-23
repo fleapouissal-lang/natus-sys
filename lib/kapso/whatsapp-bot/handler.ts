@@ -67,6 +67,21 @@ async function logProblemOnOrder(
     })
     .eq("id", order.id);
 
+  try {
+    const { syncCashierFollowUpNoteToLoyaltyCard } = await import(
+      "@/lib/loyalty/customer-notes"
+    );
+    await syncCashierFollowUpNoteToLoyaltyCard(admin, {
+      shopifyOrderId: order.id,
+      orderNumber: order.order_number,
+      customerPhone: phone,
+      note: problemText,
+      source: "whatsapp",
+    });
+  } catch (err) {
+    console.error("[Kapso] loyalty note:", err);
+  }
+
   if (order.workflow_status === "delivered") {
     await registerProblemComplaint({
       orderId: order.id,

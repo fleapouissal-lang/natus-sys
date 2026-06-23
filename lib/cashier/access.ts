@@ -41,18 +41,19 @@ export async function isPersonalCashierPlanningMode(
 
 export async function resolveStaffHomePath(
   supabase: SupabaseClient,
-  profile: CashierProfile & { role: UserRole }
+  profile: CashierProfile & { role: UserRole },
+  options?: { isMobile?: boolean }
 ): Promise<string> {
   if (profile.role !== "cashier") {
     return getHomePath(profile.role);
   }
 
   if (profile.is_store_pos) {
-    return "/cashier/pos";
+    return options?.isMobile ? CASHIER_PLANNING_PATH : "/cashier/pos";
   }
 
   if (profile.store_id && (await storeHasActivePosAccount(supabase, profile.store_id))) {
-    return CASHIER_PLANNING_PATH;
+    return options?.isMobile ? CASHIER_PLANNING_PATH : "/cashier/pos";
   }
 
   return "/cashier/pos";

@@ -4,12 +4,13 @@ import { getHomePath } from "@/lib/permissions";
 import { applySecurityHeaders } from "@/lib/security/headers";
 import { asSessionCookieOptions } from "@/lib/supabase/session-cookies";
 import { getCashierMobileRedirectPath } from "@/lib/cashier/mobile-access";
+import { isMobileUserAgent } from "@/lib/layout/mobile-request";
 import {
-  CASHIER_PLANNING_PATH,
-  isCashierPlanningRoute,
-  isPersonalCashierPlanningMode,
-  resolveStaffHomePath,
-} from "@/lib/cashier/access";
+  getMobilePosRedirectPath,
+  isMobilePosDesktopOnlyRole,
+} from "@/lib/layout/mobile-planning";
+import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
+import { resolveStaffHomePath } from "@/lib/cashier/access";
 import type { UserRole } from "@/lib/types";
 
 const STAFF_ROLES: UserRole[] = ["cashier", "manager", "directeur", "admin", "hub"];
@@ -76,7 +77,9 @@ export async function updateSession(request: NextRequest) {
 
     if (isAuthRoute && role && profile) {
       const url = request.nextUrl.clone();
-      url.pathname = await resolveStaffHomePath(supabase, profile);
+      url.pathname = await resolveStaffHomePath(supabase, profile, {
+        isMobile: isMobileUserAgent(request.headers.get("user-agent")),
+      });
       return applySecurityHeaders(NextResponse.redirect(url));
     }
 
@@ -131,16 +134,19 @@ export async function updateSession(request: NextRequest) {
         return applySecurityHeaders(NextResponse.redirect(url));
       }
 
-      if (role === "cashier" && profile) {
-        if (
-          (await isPersonalCashierPlanningMode(supabase, profile)) &&
-          !isCashierPlanningRoute(pathname)
-        ) {
-          const url = request.nextUrl.clone();
-          url.pathname = CASHIER_PLANNING_PATH;
-          return applySecurityHeaders(NextResponse.redirect(url));
-        }
+      const isMobile = isMobileUserAgent(request.headers.get("user-agent"));
+      if (
+        isMobile &&
+        role &&
+        isMobilePosDesktopOnlyRole(role) &&
+        isCashierPosRoute(pathname)
+      ) {
+        const url = request.nextUrl.clone();
+        url.pathname = getMobilePosRedirectPath(role);
+        return applySecurityHeaders(NextResponse.redirect(url));
+      }
 
+      if (role === "cashier" && profile) {
         const mobileRedirect = await getCashierMobileRedirectPath(
           supabase,
           { ...profile, id: user.id },

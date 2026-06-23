@@ -17,7 +17,8 @@ import { formatLoyaltyEarnRule, formatLoyaltyRedeemRule } from "@/lib/loyalty/se
 import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 import { formatCurrency } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
-import type { LoyaltyCustomer, LoyaltySettings } from "@/lib/types";
+import type { LoyaltyCustomer, LoyaltySettings, CustomerNote } from "@/lib/types";
+import { LoyaltyCustomerNotes } from "@/components/loyalty/loyalty-customer-notes";
 import { CreateLoyaltyCustomerModal } from "@/components/loyalty/create-customer-modal";
 import { LoyaltyCardQrForCashier } from "@/components/loyalty/loyalty-card-client-view";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
@@ -45,6 +46,7 @@ export function PosLoyaltyPanel({
   const [pending, startTransition] = useTransition();
   const [showCreate, setShowCreate] = useState(false);
   const [qrCustomer, setQrCustomer] = useState<LoyaltyCustomer | null>(null);
+  const [customerNotes, setCustomerNotes] = useState<CustomerNote[]>([]);
   const [scannerFocused, setScannerFocused] = useState(false);
 
   function runLookup(value: string) {
@@ -60,6 +62,7 @@ export function PosLoyaltyPanel({
       }
       onCustomerChange(result.customer);
       onPointsToRedeemChange(0);
+      setCustomerNotes(result.notes);
       setLookupInput("");
     });
   }
@@ -113,6 +116,7 @@ export function PosLoyaltyPanel({
                 onClick={() => {
                   onCustomerChange(null);
                   onPointsToRedeemChange(0);
+                  setCustomerNotes([]);
                 }}
                 className="absolute right-2 top-2 z-10 rounded-full bg-black/50 p-1 text-[#EBD4BA] hover:bg-black/70 cursor-pointer"
                 aria-label="Retirer le client"
@@ -126,6 +130,8 @@ export function PosLoyaltyPanel({
               <p className="font-medium text-foreground">{customer.full_name}</p>
               <p className="text-muted">{formatPhoneDisplay(customer.phone)}</p>
             </div>
+
+            <LoyaltyCustomerNotes notes={customerNotes} compact />
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-lg border border-border bg-surface px-3 py-2">

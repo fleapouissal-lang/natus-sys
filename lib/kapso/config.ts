@@ -27,6 +27,15 @@ export function getKapsoTemplateConfig(): KapsoTemplateConfig | null {
   };
 }
 
+export function getKapsoStatusTemplateConfig(): KapsoTemplateConfig | null {
+  const name = process.env.KAPSO_STATUS_TEMPLATE_NAME?.trim();
+  if (!name) return null;
+  return {
+    name,
+    language: process.env.KAPSO_STATUS_TEMPLATE_LANGUAGE?.trim() || "fr",
+  };
+}
+
 /** true = envoi vers KAPSO_SANDBOX_OVERRIDE_TO (tests uniquement) */
 export function isKapsoSandboxMode(): boolean {
   return Boolean(process.env.KAPSO_SANDBOX_OVERRIDE_TO?.trim());

@@ -14,16 +14,19 @@ import { pointsValueInMad } from "@/lib/loyalty/settings";
 import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
-import type { LoyaltyCustomer, LoyaltyTransaction, LoyaltySettings } from "@/lib/types";
+import type { LoyaltyCustomer, LoyaltyTransaction, LoyaltySettings, CustomerNote } from "@/lib/types";
+import { LoyaltyCustomerNotes } from "@/components/loyalty/loyalty-customer-notes";
 
 export function LoyaltyCustomerDetailView({
   customer,
   transactions,
+  notes = [],
   backHref,
   loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
 }: {
   customer: LoyaltyCustomer;
   transactions: LoyaltyTransaction[];
+  notes?: CustomerNote[];
   backHref: string;
   loyaltySettings?: LoyaltySettings;
 }) {
@@ -113,6 +116,20 @@ export function LoyaltyCustomerDetailView({
             </Link>
           </Card>
         </div>
+
+        <Card padding={false}>
+          <div className="border-b border-border px-6 py-4">
+            <h2 className="text-lg font-semibold">Notes client</h2>
+            <p className="text-sm text-muted">Commandes en ligne et suivi caisse</p>
+          </div>
+          <div className="px-6 py-4">
+            {notes.length === 0 ? (
+              <p className="text-sm text-muted">Aucune note pour ce client.</p>
+            ) : (
+              <LoyaltyCustomerNotes notes={notes} />
+            )}
+          </div>
+        </Card>
 
         <Card padding={false}>
           <div className="border-b border-border px-6 py-4">

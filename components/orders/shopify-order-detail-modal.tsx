@@ -24,6 +24,7 @@ import {
 } from "@/lib/shopify/order-status";
 import {
   resolveProductForLineItem,
+  orderLineDisplayName,
   type ProductLineLookup,
 } from "@/lib/shopify/order-cart";
 import { isConfirmationFollowUpResolved } from "@/lib/shopify/confirmation-follow-up";
@@ -231,7 +232,16 @@ export function ShopifyOrderDetailModal({
             const unit = parseFloat(item.price) || 0;
             const lineTotal = unit * item.quantity;
             const product = resolveProductForLineItem(item, products);
-            const displayProduct = product ?? {
+            const displayName = product
+              ? orderLineDisplayName(product, products)
+              : item.title;
+            const displayProduct = product
+              ? {
+                  ...product,
+                  name: displayName,
+                  price: unit > 0 ? unit : Number(product.price) || 0,
+                }
+              : {
               id: String(item.id),
               name: item.title,
               barcode: item.sku || "",
@@ -247,7 +257,7 @@ export function ShopifyOrderDetailModal({
               >
                 <ProductImage product={displayProduct} size="sm" className="shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium leading-snug">{item.title}</p>
+                  <p className="font-medium leading-snug">{displayName}</p>
                   <p className="mt-0.5 font-mono text-xs text-muted">
                     {item.sku || "—"}
                   </p>

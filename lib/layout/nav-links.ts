@@ -105,22 +105,29 @@ export function resolveNavLinks(input: {
   isStorePos?: boolean;
   isPersonalCashier?: boolean;
   hasPosOperator?: boolean;
+  /** Mobile : navigation réduite au planning */
+  planningOnlyNav?: boolean;
+  /** Mobile : masquer la caisse (direction, gérant, hub) */
+  hideMobilePos?: boolean;
 }): NavLinkItem[] {
   const basePath = getManagementBasePath(input.role);
 
   if (input.role === "livreur") return livreurLinks;
 
   if (input.role === "cashier") {
-    if (input.isPersonalCashier) return personalCashierLinks;
-    if (input.isStorePos) {
-      if (input.hasPosOperator) return personalCashierLinks;
-      return cashierLinks.filter((link) => link.href !== "/cashier/planning");
-    }
+    if (input.planningOnlyNav) return personalCashierLinks;
+    if (input.isStorePos) return cashierLinks;
+    if (input.isPersonalCashier) return cashierLinks;
     return cashierLinks;
   }
 
-  if (basePath) return buildManagementLinks(basePath);
-  return cashierLinks;
+  let links = basePath ? buildManagementLinks(basePath) : cashierLinks;
+
+  if (input.hideMobilePos) {
+    links = links.filter((link) => link.href !== "/cashier/pos");
+  }
+
+  return links;
 }
 
 export function isNavLinkActive(pathname: string, href: string): boolean {

@@ -91,7 +91,7 @@ export async function canStaffAccessLoyaltyCustomer(
 export async function getLoyaltyCustomerForStaff(
   profile: Profile,
   customerId: string
-): Promise<{ customer: LoyaltyCustomer; transactions: LoyaltyTransaction[] } | null> {
+): Promise<{ customer: LoyaltyCustomer; transactions: LoyaltyTransaction[]; notes: import("@/lib/types").CustomerNote[] } | null> {
   const supabase = await createClient();
 
   const { data: customer, error } = await supabase
@@ -110,10 +110,13 @@ export async function getLoyaltyCustomerForStaff(
   if (!allowed) return null;
 
   const transactions = await getCustomerTransactions(supabase, customer.id, 50);
+  const { getCustomerNotes } = await import("@/lib/loyalty/customer-notes");
+  const notes = await getCustomerNotes(supabase, customer.id, 30);
 
   return {
     customer: customer as LoyaltyCustomer,
     transactions,
+    notes,
   };
 }
 

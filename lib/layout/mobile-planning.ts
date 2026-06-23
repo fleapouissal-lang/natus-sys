@@ -1,25 +1,35 @@
-/** Mobile : caissier connecté → planning seul (compte perso ou terminal magasin) */
+import type { UserRole } from "@/lib/types";
+import { getHomePath, getManagementBasePath } from "@/lib/permissions";
+
+/** Mobile : compte caisse magasin ou caissier perso → planning seul */
 export function isMobilePlanningOnlyMode(input: {
   isPersonalCashier?: boolean;
   isStorePos?: boolean;
-  hasPosOperator?: boolean;
 }): boolean {
-  return Boolean(
-    input.isPersonalCashier || (input.isStorePos && input.hasPosOperator)
+  return Boolean(input.isPersonalCashier || input.isStorePos);
+}
+
+/** Caisse POS réservée au desktop pour direction, gérants et hub inventaire */
+export function isMobilePosDesktopOnlyRole(role: UserRole): boolean {
+  return (
+    role === "directeur" ||
+    role === "admin" ||
+    role === "manager" ||
+    role === "hub"
   );
 }
 
-/** Mobile compte caisse magasin : pas de barre du bas (gate ou planning caissier) */
-export function isMobileStorePosMode(isStorePos?: boolean): boolean {
-  return Boolean(isStorePos);
+export function getMobilePosRedirectPath(role: UserRole): string {
+  return getManagementBasePath(role) ?? getHomePath(role);
 }
 
-/** Mobile compte magasin sans caissier : écran connexion caissier plein page */
+/** Mobile compte magasin sans caissier connecté : gate caisse (desktop uniquement) */
 export function isMobileStorePosGateMode(input: {
   isStorePos?: boolean;
   hasPosOperator?: boolean;
+  isMobile?: boolean;
 }): boolean {
-  return Boolean(input.isStorePos && !input.hasPosOperator);
+  return Boolean(input.isStorePos && !input.hasPosOperator && !input.isMobile);
 }
 
 /** Barre du bas mobile visible (directeur, gérant, hub, caissier standard…) */

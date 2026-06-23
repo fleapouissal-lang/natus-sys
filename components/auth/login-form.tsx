@@ -89,7 +89,8 @@ export function LoginForm() {
 
     touchSessionActivity();
 
-    router.push(await resolveStaffHomePath(supabase, profile));
+    const isMobile = window.matchMedia("(max-width: 767px)").matches;
+    router.push(await resolveStaffHomePath(supabase, profile, { isMobile }));
     router.refresh();
   }
 

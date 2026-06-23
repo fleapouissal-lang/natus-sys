@@ -116,7 +116,7 @@ export async function getProductCatalog(): Promise<
   const supabase = await createClient();
   const { data } = await supabase
     .from("products")
-    .select("id, name, barcode, image_url, category, price")
+    .select("id, name, barcode, image_url, category, price, product_kind, parent_id")
     .order("name");
   return data || [];
 }

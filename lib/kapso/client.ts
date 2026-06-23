@@ -55,7 +55,16 @@ async function postKapsoMessage(
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
       const message = parseKapsoError(response.status, detail);
-      console.error("[Kapso] send failed:", response.status, message, { to });
+      const outsideWindow =
+        response.status === 422 &&
+        (message.toLowerCase().includes("24-hour") ||
+          message.toLowerCase().includes("24 hour") ||
+          message.toLowerCase().includes("template"));
+      if (outsideWindow) {
+        console.warn("[Kapso] send skipped (fenêtre 24 h):", message, { to });
+      } else {
+        console.error("[Kapso] send failed:", response.status, message, { to });
+      }
       return { ok: false, error: message, status: response.status };
     }
 

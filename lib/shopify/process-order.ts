@@ -112,6 +112,26 @@ export async function processShopifyOrder(
       return { ok: false, error: error.message };
     }
 
+    const customerPhone = order.phone || shipping?.phone || order.customer?.phone || null;
+    if (customerPhone) {
+      try {
+        const { syncShopifyOrderNoteToLoyaltyCard } = await import(
+          "@/lib/loyalty/customer-notes"
+        );
+        await syncShopifyOrderNoteToLoyaltyCard(supabase, {
+          shopifyOrderId: data.id,
+          orderNumber: order.name || `#${order.order_number}`,
+          customerPhone,
+          lineItems,
+          total: parseFloat(order.total_price) || 0,
+          shippingAddress,
+          shopifyNote: order.note,
+        });
+      } catch (loyaltyNoteError) {
+        console.error("processShopifyOrder loyalty note:", loyaltyNoteError);
+      }
+    }
+
     return { ok: true, id: data.id };
   }
 
@@ -131,7 +151,7 @@ export async function processShopifyOrder(
 
   const { data: products } = await supabase
     .from("products")
-    .select("id, name, barcode");
+    .select("id, name, barcode, product_kind, parent_id");
 
   async function updateStoreCoords(id: string, lat: number, lng: number) {
     await supabase.from("stores").update({ lat, lng }).eq("id", id);
@@ -215,6 +235,23 @@ export async function processShopifyOrder(
   });
 
   if (row.customer_phone) {
+    try {
+      const { syncShopifyOrderNoteToLoyaltyCard } = await import(
+        "@/lib/loyalty/customer-notes"
+      );
+      await syncShopifyOrderNoteToLoyaltyCard(supabase, {
+        shopifyOrderId: data.id,
+        orderNumber: row.order_number,
+        customerPhone: row.customer_phone,
+        lineItems,
+        total: row.total,
+        shippingAddress: shippingAddress,
+        shopifyNote: order.note,
+      });
+    } catch (loyaltyNoteError) {
+      console.error("processShopifyOrder loyalty note:", loyaltyNoteError);
+    }
+
     try {
       const { sendShopifyOrderConfirmationRequest } = await import(
         "@/lib/kapso/shopify-order-whatsapp"

@@ -943,23 +943,43 @@ export async function updateLoyaltySettings(input: {
   return { success: true, settings };
 }
 
+export async function fetchLoyaltyCustomerNotes(
+  customerId: string
+): Promise<{ notes: import("@/lib/types").CustomerNote[] } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT, "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getCustomerNotes } = await import("@/lib/loyalty/customer-notes");
+  const supabase = await createClient();
+  const notes = await getCustomerNotes(supabase, customerId, 8);
+  return { notes };
+}
+
 export async function lookupLoyaltyCustomerByPhone(
   phone: string
-): Promise<{ customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
+): Promise<
+  | { customer: import("@/lib/types").LoyaltyCustomer; notes: import("@/lib/types").CustomerNote[] }
+  | { error: string }
+> {
   const profile = await requireRole([...MANAGEMENT, "cashier"]);
   if (!profile) return { error: "Non autorisé" };
 
   const { getCustomerByPhone } = await import("@/lib/loyalty/customers");
+  const { getCustomerNotes } = await import("@/lib/loyalty/customer-notes");
   const supabase = await createClient();
   const customer = await getCustomerByPhone(supabase, phone);
   if (!customer) return { error: "Client introuvable" };
-  return { customer };
+  const notes = await getCustomerNotes(supabase, customer.id, 8);
+  return { customer, notes };
 }
 
 /** Téléphone, code-barres carte (FID-…) ou QR code (NATUS:LOYALTY:…) */
 export async function lookupLoyaltyCustomer(
   raw: string
-): Promise<{ customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
+): Promise<
+  | { customer: import("@/lib/types").LoyaltyCustomer; notes: import("@/lib/types").CustomerNote[] }
+  | { error: string }
+> {
   const profile = await requireRole([...MANAGEMENT, "cashier"]);
   if (!profile) return { error: "Non autorisé" };
 
@@ -970,10 +990,12 @@ export async function lookupLoyaltyCustomer(
   const scanPayload = parseLoyaltyQrPayload(trimmed);
   if (scanPayload) {
     const { getCustomerByCardOrToken } = await import("@/lib/loyalty/customers");
+    const { getCustomerNotes } = await import("@/lib/loyalty/customer-notes");
     const supabase = await createClient();
     const customer = await getCustomerByCardOrToken(supabase, scanPayload);
     if (!customer) return { error: "Carte fidélité introuvable" };
-    return { customer };
+    const notes = await getCustomerNotes(supabase, customer.id, 8);
+    return { customer, notes };
   }
 
   const { normalizePhone } = await import("@/lib/loyalty/phone");
@@ -1046,19 +1068,24 @@ export async function validatePosPromoCode(
 
 export async function lookupLoyaltyCustomerByScan(
   raw: string
-): Promise<{ customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
+): Promise<
+  | { customer: import("@/lib/types").LoyaltyCustomer; notes: import("@/lib/types").CustomerNote[] }
+  | { error: string }
+> {
   const profile = await requireRole([...MANAGEMENT, "cashier"]);
   if (!profile) return { error: "Non autorisé" };
 
   const { parseLoyaltyQrPayload } = await import("@/lib/loyalty/qr");
   const { getCustomerByCardOrToken } = await import("@/lib/loyalty/customers");
+  const { getCustomerNotes } = await import("@/lib/loyalty/customer-notes");
   const identifier = parseLoyaltyQrPayload(raw);
   if (!identifier) return { error: "QR Code fidélité invalide" };
 
   const supabase = await createClient();
   const customer = await getCustomerByCardOrToken(supabase, identifier);
   if (!customer) return { error: "Carte fidélité introuvable" };
-  return { customer };
+  const notes = await getCustomerNotes(supabase, customer.id, 8);
+  return { customer, notes };
 }
 
 export async function completeShopifyOrderSale(
@@ -2078,6 +2105,26 @@ export async function updateShopifyOrderConfirmationFollowUp(
     .eq("id", orderId);
 
   if (error) return { error: error.message };
+
+  if (trimmedNote) {
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const { syncCashierFollowUpNoteToLoyaltyCard } = await import(
+        "@/lib/loyalty/customer-notes"
+      );
+      const admin = createAdminClient();
+      await syncCashierFollowUpNoteToLoyaltyCard(admin, {
+        shopifyOrderId: orderId,
+        orderNumber: order.order_number,
+        customerPhone: order.customer_phone,
+        customerId: order.customer_id,
+        note: trimmedNote,
+        source: "cashier_follow_up",
+      });
+    } catch (noteError) {
+      console.error("updateShopifyOrderConfirmationFollowUp loyalty note:", noteError);
+    }
+  }
 
   revalidatePath("/cashier/orders");
   revalidatePath("/cashier/notes");

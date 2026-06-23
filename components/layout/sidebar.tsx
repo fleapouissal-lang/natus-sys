@@ -11,6 +11,7 @@ import {
 import {
   LogOut,
   PanelLeftClose,
+  UserRound,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
@@ -89,23 +90,89 @@ function SidebarToggle({
   );
 }
 
+function SidebarPosOperator({
+  collapsed,
+  posOperatorName,
+  hasPosOperator,
+  onSwitchCashier,
+  switchingCashier = false,
+}: {
+  collapsed: boolean;
+  posOperatorName?: string | null;
+  hasPosOperator?: boolean;
+  onSwitchCashier?: () => void;
+  switchingCashier?: boolean;
+}) {
+  if (!hasPosOperator || !posOperatorName) return null;
+
+  if (collapsed) {
+    return (
+      <div
+        className="flex w-full flex-col items-center gap-1 border-b border-black/10 px-2 py-2"
+        title={`Caissier connecté : ${posOperatorName}`}
+      >
+        <div className="relative">
+          <UserAvatar name={posOperatorName} className="h-8 w-8 text-xs ring-2 ring-success/70" />
+          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-sidebar bg-success" />
+        </div>
+        <p className="max-w-full truncate text-center text-[9px] font-semibold leading-tight text-black/75">
+          {posOperatorName.split(" ")[0]}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-b border-black/10 px-4 py-3">
+      <div className="flex items-center gap-3 rounded-xl bg-black/[0.06] px-3 py-2.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-champagne">
+          <UserRound className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/55">
+            Caissier connecté
+          </p>
+          <p className="truncate text-sm font-semibold text-black">{posOperatorName}</p>
+        </div>
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full bg-success shadow-[0_0_0_3px_rgba(34,197,94,0.25)]"
+          aria-hidden
+        />
+      </div>
+      {onSwitchCashier && (
+        <button
+          type="button"
+          onClick={onSwitchCashier}
+          disabled={switchingCashier}
+          className="mt-2 w-full rounded-lg border border-black/15 bg-black/[0.04] px-3 py-1.5 text-xs font-semibold text-black/75 transition-colors hover:bg-black/[0.08] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+        >
+          Changer caissier
+        </button>
+      )}
+    </div>
+  );
+}
+
 function SidebarUserProfile({
   collapsed,
   userName,
   roleLabel,
   cityLabel,
+  isStorePos = false,
 }: {
   collapsed: boolean;
   userName: string;
   roleLabel: string;
   cityLabel?: string;
+  isStorePos?: boolean;
 }) {
+  const displayRole = isStorePos ? "Caisse magasin" : roleLabel;
   if (collapsed) {
     return (
       <div className="flex w-full flex-col items-center gap-2 border-b border-black/10 px-2 py-3">
         <UserAvatar
           name={userName}
-          title={[userName, roleLabel, cityLabel].filter(Boolean).join(" · ")}
+          title={[userName, displayRole, cityLabel].filter(Boolean).join(" · ")}
         />
         <p className="max-w-full truncate text-center text-[10px] font-semibold leading-tight text-black">
           {userName.split(" ")[0]}
@@ -121,7 +188,7 @@ function SidebarUserProfile({
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-black">{userName}</p>
           <p className="text-xs font-medium uppercase tracking-wide text-black/80">
-            {roleLabel}
+            {displayRole}
           </p>
           {cityLabel && (
             <p className="truncate text-xs text-black/60">{cityLabel}</p>
@@ -152,12 +219,14 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(() => sidebarCollapsedForRoute(pathname));
+  const [switchingCashier, setSwitchingCashier] = useState(false);
 
   const links = resolveNavLinks({
     role,
     isStorePos,
     isPersonalCashier,
     hasPosOperator,
+    planningOnlyNav: false,
   });
   const roleLabel = getRoleLabel(role);
 
@@ -171,6 +240,15 @@ export function Sidebar({
 
   function toggleCollapsed() {
     setCollapsed((prev) => !prev);
+  }
+
+  async function handleSwitchCashier() {
+    if (!isStorePos || switchingCashier) return;
+    setSwitchingCashier(true);
+    await signOutPosOperator();
+    router.push("/cashier/pos?switch=1");
+    router.refresh();
+    setSwitchingCashier(false);
   }
 
   async function handleLogout() {
@@ -211,7 +289,18 @@ export function Sidebar({
         userName={userName}
         roleLabel={roleLabel}
         cityLabel={cityLabel}
+        isStorePos={isStorePos}
       />
+
+      {isStorePos && (
+        <SidebarPosOperator
+          collapsed={collapsed}
+          posOperatorName={posOperatorName}
+          hasPosOperator={hasPosOperator}
+          onSwitchCashier={handleSwitchCashier}
+          switchingCashier={switchingCashier}
+        />
+      )}
 
       <nav
         className={cn(

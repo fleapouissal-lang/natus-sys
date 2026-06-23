@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { CartItem, Product, Profile, ShopifyOrder } from "@/lib/types";
+import type { CartItem, Product, Profile, ShopifyLineItemRow, ShopifyOrder } from "@/lib/types";
 import { getCityFilter, isDirector, isManager } from "@/lib/permissions";
 import { canAccessShopifyOrder } from "@/lib/shopify/order-access";
 import { livreurDeliveryOrderStatuses } from "@/lib/shopify/order-status";
@@ -14,6 +14,7 @@ export interface ShopifyOrderPosContext {
   customerPhone: string | null;
   defaultPayment: "cash" | "card";
   workflowStatus: ShopifyOrder["workflow_status"];
+  lineItems: ShopifyLineItemRow[];
 }
 
 export interface ShopifyOrderPosLoad {
@@ -212,6 +213,7 @@ export async function loadShopifyOrderForPos(
         customerPhone: order.customer_phone,
         defaultPayment: order.payment_type === "cod" ? "cash" : "card",
         workflowStatus,
+        lineItems: order.line_items,
       },
     },
   };

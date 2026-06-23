@@ -4,7 +4,6 @@ import {
   fetchCashierSales,
   fetchStoreSales,
 } from "@/lib/sales/fetch-cashier-sales";
-import { getActivePosOperator } from "@/lib/pos/operator-session";
 import { CashierSalesHistory } from "@/components/sales/cashier-sales-history";
 
 export const dynamic = "force-dynamic";
@@ -27,9 +26,6 @@ export default async function CashierSalesPage() {
     error = result.error;
   }
 
-  const activeOperator =
-    profile && isStorePos ? await getActivePosOperator(profile) : null;
-
   return (
     <div className="animate-fade-in">
       <div className="mb-6">
@@ -41,12 +37,6 @@ export default async function CashierSalesPage() {
             ? "Toutes les ventes de la caisse — chaque ligne indique le caissier ayant encaissé"
             : "Historique de vos transactions — état des ventes et modes de paiement"}
         </p>
-        {isStorePos && activeOperator?.operator && (
-          <p className="mt-2 text-sm text-accent">
-            Caissier connecté à la caisse :{" "}
-            {activeOperator.operator.full_name || activeOperator.operator.email}
-          </p>
-        )}
       </div>
 
       {error && (

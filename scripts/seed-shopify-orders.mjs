@@ -74,7 +74,7 @@ function buildLineItems(index, products) {
     items.push(
       lineItem({
         id: lineId++,
-        title: product.name,
+        title: product.lineTitle,
         sku: product.barcode,
         quantity,
         price: product.price,
@@ -194,12 +194,45 @@ async function main() {
 
   const { data: products, error: productsError } = await supabase
     .from("products")
-    .select("name, barcode, price")
+    .select("id, name, barcode, price, product_kind, parent_id")
+    .in("product_kind", ["simple", "variant"])
+    .not("barcode", "is", null)
+    .gt("price", 0)
     .order("name");
 
   if (productsError) throw productsError;
 
-  const orders = buildSeedOrders(storeByName, products || []);
+  const parentIds = [
+    ...new Set((products || []).map((p) => p.parent_id).filter(Boolean)),
+  ];
+  let parentById = {};
+  if (parentIds.length > 0) {
+    const { data: parents, error: parentsError } = await supabase
+      .from("products")
+      .select("id, name")
+      .in("id", parentIds);
+    if (parentsError) throw parentsError;
+    parentById = Object.fromEntries((parents || []).map((p) => [p.id, p.name]));
+  }
+
+  const sellableProducts = (products || []).map((product) => {
+    if (product.product_kind === "variant" && product.parent_id) {
+      const parentName = parentById[product.parent_id];
+      return {
+        ...product,
+        lineTitle: parentName ? `${parentName} — ${product.name}` : product.name,
+      };
+    }
+    return { ...product, lineTitle: product.name };
+  });
+
+  if (sellableProducts.length === 0) {
+    throw new Error(
+      "Aucun produit vendable (simple/variante avec code-barres et prix) — vérifiez la table products."
+    );
+  }
+
+  const orders = buildSeedOrders(storeByName, sellableProducts);
 
   const { data: inserted, error: insertError } = await supabase
     .from("shopify_orders")

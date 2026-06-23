@@ -19,5 +19,6 @@ export function shopifyOrderToPosContext(order: ShopifyOrder): ShopifyOrderPosCo
     customerPhone: order.customer_phone,
     defaultPayment: order.payment_type === "cod" ? "cash" : "card",
     workflowStatus: order.workflow_status,
+    lineItems: order.line_items,
   };
 }

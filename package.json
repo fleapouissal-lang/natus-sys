@@ -22,6 +22,7 @@
     "seed:marketing-test": "npm run db:migrate && node scripts/seed-marketing-test.mjs",
     "seed:actualites": "npm run db:migrate && node scripts/seed-actualites.mjs",
     "seed:pos-terminal": "npm run db:migrate && node scripts/seed-pos-terminal.mjs",
+    "seed:loyalty-customer": "npm run db:migrate && node scripts/seed-loyalty-customer.mjs",
     "reset:demo": "node scripts/reset-demo-data.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "upload-images": "node scripts/upload-product-images.mjs"

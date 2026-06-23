@@ -129,8 +129,6 @@ export default async function PosPage({
       {profile?.is_store_pos && activeOperator ? (
         <PosStoreShell
           hasOperator
-          operatorName={operatorName}
-          authMethod={activeOperator.auth_method}
           storeName={selectedStore?.name}
           terminalEmail={profile.email}
         >

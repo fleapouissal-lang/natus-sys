@@ -142,6 +142,17 @@ export interface LoyaltyTransaction {
   created_at: string;
 }
 
+export type CustomerNoteSource = "shopify_order" | "cashier_follow_up" | "whatsapp";
+
+export interface CustomerNote {
+  id: string;
+  customer_id: string;
+  shopify_order_id: string | null;
+  source: CustomerNoteSource;
+  body: string;
+  created_at: string;
+}
+
 export interface LoyaltyStats {
   totalMembers: number;
   pointsDistributed: number;
