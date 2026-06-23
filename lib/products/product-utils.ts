@@ -26,8 +26,8 @@ export function productKindLabel(kind: ProductKind): string {
 }
 
 export function productDisplayName(
-  product: Product,
-  parent?: Product | null
+  product: Pick<Product, "name" | "product_kind">,
+  parent?: Pick<Product, "name"> | null
 ): string {
   if (product.product_kind === "variant" && parent) {
     return `${parent.name} — ${product.name}`;

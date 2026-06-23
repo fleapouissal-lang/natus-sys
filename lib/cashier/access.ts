@@ -4,7 +4,7 @@ import { getHomePath } from "@/lib/permissions";
 
 export const CASHIER_PLANNING_PATH = "/cashier/planning";
 
-type CashierProfile = Pick<Profile, "role" | "is_store_pos" | "store_id">;
+export type CashierProfile = Pick<Profile, "role" | "is_store_pos" | "store_id">;
 
 export function isCashierPlanningRoute(pathname: string): boolean {
   return (

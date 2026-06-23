@@ -149,7 +149,7 @@ export async function updateSession(request: NextRequest) {
       if (role === "cashier" && profile) {
         const mobileRedirect = await getCashierMobileRedirectPath(
           supabase,
-          { ...profile, id: user.id },
+          profile,
           pathname,
           request.headers.get("user-agent")
         );

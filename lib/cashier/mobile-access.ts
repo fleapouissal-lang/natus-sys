@@ -4,14 +4,8 @@ import {
   CASHIER_PLANNING_PATH,
   isCashierPlanningRoute,
   isPersonalCashierPlanningMode,
+  type CashierProfile,
 } from "@/lib/cashier/access";
-
-type CashierProfile = {
-  id: string;
-  role: string;
-  is_store_pos?: boolean | null;
-  store_id?: string | null;
-};
 
 /**
  * Mobile : compte caisse magasin ou caissier perso → planning seul.

@@ -59,7 +59,7 @@ export function resolveProductForLineItem(
     if (p.product_kind !== "variant" || !p.parent_id) return false;
     const parent = products.find((row) => row.id === p.parent_id);
     if (!parent) return false;
-    return productDisplayName(p, parent as Product).toLowerCase() === title;
+    return productDisplayName(p, parent).toLowerCase() === title;
   });
   if (byCompositeTitle) return byCompositeTitle;
 
@@ -116,7 +116,7 @@ export function orderLineDisplayName(
 ): string {
   if (product.product_kind === "variant" && product.parent_id) {
     const parent = products.find((p) => p.id === product.parent_id);
-    if (parent) return productDisplayName(product, parent as Product);
+    if (parent) return productDisplayName(product, parent);
   }
   return product.name;
 }
