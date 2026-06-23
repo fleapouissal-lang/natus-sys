@@ -8,6 +8,9 @@ export const DEFAULT_PAGE_SIZE = 10;
 /** Cartes magasins et stock déplié par magasin. */
 export const STORE_PAGE_SIZE = 6;
 
+/** Journal des actualités (articles longs). */
+export const NEWS_PAGE_SIZE = 5;
+
 export function usePagination<T>(
   items: T[],
   pageSize: number,

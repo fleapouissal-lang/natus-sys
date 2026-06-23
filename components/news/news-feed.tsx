@@ -6,8 +6,10 @@ import { Pin, PinOff, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { formatDate } from "@/lib/utils";
 import { getAudienceLabel } from "@/lib/news/audience";
+import { NEWS_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { NewsAnnouncement } from "@/lib/news/types";
 
 function ImageGallery({ images }: { images: NewsAnnouncement["images"] }) {
@@ -98,6 +100,7 @@ export function NewsFeed({
   onDelete,
   onTogglePin,
   actionsDisabled = false,
+  pageSize = NEWS_PAGE_SIZE,
 }: {
   announcements: NewsAnnouncement[];
   showAudience?: boolean;
@@ -106,7 +109,18 @@ export function NewsFeed({
   onDelete?: (id: string) => void;
   onTogglePin?: (id: string, pinned: boolean) => void;
   actionsDisabled?: boolean;
+  pageSize?: number;
 }) {
+  const {
+    paginated,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(announcements, pageSize);
+
   if (!announcements.length) {
     return (
       <Card className="text-center text-muted">
@@ -117,7 +131,7 @@ export function NewsFeed({
 
   return (
     <div className="w-full space-y-5">
-      {announcements.map((post) => {
+      {paginated.map((post) => {
         const manageable = canManagePost?.(post) ?? false;
 
         return (
@@ -199,6 +213,16 @@ export function NewsFeed({
           </article>
         );
       })}
+
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        className="border-t border-border pt-4"
+      />
     </div>
   );
 }

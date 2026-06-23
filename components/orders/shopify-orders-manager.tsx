@@ -861,7 +861,7 @@ export function ShopifyOrdersManager({
             rangeEnd={ordersRangeEnd}
             totalItems={ordersTotalItems}
             onPageChange={setOrdersPage}
-            className="border-t border-border"
+            className="border-t border-border px-4 py-5 max-md:pb-6 md:px-6 md:py-4"
           />
         )}
       </Card>
