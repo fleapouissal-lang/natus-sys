@@ -408,6 +408,42 @@ h1, h2, h3, h4, h5, h6,
   color: var(--primary);
 }
 
+/* Panier mobile — zone scroll + barre Retour/Suivant fixée au-dessus du bas écran */
+@media (max-width: 767px) {
+  .natus-pos-cart-mobile-scroll {
+    padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .natus-pos-cart-mobile-scroll--tall {
+    padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .natus-pos-cart-mobile-footer {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 55;
+    border-top: 1px solid rgba(179, 140, 74, 0.12);
+    background: rgba(255, 255, 255, 0.97);
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+@media (min-width: 768px) {
+  .natus-pos-cart-mobile-footer {
+    position: static;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
 /* Caisse mobile luxe — FAB panier */
 .natus-pos-luxury-fab {
   right: 1rem;

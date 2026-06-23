@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getHomePath } from "@/lib/permissions";
 import { applySecurityHeaders } from "@/lib/security/headers";
 import { asSessionCookieOptions } from "@/lib/supabase/session-cookies";
+import { getCashierMobileRedirectPath } from "@/lib/cashier/mobile-access";
 import {
   CASHIER_PLANNING_PATH,
   isCashierPlanningRoute,
@@ -130,15 +131,28 @@ export async function updateSession(request: NextRequest) {
         return applySecurityHeaders(NextResponse.redirect(url));
       }
 
-      if (
-        role === "cashier" &&
-        profile &&
-        (await isPersonalCashierPlanningMode(supabase, profile)) &&
-        !isCashierPlanningRoute(pathname)
-      ) {
-        const url = request.nextUrl.clone();
-        url.pathname = CASHIER_PLANNING_PATH;
-        return applySecurityHeaders(NextResponse.redirect(url));
+      if (role === "cashier" && profile) {
+        if (
+          (await isPersonalCashierPlanningMode(supabase, profile)) &&
+          !isCashierPlanningRoute(pathname)
+        ) {
+          const url = request.nextUrl.clone();
+          url.pathname = CASHIER_PLANNING_PATH;
+          return applySecurityHeaders(NextResponse.redirect(url));
+        }
+
+        const mobileRedirect = await getCashierMobileRedirectPath(
+          supabase,
+          { ...profile, id: user.id },
+          pathname,
+          request.headers.get("user-agent")
+        );
+
+        if (mobileRedirect) {
+          const url = request.nextUrl.clone();
+          url.pathname = mobileRedirect;
+          return applySecurityHeaders(NextResponse.redirect(url));
+        }
       }
     }
   }

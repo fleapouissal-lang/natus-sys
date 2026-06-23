@@ -16,7 +16,8 @@ import {
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import type { UserRole } from "@/lib/types";
-import { isMobilePlanningOnlyMode, isMobileBottomNavVisible } from "@/lib/layout/mobile-planning";
+import { isMobileBottomNavVisible } from "@/lib/layout/mobile-planning";
+import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
 
 export function MobileTopBar({
   userName,
@@ -84,11 +85,13 @@ export function MobileBottomNav({
   isStorePos = false,
   isPersonalCashier = false,
   hasPosOperator = false,
+  hidden = false,
 }: {
   role: UserRole;
   isStorePos?: boolean;
   isPersonalCashier?: boolean;
   hasPosOperator?: boolean;
+  hidden?: boolean;
 }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -129,7 +132,11 @@ export function MobileBottomNav({
     hasPosOperator,
   });
 
-  if (!isMobileBottomNavVisible({ isStorePos, isPersonalCashier, hasPosOperator })) {
+  if (
+    hidden ||
+    !isMobileBottomNavVisible({ isStorePos, isPersonalCashier, hasPosOperator }) ||
+    isCashierPosRoute(pathname)
+  ) {
     return null;
   }
 

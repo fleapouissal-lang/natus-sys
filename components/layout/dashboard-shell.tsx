@@ -163,6 +163,7 @@ export function DashboardShell({
           isStorePos={isStorePos}
           isPersonalCashier={isPersonalCashier}
           hasPosOperator={hasPosOperator}
+          hidden={isPos}
         />
       </div>
     </>

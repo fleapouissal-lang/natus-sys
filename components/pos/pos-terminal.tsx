@@ -664,7 +664,7 @@ export function PosTerminal({
     }
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 pb-2">
         {cart.map((item) => {
           const validated = validatedQty[item.product.id] ?? 0;
           const isItemValidated = validated >= item.quantity;
@@ -907,14 +907,14 @@ export function PosTerminal({
 
         {isStockScan && (
           <>
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4 px-4 pt-4">
-              <div>
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-4 px-4 pt-4">
+              <div className="flex flex-col">
                 <h1 className="text-2xl font-bold tracking-tight text-primary">Scan stock</h1>
                 <p className="mt-1 text-muted">
                   Scannez un code-barres pour réapprovisionner
-                  {storeName && (
-                    <span className="ml-2 text-primary">· {storeName}</span>
-                  )}
+                  {storeName ? (
+                    <span className="mt-1 block text-primary">{storeName}</span>
+                  ) : null}
                 </p>
               </div>
 
@@ -1055,19 +1055,16 @@ export function PosTerminal({
                 />
               )}
               <div className="natus-pos-luxury-header shrink-0 border-b border-primary/10 px-4 py-4 md:py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-primary/70 md:hidden">
-                      Natus
-                    </p>
-                    <h1 className="font-heading text-2xl font-bold tracking-tight text-primary md:text-2xl">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="flex min-w-0 flex-col">
+                    <h1 className="font-heading text-2xl font-bold leading-tight tracking-tight text-primary">
                       Caisse
                     </h1>
-                    {storeName && (
-                      <p className="mt-0.5 truncate text-xs text-muted md:text-sm">{storeName}</p>
-                    )}
+                    {storeName ? (
+                      <p className="mt-1 text-sm text-muted">{storeName}</p>
+                    ) : null}
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 md:shrink-0">
                     {preparableOrderCount > 0 && (
                       <Button
                         type="button"
@@ -1212,7 +1209,7 @@ export function PosTerminal({
                 "md:flex md:flex-[35] md:border-l md:border-border"
               )}
             >
-              <div className="flex h-full min-h-0 flex-col">
+              <div className="flex h-full min-h-0 flex-col overflow-hidden">
                 <div className="shrink-0 border-b border-primary/10 px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-start gap-2">
@@ -1224,11 +1221,11 @@ export function PosTerminal({
                       >
                         <ChevronLeft className="h-5 w-5" />
                       </button>
-                      <div className="min-w-0">
-                        <h2 className="font-heading text-xl font-bold text-primary md:text-lg">
+                      <div className="flex min-w-0 flex-col">
+                        <h2 className="font-heading text-xl font-bold leading-tight text-primary md:text-lg">
                           Panier
                         </h2>
-                        <p className="text-xs text-muted">
+                        <p className="mt-1 text-xs text-muted">
                           {cart.length} article{cart.length !== 1 ? "s" : ""}
                         </p>
                       </div>
@@ -1272,7 +1269,12 @@ export function PosTerminal({
                     onStepChange={setMobileCartStep}
                   />
 
-                  <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-natus">
+                  <div
+                    className={cn(
+                      "natus-pos-cart-mobile-scroll min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-natus",
+                      mobileCartStep === "payment" && "natus-pos-cart-mobile-scroll--tall"
+                    )}
+                  >
                     {mobileCartStep === "loyalty" && !isShopifyOrderCheckout && !isStockScan && (
                       <PosCheckoutPanel
                         subtotal={subtotal}
@@ -1290,7 +1292,7 @@ export function PosTerminal({
                     {mobileCartStep === "payment" && renderPaymentFooter(false)}
                   </div>
 
-                  <div className="shrink-0 border-t border-primary/10 bg-surface px-4 py-3">
+                  <div className="natus-pos-cart-mobile-footer shrink-0 border-t border-primary/10 bg-surface px-4 py-3 md:border-t md:border-primary/10">
                     {mobileCartStep === "payment" ? (
                       <div className="flex flex-col gap-2">
                         <Button

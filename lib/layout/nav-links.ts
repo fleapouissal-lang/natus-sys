@@ -113,9 +113,8 @@ export function resolveNavLinks(input: {
   if (input.role === "cashier") {
     if (input.isPersonalCashier) return personalCashierLinks;
     if (input.isStorePos) {
-      return input.hasPosOperator
-        ? cashierLinks
-        : cashierLinks.filter((link) => link.href !== "/cashier/planning");
+      if (input.hasPosOperator) return personalCashierLinks;
+      return cashierLinks.filter((link) => link.href !== "/cashier/planning");
     }
     return cashierLinks;
   }
