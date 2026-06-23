@@ -196,7 +196,10 @@ export function MobileBottomNav({
       )}
 
       <div className="natus-mobile-bottom-nav-shell md:hidden">
-        <nav className="natus-mobile-bottom-nav" aria-label="Navigation mobile">
+        <nav
+          className="natus-mobile-bottom-nav overflow-hidden rounded-t-[1.5rem] rounded-b-none"
+          aria-label="Navigation mobile"
+        >
           <ul className="natus-mobile-bottom-nav-list">
             {primaryLinks.map(({ href, label, icon: Icon }) => {
               const isActive = isNavLinkActive(pathname, href);

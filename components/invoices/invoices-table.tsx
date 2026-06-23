@@ -1,16 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { Download, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { saleDocumentNumber } from "@/components/pos/sale-document-types";
 import { invoiceTypeLabel } from "@/lib/sales/fetch-invoices";
 import { saleInvoiceCustomerName } from "@/lib/sales/invoice-customer";
+import { downloadInvoiceHtml } from "@/lib/sales/download-invoice";
+import { saleToDocumentData } from "@/lib/sales/sale-to-document";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { InvoiceSale } from "@/lib/sales/sale-to-document";
+
+function downloadInvoiceFromSale(sale: InvoiceSale) {
+  downloadInvoiceHtml(saleToDocumentData(sale));
+}
 
 export function InvoicesTable({
   sales,
@@ -113,9 +119,17 @@ export function InvoicesTable({
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => downloadInvoiceFromSale(sale)}
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline md:hidden"
+                    >
+                      <Download className="h-4 w-4" />
+                      Télécharger
+                    </button>
                     <Link
                       href={href}
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                      className="hidden items-center gap-1.5 text-sm font-medium text-primary hover:underline md:inline-flex"
                     >
                       <FileText className="h-4 w-4" />
                       Voir
