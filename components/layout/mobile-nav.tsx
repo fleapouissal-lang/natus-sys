@@ -51,19 +51,19 @@ export function MobileTopBar({
       )}
     >
       <div className="natus-mobile-topbar-pill">
-        <div className="min-w-0 flex-1 pl-1">
-          <p className="font-heading text-lg font-bold leading-none text-primary">Natus</p>
+        <div className="natus-mobile-topbar-brand min-w-0 flex-1">
+          <p className="natus-mobile-topbar-logo">Natus</p>
           {subtitle ? (
-            <p className="mt-0.5 truncate text-[10px] font-medium text-muted">{subtitle}</p>
+            <p className="natus-mobile-topbar-subtitle">{subtitle}</p>
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="natus-mobile-topbar-actions flex shrink-0 items-center gap-2">
           <UserAvatar
             name={userName}
             title={userName}
             size="sm"
-            className="natus-mobile-topbar-avatar border-primary/25 bg-champagne/60 text-primary"
+            className="natus-mobile-topbar-avatar"
           />
           <button
             type="button"
@@ -156,10 +156,10 @@ export function MobileBottomNav({
       {moreOpen && overflowLinks.length > 0 && (
         <div
           ref={moreSheetRef}
-          className="natus-mobile-nav-more-sheet fixed bottom-[calc(var(--natus-mobile-nav-height)+var(--natus-mobile-nav-shell-padding)+var(--natus-mobile-nav-gap)+env(safe-area-inset-bottom,0px)+0.5rem)] left-4 right-4 z-50 p-2 md:hidden"
+          className="natus-mobile-nav-more-sheet fixed bottom-[calc(var(--natus-mobile-nav-height)+env(safe-area-inset-bottom,0px)+0.5rem)] left-4 right-4 z-50 p-2 md:hidden"
         >
-          <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-primary">
-            Plus
+          <p className="natus-mobile-nav-more-title px-3 py-2">
+            Menu
           </p>
           <ul className="m-0 list-none p-0">
             {overflowLinks.map(({ href, label, icon: Icon }) => {
@@ -170,10 +170,10 @@ export function MobileBottomNav({
                     href={href}
                     onClick={() => setMoreOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors",
+                      "natus-mobile-nav-more-item flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-champagne/50 text-black"
-                        : "text-foreground hover:bg-champagne/25"
+                        ? "natus-mobile-nav-more-item--active"
+                        : "text-foreground"
                     )}
                   >
                     <span

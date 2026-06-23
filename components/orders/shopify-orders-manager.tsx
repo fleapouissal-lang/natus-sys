@@ -383,7 +383,7 @@ export function ShopifyOrdersManager({
         <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{message}</p>
       )}
 
-      <MobileStatGrid>
+      <MobileStatGrid columns={1}>
         <MobileStatCard
           label="Commandes"
           value={String(filteredOrders.length)}

@@ -61,9 +61,25 @@ export function MobileStatCard({
   );
 }
 
-export function MobileStatGrid({ children, className }: { children: React.ReactNode; className?: string }) {
+export function MobileStatGrid({
+  children,
+  className,
+  columns = 2,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  columns?: 1 | 2;
+}) {
   return (
-    <div className={cn("grid grid-cols-2 gap-3 md:hidden", className)}>{children}</div>
+    <div
+      className={cn(
+        "grid gap-3 md:hidden",
+        columns === 1 ? "grid-cols-1" : "grid-cols-2",
+        className
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
