@@ -13,6 +13,7 @@ export function StoreSelect({
   label = "Magasin",
   required = true,
   className = "",
+  size = "md",
 }: {
   stores: Store[];
   value?: string;
@@ -21,6 +22,7 @@ export function StoreSelect({
   label?: string;
   required?: boolean;
   className?: string;
+  size?: "sm" | "md";
 }) {
   const [internal, setInternal] = useState(value || "");
   const current = value ?? internal;
@@ -42,6 +44,7 @@ export function StoreSelect({
       })}
       placeholder="Sélectionner un magasin"
       className={className}
+      size={size}
     />
   );
 }

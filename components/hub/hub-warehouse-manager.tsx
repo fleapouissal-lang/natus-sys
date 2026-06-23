@@ -191,32 +191,34 @@ export function HubWarehouseManager({
             <ArrowRightLeft className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Envoyer du stock à un magasin</h2>
           </div>
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
             <StoreSelect
               stores={retailStores}
               value={toStoreId}
               onChange={setToStoreId}
               label="Magasin destination"
               required={false}
+              size="sm"
             />
             <Input
               label="Note (optionnel)"
+              inputSize="sm"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Réapprovisionnement…"
+              className="h-8 py-0"
             />
-            <div className="flex items-end">
-              <Button
-                type="button"
-                className="w-full"
-                loading={loading}
-                disabled={!canTransfer}
-                onClick={() => void handleTransfer()}
-              >
-                <Warehouse className="h-4 w-4" />
-                Transférer {transferCount > 0 ? `(${transferCount})` : ""}
-              </Button>
-            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 w-full shrink-0 whitespace-nowrap sm:w-auto"
+              loading={loading}
+              disabled={!canTransfer}
+              onClick={() => void handleTransfer()}
+            >
+              <Warehouse className="h-4 w-4" />
+              Transférer {transferCount > 0 ? `(${transferCount})` : ""}
+            </Button>
           </div>
           {error && <p className="mt-3 text-sm text-danger">{error}</p>}
           {success && <p className="mt-3 text-sm text-success">{success}</p>}
