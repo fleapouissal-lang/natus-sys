@@ -29,6 +29,7 @@ export function CashChangeCalculator({
   onChange,
   compact = false,
   dense = false,
+  checkout = false,
   className,
 }: {
   total: number;
@@ -36,6 +37,8 @@ export function CashChangeCalculator({
   onChange: (value: string) => void;
   compact?: boolean;
   dense?: boolean;
+  /** Panier caisse — affichage plus grand et lisible */
+  checkout?: boolean;
   className?: string;
 }) {
   const received = parseAmount(value);
@@ -68,25 +71,37 @@ export function CashChangeCalculator({
 
   const keys = ["7", "8", "9", "4", "5", "6", "1", "2", "3"];
   const bottomKeys = ["C", "0", "."] as const;
+  const isLarge = checkout && !compact && !dense;
 
   return (
     <div
       className={cn(
         "rounded-lg border border-primary/25 bg-champagne/15",
-        dense ? "p-2" : compact ? "p-2.5" : "p-3",
-        !dense && !compact && "mt-3",
+        dense ? "p-2" : compact ? "p-2.5" : isLarge ? "rounded-2xl border-primary/30 bg-gradient-to-b from-champagne/25 to-champagne/10 p-4 shadow-[0_8px_24px_rgba(179,140,74,0.12)]" : "p-3",
+        !dense && !compact && !isLarge && "mt-3",
         className
       )}
     >
       <div className={cn(dense ? "flex items-end justify-between gap-3" : "block")}>
         <div className={cn(dense ? "min-w-0 flex-1" : "w-full")}>
-          <p className={cn("font-medium text-muted", dense ? "text-[10px]" : "text-xs")}>
+          <p
+            className={cn(
+              "font-medium text-muted",
+              dense ? "text-[10px]" : isLarge ? "text-xs font-semibold uppercase tracking-[0.12em]" : "text-xs"
+            )}
+          >
             Montant remis
           </p>
           <div
             className={cn(
               "rounded-lg border border-border bg-surface px-2.5 text-right font-mono font-bold tabular-nums text-foreground",
-              dense ? "mt-1 py-1.5 text-lg" : compact ? "mt-1.5 py-2 text-xl" : "mt-1.5 py-2.5 text-2xl"
+              dense
+                ? "mt-1 py-1.5 text-lg"
+                : compact
+                  ? "mt-1.5 py-2 text-xl"
+                  : isLarge
+                    ? "mt-2 rounded-xl border-primary/25 bg-white py-3.5 text-3xl shadow-inner"
+                    : "mt-1.5 py-2.5 text-2xl"
             )}
             aria-live="polite"
           >
@@ -94,7 +109,7 @@ export function CashChangeCalculator({
             <span
               className={cn(
                 "ml-1 font-semibold text-muted",
-                dense ? "text-xs" : compact ? "text-sm" : "text-base"
+                dense ? "text-xs" : compact ? "text-sm" : isLarge ? "text-lg" : "text-base"
               )}
             >
               DH
@@ -122,7 +137,7 @@ export function CashChangeCalculator({
       </div>
 
       {!compact && !dense && (
-        <p className="mt-2 text-xs text-muted">
+        <p className={cn("text-muted", isLarge ? "mt-3 text-sm" : "mt-2 text-xs")}>
           Touchez un billet ou une pièce pour l&apos;ajouter au montant remis
         </p>
       )}
@@ -130,7 +145,7 @@ export function CashChangeCalculator({
       <div
         className={cn(
           "grid grid-cols-4",
-          dense ? "mt-1.5 gap-1" : compact ? "mt-2 gap-1.5" : "mt-2 gap-1.5"
+          dense ? "mt-1.5 gap-1" : isLarge ? "mt-3 gap-2" : compact ? "mt-2 gap-1.5" : "mt-2 gap-1.5"
         )}
       >
         {BILL_DENOMINATIONS.map((amount) => (
@@ -140,7 +155,13 @@ export function CashChangeCalculator({
             onClick={() => onChange(addDenomination(value, amount))}
             className={cn(
               "rounded-md border border-border bg-surface font-semibold transition-colors hover:border-primary/60 hover:bg-champagne/30 cursor-pointer",
-              dense ? "py-1 text-[10px]" : compact ? "py-1.5 text-[11px]" : "py-2 text-xs"
+              dense
+                ? "py-1 text-[10px]"
+                : isLarge
+                  ? "rounded-xl py-3 text-sm font-bold"
+                  : compact
+                    ? "py-1.5 text-[11px]"
+                    : "py-2 text-xs"
             )}
           >
             +{amount}
@@ -151,14 +172,20 @@ export function CashChangeCalculator({
           onClick={() => onChange(formatAmount(total))}
           className={cn(
             "rounded-md border border-primary/40 bg-champagne/40 font-semibold text-primary transition-colors hover:bg-champagne/60 cursor-pointer",
-            dense ? "py-1 text-[10px]" : compact ? "py-1.5 text-[11px]" : "py-2 text-xs"
+            dense
+              ? "py-1 text-[10px]"
+              : isLarge
+                ? "rounded-xl py-3 text-sm font-bold"
+                : compact
+                  ? "py-1.5 text-[11px]"
+                  : "py-2 text-xs"
           )}
         >
           Exact
         </button>
       </div>
 
-      <div className={cn("grid grid-cols-3", dense ? "mt-1.5 gap-1" : "mt-2 gap-1.5")}>
+      <div className={cn("grid grid-cols-3", dense ? "mt-1.5 gap-1" : isLarge ? "mt-3 gap-2" : "mt-2 gap-1.5")}>
         {(dense ? keys : [...keys, "C", "0", "."]).map((key) => (
           <button
             key={key}
@@ -166,7 +193,13 @@ export function CashChangeCalculator({
             onClick={() => appendKey(key)}
             className={cn(
               "flex items-center justify-center rounded-md border font-semibold transition-colors cursor-pointer",
-              dense ? "h-8 text-sm" : compact ? "h-9 text-sm" : "h-11 text-base",
+              dense
+                ? "h-8 text-sm"
+                : isLarge
+                  ? "h-12 rounded-xl text-lg"
+                  : compact
+                    ? "h-9 text-sm"
+                    : "h-11 text-base",
               key === "C"
                 ? "border-danger/30 bg-danger/10 text-danger hover:bg-danger/15"
                 : "border-border bg-surface hover:border-primary/60 hover:bg-page"
@@ -209,23 +242,30 @@ export function CashChangeCalculator({
           onClick={() => appendKey("⌫")}
           className={cn(
             "mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-surface font-medium transition-colors hover:border-primary/60 hover:bg-page cursor-pointer",
-            compact ? "h-8 text-xs" : "h-10 text-sm"
+            compact ? "h-8 text-xs" : isLarge ? "mt-3 h-12 rounded-xl text-base" : "h-10 text-sm"
           )}
           aria-label="Effacer le dernier chiffre"
         >
-          <Delete className={cn(compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
+          <Delete className={cn(compact ? "h-3.5 w-3.5" : isLarge ? "h-5 w-5" : "h-4 w-4")} />
           Effacer
         </button>
       )}
 
       {!dense && (
-        <div className={cn("border-t border-dashed border-border", compact ? "mt-2 pt-2" : "mt-3 pt-3")}>
+        <div
+          className={cn(
+            "border-t border-dashed border-border",
+            isLarge ? "mt-4 rounded-xl border border-primary/20 bg-white/70 px-4 py-3" : compact ? "mt-2 pt-2" : "mt-3 pt-3"
+          )}
+        >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium text-muted">À rendre au client</span>
+            <span className={cn("font-medium text-muted", isLarge ? "text-sm" : "text-sm")}>
+              À rendre au client
+            </span>
             <span
               className={cn(
                 "font-bold tabular-nums",
-                compact ? "text-lg" : "text-xl",
+                compact ? "text-lg" : isLarge ? "text-2xl" : "text-xl",
                 received <= 0
                   ? "text-muted"
                   : sufficient

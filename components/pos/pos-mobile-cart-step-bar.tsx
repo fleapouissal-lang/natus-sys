@@ -2,11 +2,10 @@
 
 import { cn } from "@/lib/utils";
 
-export type PosMobileCartStep = "loyalty" | "products" | "payment";
+export type PosMobileCartStep = "loyalty" | "payment";
 
 const STEP_LABELS: Record<PosMobileCartStep, string> = {
   loyalty: "Fidélité",
-  products: "Produits",
   payment: "Paiement",
 };
 
@@ -19,37 +18,30 @@ export function PosMobileCartStepBar({
   steps: PosMobileCartStep[];
   onStepChange: (step: PosMobileCartStep) => void;
 }) {
-  const currentIndex = steps.indexOf(step);
+  if (steps.length <= 1) return null;
 
   return (
-    <div className="natus-pos-cart-steps shrink-0 px-4 py-3">
-      <div className="flex gap-1">
+    <div className="natus-pos-checkout-pills shrink-0 px-4 py-2">
+      <div className="natus-pos-checkout-pills-track" role="tablist" aria-label="Étapes du panier">
         {steps.map((id, index) => {
           const isActive = id === step;
-          const isDone = index < currentIndex;
+          const isDone = steps.indexOf(step) > index;
+
           return (
             <button
               key={id}
               type="button"
+              role="tab"
+              aria-selected={isActive}
               onClick={() => onStepChange(id)}
               className={cn(
-                "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-center transition-colors",
-                isActive && "natus-pos-cart-step--active",
-                !isActive && isDone && "natus-pos-cart-step--done",
-                !isActive && !isDone && "natus-pos-cart-step"
+                "natus-pos-checkout-pill",
+                isActive && "natus-pos-checkout-pill--active",
+                isDone && !isActive && "natus-pos-checkout-pill--done"
               )}
             >
-              <span
-                className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold",
-                  isActive && "bg-primary text-white",
-                  !isActive && isDone && "bg-champagne text-black",
-                  !isActive && !isDone && "bg-primary/10 text-primary"
-                )}
-              >
-                {index + 1}
-              </span>
-              <span className="w-full truncate text-[10px] font-semibold">{STEP_LABELS[id]}</span>
+              <span className="natus-pos-checkout-pill-num">{index + 1}</span>
+              <span className="natus-pos-checkout-pill-label">{STEP_LABELS[id]}</span>
             </button>
           );
         })}
@@ -59,6 +51,6 @@ export function PosMobileCartStepBar({
 }
 
 export function resolveMobileCartSteps(skipLoyalty: boolean): PosMobileCartStep[] {
-  if (skipLoyalty) return ["products", "payment"];
-  return ["loyalty", "products", "payment"];
+  if (skipLoyalty) return ["payment"];
+  return ["loyalty", "payment"];
 }

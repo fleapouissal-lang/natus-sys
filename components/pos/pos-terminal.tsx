@@ -130,7 +130,7 @@ export function PosTerminal({
   const [scanAlert, setScanAlert] = useState<PosScanAlert | null>(null);
   const [scanListening, setScanListening] = useState(true);
   const [mobilePosView, setMobilePosView] = useState<"catalog" | "cart">("catalog");
-  const [mobileCartStep, setMobileCartStep] = useState<PosMobileCartStep>("loyalty");
+  const [checkoutStep, setCheckoutStep] = useState<PosMobileCartStep>("loyalty");
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cashCalculatorRef = useRef<HTMLDivElement>(null);
@@ -145,27 +145,27 @@ export function PosTerminal({
   const isStockScan = isManagementUser && managerMode === "stock";
   const isOrderMode = !!activeShopifyOrder && !isStockScan;
   const isShopifyOrderCheckout = !!activeShopifyOrder;
-  const mobileCartSteps = useMemo(
+  const checkoutSteps = useMemo(
     () => resolveMobileCartSteps(isShopifyOrderCheckout || isStockScan),
     [isShopifyOrderCheckout, isStockScan]
   );
 
-  function openMobileCart(step: PosMobileCartStep = mobileCartSteps[0]) {
-    setMobileCartStep(step);
+  function openMobileCart(step: PosMobileCartStep = checkoutSteps[0]) {
+    setCheckoutStep(step);
     setMobilePosView("cart");
   }
 
   function goToNextCartStep() {
-    const index = mobileCartSteps.indexOf(mobileCartStep);
-    if (index >= 0 && index < mobileCartSteps.length - 1) {
-      setMobileCartStep(mobileCartSteps[index + 1]);
+    const index = checkoutSteps.indexOf(checkoutStep);
+    if (index >= 0 && index < checkoutSteps.length - 1) {
+      setCheckoutStep(checkoutSteps[index + 1]);
     }
   }
 
   function goToPrevCartStep() {
-    const index = mobileCartSteps.indexOf(mobileCartStep);
+    const index = checkoutSteps.indexOf(checkoutStep);
     if (index > 0) {
-      setMobileCartStep(mobileCartSteps[index - 1]);
+      setCheckoutStep(checkoutSteps[index - 1]);
     }
   }
 
@@ -237,9 +237,9 @@ export function PosTerminal({
     });
     if (added) {
       setLastAddedProduct(product);
-      openMobileCart("products");
+      openMobileCart();
     }
-  }, [activeShopifyOrder, mobileCartSteps]);
+  }, [activeShopifyOrder]);
 
   const adjustOrderValidation = useCallback(
     (productId: string, delta: number) => {
@@ -644,10 +644,10 @@ export function PosTerminal({
   const cashPaymentReady = cashReceived >= totalTtc;
 
   useEffect(() => {
-    if (!mobileCartSteps.includes(mobileCartStep)) {
-      setMobileCartStep(mobileCartSteps[0]);
+    if (!checkoutSteps.includes(checkoutStep)) {
+      setCheckoutStep(checkoutSteps[0]);
     }
-  }, [mobileCartSteps, mobileCartStep]);
+  }, [checkoutSteps, checkoutStep]);
 
   useEffect(() => {
     setCashReceivedInput("");
@@ -839,15 +839,14 @@ export function PosTerminal({
     );
   }
 
-  function renderPaymentModeSelector() {
+  function renderPaymentModeSelector(compact = false) {
     if (isShopifyOrderCheckout) {
       return (
-        <div className="rounded-2xl border border-primary/30 bg-champagne/20 px-4 py-3">
-          <p className="text-xs font-medium text-muted">Paiement commande web</p>
-          <p className="mt-1 text-sm font-semibold text-foreground">{shopifyPaymentLabel}</p>
-          <p className="mt-1 text-xs text-muted">
-            Le ticket s&apos;imprime directement — pas de choix espèces/carte
+        <div className="rounded-xl border border-primary/30 bg-champagne/20 px-3 py-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+            Paiement commande web
           </p>
+          <p className="mt-1 text-sm font-semibold text-foreground">{shopifyPaymentLabel}</p>
         </div>
       );
     }
@@ -858,11 +857,114 @@ export function PosTerminal({
         options={PAYMENT_OPTIONS}
         onChange={setPaymentMethod}
         disabled={cart.length === 0}
+        compact={compact}
       />
     );
   }
 
-  function renderCashCalculatorPanel(options?: { compact?: boolean; dense?: boolean }) {
+  function renderCartFixedTotal() {
+    return (
+      <div className="natus-pos-cart-total-bar">
+        {(loyaltyDiscount > 0 || promoDiscount > 0) && (
+          <div className="natus-pos-cart-total-discounts">
+            <div className="flex items-center justify-between text-xs text-muted">
+              <span>Sous-total</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+            {loyaltyDiscount > 0 && (
+              <div className="flex items-center justify-between text-xs text-success">
+                <span>Fidélité</span>
+                <span>-{formatCurrency(loyaltyDiscount)}</span>
+              </div>
+            )}
+            {promoDiscount > 0 && appliedPromo && (
+              <div className="flex items-center justify-between text-xs text-success">
+                <span>{appliedPromo.code}</span>
+                <span>-{formatCurrency(promoDiscount)}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between text-sm text-muted">
+          <span>Total HT</span>
+          <span className="font-semibold text-foreground">{formatCurrency(totalHt)}</span>
+        </div>
+
+        <div className="natus-pos-cart-total-tva">
+          <div className="flex items-center justify-between text-sm text-muted">
+            <span>TVA ({tvaPercent} %)</span>
+            <span>{formatCurrency(totalTva)}</span>
+          </div>
+        </div>
+
+        <div className="natus-pos-cart-total-divider" aria-hidden />
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-base font-bold text-foreground">Total TTC</span>
+          <span className="natus-pos-cart-total-ttc">{formatCurrency(totalTtc)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  function renderPaymentStepContent() {
+    return (
+      <div className="space-y-3">
+        {renderPaymentModeSelector(true)}
+        {isOrderMode && !orderFullyValidated && (
+          <p className="text-xs text-warning">
+            Validez tous les produits ({orderValidationDone}/{orderValidationTotal}) — scan ou +
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  function renderCartCheckoutBody() {
+    const showLoyalty = checkoutStep === "loyalty" && !isShopifyOrderCheckout && !isStockScan;
+    const skipLoyalty = isShopifyOrderCheckout || isStockScan;
+
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-natus">
+          {showLoyalty ? (
+            <>
+              <div className="shrink-0 border-b border-primary/10 px-4 py-3">
+                {renderLoyaltyStep()}
+              </div>
+              <div className="px-4 py-3">{renderCartItems()}</div>
+            </>
+          ) : checkoutStep === "payment" ? (
+            <>
+              {skipLoyalty && (
+                <div className="border-b border-primary/10 px-4 py-3">{renderCartItems()}</div>
+              )}
+              <div className="px-4 py-3">{renderPaymentStepContent()}</div>
+            </>
+          ) : (
+            <div className="px-4 py-3">{renderCartItems()}</div>
+          )}
+        </div>
+
+        <div className="natus-pos-cart-checkout-footer shrink-0">
+          {checkoutStep === "payment" && showCashCalculator && (
+            <div className="natus-pos-cart-calc-dock border-b border-primary/10 px-4 py-2">
+              {renderCashCalculatorPanel({ checkout: true })}
+            </div>
+          )}
+          {renderCartFixedTotal()}
+          <div className="px-4 pb-3 pt-2">{renderCheckoutNavButtons()}</div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderCashCalculatorPanel(options?: {
+    compact?: boolean;
+    dense?: boolean;
+    checkout?: boolean;
+  }) {
     if (!showCashCalculator) return null;
 
     return (
@@ -873,7 +975,10 @@ export function PosTerminal({
           onChange={setCashReceivedInput}
           compact={options?.compact}
           dense={options?.dense}
-          className={options?.compact || options?.dense ? "mt-0" : undefined}
+          checkout={options?.checkout}
+          className={
+            options?.compact || options?.dense || options?.checkout ? "mt-0" : undefined
+          }
         />
       </div>
     );
@@ -884,6 +989,7 @@ export function PosTerminal({
     includeCalculator?: boolean;
     compactCalculator?: boolean;
     denseCalculator?: boolean;
+    checkoutCalculator?: boolean;
   }) {
     const includePaymentMode = options?.includePaymentMode ?? true;
     const includeCalculator = options?.includeCalculator ?? true;
@@ -900,6 +1006,7 @@ export function PosTerminal({
               renderCashCalculatorPanel({
                 compact: options?.compactCalculator,
                 dense: options?.denseCalculator,
+                checkout: options?.checkoutCalculator,
               })}
             {isOrderMode && !orderFullyValidated && (
               <p className="mt-2 text-xs text-warning">
@@ -912,37 +1019,76 @@ export function PosTerminal({
     );
   }
 
-  function renderDesktopCheckoutDock() {
+  function renderCheckoutStepBar() {
+    if (checkoutSteps.length <= 1) return null;
     return (
-      <div className="natus-pos-checkout-dock shrink-0">
-        <div className="space-y-0">
-          {!isShopifyOrderCheckout && (
-            <div className="border-b border-primary/10 px-4 pb-3 pt-3">
-              {renderPaymentModeSelector()}
-            </div>
+      <PosMobileCartStepBar
+        step={checkoutStep}
+        steps={checkoutSteps}
+        onStepChange={setCheckoutStep}
+      />
+    );
+  }
+
+  function renderLoyaltyStep() {
+    if (isShopifyOrderCheckout || isStockScan) return null;
+    return (
+      <PosCheckoutPanel
+        subtotal={subtotal}
+        storeId={defaultStoreId || undefined}
+        customer={loyaltyCustomer}
+        pointsToRedeem={pointsToRedeem}
+        promo={appliedPromo}
+        onCustomerChange={setLoyaltyCustomer}
+        onPointsToRedeemChange={setPointsToRedeem}
+        onPromoChange={setAppliedPromo}
+        loyaltySettings={loyaltySettings}
+      />
+    );
+  }
+
+  function renderCheckoutNavButtons() {
+    if (checkoutStep === "payment") {
+      return (
+        <div className="flex gap-2">
+          {checkoutSteps.length > 1 && (
+            <Button type="button" variant="secondary" className="flex-1" onClick={goToPrevCartStep}>
+              <ChevronLeft className="h-4 w-4" />
+              Retour
+            </Button>
           )}
-
-          <div className="border-b border-primary/10 px-4 py-2.5">
-            {isShopifyOrderCheckout
-              ? renderPaymentModeSelector()
-              : renderCartTotals(showCashCalculator ? "dock" : "full")}
-          </div>
-
-          {showCashCalculator && (
-            <div className="border-b border-primary/10 px-4 py-2.5">
-              {renderCashCalculatorPanel({ dense: true })}
-            </div>
-          )}
-
-          <div className="space-y-2 px-4 py-3">
-            {isOrderMode && !orderFullyValidated && (
-              <p className="text-xs text-warning">
-                Validez tous les produits ({orderValidationDone}/{orderValidationTotal}) — scan ou +
-              </p>
-            )}
+          <div className={checkoutSteps.length > 1 ? "flex-[2]" : "w-full"}>
             {renderPrintTicketButton()}
           </div>
         </div>
+      );
+    }
+
+    return (
+      <div className="flex gap-2">
+        {checkoutSteps.indexOf(checkoutStep) > 0 ? (
+          <Button
+            type="button"
+            variant="secondary"
+            className="flex-1"
+            onClick={goToPrevCartStep}
+          >
+            Retour
+          </Button>
+        ) : null}
+        {checkoutStep === "loyalty" ? (
+          <Button
+            type="button"
+            variant="secondary"
+            className="flex-1"
+            onClick={goToNextCartStep}
+          >
+            Passer
+          </Button>
+        ) : null}
+        <Button type="button" className="flex-1" onClick={goToNextCartStep}>
+          Suivant
+        </Button>
       </div>
     );
   }
@@ -1324,124 +1470,8 @@ export function PosTerminal({
 
                 </div>
 
-                {/* Mobile — étapes Fidélité → Produits → Paiement */}
-                <div className="flex min-h-0 flex-1 flex-col md:hidden">
-                  <PosMobileCartStepBar
-                    step={mobileCartStep}
-                    steps={mobileCartSteps}
-                    onStepChange={setMobileCartStep}
-                  />
-
-                  <div
-                    className={cn(
-                      "natus-pos-cart-mobile-scroll min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-natus",
-                      mobileCartStep === "payment" && "natus-pos-cart-mobile-scroll--tall"
-                    )}
-                  >
-                    {mobileCartStep === "loyalty" && !isShopifyOrderCheckout && !isStockScan && (
-                      <PosCheckoutPanel
-                        subtotal={subtotal}
-                        storeId={defaultStoreId || undefined}
-                        customer={loyaltyCustomer}
-                        pointsToRedeem={pointsToRedeem}
-                        promo={appliedPromo}
-                        onCustomerChange={setLoyaltyCustomer}
-                        onPointsToRedeemChange={setPointsToRedeem}
-                        onPromoChange={setAppliedPromo}
-                        loyaltySettings={loyaltySettings}
-                      />
-                    )}
-                    {mobileCartStep === "products" && renderCartItems()}
-                    {mobileCartStep === "payment" &&
-                      renderPaymentDetails({ denseCalculator: true })}
-                  </div>
-
-                  <div className="natus-pos-cart-mobile-footer shrink-0 border-t border-primary/10 bg-surface px-4 py-3 md:border-t md:border-primary/10">
-                    {mobileCartStep === "payment" ? (
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={goToPrevCartStep}
-                          disabled={mobileCartSteps.indexOf(mobileCartStep) === 0}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                          Retour
-                        </Button>
-                        <Button
-                          className="w-full"
-                          size="lg"
-                          onClick={() =>
-                            void handlePay(
-                              isShopifyOrderCheckout
-                                ? activeShopifyOrder!.defaultPayment
-                                : paymentMethod
-                            )
-                          }
-                          disabled={
-                            cart.length === 0 ||
-                            loading ||
-                            (isOrderMode && !orderFullyValidated) ||
-                            (showCashCalculator && !cashPaymentReady)
-                          }
-                          loading={loading}
-                        >
-                          <Printer className="h-4 w-4" />
-                          Imprimer ticket
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        {mobileCartSteps.indexOf(mobileCartStep) > 0 ? (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="flex-1"
-                            onClick={goToPrevCartStep}
-                          >
-                            Retour
-                          </Button>
-                        ) : null}
-                        {mobileCartStep === "loyalty" ? (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="flex-1"
-                            onClick={goToNextCartStep}
-                          >
-                            Passer
-                          </Button>
-                        ) : null}
-                        <Button type="button" className="flex-1" onClick={goToNextCartStep}>
-                          Suivant
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Desktop — panier complet */}
-                <div className="hidden min-h-0 flex-1 flex-col md:flex">
-                  <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-natus">
-                    {!isShopifyOrderCheckout && !isStockScan && (
-                      <div className="mb-4">
-                        <PosCheckoutPanel
-                          subtotal={subtotal}
-                          storeId={defaultStoreId || undefined}
-                          customer={loyaltyCustomer}
-                          pointsToRedeem={pointsToRedeem}
-                          promo={appliedPromo}
-                          onCustomerChange={setLoyaltyCustomer}
-                          onPointsToRedeemChange={setPointsToRedeem}
-                          onPromoChange={setAppliedPromo}
-                          loyaltySettings={loyaltySettings}
-                        />
-                      </div>
-                    )}
-                    {renderCartItems()}
-                  </div>
-                  {renderDesktopCheckoutDock()}
-                </div>
+                {renderCheckoutStepBar()}
+                {renderCartCheckoutBody()}
               </div>
             </div>
 
@@ -1449,7 +1479,7 @@ export function PosTerminal({
               <PosLuxuryCartFab
                 itemCount={cart.reduce((s, i) => s + i.quantity, 0)}
                 totalLabel={formatCurrency(totalTtc)}
-                onClick={() => openMobileCart("products")}
+                onClick={() => openMobileCart()}
               />
             )}
           </div>
