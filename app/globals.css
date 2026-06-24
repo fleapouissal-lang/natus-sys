@@ -1246,3 +1246,22 @@ textarea:focus {
   border: 1px solid rgba(150, 112, 58, 0.35) !important;
   box-shadow: 0 4px 16px rgba(179, 140, 74, 0.22);
 }
+
+/* Retour tactile discret (mobile) */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a,
+  [role="button"],
+  .cursor-pointer,
+  label[for] {
+    -webkit-tap-highlight-color: rgba(179, 140, 74, 0.18);
+  }
+
+  button:active:not(:disabled),
+  a:active,
+  [role="button"]:active,
+  .cursor-pointer:active {
+    opacity: 0.88;
+    transition: opacity 0.1s ease;
+  }
+}
