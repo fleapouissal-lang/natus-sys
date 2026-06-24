@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { resolveAvatarDisplayUrl } from "@/lib/profile/avatar-url";
 
 function getInitials(name: string) {
   return name
@@ -11,16 +12,36 @@ function getInitials(name: string) {
 
 export function UserAvatar({
   name,
+  avatarUrl,
   className,
   title,
   size = "md",
 }: {
   name: string;
+  avatarUrl?: string | null;
   className?: string;
   title?: string;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
 }) {
-  const sizeClass = size === "sm" ? "h-9 w-9 text-xs" : "h-10 w-10 text-sm";
+  const sizeClass =
+    size === "sm" ? "h-9 w-9 text-xs" : size === "lg" ? "h-24 w-24 text-xl" : "h-10 w-10 text-sm";
+  const src = resolveAvatarDisplayUrl(avatarUrl);
+
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt={name}
+        title={title ?? name}
+        className={cn(
+          "avatar-round shrink-0 border border-black/15 object-cover bg-white/50",
+          sizeClass,
+          className
+        )}
+      />
+    );
+  }
 
   return (
     <div

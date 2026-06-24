@@ -11,45 +11,15 @@ import {
 import {
   LogOut,
   PanelLeftClose,
-  UserRound,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
 import { signOutPosOperator } from "@/lib/pos/actions";
 import { cn } from "@/lib/utils";
 import { getRoleLabel } from "@/lib/permissions";
+import { getSettingsPath } from "@/lib/layout/settings-path";
 import type { UserRole } from "@/lib/types";
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function UserAvatar({
-  name,
-  className,
-  title,
-}: {
-  name: string;
-  className?: string;
-  title?: string;
-}) {
-  return (
-    <div
-      title={title}
-      className={cn(
-        "avatar-round flex h-10 w-10 shrink-0 items-center justify-center border border-black bg-white/50 text-sm font-semibold text-black",
-        className
-      )}
-    >
-      {getInitials(name)}
-    </div>
-  );
-}
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 function SidebarBrand({ collapsed }: { collapsed?: boolean }) {
   return (
@@ -90,55 +60,78 @@ function SidebarToggle({
   );
 }
 
-function SidebarPosOperator({
+function SidebarUserProfile({
   collapsed,
-  posOperatorName,
-  hasPosOperator,
+  userName,
+  avatarUrl,
+  roleLabel,
+  subtitle,
+  settingsHref,
+  showOnlineIndicator = false,
   onSwitchCashier,
   switchingCashier = false,
 }: {
   collapsed: boolean;
-  posOperatorName?: string | null;
-  hasPosOperator?: boolean;
+  userName: string;
+  avatarUrl?: string | null;
+  roleLabel: string;
+  subtitle?: string;
+  settingsHref: string;
+  showOnlineIndicator?: boolean;
   onSwitchCashier?: () => void;
   switchingCashier?: boolean;
 }) {
-  if (!hasPosOperator || !posOperatorName) return null;
-
   if (collapsed) {
     return (
-      <div
-        className="flex w-full flex-col items-center gap-1 border-b border-black/10 px-2 py-2"
-        title={`Caissier connecté : ${posOperatorName}`}
+      <Link
+        href={settingsHref}
+        className="flex w-full flex-col items-center gap-2 border-b border-black/10 px-2 py-3 transition-colors hover:bg-black/[0.04]"
+        title="Paramètres du profil"
       >
         <div className="relative">
-          <UserAvatar name={posOperatorName} className="h-8 w-8 text-xs ring-2 ring-success/70" />
-          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-sidebar bg-success" />
+          <UserAvatar
+            name={userName}
+            avatarUrl={avatarUrl}
+            title={[userName, roleLabel, subtitle].filter(Boolean).join(" · ")}
+            className={showOnlineIndicator ? "ring-2 ring-success/70" : undefined}
+          />
+          {showOnlineIndicator && (
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-sidebar bg-success" />
+          )}
         </div>
-        <p className="max-w-full truncate text-center text-[9px] font-semibold leading-tight text-black/75">
-          {posOperatorName.split(" ")[0]}
+        <p className="max-w-full truncate text-center text-[10px] font-semibold leading-tight text-black">
+          {userName.split(" ")[0]}
         </p>
-      </div>
+      </Link>
     );
   }
 
   return (
-    <div className="border-b border-black/10 px-4 py-3">
-      <div className="flex items-center gap-3 rounded-xl bg-black/[0.06] px-3 py-2.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-champagne">
-          <UserRound className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black/55">
-            Caissier connecté
-          </p>
-          <p className="truncate text-sm font-semibold text-black">{posOperatorName}</p>
+    <div className="border-b border-black/10 px-4 py-4">
+      <Link
+        href={settingsHref}
+        className="flex items-center gap-3 rounded-xl px-1 py-1 transition-colors hover:bg-black/[0.04]"
+        title="Paramètres du profil"
+      >
+        <div className="relative shrink-0">
+          <UserAvatar name={userName} avatarUrl={avatarUrl} />
+          {showOnlineIndicator && (
+            <span
+              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-sidebar bg-success shadow-[0_0_0_3px_rgba(34,197,94,0.25)]"
+              aria-hidden
+            />
+          )}
         </div>
-        <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full bg-success shadow-[0_0_0_3px_rgba(34,197,94,0.25)]"
-          aria-hidden
-        />
-      </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-black">{userName}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-black/80">
+            {roleLabel}
+          </p>
+          {subtitle && (
+            <p className="truncate text-xs text-black/60">{subtitle}</p>
+          )}
+        </div>
+      </Link>
       {onSwitchCashier && (
         <button
           type="button"
@@ -153,68 +146,28 @@ function SidebarPosOperator({
   );
 }
 
-function SidebarUserProfile({
-  collapsed,
-  userName,
-  roleLabel,
-  cityLabel,
-  isStorePos = false,
-}: {
-  collapsed: boolean;
-  userName: string;
-  roleLabel: string;
-  cityLabel?: string;
-  isStorePos?: boolean;
-}) {
-  const displayRole = isStorePos ? "Caisse magasin" : roleLabel;
-  if (collapsed) {
-    return (
-      <div className="flex w-full flex-col items-center gap-2 border-b border-black/10 px-2 py-3">
-        <UserAvatar
-          name={userName}
-          title={[userName, displayRole, cityLabel].filter(Boolean).join(" · ")}
-        />
-        <p className="max-w-full truncate text-center text-[10px] font-semibold leading-tight text-black">
-          {userName.split(" ")[0]}
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="border-b border-black/10 px-4 py-4">
-      <div className="flex items-center gap-3 px-1 py-1">
-        <UserAvatar name={userName} />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-black">{userName}</p>
-          <p className="text-xs font-medium uppercase tracking-wide text-black/80">
-            {displayRole}
-          </p>
-          {cityLabel && (
-            <p className="truncate text-xs text-black/60">{cityLabel}</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function Sidebar({
   role,
   userName,
+  avatarUrl,
   cityLabel,
+  storeName,
   isStorePos = false,
   isPersonalCashier = false,
   hasPosOperator = false,
   posOperatorName,
+  posOperatorAvatarUrl,
 }: {
   role: UserRole;
   userName: string;
+  avatarUrl?: string | null;
   cityLabel?: string;
+  storeName?: string;
   isStorePos?: boolean;
   isPersonalCashier?: boolean;
   hasPosOperator?: boolean;
   posOperatorName?: string | null;
+  posOperatorAvatarUrl?: string | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -229,6 +182,15 @@ export function Sidebar({
     planningOnlyNav: false,
   });
   const roleLabel = getRoleLabel(role);
+  const operatorActive = isStorePos && hasPosOperator && Boolean(posOperatorName);
+  const profileName = operatorActive ? posOperatorName! : userName;
+  const profileAvatar = operatorActive ? posOperatorAvatarUrl : avatarUrl;
+  const profileRole = operatorActive
+    ? "Caissier"
+    : isStorePos
+      ? "Caisse magasin"
+      : roleLabel;
+  const profileSubtitle = storeName || cityLabel;
 
   useEffect(() => {
     setCollapsed(sidebarCollapsedForRoute(pathname));
@@ -286,21 +248,15 @@ export function Sidebar({
 
       <SidebarUserProfile
         collapsed={collapsed}
-        userName={userName}
-        roleLabel={roleLabel}
-        cityLabel={cityLabel}
-        isStorePos={isStorePos}
+        userName={profileName}
+        avatarUrl={profileAvatar}
+        roleLabel={profileRole}
+        subtitle={profileSubtitle}
+        settingsHref={getSettingsPath(role)}
+        showOnlineIndicator={operatorActive}
+        onSwitchCashier={operatorActive ? handleSwitchCashier : undefined}
+        switchingCashier={switchingCashier}
       />
-
-      {isStorePos && (
-        <SidebarPosOperator
-          collapsed={collapsed}
-          posOperatorName={posOperatorName}
-          hasPosOperator={hasPosOperator}
-          onSwitchCashier={handleSwitchCashier}
-          switchingCashier={switchingCashier}
-        />
-      )}
 
       <nav
         className={cn(

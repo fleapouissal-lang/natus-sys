@@ -1,6 +1,23 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+function getSupabaseImagePattern() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return null;
+  try {
+    const { hostname } = new URL(url);
+    return {
+      protocol: "https" as const,
+      hostname,
+      pathname: "/storage/v1/object/public/**",
+    };
+  } catch {
+    return null;
+  }
+}
+
+const supabaseImagePattern = getSupabaseImagePattern();
+
 const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
@@ -11,6 +28,12 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "placehold.co",
       },
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/**",
+      },
+      ...(supabaseImagePattern ? [supabaseImagePattern] : []),
     ],
   },
   async headers() {

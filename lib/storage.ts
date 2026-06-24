@@ -55,6 +55,48 @@ export async function uploadProductImage(
   return { url: data.publicUrl };
 }
 
+const PROFILE_AVATARS_BUCKET = "profile-avatars";
+
+export async function uploadProfileAvatar(
+  supabase: SupabaseClient,
+  userId: string,
+  file: File
+): Promise<{ url?: string; error?: string }> {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { error: "Format d'image non supporté (JPG, PNG, WebP, GIF)" };
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    return { error: "Image trop volumineuse (max 2 Mo)" };
+  }
+
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${userId}/avatar.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error } = await supabase.storage.from(PROFILE_AVATARS_BUCKET).upload(path, buffer, {
+    contentType: file.type,
+    upsert: true,
+  });
+
+  if (error) return { error: error.message };
+
+  const { data } = supabase.storage.from(PROFILE_AVATARS_BUCKET).getPublicUrl(path);
+  return { url: data.publicUrl };
+}
+
+export async function deleteProfileAvatarFile(
+  supabase: SupabaseClient,
+  avatarUrl: string
+): Promise<void> {
+  const marker = `/storage/v1/object/public/${PROFILE_AVATARS_BUCKET}/`;
+  const index = avatarUrl.indexOf(marker);
+  if (index === -1) return;
+
+  const path = decodeURIComponent(avatarUrl.slice(index + marker.length));
+  await supabase.storage.from(PROFILE_AVATARS_BUCKET).remove([path]);
+}
+
 const COMPLAINT_PHOTOS_BUCKET = "complaint-photos";
 
 export async function uploadComplaintPhoto(

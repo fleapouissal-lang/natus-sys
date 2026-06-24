@@ -19,8 +19,10 @@ import {
   FileText,
   CalendarClock,
   Newspaper,
+  Settings,
 } from "lucide-react";
 import { getManagementBasePath } from "@/lib/permissions";
+import { getSettingsPath } from "@/lib/layout/settings-path";
 import type { UserRole } from "@/lib/types";
 
 export type NavLinkItem = {
@@ -100,6 +102,15 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   return links;
 }
 
+export function getSettingsNavItem(role: UserRole): NavLinkItem {
+  return {
+    href: getSettingsPath(role),
+    label: "Paramètres",
+    icon: Settings,
+    mobileOrder: 99,
+  };
+}
+
 export function resolveNavLinks(input: {
   role: UserRole;
   isStorePos?: boolean;
@@ -112,13 +123,15 @@ export function resolveNavLinks(input: {
 }): NavLinkItem[] {
   const basePath = getManagementBasePath(input.role);
 
-  if (input.role === "livreur") return livreurLinks;
+  if (input.role === "livreur") {
+    return [...livreurLinks, getSettingsNavItem(input.role)];
+  }
 
   if (input.role === "cashier") {
-    if (input.planningOnlyNav) return personalCashierLinks;
-    if (input.isStorePos) return cashierLinks;
-    if (input.isPersonalCashier) return cashierLinks;
-    return cashierLinks;
+    const links = input.planningOnlyNav
+      ? personalCashierLinks
+      : cashierLinks;
+    return [...links, getSettingsNavItem(input.role)];
   }
 
   let links = basePath ? buildManagementLinks(basePath) : cashierLinks;
@@ -127,7 +140,7 @@ export function resolveNavLinks(input: {
     links = links.filter((link) => link.href !== "/cashier/pos");
   }
 
-  return links;
+  return [...links, getSettingsNavItem(input.role)];
 }
 
 export function isNavLinkActive(pathname: string, href: string): boolean {

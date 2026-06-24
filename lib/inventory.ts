@@ -74,6 +74,13 @@ export async function getProductsWithStoreStock(
       ...product,
       stock: stockMap.get(product.id) ?? 0,
       parent_name: parent?.name ?? null,
+      parent_image_url: parent?.image_url ?? null,
+      parent_category: parent?.category ?? null,
+      parent_categories: parent?.categories?.length
+        ? parent.categories
+        : parent?.category
+          ? [parent.category]
+          : undefined,
     };
   });
 }

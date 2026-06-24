@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { createClient } from "@/lib/supabase/server";
 import { isPersonalCashierPlanningMode } from "@/lib/cashier/access";
+import { getStoreById } from "@/lib/inventory";
 import { getActivePosOperator } from "@/lib/pos/operator-session";
 
 export default async function CashierLayout({
@@ -25,17 +26,22 @@ export default async function CashierLayout({
     activeOperator?.operator?.full_name ||
     activeOperator?.operator?.email ||
     null;
+  const posOperatorAvatarUrl = activeOperator?.operator?.avatar_url ?? null;
+  const store = profile.store_id ? await getStoreById(profile.store_id) : null;
 
   return (
     <DashboardShell
       role={profile.role}
       userName={profile.full_name || profile.email}
+      avatarUrl={profile.avatar_url}
       cityLabel={profile.city || undefined}
+      storeName={store?.name}
       storeId={profile.store_id}
       isStorePos={profile.is_store_pos === true}
       isPersonalCashier={isPersonalCashier}
       hasPosOperator={Boolean(activeOperator?.operator_id)}
       posOperatorName={posOperatorName}
+      posOperatorAvatarUrl={posOperatorAvatarUrl}
     >
       {children}
     </DashboardShell>

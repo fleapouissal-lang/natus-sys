@@ -22,7 +22,7 @@ export function ProductInfoCard({
 
   return (
     <div className={`flex gap-4 ${compact ? "items-center" : "flex-col sm:flex-row sm:items-center"}`}>
-      <ProductImage product={product} size={compact ? "sm" : "md"} />
+      <ProductImage product={product} parent={parent} size={compact ? "sm" : "md"} />
       <div className="flex-1 min-w-0">
         <p className={`font-semibold text-foreground ${compact ? "text-base" : "text-lg"}`}>
           {displayName}

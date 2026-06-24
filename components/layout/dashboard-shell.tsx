@@ -21,6 +21,7 @@ import { CashierNotificationsProvider } from "@/components/notifications/cashier
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
 import type { NotificationScope } from "@/lib/notifications/notification-scope";
+import { getSettingsPath } from "@/lib/layout/settings-path";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
 
@@ -37,24 +38,30 @@ function resolveNotificationScope(
 export function DashboardShell({
   role,
   userName,
+  avatarUrl,
   cityLabel,
+  storeName,
   storeId,
   city,
   isStorePos = false,
   isPersonalCashier = false,
   hasPosOperator = false,
   posOperatorName,
+  posOperatorAvatarUrl,
   children,
 }: {
   role: UserRole;
   userName: string;
+  avatarUrl?: string | null;
   cityLabel?: string;
+  storeName?: string;
   storeId?: string | null;
   city?: string | null;
   isStorePos?: boolean;
   isPersonalCashier?: boolean;
   hasPosOperator?: boolean;
   posOperatorName?: string | null;
+  posOperatorAvatarUrl?: string | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -78,7 +85,14 @@ export function DashboardShell({
     ? null
     : resolveNotificationScope(role, storeId, city ?? cityLabel);
 
-  const mobileSubtitle = planningOnlyActive ? "Planning · lecture seule" : cityLabel || null;
+  const profileSubtitle = storeName || cityLabel || null;
+  const operatorActive = isStorePos && hasPosOperator && Boolean(posOperatorName);
+  const displayUserName = operatorActive ? posOperatorName! : userName;
+  const displayAvatarUrl = operatorActive ? posOperatorAvatarUrl : avatarUrl;
+
+  const mobileSubtitle = planningOnlyActive
+    ? "Planning · lecture seule"
+    : profileSubtitle;
 
   const showMobileTopBar =
     (planningOnlyActive || !mobileStorePosGate) && !isPos;
@@ -104,18 +118,23 @@ export function DashboardShell({
           <Sidebar
             role={role}
             userName={userName}
+            avatarUrl={avatarUrl}
             cityLabel={cityLabel}
+            storeName={storeName}
             isStorePos={isStorePos}
             isPersonalCashier={isPersonalCashier}
             hasPosOperator={hasPosOperator}
             posOperatorName={posOperatorName}
+            posOperatorAvatarUrl={posOperatorAvatarUrl}
           />
         </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {showMobileTopBar && (
             <MobileTopBar
-              userName={userName}
+              userName={displayUserName}
+              avatarUrl={displayAvatarUrl}
+              settingsHref={getSettingsPath(role)}
               subtitle={mobileSubtitle}
               isStorePos={isStorePos}
               alwaysVisible={planningOnlyActive}

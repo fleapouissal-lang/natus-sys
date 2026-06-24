@@ -21,11 +21,15 @@ import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
 
 export function MobileTopBar({
   userName,
+  avatarUrl,
+  settingsHref,
   subtitle,
   isStorePos = false,
   alwaysVisible = false,
 }: {
   userName: string;
+  avatarUrl?: string | null;
+  settingsHref: string;
   subtitle?: string | null;
   isStorePos?: boolean;
   alwaysVisible?: boolean;
@@ -59,12 +63,15 @@ export function MobileTopBar({
         </div>
 
         <div className="natus-mobile-topbar-actions flex shrink-0 items-center gap-2">
-          <UserAvatar
-            name={userName}
-            title={userName}
-            size="sm"
-            className="natus-mobile-topbar-avatar"
-          />
+          <Link href={settingsHref} title="Paramètres">
+            <UserAvatar
+              name={userName}
+              avatarUrl={avatarUrl}
+              title={userName}
+              size="sm"
+              className="natus-mobile-topbar-avatar"
+            />
+          </Link>
           <button
             type="button"
             onClick={handleLogout}

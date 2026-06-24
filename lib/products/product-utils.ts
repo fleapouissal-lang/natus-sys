@@ -79,3 +79,40 @@ export function groupProductsForList(products: Product[]): Product[] {
 
   return result;
 }
+
+/** Produits affichés au premier niveau (parents, simples, variantes orphelines). */
+export function getTopLevelProducts(products: Product[]): Product[] {
+  const parents = products.filter((p) => p.product_kind === "parent");
+  const simples = products.filter(
+    (p) => p.product_kind === "simple" || !p.product_kind
+  );
+  const parentIds = new Set(parents.map((p) => p.id));
+  const orphans = products.filter(
+    (p) =>
+      p.product_kind === "variant" &&
+      (!p.parent_id || !parentIds.has(p.parent_id))
+  );
+
+  return [...parents, ...simples, ...orphans].sort((a, b) =>
+    a.name.localeCompare(b.name, "fr")
+  );
+}
+
+export function ensureParentsForVariants(
+  products: Product[],
+  parentById: Map<string, Product>
+): Product[] {
+  const ids = new Set(products.map((p) => p.id));
+  const extras: Product[] = [];
+
+  for (const product of products) {
+    if (product.product_kind !== "variant" || !product.parent_id) continue;
+    const parent = parentById.get(product.parent_id);
+    if (parent && !ids.has(parent.id)) {
+      extras.push(parent);
+      ids.add(parent.id);
+    }
+  }
+
+  return extras.length ? [...products, ...extras] : products;
+}

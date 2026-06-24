@@ -14,6 +14,7 @@ export default async function HubLayout({
     <DashboardShell
       role="hub"
       userName={profile.full_name || profile.email}
+      avatarUrl={profile.avatar_url}
       cityLabel={profile.city || undefined}
     >
       {children}

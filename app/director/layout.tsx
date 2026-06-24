@@ -14,6 +14,7 @@ export default async function DirectorLayout({
     <DashboardShell
       role={profile.role}
       userName={profile.full_name || profile.email}
+      avatarUrl={profile.avatar_url}
       cityLabel="Toutes les villes"
     >
       {children}

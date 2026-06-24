@@ -36,7 +36,7 @@ export async function getActivePosOperator(
 
   const { data: operator } = await supabase
     .from("profiles")
-    .select("id, full_name, email")
+    .select("id, full_name, email, avatar_url")
     .eq("id", session.operator_id)
     .maybeSingle();
 

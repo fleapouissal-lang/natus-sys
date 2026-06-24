@@ -165,7 +165,9 @@ async function upsertUser(supabase, user, storeByName) {
 
   if (!userId) return;
 
-  const profileUpdate = {
+  const profilePayload = {
+    id: userId,
+    email: user.email,
     full_name: user.full_name,
     role: user.role,
     is_active: true,
@@ -174,7 +176,11 @@ async function upsertUser(supabase, user, storeByName) {
     is_store_pos: user.role === "cashier" ? Boolean(user.is_store_pos) : false,
   };
 
-  await supabase.from("profiles").update(profileUpdate).eq("id", userId);
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .upsert(profilePayload, { onConflict: "id" });
+
+  if (profileError) throw profileError;
 
   const label = user.is_store_pos ? "caisse magasin" : user.role;
   console.log(`✓  ${user.email} (${label})`);

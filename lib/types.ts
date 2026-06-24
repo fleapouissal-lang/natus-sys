@@ -57,6 +57,7 @@ export interface Profile {
   city: string | null;
   store_id: string | null;
   is_store_pos?: boolean;
+  avatar_url?: string | null;
   created_at: string;
   updated_at: string;
   stores?: Pick<Store, "name" | "city"> | null;
@@ -76,6 +77,9 @@ export interface Product {
   product_kind?: ProductKind;
   parent_id?: string | null;
   parent_name?: string | null;
+  parent_image_url?: string | null;
+  parent_category?: string | null;
+  parent_categories?: string[];
   brand: string | null;
   image_url: string | null;
   created_at: string;

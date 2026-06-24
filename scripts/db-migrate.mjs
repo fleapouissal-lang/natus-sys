@@ -27,27 +27,29 @@ function loadEnvLocal() {
   return env;
 }
 
-function printHelp() {
+function printHelp(extra = "") {
   console.error(`
-❌ Migrations Supabase — authentification requise
+❌ Migrations Supabase — échec${extra ? ` (${extra})` : ""}
 
-1) Connexion CLI (token personnel, pas la service_role JWT) :
-   npx supabase login
-   → ou token sur https://supabase.com/dashboard/account/tokens
-   → puis dans .env.local : SUPABASE_ACCESS_TOKEN=sbp_...
+1) Token Supabase CLI (pas la service_role JWT) :
+   https://supabase.com/dashboard/account/tokens
+   → dans .env.local : SUPABASE_ACCESS_TOKEN=sbp_...
 
 2) Mot de passe base de données (Dashboard → Project Settings → Database) :
    → dans .env.local : SUPABASE_DB_PASSWORD=votre_mot_de_passe
 
-3) Projet lié (ref : agobpjhgkloxgetntcye) :
+3) Projet lié :
    npx supabase link --project-ref agobpjhgkloxgetntcye
 
 4) Relancer :
    npm run db:migrate
 
-Contournement direct (si login role échoue encore) :
-   npx supabase db push --linked --yes --db-url "postgresql://postgres.[ref]:[mdp]@..."
-   (Session pooler ou connexion directe depuis le Dashboard Supabase)
+Si « Remote migration versions not found in local » (ex. 070) :
+   → le fichier 070_remote_sync.sql doit exister localement (déjà ajouté)
+   → ou : npx supabase migration repair --status reverted 070
+
+Alternative sans CLI : coller le SQL de supabase/migrations/071_*.sql
+   dans Supabase Dashboard → SQL Editor → Run
 `);
 }
 

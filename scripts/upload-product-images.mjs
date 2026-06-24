@@ -115,7 +115,7 @@ async function main() {
 
   const { data: products, error: fetchError } = await supabase
     .from("products")
-    .select("id, name, category");
+    .select("id, name, category, categories");
 
   if (fetchError) {
     console.error("❌ Lecture produits :", fetchError.message);
@@ -125,7 +125,10 @@ async function main() {
   console.log(`\n🔄 Mise à jour de ${products?.length || 0} produit(s)...\n`);
 
   for (const product of products || []) {
-    const category = product.category || "Soin visage";
+    const category =
+      (Array.isArray(product.categories) && product.categories[0]) ||
+      product.category ||
+      "Soin visage";
     const imageUrl =
       uploadedByCategory[category] ||
       getProductImagePublicUrl(url, category, CATEGORY_DEFAULT_IMAGES["Soin visage"]);

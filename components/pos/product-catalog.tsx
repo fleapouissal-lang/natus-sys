@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useEffect, useCallback } from "react";
-import Image from "next/image";
 import {
   Search,
   CheckCircle2,
@@ -27,7 +26,7 @@ import {
   PRODUCT_VIEW_ACTION_COLOR,
 } from "@/components/products/product-view-modal";
 import { formatCurrency, cn } from "@/lib/utils";
-import { getProductImageUrl } from "@/lib/product-image";
+import { resolveParentImageSource } from "@/lib/product-image";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import {
@@ -141,6 +140,7 @@ function ProductCard({
     product,
     product.parent_name ? ({ name: product.parent_name } as Product) : null
   );
+  const parentImage = resolveParentImageSource(product);
 
   function handleCardClick() {
     if (outOfStock) {
@@ -188,13 +188,7 @@ function ProductCard({
         )}
       >
         <div className="relative aspect-square w-full shrink-0 bg-page">
-          <Image
-            src={getProductImageUrl(product)}
-            alt={product.name}
-            fill
-            className="object-cover"
-            unoptimized
-          />
+          <ProductImage product={product} parent={parentImage} fill />
           {cartQty > 0 && (
             <span className="absolute right-1.5 top-1.5 z-[2] min-w-[1.25rem] rounded-md border-0 bg-champagne px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-black shadow-sm">
               {orderMode ? `${validatedQty}/${cartQty}` : cartQty}
@@ -322,13 +316,7 @@ function ProductCard({
         )}
       >
         <div className="relative aspect-[4/3] w-full shrink-0 bg-page">
-          <Image
-            src={getProductImageUrl(product)}
-            alt={product.name}
-            fill
-            className="object-cover"
-            unoptimized
-          />
+          <ProductImage product={product} parent={parentImage} fill />
           {!outOfStock && (
             <span
               className="absolute right-1.5 top-1.5 z-[1] min-w-[1.25rem] rounded-md border-0 bg-champagne px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-black shadow-sm"
@@ -474,13 +462,7 @@ function ProductCard({
       )}
     >
       <div className="relative aspect-[4/3] w-full shrink-0 bg-page">
-        <Image
-          src={getProductImageUrl(product)}
-          alt={product.name}
-          fill
-          className="object-cover"
-          unoptimized
-        />
+        <ProductImage product={product} parent={parentImage} fill />
         {!outOfStock && (
           <span
             className="absolute right-1.5 top-1.5 z-[1] min-w-[1.25rem] rounded-md border-0 bg-champagne px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-black shadow-sm"

@@ -1,18 +1,17 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Image from "next/image";
 import { Barcode, Package, Tag, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
-import { getProductImageUrl } from "@/lib/product-image";
+import { ProductImage } from "@/components/pos/product-image";
 import { PRODUCT_BRAND } from "@/lib/constants/products";
 import {
   getProductCategories,
   productDisplayName,
 } from "@/lib/products/product-utils";
+import { formatCurrency } from "@/lib/utils";
 import type { Product } from "@/lib/types";
 
 function DetailRow({
@@ -66,13 +65,7 @@ export function ProductViewModal({
 
       <div className="grid gap-6 md:grid-cols-[minmax(0,16rem)_1fr]">
         <div className="relative mx-auto aspect-square w-full max-w-[16rem] overflow-hidden rounded-lg border border-border bg-page">
-          <Image
-            src={getProductImageUrl(product)}
-            alt={displayName}
-            fill
-            className="object-cover"
-            unoptimized
-          />
+          <ProductImage product={product} parent={parent} fill />
         </div>
 
         <dl className="space-y-4">

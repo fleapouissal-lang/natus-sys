@@ -1,22 +1,63 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { getProductImageUrl } from "@/lib/product-image";
-import type { Product } from "@/lib/types";
+import {
+  getProductImageFallbackUrl,
+  getProductImageUrl,
+  type ProductImageSource,
+} from "@/lib/product-image";
 
 export function ProductImage({
   product,
+  parent,
   size = "md",
+  fill = false,
   strip = false,
   className,
+  imgClassName,
 }: {
-  product: Pick<Product, "image_url" | "category" | "name">;
+  product: ProductImageSource;
+  parent?: ProductImageSource | null;
   size?: "xs" | "sm" | "cart" | "md" | "lg";
+  fill?: boolean;
   strip?: boolean;
   className?: string;
+  imgClassName?: string;
 }) {
   const sizes = { xs: 48, sm: 64, cart: 84, md: 160, lg: 240 };
   const px = sizes[size];
-  const src = getProductImageUrl(product);
+  const primarySrc = useMemo(
+    () => getProductImageUrl(product, { parent }),
+    [product, parent]
+  );
+  const [src, setSrc] = useState(primarySrc);
+
+  useEffect(() => {
+    setSrc(primarySrc);
+  }, [primarySrc]);
+
+  function handleError() {
+    const fallback = getProductImageFallbackUrl(product, {
+      parent,
+      failedUrl: src,
+    });
+    if (fallback && fallback !== src) {
+      setSrc(fallback);
+    }
+  }
+
+  const image = (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={product.name}
+      onError={handleError}
+      loading={fill ? "eager" : "lazy"}
+      decoding="async"
+      className={cn("h-full w-full object-cover", imgClassName)}
+    />
+  );
 
   if (strip) {
     return (
@@ -26,13 +67,15 @@ export function ProductImage({
           className
         )}
       >
-        <Image
-          src={src}
-          alt={product.name}
-          fill
-          className="object-cover"
-          unoptimized
-        />
+        {image}
+      </div>
+    );
+  }
+
+  if (fill) {
+    return (
+      <div className={cn("absolute inset-0 overflow-hidden", className)}>
+        {image}
       </div>
     );
   }
@@ -40,18 +83,12 @@ export function ProductImage({
   return (
     <div
       className={cn(
-        "relative overflow-hidden border border-border bg-surface",
+        "relative shrink-0 overflow-hidden rounded-lg border border-[#B38C4A]/15 bg-[#FAF6EF]/40",
         className
       )}
       style={className?.includes("!h-full") ? undefined : { width: px, height: px }}
     >
-      <Image
-        src={src}
-        alt={product.name}
-        fill
-        className="object-cover"
-        unoptimized
-      />
+      {image}
     </div>
   );
 }
