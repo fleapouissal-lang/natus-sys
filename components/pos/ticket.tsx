@@ -86,7 +86,7 @@ export function Ticket({ data }: { data: SaleDocumentData }) {
           </tbody>
         </table>
 
-        {(data.pointsRedeemed || data.pointsEarned) && (
+        {((data.pointsRedeemed ?? 0) > 0 || (data.pointsEarned ?? 0) > 0) && (
           <div className="mb-3 space-y-0.5 text-[10px] text-[#4a4034]">
             {data.pointsRedeemed ? (
               <p className="flex justify-between">
