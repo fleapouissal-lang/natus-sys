@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   CalendarOff,
@@ -9,10 +9,13 @@ import {
   Clock,
   MapPin,
   Sparkles,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import {
   addWeeks,
+  formatShiftDate,
   formatTimeLabel,
   formatWeekRangeLabel,
   getDayNumber,
@@ -36,10 +39,57 @@ function shiftDurationHours(start: string, end: string): number {
   return (eh * 60 + em - (sh * 60 + sm)) / 60;
 }
 
+function DayPlanningContent({
+  day,
+  shift,
+  isOff,
+}: {
+  day: string;
+  shift?: CashierShift;
+  isOff: boolean;
+}) {
+  const today = isToday(day);
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <p className="text-lg font-semibold text-foreground">{formatShiftDate(day)}</p>
+        {today && (
+          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
+            Aujourd&apos;hui
+          </span>
+        )}
+      </div>
+
+      {isOff ? (
+        <div className="mt-4 flex items-center gap-2 text-sm text-muted">
+          <CalendarOff className="h-4 w-4 shrink-0" />
+          Jour de repos
+        </div>
+      ) : shift ? (
+        <div className="mt-4 space-y-3">
+          <p className="flex items-center gap-1.5 text-xl font-semibold text-primary">
+            <Clock className="h-5 w-5 shrink-0" />
+            {formatTimeLabel(shift.start_time)} – {formatTimeLabel(shift.end_time)}
+          </p>
+          <p className="flex items-center gap-1.5 text-sm text-muted">
+            <MapPin className="h-4 w-4 shrink-0 text-primary" />
+            {shift.stores?.name || "Magasin"}
+          </p>
+          {shift.notes && <p className="text-sm text-muted">{shift.notes}</p>}
+        </div>
+      ) : (
+        <p className="mt-4 text-sm text-muted">Pas de créneau ce jour-là</p>
+      )}
+    </>
+  );
+}
+
 export function CashierMyScheduleMobile({ shifts, weekStart, offDate }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [popupDay, setPopupDay] = useState<string | null>(null);
 
   const weekDays = useMemo(() => getWeekDays(weekStart), [weekStart]);
 
@@ -73,6 +123,13 @@ export function CashierMyScheduleMobile({ shifts, weekStart, offDate }: Props) {
     params.set("week", nextWeek);
     router.push(`${pathname}?${params.toString()}`);
   }
+
+  function openDay(day: string) {
+    setPopupDay(day);
+  }
+
+  const popupShift = popupDay ? shiftByDay.get(popupDay) : undefined;
+  const popupIsOff = popupDay ? offDate === popupDay : false;
 
   return (
     <div className="space-y-4">
@@ -147,11 +204,15 @@ export function CashierMyScheduleMobile({ shifts, weekStart, offDate }: Props) {
           const today = isToday(day);
 
           return (
-            <div
+            <button
               key={day}
+              type="button"
+              onClick={() => openDay(day)}
+              aria-label={formatShiftDate(day)}
               className={cn(
-                "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2",
-                today && "bg-primary/10 ring-1 ring-primary/30"
+                "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl py-2 transition-colors cursor-pointer",
+                today && "bg-primary/10 ring-1 ring-primary/30",
+                !today && "hover:bg-black/[0.04]"
               )}
             >
               <span
@@ -179,7 +240,7 @@ export function CashierMyScheduleMobile({ shifts, weekStart, offDate }: Props) {
                 )}
                 aria-hidden
               />
-            </div>
+            </button>
           );
         })}
       </div>
@@ -200,9 +261,12 @@ export function CashierMyScheduleMobile({ shifts, weekStart, offDate }: Props) {
                 />
               )}
 
-              <div
+              <button
+                type="button"
+                onClick={() => openDay(day)}
+                aria-label={`Voir le planning du ${formatShiftDate(day)}`}
                 className={cn(
-                  "relative z-10 flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-full text-[10px] font-bold leading-none",
+                  "relative z-10 flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-full text-[10px] font-bold leading-none cursor-pointer transition-transform active:scale-95",
                   isOff && "bg-black/5 text-muted",
                   shift && "bg-primary text-white",
                   !isOff && !shift && "border border-dashed border-black/20 bg-surface text-muted",
@@ -210,11 +274,13 @@ export function CashierMyScheduleMobile({ shifts, weekStart, offDate }: Props) {
                 )}
               >
                 {getDayNumber(day)}
-              </div>
+              </button>
 
-              <div
+              <button
+                type="button"
+                onClick={() => openDay(day)}
                 className={cn(
-                  "min-w-0 flex-1 rounded-2xl border px-3.5 py-3",
+                  "min-w-0 flex-1 rounded-2xl border px-3.5 py-3 text-left transition-colors cursor-pointer active:scale-[0.99]",
                   today && shift && "border-primary/35 bg-champagne/25",
                   today && isOff && "border-black/10 bg-page/80",
                   today && !shift && !isOff && "border-black/10 bg-surface",
@@ -250,18 +316,37 @@ export function CashierMyScheduleMobile({ shifts, weekStart, offDate }: Props) {
                       <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
                       {shift.stores?.name || "Magasin"}
                     </p>
-                    {shift.notes && (
-                      <p className="text-xs text-muted">{shift.notes}</p>
-                    )}
                   </div>
                 ) : (
                   <p className="mt-2 text-sm text-muted">Pas de créneau</p>
                 )}
-              </div>
+              </button>
             </li>
           );
         })}
       </ol>
+
+      {popupDay && (
+        <Modal onClose={() => setPopupDay(null)} size="sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <DayPlanningContent
+                day={popupDay}
+                shift={popupShift}
+                isOff={popupIsOff}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setPopupDay(null)}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-black/5 hover:text-foreground cursor-pointer"
+              aria-label="Fermer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
