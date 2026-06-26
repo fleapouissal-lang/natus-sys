@@ -73,6 +73,7 @@ function revalidateManagement() {
   revalidatePath("/manager/stores");
   revalidatePath("/manager/users");
   revalidatePath("/manager/planning");
+  revalidatePath("/manager/hub-orders");
   revalidatePath("/director/products");
   revalidatePath("/director/stock");
   revalidatePath("/director/activity");
@@ -83,6 +84,7 @@ function revalidateManagement() {
   revalidatePath("/hub");
   revalidatePath("/hub/stock");
   revalidatePath("/hub/hub-stock");
+  revalidatePath("/hub/orders");
   revalidatePath("/hub/activity");
   revalidatePath("/cashier/transfers");
   revalidatePath("/cashier/pos");

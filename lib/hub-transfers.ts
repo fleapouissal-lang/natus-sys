@@ -45,7 +45,10 @@ function mapTransferRow(row: Record<string, unknown>): HubStockTransfer {
     assigned_livreur_name: livreur?.full_name || livreur?.email || null,
     items: rawItems.map((item) => {
       const product = unwrapOne(
-        item.products as { name: string; barcode: string } | { name: string; barcode: string }[] | null
+        item.products as
+          | { name: string; barcode: string; image_url: string | null }
+          | { name: string; barcode: string; image_url: string | null }[]
+          | null
       );
       return {
         id: item.id as string,
@@ -53,6 +56,7 @@ function mapTransferRow(row: Record<string, unknown>): HubStockTransfer {
         quantity: item.quantity as number,
         product_name: product?.name ?? "Produit",
         product_barcode: product?.barcode ?? "",
+        product_image_url: product?.image_url ?? null,
       };
     }),
     total_units: rawItems.reduce((sum, item) => sum + (item.quantity as number), 0),
@@ -82,13 +86,14 @@ const TRANSFER_SELECT = `
     id,
     product_id,
     quantity,
-    products:product_id(name, barcode)
+    products:product_id(name, barcode, image_url)
   )
 `;
 
 export async function getHubStockTransfers(options: {
   fromStoreId?: string;
   toStoreId?: string;
+  toStoreIds?: string[];
   status?: HubStockTransfer["status"];
   limit?: number;
 }): Promise<HubStockTransfer[]> {
@@ -104,6 +109,9 @@ export async function getHubStockTransfers(options: {
   }
   if (options.toStoreId) {
     query = query.eq("to_store_id", options.toStoreId);
+  }
+  if (options.toStoreIds?.length) {
+    query = query.in("to_store_id", options.toStoreIds);
   }
   if (options.status) {
     query = query.eq("status", options.status);
@@ -165,4 +173,10 @@ export async function getHubTransferById(transferId: string): Promise<HubStockTr
 
   if (!data) return null;
   return mapTransferRow(data as Record<string, unknown>);
+}
+
+/** Commandes dépôt → magasins visibles par le gérant (lecture seule). */
+export async function getManagerHubStockTransfers(storeIds: string[]): Promise<HubStockTransfer[]> {
+  if (storeIds.length === 0) return [];
+  return getHubStockTransfers({ toStoreIds: storeIds, limit: 100 });
 }

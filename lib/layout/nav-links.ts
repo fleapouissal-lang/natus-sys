@@ -60,8 +60,9 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       { href: "/hub", label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
       { href: "/hub/stock", label: "Stock", icon: Warehouse, mobileOrder: 1 },
       { href: "/hub/hub-stock", label: "Entrepôt", icon: Boxes, mobileOrder: 2 },
-      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 3 },
-      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 4 },
+      { href: "/hub/orders", label: "Commandes", icon: Package, mobileOrder: 3 },
+      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 4 },
+      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 5 },
     ];
   }
 
@@ -83,6 +84,15 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     { href: `${basePath}/sales`, label: "Ventes", icon: Receipt, mobileOrder: 3 },
     { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 4 }
   );
+
+  if (basePath === "/manager") {
+    links.push({
+      href: `${basePath}/hub-orders`,
+      label: "Cmd. dépôt",
+      icon: Boxes,
+      mobileOrder: 5,
+    });
+  }
 
   if (basePath !== "/manager") {
     links.push({

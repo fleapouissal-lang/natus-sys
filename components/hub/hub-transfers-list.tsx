@@ -13,9 +13,11 @@ import {
   pickupHubTransfer,
   repairHubStockTransfer,
 } from "@/lib/actions";
+import { ProductImage } from "@/components/pos/product-image";
 import {
   hubTransferStatusLabel,
   hubTransferStatusVariant,
+  hubTransferStoreStatusHint,
 } from "@/lib/hub-transfer-status";
 import { formatDate } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
@@ -26,12 +28,20 @@ export function HubTransfersList({
   title = "Commandes de transfert",
   allowRepair = false,
   allowManage = false,
+  readOnly = false,
+  showOrigin = false,
+  showProductImages = false,
+  emptyMessage = "Aucune commande de transfert pour le moment",
   livreurs = [],
 }: {
   transfers: HubStockTransfer[];
   title?: string;
   allowRepair?: boolean;
   allowManage?: boolean;
+  readOnly?: boolean;
+  showOrigin?: boolean;
+  showProductImages?: boolean;
+  emptyMessage?: string;
   livreurs?: Profile[];
 }) {
   const router = useRouter();
@@ -83,10 +93,12 @@ export function HubTransfersList({
   if (transfers.length === 0) {
     return (
       <Card>
-        <p className="text-sm text-muted">Aucune commande de transfert pour le moment</p>
+        <p className="text-sm text-muted">{emptyMessage}</p>
       </Card>
     );
   }
+
+  const showActions = !readOnly && (allowManage || allowRepair);
 
   return (
     <Card padding={false}>
@@ -99,21 +111,33 @@ export function HubTransfersList({
           <thead>
             <tr className="border-b border-border bg-primary-light/30">
               <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
-              <th className="px-6 py-3 text-left font-medium text-muted">Destination</th>
+              {showOrigin && (
+                <th className="px-6 py-3 text-left font-medium text-muted">Dépôt</th>
+              )}
+              <th className="px-6 py-3 text-left font-medium text-muted">
+                {showOrigin ? "Magasin" : "Destination"}
+              </th>
               <th className="px-6 py-3 text-left font-medium text-muted">Produits</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
               <th className="px-6 py-3 text-right font-medium text-muted">Unités</th>
-              {(allowManage || allowRepair) && (
+              {showActions && (
                 <th className="px-6 py-3 text-right font-medium text-muted">Action</th>
               )}
             </tr>
           </thead>
           <tbody>
-            {paginated.map((transfer) => (
+            {paginated.map((transfer) => {
+              const statusHint = readOnly ? hubTransferStoreStatusHint(transfer.status) : "";
+              return (
               <tr key={transfer.id} className="border-b border-border last:border-b-0">
                 <td className="px-6 py-4 whitespace-nowrap">
                   {formatDate(transfer.sent_at)}
                 </td>
+                {showOrigin && (
+                  <td className="px-6 py-4">
+                    <p className="font-medium">{transfer.from_store_name || "Entrepôt"}</p>
+                  </td>
+                )}
                 <td className="px-6 py-4">
                   <p className="font-medium">{transfer.to_store_name || "—"}</p>
                   {transfer.assigned_livreur_name && (
@@ -124,15 +148,29 @@ export function HubTransfersList({
                   )}
                 </td>
                 <td className="px-6 py-4">
-                  <ul className="space-y-1">
-                    {transfer.items.slice(0, 3).map((item) => (
-                      <li key={item.id} className="text-xs text-muted">
-                        {item.product_name} × {item.quantity}
+                  <ul className="space-y-2">
+                    {transfer.items.slice(0, showProductImages ? 4 : 3).map((item) => (
+                      <li key={item.id} className="flex items-center gap-2 text-xs text-muted">
+                        {showProductImages && (
+                          <ProductImage
+                            product={{
+                              id: item.product_id,
+                              name: item.product_name,
+                              barcode: item.product_barcode,
+                              image_url: item.product_image_url,
+                            }}
+                            size="xs"
+                            className="h-9 w-9 shrink-0 overflow-hidden rounded-md border border-border bg-page"
+                          />
+                        )}
+                        <span>
+                          {item.product_name} × {item.quantity}
+                        </span>
                       </li>
                     ))}
-                    {transfer.items.length > 3 && (
+                    {transfer.items.length > (showProductImages ? 4 : 3) && (
                       <li className="text-xs text-muted">
-                        +{transfer.items.length - 3} autre(s)
+                        +{transfer.items.length - (showProductImages ? 4 : 3)} autre(s)
                       </li>
                     )}
                   </ul>
@@ -141,6 +179,9 @@ export function HubTransfersList({
                   <Badge variant={hubTransferStatusVariant(transfer.status)}>
                     {hubTransferStatusLabel(transfer.status)}
                   </Badge>
+                  {statusHint && (
+                    <p className="mt-1 text-xs text-muted">{statusHint}</p>
+                  )}
                   {transfer.ready_at && transfer.status !== "en_cours" && (
                     <p className="mt-1 text-xs text-muted">Prête : {formatDate(transfer.ready_at)}</p>
                   )}
@@ -158,7 +199,7 @@ export function HubTransfersList({
                 <td className="px-6 py-4 text-right font-medium">
                   {transfer.total_units}
                 </td>
-                {(allowManage || allowRepair) && (
+                {showActions && (
                   <td className="px-6 py-4 text-right">
                     {allowManage && transfer.status === "en_cours" && (
                       <Button
@@ -239,7 +280,8 @@ export function HubTransfersList({
                   </td>
                 )}
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>

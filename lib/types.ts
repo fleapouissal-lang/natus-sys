@@ -301,6 +301,7 @@ export interface HubStockTransferItem {
   quantity: number;
   product_name: string;
   product_barcode: string;
+  product_image_url?: string | null;
 }
 
 export interface HubStockTransfer {

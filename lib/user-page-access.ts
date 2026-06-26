@@ -20,6 +20,7 @@ export type UserPageKey =
   | "hubs"
   | "notes"
   | "transfers"
+  | "hub_orders"
   | "returns"
   | "customers";
 
@@ -50,6 +51,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "hubs", label: "Dépôts", description: "Comptes dépôt ville (indépendants des gérants)", group: "admin" },
   { key: "notes", label: "Notes", description: "Notes clients et suivi caisse", group: "clients" },
   { key: "transfers", label: "Hub / transferts", description: "Réceptions et envois hub", group: "operations" },
+  { key: "hub_orders", label: "Commandes dépôt", description: "Commandes entrepôt vers magasins", group: "operations" },
   { key: "returns", label: "Retours", description: "Retours produits et SAV", group: "clients" },
   { key: "customers", label: "Fidélité caisse", description: "Clients fidélité en magasin", group: "clients" },
 ];
@@ -66,7 +68,7 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
     "hub_stock", "hubs",
   ],
   manager: [
-    "dashboard", "planning", "sales", "stock", "stores",
+    "dashboard", "planning", "sales", "stock", "hub_orders", "stores",
     "activity", "reclamations", "actualites", "users",
   ],
   cashier: [
@@ -74,7 +76,7 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
     "customers", "returns", "invoices",
   ],
   livreur: ["actualites", "transfers", "returns"],
-  hub: ["dashboard", "stock", "hub_stock", "activity", "actualites"],
+  hub: ["dashboard", "stock", "hub_stock", "hub_orders", "activity", "actualites"],
 };
 
 const PAGE_HOME_PRIORITY: UserPageKey[] = [
@@ -83,6 +85,7 @@ const PAGE_HOME_PRIORITY: UserPageKey[] = [
   "planning",
   "sales",
   "stock",
+  "hub_orders",
   "products",
   "stores",
   "reclamations",
@@ -180,6 +183,10 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       return "/cashier/notes";
     case "transfers":
       return role === "livreur" ? "/livreur/transfers" : "/cashier/transfers";
+    case "hub_orders":
+      if (role === "hub") return "/hub/orders";
+      if (role === "manager") return "/manager/hub-orders";
+      return null;
     case "returns":
       return role === "livreur" ? "/livreur/returns" : "/cashier/returns";
     case "customers":

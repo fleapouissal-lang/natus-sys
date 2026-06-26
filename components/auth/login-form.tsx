@@ -109,7 +109,8 @@ export function LoginForm() {
 
                 <Button
                   type="submit"
-                  className="natus-login-submit mt-2 w-full"
+                  variant="ghost"
+                  className="natus-login-submit mt-2 w-full shadow-none"
                   size="lg"
                   loading={loading}
                 >

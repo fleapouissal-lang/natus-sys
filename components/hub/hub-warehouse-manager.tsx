@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRightLeft, Package, Search, Warehouse } from "lucide-react";
+import { AlertTriangle, ArrowRight, ArrowRightLeft, Package, Search, Store, Warehouse } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { Badge } from "@/components/ui/badge";
@@ -18,21 +18,23 @@ import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { transferHubStock } from "@/lib/actions";
 import { formatCurrency } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
-import type { Product, Profile, Store, HubStockTransfer } from "@/lib/types";
-import { HubTransfersList } from "@/components/hub/hub-transfers-list";
+import type { Product, Store } from "@/lib/types";
+
+type TransferAlert = {
+  title: string;
+  message: string;
+  product?: Product;
+  requested?: number;
+};
 
 export function HubWarehouseManager({
   hubStore,
   products,
   retailStores,
-  transfers,
-  livreurs,
 }: {
   hubStore: Store;
   products: Product[];
   retailStores: Store[];
-  transfers: HubStockTransfer[];
-  livreurs: Profile[];
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -41,9 +43,9 @@ export function HubWarehouseManager({
   const [notes, setNotes] = useState("");
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [alertOpen, setAlertOpen] = useState<TransferAlert | null>(null);
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -80,13 +82,17 @@ export function HubWarehouseManager({
         const qty = parseInt(quantities[product.id] || "", 10);
         if (!Number.isFinite(qty) || qty <= 0) return null;
         if (qty > product.stock) {
-          return { invalid: product.name };
+          return { invalid: { product, requested: qty } };
         }
         return { productId: product.id, quantity: qty };
       })
-      .filter(Boolean) as Array<{ productId: string; quantity: number } | { invalid: string }>;
+      .filter(Boolean) as Array<
+        { productId: string; quantity: number } | { invalid: { product: Product; requested: number } }
+      >;
 
-    const invalid = items.find((item) => "invalid" in item) as { invalid: string } | undefined;
+    const invalid = items.find((item) => "invalid" in item) as
+      | { invalid: { product: Product; requested: number } }
+      | undefined;
     const payload = items.filter(
       (item): item is { productId: string; quantity: number } => "productId" in item
     );
@@ -95,37 +101,67 @@ export function HubWarehouseManager({
   }, [products, quantities]);
 
   const transferCount = transferPayload.payload.length;
-  const destinationName = retailStores.find((s) => s.id === toStoreId)?.name || "le magasin";
+  const destinationStore = retailStores.find((s) => s.id === toStoreId);
+  const destinationName = destinationStore?.name || "le magasin";
+
+  const confirmSummary = useMemo(() => {
+    const items = transferPayload.payload
+      .map((item) => {
+        const product = products.find((p) => p.id === item.productId);
+        if (!product) return null;
+        return { product, quantity: item.quantity };
+      })
+      .filter(Boolean) as Array<{ product: Product; quantity: number }>;
+
+    return {
+      items,
+      totalQty: items.reduce((sum, item) => sum + item.quantity, 0),
+    };
+  }, [transferPayload.payload, products]);
+
+  function showTransferAlert(alert: TransferAlert) {
+    setAlertOpen(alert);
+  }
 
   function setProductQty(productId: string, value: string) {
     setQuantities((prev) => ({ ...prev, [productId]: value }));
-    setError("");
     setSuccess("");
   }
 
   function resetTransfer() {
     setQuantities({});
     setNotes("");
-    setError("");
     setSuccess("");
   }
 
   function openConfirm() {
-    setError("");
     setSuccess("");
+    setAlertOpen(null);
 
     if (!toStoreId) {
-      setError("Sélectionnez un magasin destination");
+      showTransferAlert({
+        title: "Magasin requis",
+        message: "Sélectionnez un magasin destination avant d'envoyer la commande.",
+      });
       return;
     }
 
     if (transferPayload.invalid) {
-      setError(`Quantité trop élevée pour ${transferPayload.invalid.invalid}`);
+      const { product, requested } = transferPayload.invalid.invalid;
+      showTransferAlert({
+        title: "Quantité trop élevée",
+        message: `La quantité demandée dépasse le stock disponible en entrepôt pour ce produit.`,
+        product,
+        requested,
+      });
       return;
     }
 
     if (transferPayload.payload.length === 0) {
-      setError("Indiquez au moins une quantité à envoyer");
+      showTransferAlert({
+        title: "Aucune quantité",
+        message: "Indiquez au moins une quantité à envoyer dans le tableau ci-dessous.",
+      });
       return;
     }
 
@@ -139,15 +175,15 @@ export function HubWarehouseManager({
     setConfirmOpen(false);
 
     if ("error" in result) {
-      setError(result.error);
+      showTransferAlert({
+        title: "Envoi impossible",
+        message: result.error,
+      });
       return;
     }
 
-    const storeName = result.storeName || destinationName;
-    setSuccess(
-      `Commande créée vers ${storeName} — statut En cours (${transferPayload.payload.length} produit${transferPayload.payload.length > 1 ? "s" : ""}). Le stock dépôt sera déduit à la prise en charge par le livreur.`
-    );
     resetTransfer();
+    router.push("/hub/orders?created=1");
     router.refresh();
   }
 
@@ -220,7 +256,6 @@ export function HubWarehouseManager({
               Envoyer {transferCount > 0 ? `(${transferCount})` : ""}
             </Button>
           </div>
-          {error && <p className="mt-3 text-sm text-danger">{error}</p>}
           {success && <p className="mt-3 text-sm text-success">{success}</p>}
         </div>
 
@@ -326,52 +361,240 @@ export function HubWarehouseManager({
         )}
       </Card>
 
-      <HubTransfersList
-        transfers={transfers}
-        allowRepair
-        allowManage
-        livreurs={livreurs}
-      />
+      {alertOpen && (
+        <Modal onClose={() => setAlertOpen(null)} size="md" className="!p-0 overflow-hidden">
+          <div className="border-b border-warning/25 bg-gradient-to-br from-warning/10 via-surface to-surface px-6 py-5 sm:px-8">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-warning/30 bg-warning/15 text-warning">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-warning">
+                  Vérification commande
+                </p>
+                <h3 className="mt-1 text-xl font-bold tracking-tight text-foreground">
+                  {alertOpen.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">{alertOpen.message}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 px-6 py-5 sm:px-8">
+            {alertOpen.product && (
+              <div className="rounded-2xl border border-warning/25 bg-warning/5 p-4">
+                <div className="flex items-start gap-4">
+                  <ProductImage
+                    product={alertOpen.product}
+                    size="sm"
+                    className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-border bg-page"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                      Produit concerné
+                    </p>
+                    <p className="mt-1 text-base font-semibold leading-snug text-foreground">
+                      {alertOpen.product.name}
+                    </p>
+                    <p className="mt-1 font-mono text-xs text-muted">{alertOpen.product.barcode}</p>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-lg border border-border bg-page px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-muted">
+                          Stock entrepôt
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-foreground">
+                          {alertOpen.product.stock}
+                        </p>
+                      </div>
+                      {typeof alertOpen.requested === "number" && (
+                        <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2">
+                          <p className="text-[10px] uppercase tracking-[0.14em] text-warning">
+                            Quantité demandée
+                          </p>
+                          <p className="mt-1 text-lg font-bold text-warning">
+                            {alertOpen.requested}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <p className="text-sm text-muted">
+              Corrigez la quantité dans le tableau, puis relancez l&apos;envoi.
+            </p>
+          </div>
+
+          <div className="flex justify-end border-t border-border bg-page/50 px-6 py-4 sm:px-8">
+            <Button type="button" onClick={() => setAlertOpen(null)} className="min-w-[140px]">
+              Compris
+            </Button>
+          </div>
+        </Modal>
+      )}
 
       {confirmOpen && (
-        <Modal onClose={() => !loading && setConfirmOpen(false)} size="sm">
-          <div className="space-y-5 p-6">
-            <div>
-              <h3 className="text-lg font-semibold">Confirmer l&apos;envoi</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">
-                Créer une commande vers <strong>{destinationName}</strong> avec{" "}
-                <strong>{transferCount}</strong> produit{transferCount > 1 ? "s" : ""} ?
+        <Modal
+          onClose={() => !loading && setConfirmOpen(false)}
+          size="lg"
+          className="!p-0 overflow-hidden"
+        >
+          <div className="border-b border-primary/15 bg-gradient-to-br from-champagne/35 via-surface to-surface px-6 py-5 sm:px-8">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm">
+                <ArrowRightLeft className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/70">
+                  Commande entrepôt
+                </p>
+                <h3 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                  Confirmer l&apos;envoi
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  Vérifiez les produits avant de créer la commande. Le stock dépôt sera déduit
+                  lorsque le livreur prendra la commande en charge.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
+              <div className="rounded-xl border border-primary/15 bg-page/80 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  Depuis
+                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <Warehouse className="h-4 w-4 shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-foreground">{hubStore.name}</p>
+                    <p className="text-xs text-muted">{hubStore.city}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden justify-center sm:flex">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/20 bg-champagne/30 text-primary">
+                  <ArrowRight className="h-5 w-5" />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-primary/15 bg-page/80 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  Vers
+                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <Store className="h-4 w-4 shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-foreground">{destinationName}</p>
+                    <p className="text-xs text-muted">
+                      {destinationStore?.city || hubStore.city}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 px-6 py-5 sm:px-8">
+            <div className="relative overflow-hidden rounded-2xl border-2 border-primary/35 bg-gradient-to-br from-primary/10 via-champagne/45 to-primary/5 px-6 py-6 text-center shadow-sm">
+              <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+              <p className="text-[10px] font-bold uppercase tracking-[0.34em] text-primary/75">
+                Action
               </p>
-              <p className="mt-2 text-sm text-muted">
-                Le stock dépôt ne sera pas déduit maintenant. Il le sera lorsque le livreur
-                prendra la commande en charge.
+              <p className="mt-2 font-heading text-4xl font-bold uppercase tracking-[0.14em] text-primary sm:text-5xl">
+                Envoi
+              </p>
+              <p className="mt-3 text-lg font-semibold text-foreground">
+                {confirmSummary.totalQty} unité{confirmSummary.totalQty > 1 ? "s" : ""} vers{" "}
+                {destinationName}
+              </p>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+                Vous allez créer une commande entrepôt. Le dépôt prépare, le livreur transporte,
+                le magasin valide la réception.
               </p>
             </div>
 
-            <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-page p-3 text-xs text-muted">
-              {transferPayload.payload.map((item) => {
-                const product = products.find((p) => p.id === item.productId);
-                return (
-                  <li key={item.productId}>
-                    {product?.name || "Produit"} × {item.quantity}
-                  </li>
-                );
-              })}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {confirmSummary.items.length} produit
+                  {confirmSummary.items.length > 1 ? "s" : ""} à envoyer
+                </p>
+                <p className="text-xs text-muted">
+                  {confirmSummary.totalQty} unité{confirmSummary.totalQty > 1 ? "s" : ""} au total
+                </p>
+              </div>
+              <Badge variant="accent" className="px-3 py-1 text-xs">
+                Statut initial : En cours
+              </Badge>
+            </div>
+
+            {notes.trim() && (
+              <div className="rounded-xl border border-border bg-page/70 px-4 py-3 text-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  Note
+                </p>
+                <p className="mt-1 text-foreground">{notes.trim()}</p>
+              </div>
+            )}
+
+            <ul className="max-h-[min(52vh,420px)] space-y-3 overflow-y-auto pr-1 scrollbar-natus">
+              {confirmSummary.items.map(({ product, quantity }) => (
+                <li
+                  key={product.id}
+                  className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-3 shadow-sm transition-colors hover:border-primary/20"
+                >
+                  <ProductImage
+                    product={product}
+                    size="sm"
+                    className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-border bg-page"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-foreground">{product.name}</p>
+                    <p className="mt-0.5 font-mono text-xs text-muted">{product.barcode}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <Badge variant="default">{product.category || "Sans catégorie"}</Badge>
+                      <span className="text-muted">
+                        Stock entrepôt :{" "}
+                        <span className="font-semibold text-foreground">{product.stock}</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                      Qté
+                    </p>
+                    <p className="mt-1 text-2xl font-bold tabular-nums text-primary">
+                      ×{quantity}
+                    </p>
+                    <p className="mt-1 text-xs text-muted">{formatCurrency(product.price)}</p>
+                  </div>
+                </li>
+              ))}
             </ul>
+          </div>
 
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={loading}
-                onClick={() => setConfirmOpen(false)}
-              >
-                Modifier
-              </Button>
-              <Button type="button" loading={loading} onClick={() => void handleTransferConfirm()}>
-                Confirmer l&apos;envoi
-              </Button>
-            </div>
+          <div className="flex flex-col-reverse gap-2 border-t border-border bg-page/50 px-6 py-4 sm:flex-row sm:justify-end sm:px-8">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={loading}
+              onClick={() => setConfirmOpen(false)}
+              className="sm:min-w-[140px]"
+            >
+              Modifier
+            </Button>
+            <Button
+              type="button"
+              loading={loading}
+              onClick={() => void handleTransferConfirm()}
+              className="sm:min-w-[180px]"
+            >
+              <ArrowRightLeft className="h-4 w-4" />
+              Confirmer l&apos;envoi
+            </Button>
           </div>
         </Modal>
       )}
