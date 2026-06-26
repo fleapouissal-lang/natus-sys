@@ -37,21 +37,16 @@ async function main() {
 
   const { data: products, error: productsError } = await supabase
     .from("products")
-    .select("id, name, product_kind")
-    .in("product_kind", ["simple", "variant"]);
+    .select("id, name, product_kind");
 
   if (productsError) throw productsError;
 
-  const sellable = (products || []).filter(
-    (p) => p.product_kind === "simple" || p.product_kind === "variant"
-  );
-
   console.log(`   Magasins : ${stores.length}`);
-  console.log(`   Produits : ${sellable.length}`);
+  console.log(`   Produits : ${(products || []).length}`);
 
   const rows = [];
   for (const store of stores) {
-    for (const product of sellable) {
+    for (const product of products || []) {
       rows.push({
         store_id: store.id,
         product_id: product.id,
