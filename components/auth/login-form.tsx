@@ -63,7 +63,7 @@ export function LoginForm() {
               inputSize="lg"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="directeur@natus.ma"
+              placeholder="xxxxx@gmail.com"
               required
               autoComplete="username"
               className="natus-login-field"
@@ -74,7 +74,8 @@ export function LoginForm() {
               inputSize="lg"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="********"
+              placeholder="**"
+              maskWithAsterisk
               required
               autoComplete="current-password"
               className="natus-login-field"

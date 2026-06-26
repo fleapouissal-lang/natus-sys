@@ -808,6 +808,12 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .natus-mobile-nav-more-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(
+    100dvh - var(--natus-mobile-nav-clearance) - env(safe-area-inset-bottom, 0px) - 1.25rem
+  );
+  overflow: hidden;
   border-radius: 1.35rem !important;
   border: 1px solid rgba(179, 140, 74, 0.22);
   background:
@@ -818,6 +824,16 @@ h1, h2, h3, h4, h5, h6,
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(20px) saturate(1.15);
   -webkit-backdrop-filter: blur(20px) saturate(1.15);
+}
+
+.natus-mobile-nav-more-list {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 0.15rem;
 }
 
 .natus-mobile-nav-more-item--active {
@@ -851,16 +867,18 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .natus-sidebar-nav {
-  overflow: visible !important;
+  overflow-y: auto;
+  overflow-x: hidden;
   margin: 0;
   list-style: none;
-  padding: 0.75rem 0 0.75rem 0.75rem;
+  padding: 0.75rem 0.35rem 0.75rem 0.75rem;
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 
 .natus-sidebar-nav ul {
-  overflow: visible !important;
   margin: 0;
-  padding: 0;
+  padding: 0 0.4rem 0 0;
 }
 
 .natus-nav-item {
@@ -1337,6 +1355,11 @@ textarea:focus {
   -webkit-text-fill-color: #000000 !important;
   caret-color: #000000;
   transition: background-color 99999s ease-out 0s;
+}
+
+.natus-login .natus-login-field::placeholder {
+  color: rgba(102, 102, 102, 0.26);
+  opacity: 1;
 }
 
 .natus-login-submit {

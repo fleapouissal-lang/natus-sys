@@ -260,8 +260,10 @@ export function Sidebar({
 
       <nav
         className={cn(
-          "flex-1",
-          collapsed ? "overflow-y-auto overflow-x-hidden px-2 py-2" : "natus-sidebar-nav overflow-visible"
+          "min-h-0 flex-1",
+          collapsed
+            ? "overflow-y-auto overflow-x-hidden px-2 py-2 scrollbar-natus"
+            : "natus-sidebar-nav scrollbar-natus"
         )}
       >
         <ul className={cn("m-0 list-none p-0", collapsed && "flex flex-col items-center gap-1")}>

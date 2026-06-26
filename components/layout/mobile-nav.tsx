@@ -123,11 +123,17 @@ export function MobileBottomNav({
       closeMore();
     }
 
-    window.addEventListener("scroll", closeMore, true);
+    function handleScroll(event: Event) {
+      const target = event.target as Node;
+      if (moreSheetRef.current?.contains(target)) return;
+      closeMore();
+    }
+
+    window.addEventListener("scroll", handleScroll, true);
     document.addEventListener("pointerdown", handlePointerDown, true);
 
     return () => {
-      window.removeEventListener("scroll", closeMore, true);
+      window.removeEventListener("scroll", handleScroll, true);
       document.removeEventListener("pointerdown", handlePointerDown, true);
     };
   }, [moreOpen]);
@@ -170,35 +176,37 @@ export function MobileBottomNav({
           <p className="natus-mobile-nav-more-title px-3 py-2">
             Menu
           </p>
-          <ul className="m-0 list-none p-0">
-            {overflowLinks.map(({ href, label, icon: Icon }) => {
-              const isActive = isNavLinkActive(pathname, href);
-              return (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    onClick={() => setMoreOpen(false)}
-                    className={cn(
-                      "natus-mobile-nav-more-item flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors",
-                      isActive
-                        ? "natus-mobile-nav-more-item--active"
-                        : "text-foreground"
-                    )}
-                  >
-                    <span
+          <div className="natus-mobile-nav-more-list scrollbar-natus">
+            <ul className="m-0 list-none p-0">
+              {overflowLinks.map(({ href, label, icon: Icon }) => {
+                const isActive = isNavLinkActive(pathname, href);
+                return (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      onClick={() => setMoreOpen(false)}
                       className={cn(
-                        "flex h-9 w-9 items-center justify-center rounded-full",
-                        isActive ? "bg-champagne text-black" : "bg-primary/10 text-primary"
+                        "natus-mobile-nav-more-item flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors",
+                        isActive
+                          ? "natus-mobile-nav-more-item--active"
+                          : "text-foreground"
                       )}
                     >
-                      <Icon className="h-4 w-4 shrink-0" />
-                    </span>
-                    {label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                      <span
+                        className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-full",
+                          isActive ? "bg-champagne text-black" : "bg-primary/10 text-primary"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                      </span>
+                      {label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </div>
       )}
 
