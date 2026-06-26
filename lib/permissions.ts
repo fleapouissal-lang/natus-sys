@@ -90,6 +90,14 @@ export function filterStoresByProfile<T extends Pick<Store, "city" | "id">>(
   return stores.filter((s) => s.city === city);
 }
 
+/** Magasins retail accessibles au gérant (ville ou magasin assigné, sans dépôt). */
+export function filterRetailStoresByProfile<T extends Pick<Store, "city" | "id" | "is_hub">>(
+  stores: T[],
+  profile: Profile
+): T[] {
+  return filterStoresByProfile(stores, profile).filter((store) => !store.is_hub);
+}
+
 export function canCreateRole(creator: Profile, targetRole: UserRole): boolean {
   if (isDirector(creator)) {
     return (
@@ -109,6 +117,11 @@ export function canCreateStoreInCity(profile: Profile, city: string): boolean {
   if (isDirector(profile)) return true;
   if (isManager(profile)) return profile.city === city;
   return false;
+}
+
+/** Création d'un point de vente (réservée au directeur). */
+export function canCreateStore(profile: Pick<Profile, "role">): boolean {
+  return isDirector(profile);
 }
 
 export function canManageStore(

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { canCreateRole, canCreateStoreInCity, canManageStore, isDirector, isHub, isManager } from "@/lib/permissions";
+import { canCreateRole, canCreateStore, canCreateStoreInCity, canManageStore, isDirector, isHub, isManager } from "@/lib/permissions";
 import {
   parseAllowedPagesInput,
   validateAllowedPagesForRole,
@@ -462,6 +462,9 @@ export async function createStore(formData: FormData) {
 
   if (!name) return { error: "Nom du magasin requis" };
   if (!city) return { error: "Ville requise" };
+  if (!canCreateStore(profile)) {
+    return { error: "Seul le directeur peut créer un magasin" };
+  }
   if (!NATUS_CITIES.includes(city as (typeof NATUS_CITIES)[number])) {
     return { error: "Ville invalide" };
   }

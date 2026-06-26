@@ -1,5 +1,5 @@
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter, isDirector } from "@/lib/permissions";
+import { getCityFilter, canCreateStore } from "@/lib/permissions";
 import { NATUS_CITIES } from "@/lib/constants/cities";
 import {
   getProductsWithStoreStock,
@@ -19,7 +19,7 @@ export default async function StoresPage() {
     })
   );
 
-  const allowedCities = profile && isDirector(profile)
+  const allowedCities = profile && canCreateStore(profile)
     ? [...NATUS_CITIES]
     : profile?.city
       ? [profile.city]
@@ -32,6 +32,7 @@ export default async function StoresPage() {
       allowedCities={allowedCities}
       defaultCity={profile?.city || undefined}
       cityLabel={city || undefined}
+      canCreateStore={profile ? canCreateStore(profile) : false}
     />
   );
 }

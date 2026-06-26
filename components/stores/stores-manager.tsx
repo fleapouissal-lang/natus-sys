@@ -326,12 +326,14 @@ export function StoresManager({
   allowedCities,
   defaultCity,
   cityLabel,
+  canCreateStore = false,
 }: {
   stores: StoreWithStats[];
   inventoryByStore: Record<string, Product[]>;
   allowedCities: string[];
   defaultCity?: string;
   cityLabel?: string;
+  canCreateStore?: boolean;
 }) {
   const [selectedStoreId, setSelectedStoreId] = useState(stores[0]?.id ?? "");
   const {
@@ -383,7 +385,9 @@ export function StoresManager({
         </div>
       )}
 
-      <CreateStoreForm allowedCities={allowedCities} defaultCity={defaultCity} />
+      {canCreateStore && (
+        <CreateStoreForm allowedCities={allowedCities} defaultCity={defaultCity} />
+      )}
 
       {stores.length > 0 ? (
         <>

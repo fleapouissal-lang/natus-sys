@@ -66,7 +66,7 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
     "hub_stock", "hubs",
   ],
   manager: [
-    "dashboard", "planning", "sales", "stock", "products", "stores",
+    "dashboard", "planning", "sales", "stock", "stores",
     "activity", "reclamations", "actualites", "users",
   ],
   cashier: [
