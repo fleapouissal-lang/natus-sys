@@ -303,7 +303,21 @@
 
 .loyalty-client-portal-main {
   background: var(--page);
-  padding-bottom: env(safe-area-inset-bottom, 0);
+  min-height: 0;
+}
+
+@media (max-width: 767px) {
+  .loyalty-client-portal-main {
+    min-height: 100dvh;
+  }
+
+  .loyalty-client-portal .natus-mobile-bottom-nav-shell {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+  }
 }
 
 .loyalty-client-portal-sidebar .natus-sidebar-nav {

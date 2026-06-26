@@ -7,6 +7,11 @@ import {
 export const PRO_CLIENT_DISCOUNT_PERCENT = 34;
 export const PRO_CLIENT_DISCOUNT_LABEL = "Remise Client Pro";
 
+/** Proposition commerciale — palier premium (non activé en caisse pour l'instant) */
+export const PRO_PLUS_DISCOUNT_PERCENT = 40;
+export const PRO_PLUS_LABEL = "Client Pro Plus";
+export const PRO_PLUS_TAGLINE = "Programme premium pour partenaires stratégiques";
+
 export function isActiveProClient(
   customer: Pick<LoyaltyCustomer, "is_pro_client" | "pro_client_active"> | null | undefined
 ): boolean {

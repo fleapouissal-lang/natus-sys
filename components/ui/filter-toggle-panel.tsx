@@ -32,7 +32,7 @@ export function FilterTogglePanel({
     <div className={cn("space-y-0", className)}>
       <div
         className={cn(
-          "flex flex-wrap items-center justify-between gap-2",
+          "flex flex-wrap items-center justify-between gap-2 md:hidden",
           !open && "natus-filter-bar px-3 py-2.5"
         )}
       >
@@ -58,7 +58,7 @@ export function FilterTogglePanel({
           </div>
         ) : null}
       </div>
-      {open ? children : null}
+      <div className={cn(!open && "hidden md:block")}>{children}</div>
     </div>
   );
 }

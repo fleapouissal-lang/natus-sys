@@ -77,6 +77,7 @@ import {
   type PosMobileCartStep,
 } from "@/components/pos/pos-mobile-cart-step-bar";
 import type { ShopifyOrderPosContext } from "@/lib/orders";
+import type { ProductSalesQtyMap } from "@/lib/pos/product-sales-rank";
 
 type ManagerMode = "stock" | "sale";
 
@@ -100,6 +101,7 @@ export function PosTerminal({
   loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
   isStorePos = false,
   cashierUserId,
+  productSalesQty = {},
 }: {
   products: Product[];
   role: UserRole;
@@ -114,6 +116,7 @@ export function PosTerminal({
   loyaltySettings?: LoyaltySettings;
   isStorePos?: boolean;
   cashierUserId?: string;
+  productSalesQty?: ProductSalesQtyMap;
 }) {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
@@ -1445,6 +1448,7 @@ export function PosTerminal({
                   orderMode={isOrderMode}
                   compact
                   luxuryMobile
+                  productSalesQty={productSalesQty}
                 />
               </div>
             </div>

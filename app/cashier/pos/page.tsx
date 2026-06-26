@@ -5,6 +5,7 @@ import { getActiveStores, getProductsWithStoreStock } from "@/lib/inventory";
 import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store";
 import { PosTerminal } from "@/components/pos/pos-terminal";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
+import { getStoreProductSalesQuantities } from "@/lib/pos/product-sales-rank.server";
 import { getLoyaltySettings } from "@/lib/loyalty/settings.server";
 import { getStorePosAccount } from "@/lib/pos/operator-session";
 import { Card } from "@/components/ui/card";
@@ -55,6 +56,9 @@ export default async function PosPage({
   }
 
   const products = storeId ? await getProductsWithStoreStock(storeId) : [];
+  const productSalesQty = storeId
+    ? await getStoreProductSalesQuantities(storeId)
+    : {};
   const loyaltySettings = await getLoyaltySettings();
 
   const cashierName =
@@ -95,6 +99,7 @@ export default async function PosPage({
           loyaltySettings={loyaltySettings}
           isStorePos={profile?.is_store_pos === true}
           cashierUserId={profile?.id}
+          productSalesQty={productSalesQty}
         />
       </div>
     </div>

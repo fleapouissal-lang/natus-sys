@@ -15,6 +15,7 @@ import {
   Plus,
   Minus,
   Eye,
+  ArrowLeft,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -28,12 +29,16 @@ import {
 import { formatCurrency, cn } from "@/lib/utils";
 import { resolveParentImageSource } from "@/lib/product-image";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
-import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import {
-  getProductCategories,
   productDisplayName,
-  productHasCategory,
 } from "@/lib/products/product-utils";
+import {
+  buildPosCategoryCards,
+  filterProductsForCategory,
+  sortProductsByBestSellers,
+  type PosCategoryCard,
+  type ProductSalesQtyMap,
+} from "@/lib/pos/product-sales-rank";
 import type { Product } from "@/lib/types";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -45,6 +50,71 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Cheveux: Scissors,
   Accessoires: Gift,
 };
+
+function CategoryCardsGrid({
+  cards,
+  onSelect,
+}: {
+  cards: PosCategoryCard[];
+  onSelect: (category: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary md:text-xs">
+          Catégories
+        </p>
+        <p className="mt-1 text-xs text-muted">
+          Classées par volume de ventes · choisissez une catégorie
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 md:gap-4">
+        {cards.map((card, index) => {
+          const Icon = CATEGORY_ICONS[card.name] ?? Sparkles;
+          const parentImage = card.coverProduct
+            ? resolveParentImageSource(card.coverProduct)
+            : null;
+          return (
+            <button
+              key={card.name}
+              type="button"
+              onClick={() => onSelect(card.name)}
+              className="group relative aspect-[4/5] overflow-hidden rounded-2xl border border-primary/20 bg-surface text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md cursor-pointer"
+            >
+              <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/70" />
+              {card.coverProduct ? (
+                <ProductImage
+                  product={card.coverProduct}
+                  parent={parentImage}
+                  fill
+                  className="transition-transform duration-300 group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-champagne/50 to-page">
+                  <Icon className="h-10 w-10 text-primary/70" />
+                </div>
+              )}
+              <div className="absolute inset-x-0 bottom-0 p-3 text-white">
+                {index < 3 && card.totalSold > 0 && (
+                  <span className="mb-2 inline-flex rounded-full bg-champagne/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-black">
+                    Top ventes
+                  </span>
+                )}
+                <p className="font-heading text-sm font-semibold leading-tight drop-shadow-sm md:text-base">
+                  {card.name}
+                </p>
+                <p className="mt-1 text-[10px] text-white/85 md:text-xs">
+                  {card.productCount} produit{card.productCount > 1 ? "s" : ""}
+                  {card.totalSold > 0 ? ` · ${card.totalSold} vendus` : ""}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function CategoryStrip({
   categories,
@@ -589,6 +659,7 @@ export function ProductCatalog({
   orderMode = false,
   compact = false,
   luxuryMobile = false,
+  productSalesQty = {},
 }: {
   products: Product[];
   onAddToCart: (product: Product, qty: number) => void;
@@ -601,20 +672,23 @@ export function ProductCatalog({
   orderMode?: boolean;
   compact?: boolean;
   luxuryMobile?: boolean;
+  productSalesQty?: ProductSalesQtyMap;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
 
   const categories = useMemo(() => {
-    const fromProducts = new Set<string>();
-    for (const p of products) {
-      for (const category of getProductCategories(p)) {
-        fromProducts.add(category);
-      }
-    }
-    return PRODUCT_CATEGORIES.filter((c) => fromProducts.has(c));
-  }, [products]);
+    return buildPosCategoryCards(products, productSalesQty).map((card) => card.name);
+  }, [products, productSalesQty]);
+
+  const categoryCards = useMemo(
+    () => buildPosCategoryCards(products, productSalesQty),
+    [products, productSalesQty]
+  );
+
+  const hasSearch = searchQuery.trim().length > 0;
+  const showCategoryGrid = !orderMode && !hasSearch && !selectedCategory;
 
   const handleScan = useCallback(
     (code: string) => {
@@ -652,7 +726,9 @@ export function ProductCatalog({
   const filtered = useMemo(() => {
     let list = products;
     if (selectedCategory) {
-      list = list.filter((p) => productHasCategory(p, selectedCategory));
+      list = filterProductsForCategory(products, selectedCategory, productSalesQty);
+    } else if (hasSearch) {
+      list = sortProductsByBestSellers(products, productSalesQty);
     }
     const q = searchQuery.trim().toLowerCase();
     if (q) {
@@ -668,7 +744,7 @@ export function ProductCatalog({
       });
     }
     return list;
-  }, [products, searchQuery, selectedCategory]);
+  }, [products, searchQuery, selectedCategory, productSalesQty, hasSearch]);
 
   if (products.length === 0) {
     return (
@@ -678,12 +754,6 @@ export function ProductCatalog({
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <CategoryStrip
-        categories={categories}
-        selected={selectedCategory}
-        onSelect={setSelectedCategory}
-      />
-
       <div className="space-y-2">
         <div
           role="button"
@@ -719,11 +789,51 @@ export function ProductCatalog({
           />
         </div>
 
-        <p className="text-xs text-muted">
-          {filtered.length} produit{filtered.length > 1 ? "s" : ""}
-          {selectedCategory ? ` — ${selectedCategory}` : ""}
-        </p>
+        {!showCategoryGrid && (
+          <p className="text-xs text-muted">
+            {filtered.length} produit{filtered.length > 1 ? "s" : ""}
+            {selectedCategory ? ` — ${selectedCategory}` : hasSearch ? " — recherche" : ""}
+            {!orderMode ? " · triés par ventes" : ""}
+          </p>
+        )}
       </div>
+
+      {showCategoryGrid ? (
+        <CategoryCardsGrid
+          cards={categoryCards}
+          onSelect={(category) => setSelectedCategory(category)}
+        />
+      ) : (
+        <>
+          {!orderMode && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory(null);
+                  setSearchQuery("");
+                  focusInput();
+                }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-primary/40 hover:text-primary"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Catégories
+              </button>
+              {selectedCategory && (
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  {selectedCategory}
+                </span>
+              )}
+            </div>
+          )}
+
+          {!orderMode && categories.length > 0 && (
+            <CategoryStrip
+              categories={categories}
+              selected={selectedCategory}
+              onSelect={setSelectedCategory}
+            />
+          )}
 
       {lastAddedProduct && !compact && (
         <Card className="flex items-center gap-4 border-success/40 bg-success/10 !p-3">
@@ -779,6 +889,8 @@ export function ProductCatalog({
           }
           onClose={() => setViewProduct(null)}
         />
+      )}
+        </>
       )}
     </div>
   );

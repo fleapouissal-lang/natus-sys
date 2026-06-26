@@ -21,14 +21,15 @@ export default async function DirectorClientsPage({
   ]);
   const normalClients = allCustomers.filter((c) => !c.is_pro_client);
   const basePath = getManagementBasePath(profile.role)!;
-  const initialTab = tab === "pro" ? "pro" : "normal";
+  const initialTab =
+    tab === "pro-plus" ? ("pro-plus" as const) : tab === "pro" ? ("pro" as const) : ("normal" as const);
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
         <p className="mt-1 text-muted">
-          Gestion des clients normaux et Client Pro · activation, désactivation et suppression
+          Gestion des clients normaux, Client Pro et proposition Pro Plus
         </p>
       </div>
 

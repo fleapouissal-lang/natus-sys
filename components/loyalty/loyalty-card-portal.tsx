@@ -51,12 +51,114 @@ import { cn } from "@/lib/utils";
 
 type PortalTab = "carte" | "points" | "historique" | "factures";
 
-const TABS: { id: PortalTab; label: string; icon: typeof CreditCard }[] = [
-  { id: "carte", label: "Ma carte", icon: CreditCard },
-  { id: "points", label: "Mes points", icon: Coins },
-  { id: "historique", label: "Historique", icon: History },
-  { id: "factures", label: "Factures", icon: FileText },
+const TABS: { id: PortalTab; label: string; short: string; icon: typeof CreditCard }[] = [
+  { id: "carte", label: "Ma carte", short: "Carte", icon: CreditCard },
+  { id: "points", label: "Mes points", short: "Points", icon: Coins },
+  { id: "historique", label: "Historique", short: "Historique", icon: History },
+  { id: "factures", label: "Factures", short: "Factures", icon: FileText },
 ];
+
+function tabDescription(tab: PortalTab): string {
+  switch (tab) {
+    case "carte":
+      return "Votre carte fidélité et accès magasin";
+    case "points":
+      return "Solde et progression de vos points";
+    case "historique":
+      return "Mouvements de points en boutique";
+    case "factures":
+      return "Tickets et factures de vos achats";
+  }
+}
+
+function ClientPortalMobileTopBar({
+  initial,
+  refreshing,
+  onRefresh,
+  onShare,
+}: {
+  initial: string;
+  refreshing: boolean;
+  onRefresh: () => void;
+  onShare: () => void;
+}) {
+  return (
+    <header className="natus-mobile-topbar-shell shrink-0 md:hidden">
+      <div className="natus-mobile-topbar-pill">
+        <div className="natus-mobile-topbar-brand min-w-0 flex flex-1 items-center gap-2.5">
+          <div className="loyalty-portal-avatar natus-mobile-topbar-mark h-9 w-9 text-sm">
+            {initial}
+          </div>
+          <div className="min-w-0">
+            <p className="natus-mobile-topbar-logo">Natus</p>
+            <p className="natus-mobile-topbar-subtitle">Espace client</p>
+          </div>
+        </div>
+        <div className="natus-mobile-topbar-actions flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="natus-mobile-topbar-action"
+            aria-label="Actualiser"
+            title="Actualiser"
+          >
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+          </button>
+          <button
+            type="button"
+            onClick={onShare}
+            className="natus-mobile-topbar-action"
+            aria-label="Partager ma carte"
+            title="Partager"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function ClientPortalMobileBottomNav({
+  tab,
+  onTabChange,
+}: {
+  tab: PortalTab;
+  onTabChange: (tab: PortalTab) => void;
+}) {
+  return (
+    <div className="natus-mobile-bottom-nav-shell md:hidden">
+      <nav
+        className="natus-mobile-bottom-nav overflow-hidden rounded-t-[1.5rem] rounded-b-none"
+        aria-label="Navigation espace client"
+      >
+        <ul className="natus-mobile-bottom-nav-list">
+          {TABS.map(({ id, short, icon: Icon }) => {
+            const isActive = tab === id;
+            return (
+              <li key={id} className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => onTabChange(id)}
+                  className={cn(
+                    "natus-mobile-nav-link w-full",
+                    isActive && "natus-mobile-nav-link--active"
+                  )}
+                >
+                  <span className="natus-mobile-nav-icon">
+                    <Icon className="h-[1.125rem] w-[1.125rem] shrink-0" />
+                  </span>
+                  <span className="max-w-full truncate px-0.5">{short}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </div>
+  );
+}
 
 function ClientTypeBadge({
   isPro,
@@ -251,26 +353,20 @@ export function LoyaltyCardPortal({
   }
 
   return (
-    <div className="loyalty-client-portal flex min-h-[100dvh] w-full">
-      <aside
-        className={cn(
-          "natus-sidebar loyalty-client-portal-sidebar loyalty-client-portal-sidebar--compact",
-          "flex w-[4.5rem] shrink-0 flex-col md:w-72"
-        )}
-      >
-        <div className="loyalty-portal-brand flex shrink-0 flex-col px-3 py-5 md:px-5 md:py-6">
-          <span className="font-heading text-xl font-bold tracking-[0.04em] text-black md:text-[1.65rem]">
-            <span className="md:hidden">N</span>
-            <span className="hidden md:inline">Natus</span>
+    <div className="loyalty-client-portal flex min-h-[100dvh] w-full flex-col md:flex-row">
+      <aside className="natus-sidebar loyalty-client-portal-sidebar hidden w-72 shrink-0 flex-col md:flex">
+        <div className="loyalty-portal-brand flex shrink-0 flex-col px-5 py-6">
+          <span className="font-heading text-[1.65rem] font-bold tracking-[0.04em] text-black">
+            Natus
           </span>
-          <p className="mt-2 hidden text-[10px] font-semibold uppercase tracking-[0.28em] text-black/45 md:block">
+          <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-black/45">
             Espace client
           </p>
         </div>
 
-        <div className="loyalty-portal-sidebar-divider hidden md:block" />
+        <div className="loyalty-portal-sidebar-divider" />
 
-        <div className="hidden shrink-0 px-2 py-4 md:block">
+        <div className="shrink-0 px-2 py-4">
           <div className="loyalty-portal-profile-card">
             <div className="flex items-start gap-3">
               <div className="loyalty-portal-avatar h-12 w-12 shrink-0 text-base">{initial}</div>
@@ -311,36 +407,26 @@ export function LoyaltyCardPortal({
           </div>
         </div>
 
-        <div className="flex shrink-0 justify-center py-3 md:hidden">
-          <div className="loyalty-portal-avatar h-10 w-10 text-sm">{initial}</div>
-        </div>
+        <div className="loyalty-portal-sidebar-divider" />
 
-        <div className="loyalty-portal-sidebar-divider hidden md:block" />
-
-        <p className="hidden px-5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-black/40 md:block">
+        <p className="px-5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-black/40">
           Navigation
         </p>
 
         <nav className="natus-sidebar-nav min-h-0 flex-1">
-          <ul className="m-0 flex list-none flex-col items-center gap-1 p-0 md:items-stretch md:gap-0 md:pr-1">
+          <ul className="m-0 list-none p-0 pr-1">
             {TABS.map(({ id, label, icon: Icon }) => {
               const isActive = tab === id;
               return (
                 <li
                   key={id}
-                  className={cn(
-                    "natus-nav-item flex w-full justify-center md:block",
-                    isActive && "natus-nav-item-active"
-                  )}
+                  className={cn("natus-nav-item", isActive && "natus-nav-item-active")}
                 >
                   <button
                     type="button"
                     onClick={() => switchTab(id)}
                     title={label}
-                    className={cn(
-                      "natus-nav-link flex h-10 w-10 items-center justify-center md:h-auto md:w-full md:justify-start",
-                      isActive && "natus-nav-link-active"
-                    )}
+                    className={cn("natus-nav-link", isActive && "natus-nav-link-active")}
                   >
                     <Icon
                       className={cn(
@@ -348,7 +434,7 @@ export function LoyaltyCardPortal({
                         isActive ? "text-primary" : "text-black"
                       )}
                     />
-                    <span className="hidden md:inline">{label}</span>
+                    <span>{label}</span>
                   </button>
                 </li>
               );
@@ -356,32 +442,39 @@ export function LoyaltyCardPortal({
           </ul>
         </nav>
 
-        <div className="shrink-0 px-2 pb-3 pt-1 md:px-4 md:pb-4">
+        <div className="shrink-0 px-4 pb-4 pt-1">
           <div className="flex flex-col gap-2">
             <button
               type="button"
               onClick={() => void refresh()}
               disabled={refreshing}
               title="Actualiser"
-              className="loyalty-portal-sidebar-footer-btn flex h-10 w-full items-center justify-center gap-2 disabled:opacity-50 md:px-3 md:py-2.5"
+              className="loyalty-portal-sidebar-footer-btn flex h-10 w-full items-center justify-center gap-2 disabled:opacity-50 px-3 py-2.5"
             >
               <RefreshCw className={cn("h-4 w-4 shrink-0", refreshing && "animate-spin")} />
-              <span className="hidden text-sm font-medium md:inline">Actualiser</span>
+              <span className="text-sm font-medium">Actualiser</span>
             </button>
             <button
               type="button"
               onClick={() => void shareLink()}
               title="Partager"
-              className="loyalty-portal-sidebar-footer-btn loyalty-portal-sidebar-footer-btn--primary flex h-10 w-full items-center justify-center gap-2 md:px-3 md:py-2.5"
+              className="loyalty-portal-sidebar-footer-btn loyalty-portal-sidebar-footer-btn--primary flex h-10 w-full items-center justify-center gap-2 px-3 py-2.5"
             >
               <Share2 className="h-4 w-4 shrink-0" />
-              <span className="hidden text-sm font-medium md:inline">Partager ma carte</span>
+              <span className="text-sm font-medium">Partager ma carte</span>
             </button>
           </div>
         </div>
       </aside>
 
       <div className="loyalty-client-portal-main flex min-w-0 flex-1 flex-col">
+        <ClientPortalMobileTopBar
+          initial={initial}
+          refreshing={refreshing}
+          onRefresh={() => void refresh()}
+          onShare={() => void shareLink()}
+        />
+
         <header className="border-b border-primary/10 bg-page px-4 py-4 md:hidden">
           <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-champagne/25 via-surface to-surface p-4 shadow-sm">
             <div className="flex items-start gap-3">
@@ -422,18 +515,13 @@ export function LoyaltyCardPortal({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-8">
-          <div className="mx-auto w-full max-w-2xl">
-            <div className="mb-6 hidden md:block">
+        <main className="natus-main-mobile-nav min-h-0 flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="w-full">
+            <div className="mb-6">
               <h2 className="text-xl font-bold tracking-tight text-foreground">
                 {TABS.find((t) => t.id === tab)?.label}
               </h2>
-              <p className="mt-1 text-sm text-muted">
-                {tab === "carte" && "Votre carte fidélité et accès magasin"}
-                {tab === "points" && "Solde et progression de vos points"}
-                {tab === "historique" && "Mouvements de points en boutique"}
-                {tab === "factures" && "Tickets et factures de vos achats"}
-              </p>
+              <p className="mt-1 text-sm text-muted">{tabDescription(tab)}</p>
             </div>
 
         {tab === "carte" && (
@@ -703,11 +791,14 @@ export function LoyaltyCardPortal({
           </div>
         )}
           </div>
+            <div className="natus-mobile-nav-spacer md:hidden" aria-hidden />
         </main>
 
         <footer className="hidden border-t border-border/60 px-8 py-4 text-center text-[10px] text-muted md:block">
           Lien personnel · sans mot de passe · Natus Cosmétiques
         </footer>
+
+        <ClientPortalMobileBottomNav tab={tab} onTabChange={switchTab} />
       </div>
     </div>
   );
