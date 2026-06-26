@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { getCityFilter } from "@/lib/permissions";
 import { getActiveStores, getProductsWithStoreStock } from "@/lib/inventory";
@@ -17,6 +18,11 @@ export default async function PosPage({
 }) {
   const { store: storeParam } = await searchParams;
   const profile = await getCurrentProfile();
+
+  if (profile?.role === "manager") {
+    redirect("/manager");
+  }
+
   const city = profile ? getCityFilter(profile) : null;
   const stores = await getActiveStores(city);
 
@@ -27,9 +33,9 @@ export default async function PosPage({
 
   const selectedStore = getSelectedStore(stores, storeId);
   const showStoreFilter =
-    profile?.role === "manager" ||
     profile?.role === "directeur" ||
-    profile?.role === "admin";
+    profile?.role === "admin" ||
+    profile?.role === "hub";
 
   if (
     profile?.role === "cashier" &&

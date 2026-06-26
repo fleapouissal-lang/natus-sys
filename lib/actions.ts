@@ -610,8 +610,8 @@ export async function transferHubStock(
     if (msg.includes("Stock insuffisant")) {
       return { error: "Stock insuffisant à l'entrepôt pour un ou plusieurs produits" };
     }
-    if (msg.includes("gérant affecté")) {
-      return { error: "Aucun gérant affecté — contactez le directeur" };
+    if (msg.includes("Magasin destination non autorisé")) {
+      return { error: "Ce magasin n'est pas rattaché à votre dépôt" };
     }
     if (msg.includes("destination invalide")) {
       return { error: "Magasin destination non autorisé" };
@@ -1339,9 +1339,26 @@ export async function createUser(formData: FormData) {
         return { error: "Ce magasin n'est pas dans votre périmètre" };
       }
     } else if (!city) {
-      return { error: role === "hub" ? "Ville requise pour le hub stock" : "Ville requise pour le gérant" };
+      return { error: role === "hub" ? "Ville requise pour le dépôt" : "Ville requise pour le gérant" };
     } else if (!canCreateStoreInCity(profile, city)) {
       return { error: "Vous ne pouvez créer ce compte que pour votre ville" };
+    }
+  }
+
+  const hubStoreIds =
+    role === "hub"
+      ? [...new Set(formData.getAll("hub_store_ids").map(String).filter(Boolean))]
+      : [];
+
+  if (role === "hub") {
+    if (hubStoreIds.length === 0) {
+      return { error: "Sélectionnez au moins un magasin rattaché au dépôt" };
+    }
+    for (const storeId of hubStoreIds) {
+      const store = await getStoreById(storeId);
+      if (!store || store.is_hub || !store.is_active) {
+        return { error: "Magasin retail invalide pour ce dépôt" };
+      }
     }
   }
 
@@ -1433,10 +1450,8 @@ export async function createUser(formData: FormData) {
     await admin.from("profiles").update(updates).eq("id", data.user.id);
 
     if (role === "hub" && city) {
-      await admin.rpc("auto_assign_hub_managers", {
-        p_hub_user_id: data.user.id,
-        p_city: city,
-      });
+      const assignResult = await saveHubStoreAssignments(admin, data.user.id, hubStoreIds);
+      if (assignResult.error) return { error: assignResult.error };
     }
   }
 
@@ -1598,26 +1613,20 @@ export async function updateUser(formData: FormData) {
   const { error: profileError } = await admin.from("profiles").update(updates).eq("id", userId);
   if (profileError) return { error: profileError.message };
 
-  if (role === "hub" && city) {
-    await admin.rpc("auto_assign_hub_managers", {
-      p_hub_user_id: userId,
-      p_city: city,
-    });
-  }
-
   revalidateManagement();
   revalidatePath("/director/hubs");
   return { success: true };
 }
 
-export async function updateHubManagers(
+export async function updateHubStoreAssignments(
   hubUserId: string,
-  managerIds: string[]
+  storeIds: string[]
 ): Promise<{ success: true } | { error: string }> {
   const profile = await requireRole(["directeur", "admin"]);
   if (!profile) return { error: "Non autorisé" };
 
   const supabase = await createClient();
+  const admin = (await import("@/lib/supabase/admin")).createAdminClient();
 
   const { data: hubProfile } = await supabase
     .from("profiles")
@@ -1626,38 +1635,119 @@ export async function updateHubManagers(
     .eq("role", "hub")
     .maybeSingle();
 
-  if (!hubProfile?.city) return { error: "Compte hub introuvable" };
+  if (!hubProfile?.city) return { error: "Compte dépôt introuvable" };
 
-  const { data: validManagers } = await supabase
+  const uniqueIds = [...new Set(storeIds.filter(Boolean))];
+  if (uniqueIds.length === 0) {
+    return { error: "Sélectionnez au moins un magasin" };
+  }
+
+  for (const storeId of uniqueIds) {
+    const store = await getStoreById(storeId);
+    if (!store || store.is_hub || !store.is_active) {
+      return { error: "Magasin retail invalide" };
+    }
+  }
+
+  const assignResult = await saveHubStoreAssignments(admin, hubUserId, uniqueIds);
+  if (assignResult.error) return { error: assignResult.error };
+
+  revalidatePath("/director/hubs");
+  revalidatePath("/hub");
+  revalidatePath("/hub/hub-stock");
+  return { success: true };
+}
+
+export async function updateHubDepot(formData: FormData) {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const userId = (formData.get("user_id") as string) || "";
+  const storeIds = [...new Set(formData.getAll("hub_store_ids").map(String).filter(Boolean))];
+
+  if (!userId) return { error: "Compte dépôt introuvable" };
+  if (storeIds.length === 0) {
+    return { error: "Sélectionnez au moins un magasin rattaché au dépôt" };
+  }
+
+  const supabase = await createClient();
+  const { data: hubProfile } = await supabase
     .from("profiles")
-    .select("id")
-    .eq("role", "manager")
-    .eq("city", hubProfile.city)
-    .in("id", managerIds);
+    .select("id, role")
+    .eq("id", userId)
+    .eq("role", "hub")
+    .maybeSingle();
 
-  const validIds = new Set((validManagers || []).map((m) => m.id));
-  const filtered = managerIds.filter((id) => validIds.has(id));
+  if (!hubProfile) return { error: "Compte dépôt introuvable" };
 
-  const { error: deleteError } = await supabase
-    .from("hub_manager_assignments")
+  const userResult = await updateUser(formData);
+  if ("error" in userResult && userResult.error) return userResult;
+
+  return updateHubStoreAssignments(userId, storeIds);
+}
+
+async function saveHubStoreAssignments(
+  client: Awaited<ReturnType<typeof import("@/lib/supabase/admin").createAdminClient>>,
+  hubUserId: string,
+  storeIds: string[]
+): Promise<{ success: true } | { error: string }> {
+  const uniqueIds = [...new Set(storeIds.filter(Boolean))];
+  if (uniqueIds.length === 0) {
+    return { error: "Sélectionnez au moins un magasin" };
+  }
+
+  const { data: stores, error: storesError } = await client
+    .from("stores")
+    .select("id, city, is_hub, is_active")
+    .in("id", uniqueIds);
+
+  if (storesError) return { error: storesError.message };
+  if ((stores || []).length !== uniqueIds.length) {
+    return { error: "Un ou plusieurs magasins sont introuvables" };
+  }
+
+  for (const store of stores || []) {
+    if (!store.is_active || store.is_hub) {
+      return { error: "Magasin retail invalide" };
+    }
+  }
+
+  const { data: conflicts } = await client
+    .from("hub_store_assignments")
+    .select("store_id, hub_user_id")
+    .in("store_id", uniqueIds)
+    .neq("hub_user_id", hubUserId);
+
+  if (conflicts && conflicts.length > 0) {
+    return { error: "Un magasin ne peut être rattaché qu'à un seul dépôt" };
+  }
+
+  const { error: deleteError } = await client
+    .from("hub_store_assignments")
     .delete()
     .eq("hub_user_id", hubUserId);
 
   if (deleteError) return { error: deleteError.message };
 
-  if (filtered.length > 0) {
-    const { error: insertError } = await supabase.from("hub_manager_assignments").insert(
-      filtered.map((managerId) => ({
-        hub_user_id: hubUserId,
-        manager_id: managerId,
-      }))
-    );
-    if (insertError) return { error: insertError.message };
-  }
+  const { error: insertError } = await client.from("hub_store_assignments").insert(
+    uniqueIds.map((storeId) => ({
+      hub_user_id: hubUserId,
+      store_id: storeId,
+    }))
+  );
 
-  revalidatePath("/director/hubs");
-  revalidatePath("/hub");
+  if (insertError) return { error: insertError.message };
+
   return { success: true };
+}
+
+export async function updateHubManagers(
+  hubUserId: string,
+  managerIds: string[]
+): Promise<{ success: true } | { error: string }> {
+  void managerIds;
+  void hubUserId;
+  return { error: "Les dépôts ne sont plus associés aux gérants — utilisez les magasins rattachés" };
 }
 
 export async function syncShopifyOrders(): Promise<

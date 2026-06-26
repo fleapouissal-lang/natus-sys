@@ -2,33 +2,45 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, UserCheck, UserX, X } from "lucide-react";
+import { Plus, Pencil, Trash2, UserCheck, UserX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { HubStorePicker } from "@/components/hub/hub-store-picker";
 import { cityOptions } from "@/lib/select-options";
-import { createUser, toggleUserActive, updateHubManagers } from "@/lib/actions";
+import { NATUS_CITIES } from "@/lib/constants/cities";
+import { createUser, deleteUser, toggleUserActive, updateHubDepot } from "@/lib/actions";
 import { formatDate } from "@/lib/utils";
-import type { Profile } from "@/lib/types";
+import type { Profile, Store } from "@/lib/types";
+
+function storesForCity(stores: Store[], city: string) {
+  return stores.filter((store) => store.city === city && !store.is_hub);
+}
 
 function CreateHubForm({
-  cities,
+  retailStores,
   onClose,
 }: {
-  cities: string[];
+  retailStores: Store[];
   onClose: () => void;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [city, setCity] = useState(cities[0] || "");
+  const [city, setCity] = useState(NATUS_CITIES[0] || "");
   const [password, setPassword] = useState("");
+  const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (selectedStoreIds.length === 0) {
+      setError("Sélectionnez au moins un magasin rattaché au dépôt");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -36,6 +48,7 @@ function CreateHubForm({
     formData.set("role", "hub");
     formData.set("city", city);
     formData.set("password", password);
+    selectedStoreIds.forEach((storeId) => formData.append("hub_store_ids", storeId));
 
     const result = await createUser(formData);
     if (result.error) {
@@ -52,8 +65,8 @@ function CreateHubForm({
   return (
     <Modal onClose={onClose} size="md" closeOnBackdrop={false} closeOnEscape={false}>
       <CardHeader
-        title="Nouveau compte hub stock"
-        description="Les gérants actifs de la ville seront affectés automatiquement"
+        title="Nouveau compte dépôt"
+        description="Magasins de la ville du dépôt par défaut — possibilité d'en ajouter d'autres villes"
         action={
           <button
             type="button"
@@ -66,13 +79,13 @@ function CreateHubForm({
         }
       />
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input label="Nom du hub" name="full_name" required placeholder="Hub Marrakech" />
+        <Input label="Nom du dépôt" name="full_name" required placeholder="Dépôt Marrakech" />
         <Input
           label="Email"
           name="email"
           type="email"
           required
-          placeholder="hub.marrakech@natus.ma"
+          placeholder="depot.marrakech@natus.ma"
         />
         <PasswordInput
           label="Mot de passe"
@@ -88,48 +101,67 @@ function CreateHubForm({
           label="Ville"
           value={city}
           onChange={setCity}
-          options={cityOptions(cities, { includeAll: false })}
+          options={cityOptions(NATUS_CITIES, { includeAll: false })}
           required
+        />
+        <HubStorePicker
+          hubCity={city}
+          retailStores={retailStores}
+          value={selectedStoreIds}
+          onChange={setSelectedStoreIds}
+          autoSelectCityStores
         />
         {error && <p className="text-sm text-danger">{error}</p>}
         <Button type="submit" loading={loading} className="w-full">
-          Créer le compte hub
+          Créer le compte dépôt
         </Button>
       </form>
     </Modal>
   );
 }
 
-function HubManagersModal({
+function EditHubDepotModal({
   hub,
-  cityManagers,
+  retailStores,
   assignedIds,
   onClose,
 }: {
   hub: Profile;
-  cityManagers: Profile[];
+  retailStores: Store[];
   assignedIds: string[];
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [selected, setSelected] = useState<string[]>(assignedIds);
+  const [fullName, setFullName] = useState(hub.full_name);
+  const [email, setEmail] = useState(hub.email);
+  const [password, setPassword] = useState("");
+  const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>(assignedIds);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
 
-  function toggleManager(id: string) {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (selectedStoreIds.length === 0) {
+      setError("Sélectionnez au moins un magasin rattaché au dépôt");
+      return;
+    }
 
-  function save() {
     setError("");
     startTransition(async () => {
-      const result = await updateHubManagers(hub.id, selected);
-      if ("error" in result) {
+      const formData = new FormData();
+      formData.set("user_id", hub.id);
+      formData.set("full_name", fullName.trim());
+      formData.set("email", email.trim());
+      if (password) formData.set("password", password);
+      if (hub.city) formData.set("city", hub.city);
+      selectedStoreIds.forEach((storeId) => formData.append("hub_store_ids", storeId));
+
+      const result = await updateHubDepot(formData);
+      if ("error" in result && result.error) {
         setError(result.error);
         return;
       }
+
       router.refresh();
       onClose();
     });
@@ -138,7 +170,7 @@ function HubManagersModal({
   return (
     <Modal onClose={onClose} size="md" closeOnBackdrop={false} closeOnEscape={false}>
       <CardHeader
-        title={`Gérants — ${hub.full_name}`}
+        title="Modifier le dépôt"
         description={`Ville : ${hub.city}`}
         action={
           <button
@@ -151,74 +183,111 @@ function HubManagersModal({
           </button>
         }
       />
-      <div className="space-y-2">
-        {cityManagers.length === 0 ? (
-          <p className="text-sm text-muted">Aucun gérant actif dans cette ville.</p>
-        ) : (
-          cityManagers.map((manager) => (
-            <label
-              key={manager.id}
-              className="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2 hover:bg-primary-light/10"
-            >
-              <input
-                type="checkbox"
-                checked={selected.includes(manager.id)}
-                onChange={() => toggleManager(manager.id)}
-                className="h-4 w-4 accent-primary"
-              />
-              <div>
-                <p className="text-sm font-medium">{manager.full_name}</p>
-                <p className="text-xs text-muted">{manager.email}</p>
-              </div>
-            </label>
-          ))
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Nom du dépôt"
+          name="full_name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          required
+        />
+        <Input
+          label="Email"
+          name="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <PasswordInput
+          label="Nouveau mot de passe"
+          name="password"
+          maskWithAsterisk
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          minLength={6}
+          placeholder="Laisser vide pour ne pas changer"
+          autoComplete="new-password"
+        />
+        {hub.city && (
+          <HubStorePicker
+            hubCity={hub.city}
+            retailStores={retailStores}
+            value={selectedStoreIds}
+            onChange={setSelectedStoreIds}
+          />
         )}
-      </div>
-      {error && <p className="mt-3 text-sm text-danger">{error}</p>}
-      <Button type="button" className="mt-4 w-full" loading={pending} onClick={save}>
-        Enregistrer les affectations
-      </Button>
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <Button type="submit" loading={pending} className="w-full">
+          Enregistrer
+        </Button>
+      </form>
     </Modal>
   );
 }
 
 export function HubAccountsManager({
   hubAccounts,
-  managersByCity,
+  retailStores,
   assignmentsByHub,
 }: {
   hubAccounts: Profile[];
-  managersByCity: Record<string, Profile[]>;
+  retailStores: Store[];
   assignmentsByHub: Record<string, string[]>;
 }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [editHub, setEditHub] = useState<Profile | null>(null);
-  const cities = useMemo(() => Object.keys(managersByCity).sort(), [managersByCity]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const storeMap = useMemo(
+    () => Object.fromEntries(retailStores.map((store) => [store.id, store])),
+    [retailStores]
+  );
 
   async function toggleActive(userId: string, isActive: boolean) {
     await toggleUserActive(userId, !isActive);
     router.refresh();
   }
 
+  async function handleDelete(hub: Profile) {
+    if (
+      !window.confirm(
+        `Supprimer définitivement le dépôt « ${hub.full_name} » ?\n\nSi le dépôt a de l'historique (transferts…), la suppression échouera — désactivez-le à la place.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingId(hub.id);
+    const result = await deleteUser(hub.id);
+    if (result.error) {
+      window.alert(result.error);
+    } else {
+      router.refresh();
+    }
+    setDeletingId(null);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Comptes hub stock</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Comptes dépôt</h1>
           <p className="mt-1 text-muted">
-            Créez des comptes hub par ville et affectez les gérants
+            Par défaut, les magasins de la ville du dépôt — possibilité d&apos;en rattacher
+            d&apos;autres villes
           </p>
         </div>
         <Button type="button" onClick={() => setShowCreate(true)}>
           <Plus className="h-4 w-4" />
-          Nouveau compte hub
+          Nouveau compte dépôt
         </Button>
       </div>
 
       <Card padding={false}>
         {hubAccounts.length === 0 ? (
-          <p className="px-6 py-12 text-center text-sm text-muted">Aucun compte hub</p>
+          <p className="px-6 py-12 text-center text-sm text-muted">Aucun compte dépôt</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -226,24 +295,48 @@ export function HubAccountsManager({
                 <tr className="border-b border-border bg-primary-light/30">
                   <th className="px-6 py-3 text-left font-medium text-muted">Nom</th>
                   <th className="px-6 py-3 text-left font-medium text-muted">Ville</th>
+                  <th className="px-6 py-3 text-left font-medium text-muted">Magasins</th>
                   <th className="px-6 py-3 text-left font-medium text-muted">Email</th>
-                  <th className="px-6 py-3 text-left font-medium text-muted">Gérants</th>
                   <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
                   <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {hubAccounts.map((hub) => {
-                  const assignedCount = assignmentsByHub[hub.id]?.length ?? 0;
-                  const cityManagers = hub.city ? managersByCity[hub.city] || [] : [];
+                  const assignedIds = assignmentsByHub[hub.id] || [];
+                  const cityStoreCount = hub.city
+                    ? storesForCity(retailStores, hub.city).length
+                    : 0;
+                  const assignedNames = assignedIds
+                    .map((id) => storeMap[id]?.name)
+                    .filter(Boolean)
+                    .slice(0, 3);
+                  const crossCityCount = assignedIds.filter(
+                    (id) => storeMap[id] && hub.city && storeMap[id].city !== hub.city
+                  ).length;
+
                   return (
                     <tr key={hub.id} className="border-b border-border last:border-b-0">
                       <td className="px-6 py-4 font-medium">{hub.full_name}</td>
                       <td className="px-6 py-4">{hub.city}</td>
-                      <td className="px-6 py-4 text-muted">{hub.email}</td>
                       <td className="px-6 py-4">
-                        {assignedCount} / {cityManagers.length}
+                        <p className="font-medium">
+                          {assignedIds.length} magasin{assignedIds.length !== 1 ? "s" : ""}
+                          {cityStoreCount > 0 ? ` · ${cityStoreCount} en ville` : ""}
+                        </p>
+                        {crossCityCount > 0 && (
+                          <p className="mt-0.5 text-xs text-muted">
+                            {crossCityCount} hors ville
+                          </p>
+                        )}
+                        {assignedNames.length > 0 && (
+                          <p className="mt-1 text-xs text-muted">
+                            {assignedNames.join(" · ")}
+                            {assignedIds.length > 3 ? ` · +${assignedIds.length - 3}` : ""}
+                          </p>
+                        )}
                       </td>
+                      <td className="px-6 py-4 text-muted">{hub.email}</td>
                       <td className="px-6 py-4">
                         <Badge variant={hub.is_active ? "success" : "default"}>
                           {hub.is_active ? "Actif" : "Inactif"}
@@ -256,8 +349,19 @@ export function HubAccountsManager({
                             size="sm"
                             variant="secondary"
                             onClick={() => setEditHub(hub)}
+                            title="Modifier le dépôt"
                           >
-                            Gérants
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            loading={deletingId === hub.id}
+                            onClick={() => void handleDelete(hub)}
+                            title="Supprimer le dépôt"
+                          >
+                            <Trash2 className="h-4 w-4 text-danger" />
                           </Button>
                           <Button
                             type="button"
@@ -285,12 +389,14 @@ export function HubAccountsManager({
         )}
       </Card>
 
-      {showCreate && <CreateHubForm cities={cities} onClose={() => setShowCreate(false)} />}
+      {showCreate && (
+        <CreateHubForm retailStores={retailStores} onClose={() => setShowCreate(false)} />
+      )}
 
-      {editHub && editHub.city && (
-        <HubManagersModal
+      {editHub && (
+        <EditHubDepotModal
           hub={editHub}
-          cityManagers={managersByCity[editHub.city] || []}
+          retailStores={retailStores}
           assignedIds={assignmentsByHub[editHub.id] || []}
           onClose={() => setEditHub(null)}
         />

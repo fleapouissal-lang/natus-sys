@@ -53,6 +53,7 @@ export function PosCheckoutPanel({
   onCustomerChange,
   onPointsToRedeemChange,
   onPromoChange,
+  onLoyaltyLookupError,
   loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
 }: {
   subtotal: number;
@@ -63,6 +64,7 @@ export function PosCheckoutPanel({
   onCustomerChange: (customer: LoyaltyCustomer | null) => void;
   onPointsToRedeemChange: (points: number) => void;
   onPromoChange: (promo: AppliedPosPromo | null) => void;
+  onLoyaltyLookupError?: (code: string, error: string) => void;
   loyaltySettings?: LoyaltySettings;
 }) {
   const [input, setInput] = useState("");
@@ -112,7 +114,11 @@ export function PosCheckoutPanel({
     startTransition(async () => {
       const result = await lookupLoyaltyCustomer(trimmed);
       if ("error" in result) {
-        setError(result.error);
+        if (onLoyaltyLookupError) {
+          onLoyaltyLookupError(trimmed, result.error);
+        } else {
+          setError(result.error);
+        }
         return;
       }
       onCustomerChange(result.customer);

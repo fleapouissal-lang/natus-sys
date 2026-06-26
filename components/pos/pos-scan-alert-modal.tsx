@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertTriangle, PackageX, SearchX, X } from "lucide-react";
+import { AlertTriangle, CreditCard, PackageX, SearchX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { formatCurrency } from "@/lib/utils";
@@ -10,7 +10,21 @@ import type { Product } from "@/lib/types";
 export type PosScanAlert =
   | { kind: "not_found"; barcode: string }
   | { kind: "out_of_stock"; product: Product }
-  | { kind: "insufficient_stock"; product: Product; available: number };
+  | { kind: "insufficient_stock"; product: Product; available: number }
+  | { kind: "loyalty_not_found"; code: string; message: string }
+  | { kind: "loyalty_inactive"; code: string; message: string };
+
+export function createLoyaltyScanAlert(code: string, error: string): PosScanAlert {
+  const inactive =
+    error === "Client désactivé par le directeur" ||
+    error === "Client pro en attente d'activation par le directeur";
+
+  if (inactive) {
+    return { kind: "loyalty_inactive", code, message: error };
+  }
+
+  return { kind: "loyalty_not_found", code, message: error };
+}
 
 function alertContent(alert: PosScanAlert) {
   switch (alert.kind) {
@@ -38,6 +52,24 @@ function alertContent(alert: PosScanAlert) {
         title: "Stock insuffisant",
         message: `Il reste seulement ${alert.available} unité${alert.available !== 1 ? "s" : ""} de ${alert.product.name}.`,
         detail: `Code-barres : ${alert.product.barcode}`,
+        tone: "text-warning",
+        iconBg: "bg-warning/15 text-warning",
+      };
+    case "loyalty_not_found":
+      return {
+        icon: SearchX,
+        title: "Carte fidélité introuvable",
+        message: alert.message,
+        detail: alert.code,
+        tone: "text-danger",
+        iconBg: "bg-danger/15 text-danger",
+      };
+    case "loyalty_inactive":
+      return {
+        icon: CreditCard,
+        title: "Carte inactive",
+        message: alert.message,
+        detail: alert.code,
         tone: "text-warning",
         iconBg: "bg-warning/15 text-warning",
       };

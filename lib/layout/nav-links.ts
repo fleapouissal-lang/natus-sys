@@ -57,28 +57,48 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   if (basePath === "/hub") {
     return [
       { href: "/hub", label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
-      { href: "/hub/stock", label: "Stock", icon: Warehouse, mobileOrder: 1 },
-      { href: "/hub/hub-stock", label: "Entrepôt", icon: Boxes, mobileOrder: 2 },
-      { href: "/hub/activity", label: "Activité", icon: ClipboardList, mobileOrder: 3 },
-      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 4 },
+      { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 1 },
+      { href: "/hub/stock", label: "Stock", icon: Warehouse, mobileOrder: 2 },
+      { href: "/hub/hub-stock", label: "Entrepôt", icon: Boxes, mobileOrder: 3 },
+      { href: "/hub/activity", label: "Activité", icon: ClipboardList, mobileOrder: 4 },
+      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 5 },
     ];
   }
 
   const links: NavLinkItem[] = [
     { href: basePath, label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
     { href: `${basePath}/planning`, label: "Planning", icon: CalendarClock, mobileOrder: 1 },
-    { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 2 },
+  ];
+
+  if (basePath === "/director") {
+    links.push({
+      href: "/cashier/pos",
+      label: "Caisse",
+      icon: ShoppingCart,
+      mobileOrder: 2,
+    });
+  }
+
+  links.push(
     { href: `${basePath}/sales`, label: "Ventes", icon: Receipt, mobileOrder: 3 },
     { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 4 },
     { href: `${basePath}/products`, label: "Produits", icon: Package, mobileOrder: 5 },
     { href: `${basePath}/stores`, label: "Magasins", icon: Store, mobileOrder: 6 },
     { href: `${basePath}/activity`, label: "Activité", icon: ClipboardList, mobileOrder: 7 },
-    { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 8 },
-    { href: `${basePath}/loyalty`, label: "Fidélité", icon: Gift, mobileOrder: 9 },
-    { href: `${basePath}/invoices`, label: "Factures", icon: FileText, mobileOrder: 10 },
+    { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 8 }
+  );
+
+  if (basePath !== "/manager") {
+    links.push(
+      { href: `${basePath}/loyalty`, label: "Fidélité", icon: Gift, mobileOrder: 9 },
+      { href: `${basePath}/invoices`, label: "Factures", icon: FileText, mobileOrder: 10 }
+    );
+  }
+
+  links.push(
     { href: `${basePath}/actualites`, label: "Actus", icon: Newspaper, mobileOrder: 11 },
-    { href: `${basePath}/users`, label: "Users", icon: Users, mobileOrder: 12 },
-  ];
+    { href: `${basePath}/users`, label: "Users", icon: Users, mobileOrder: 12 }
+  );
 
   if (basePath === "/director") {
     links.splice(6, 0, {
@@ -87,15 +107,18 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       icon: Boxes,
       mobileOrder: 6,
     });
+    const loyaltyIdx = links.findIndex((link) => link.href === `${basePath}/loyalty`);
+    if (loyaltyIdx >= 0) {
+      links[loyaltyIdx] = {
+        href: "/director/clients",
+        label: "Clients & Fidélité",
+        icon: Gift,
+        mobileOrder: 9,
+      };
+    }
     links.splice(11, 0, {
-      href: "/director/clients",
-      label: "Clients",
-      icon: Users,
-      mobileOrder: 10,
-    });
-    links.splice(12, 0, {
       href: "/director/hubs",
-      label: "Hubs",
+      label: "Dépôts",
       icon: Users,
       mobileOrder: 11,
     });
@@ -161,6 +184,11 @@ export function resolveNavLinks(input: {
 export function isNavLinkActive(pathname: string, href: string): boolean {
   if (href === "/manager" || href === "/director" || href === "/hub") {
     return pathname === href;
+  }
+  if (href === "/director/clients") {
+    if (pathname === href) return true;
+    if (pathname.startsWith("/director/loyalty")) return true;
+    return pathname.startsWith(`${href}/`);
   }
   if (pathname === href) return true;
   return pathname.startsWith(`${href}/`);

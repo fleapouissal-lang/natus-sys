@@ -17,6 +17,17 @@ export default async function UsersPage() {
     .select("*")
     .order("created_at", { ascending: false });
 
+  const scopedUsers =
+    profile.role === "manager"
+      ? (users || []).filter((user) => {
+          if (user.role === "hub" || user.role === "directeur" || user.role === "admin") {
+            return false;
+          }
+          if (city && user.city && user.city !== city) return false;
+          return true;
+        })
+      : users || [];
+
   const { data: nfcCards } = await supabase
     .from("cashier_nfc_cards")
     .select("cashier_id, nfc_uid");
@@ -27,7 +38,7 @@ export default async function UsersPage() {
 
   return (
     <UsersManager
-      users={users || []}
+      users={scopedUsers}
       stores={stores}
       viewer={profile}
       nfcByCashier={nfcByCashier}

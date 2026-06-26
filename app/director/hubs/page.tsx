@@ -1,30 +1,37 @@
 import { redirect } from "next/navigation";
+import dynamic from "next/dynamic";
 import { requireRole } from "@/lib/auth";
-import { NATUS_CITIES } from "@/lib/constants/cities";
-import { getHubAccounts, getManagersForCity, getHubAssignedManagers } from "@/lib/hub";
-import { HubAccountsManager } from "@/components/hub/hub-accounts-manager";
+import { getActiveStores } from "@/lib/inventory";
+import { getHubAccounts, getHubStoreAssignmentsMap } from "@/lib/hub";
+
+const HubAccountsManager = dynamic(
+  () =>
+    import("@/components/hub/hub-accounts-manager").then((mod) => mod.HubAccountsManager),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="space-y-6" aria-busy="true" aria-label="Chargement des comptes dépôt">
+        <div className="h-9 w-56 animate-pulse rounded bg-primary-light/30" />
+        <div className="h-72 animate-pulse rounded-xl bg-primary-light/20" />
+      </div>
+    ),
+  }
+);
 
 export default async function DirectorHubsPage() {
   const profile = await requireRole(["directeur", "admin"]);
   if (!profile) redirect("/login");
 
-  const hubAccounts = await getHubAccounts();
-
-  const managersByCity: Record<string, Awaited<ReturnType<typeof getManagersForCity>>> = {};
-  for (const city of NATUS_CITIES) {
-    managersByCity[city] = await getManagersForCity(city);
-  }
-
-  const assignmentsByHub: Record<string, string[]> = {};
-  for (const hub of hubAccounts) {
-    const managers = await getHubAssignedManagers(hub.id);
-    assignmentsByHub[hub.id] = managers.map((m) => m.id);
-  }
+  const [hubAccounts, retailStores, assignmentsByHub] = await Promise.all([
+    getHubAccounts(),
+    getActiveStores(null),
+    getHubStoreAssignmentsMap(),
+  ]);
 
   return (
     <HubAccountsManager
       hubAccounts={hubAccounts}
-      managersByCity={managersByCity}
+      retailStores={retailStores.filter((store) => !store.is_hub)}
       assignmentsByHub={assignmentsByHub}
     />
   );

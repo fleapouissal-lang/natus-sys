@@ -17,20 +17,18 @@ import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { transferHubStock } from "@/lib/actions";
 import { formatCurrency } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
-import type { Product, Profile, Store, HubStockTransfer } from "@/lib/types";
+import type { Product, Store, HubStockTransfer } from "@/lib/types";
 import { HubTransfersList } from "@/components/hub/hub-transfers-list";
 
 export function HubWarehouseManager({
   hubStore,
   products,
   retailStores,
-  assignedManagers,
   transfers,
 }: {
   hubStore: Store;
   products: Product[];
   retailStores: Store[];
-  assignedManagers: Profile[];
   transfers: HubStockTransfer[];
 }) {
   const router = useRouter();
@@ -147,18 +145,18 @@ export function HubWarehouseManager({
     router.refresh();
   }
 
-  const canTransfer = assignedManagers.length > 0 && retailStores.length > 0;
+  const canTransfer = retailStores.length > 0;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Entrepôt hub</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Entrepôt dépôt</h1>
         <p className="mt-1 text-muted">
           {hubStore.name} — {hubStore.city}
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <p className="text-sm text-muted">Produits en entrepôt</p>
           <p className="mt-1 text-3xl font-bold">{products.length}</p>
@@ -170,17 +168,13 @@ export function HubWarehouseManager({
             {totalUnits}
           </p>
         </Card>
-        <Card>
-          <p className="text-sm text-muted">Gérants affectés</p>
-          <p className="mt-1 text-3xl font-bold">{assignedManagers.length}</p>
-        </Card>
       </div>
 
       {!canTransfer && (
         <Card className="border-warning/40 bg-warning/5">
           <p className="text-sm">
-            Aucun gérant affecté ou aucun magasin retail disponible. Le directeur doit vous
-            affecter des gérants depuis <strong>Comptes hub</strong> avant d&apos;envoyer du stock.
+            Aucun magasin retail rattaché à ce dépôt. Le directeur doit associer des magasins
+            depuis <strong>Comptes dépôt</strong>.
           </p>
         </Card>
       )}
@@ -327,22 +321,6 @@ export function HubWarehouseManager({
       </Card>
 
       <HubTransfersList transfers={transfers} allowRepair />
-
-      {assignedManagers.length > 0 && (
-        <Card padding={false}>
-          <div className="border-b border-border px-6 py-4">
-            <h2 className="text-lg font-semibold">Gérants affectés — {hubStore.city}</h2>
-          </div>
-          <ul className="divide-y divide-border">
-            {assignedManagers.map((manager) => (
-              <li key={manager.id} className="px-6 py-3">
-                <p className="font-medium">{manager.full_name}</p>
-                <p className="text-sm text-muted">{manager.email}</p>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
     </div>
   );
 }

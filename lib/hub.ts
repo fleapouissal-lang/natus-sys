@@ -24,27 +24,39 @@ export async function getHubAccounts(): Promise<Profile[]> {
   return (data || []) as Profile[];
 }
 
-export async function getHubAssignedManagers(hubUserId: string): Promise<Profile[]> {
+export async function getHubStoreAssignmentsMap(): Promise<Record<string, string[]>> {
   const supabase = await createClient();
-  const { data: links } = await supabase
-    .from("hub_manager_assignments")
-    .select("manager_id")
-    .eq("hub_user_id", hubUserId);
+  const { data } = await supabase
+    .from("hub_store_assignments")
+    .select("hub_user_id, store_id");
 
-  const ids = (links || []).map((l) => l.manager_id);
-  if (ids.length === 0) return [];
-
-  const { data: managers } = await supabase
-    .from("profiles")
-    .select("*")
-    .in("id", ids)
-    .order("full_name");
-
-  return (managers || []) as Profile[];
+  const map: Record<string, string[]> = {};
+  for (const row of data || []) {
+    if (!map[row.hub_user_id]) map[row.hub_user_id] = [];
+    map[row.hub_user_id].push(row.store_id);
+  }
+  return map;
 }
 
-/** Magasins retail de la ville (destinations de transfert hub). */
-export async function getHubRetailStoresForTransfer(city: string): Promise<Store[]> {
+export async function getHubAssignedStores(hubUserId: string): Promise<Store[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("hub_store_assignments")
+    .select("store_id, stores:store_id(*)")
+    .eq("hub_user_id", hubUserId);
+
+  return (data || [])
+    .map((row) => row.stores as Store | null)
+    .filter((store): store is Store => Boolean(store?.is_active && !store.is_hub));
+}
+
+/** Magasins retail associés au dépôt (destinations de transfert). */
+export async function getHubRetailStoresForTransfer(hubUserId: string): Promise<Store[]> {
+  const stores = await getHubAssignedStores(hubUserId);
+  return stores.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function getRetailStoresByCity(city: string): Promise<Store[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("stores")
@@ -54,18 +66,6 @@ export async function getHubRetailStoresForTransfer(city: string): Promise<Store
     .eq("is_hub", false)
     .order("name");
   return data || [];
-}
-
-export async function getManagersForCity(city: string): Promise<Profile[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("role", "manager")
-    .eq("city", city)
-    .eq("is_active", true)
-    .order("full_name");
-  return (data || []) as Profile[];
 }
 
 export async function getHubCityStaff(city: string): Promise<{

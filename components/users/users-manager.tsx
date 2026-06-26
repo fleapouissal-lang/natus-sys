@@ -6,12 +6,13 @@ import { Plus, Pencil, Trash2, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { CashierNfcField } from "@/components/users/cashier-nfc-field";
 import { CreateUserWizard } from "@/components/users/create-user-wizard";
 import { EditUserWizard } from "@/components/users/edit-user-wizard";
-import { storeOptions } from "@/lib/select-options";
+import { cityOptions, storeOptions } from "@/lib/select-options";
 import {
   deleteUser,
   toggleUserActive,
@@ -24,11 +25,26 @@ import { formatDate } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Profile, Store, UserRole } from "@/lib/types";
 
+const DIRECTOR_ROLE_FILTERS: { value: UserRole | ""; label: string }[] = [
+  { value: "", label: "Tous les rôles" },
+  { value: "directeur", label: "Directeur" },
+  { value: "admin", label: "Administrateur" },
+  { value: "manager", label: "Gérant" },
+  { value: "cashier", label: "Caissier" },
+  { value: "livreur", label: "Livreur" },
+  { value: "hub", label: "Dépôt" },
+];
+
 function roleBadgeVariant(role: UserRole) {
   if (role === "directeur" || role === "admin") return "accent";
   if (role === "manager") return "default";
   if (role === "livreur") return "warning";
   return "success";
+}
+
+function resolveUserCity(user: Profile, storeMap: Record<string, Store>): string | null {
+  if (user.role === "directeur" || user.role === "admin") return null;
+  return user.city || storeMap[user.store_id || ""]?.city || null;
 }
 
 export function UsersManager({
@@ -46,8 +62,12 @@ export function UsersManager({
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
+  const [cityFilter, setCityFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState<UserRole | "">("");
 
-  const cities = isDirector(viewer)
+  const directorView = isDirector(viewer);
+
+  const cities = directorView
     ? [...NATUS_CITIES]
     : viewer.city
       ? [viewer.city]
@@ -58,6 +78,23 @@ export function UsersManager({
     [stores]
   );
 
+  const filteredUsers = useMemo(() => {
+    if (!directorView) return users;
+
+    return users.filter((user) => {
+      if (roleFilter && user.role !== roleFilter) return false;
+
+      if (cityFilter) {
+        if (user.role === "directeur" || user.role === "admin") return false;
+        const userCity = resolveUserCity(user, storeMap);
+        if (userCity !== cityFilter) return false;
+      }
+
+      return true;
+    });
+  }, [users, directorView, cityFilter, roleFilter, storeMap]);
+
+  const filterToken = `${cityFilter}|${roleFilter}`;
   const {
     paginated: paginatedUsers,
     page,
@@ -66,7 +103,7 @@ export function UsersManager({
     rangeStart,
     rangeEnd,
     totalItems,
-  } = usePagination(users, DEFAULT_PAGE_SIZE);
+  } = usePagination(filteredUsers, DEFAULT_PAGE_SIZE, filterToken);
 
   async function handleStoreChange(userId: string, storeId: string) {
     setLoading(userId);
@@ -107,9 +144,11 @@ export function UsersManager({
           <CardHeader
             title="Utilisateurs"
             description={
-              isDirector(viewer)
-                ? `${users.length} utilisateur(s) — toutes villes`
-                : `${users.length} utilisateur(s) — ${viewer.city}`
+              directorView
+                ? cityFilter || roleFilter
+                  ? `${filteredUsers.length} utilisateur${filteredUsers.length !== 1 ? "s" : ""} sur ${users.length}`
+                  : `${users.length} utilisateur${users.length !== 1 ? "s" : ""} — toutes villes`
+                : `${users.length} utilisateur${users.length !== 1 ? "s" : ""} — ${viewer.city}`
             }
             action={
               <Button onClick={() => setShowForm(true)}>
@@ -119,6 +158,34 @@ export function UsersManager({
             }
           />
         </div>
+
+        {directorView && (
+          <FilterTogglePanel
+            toggleLabel="Filtrer les utilisateurs"
+            summary={`${filteredUsers.length} résultat${filteredUsers.length !== 1 ? "s" : ""}`}
+            className="border-t border-border"
+          >
+            <div className="natus-filter-bar grid gap-4 p-4 sm:grid-cols-2 lg:max-w-2xl">
+              <SelectMenu
+                label="Ville"
+                value={cityFilter}
+                onChange={setCityFilter}
+                options={cityOptions(NATUS_CITIES)}
+                size="sm"
+              />
+              <SelectMenu
+                label="Rôle"
+                value={roleFilter}
+                onChange={(value) => setRoleFilter(value as UserRole | "")}
+                options={DIRECTOR_ROLE_FILTERS.map((option) => ({
+                  value: option.value,
+                  label: option.label,
+                }))}
+                size="sm"
+              />
+            </div>
+          </FilterTogglePanel>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -135,7 +202,14 @@ export function UsersManager({
               </tr>
             </thead>
             <tbody>
-              {paginatedUsers.map((user) => (
+              {paginatedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-sm text-muted">
+                    Aucun utilisateur ne correspond aux filtres
+                  </td>
+                </tr>
+              ) : (
+              paginatedUsers.map((user) => (
                 <tr key={user.id} className="border-b border-border">
                   <td className="px-6 py-4">
                     <div>
@@ -190,6 +264,10 @@ export function UsersManager({
                         size="sm"
                         className="min-w-[140px]"
                       />
+                  ) : user.role === "hub" ? (
+                      <span className="text-xs text-muted">
+                        Dépôt — {user.city || "—"}
+                      </span>
                     ) : user.role === "manager" ? (
                       <span className="text-xs text-muted">
                         {user.store_id
@@ -261,11 +339,12 @@ export function UsersManager({
                     )}
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>
-        {users.length > 0 && (
+        {filteredUsers.length > 0 && (
           <PaginationBar
             page={page}
             totalPages={totalPages}

@@ -107,6 +107,15 @@ export async function updateSession(request: NextRequest) {
         url.pathname = role ? homePath : "/login";
         return applySecurityHeaders(NextResponse.redirect(url));
       }
+
+      if (
+        pathname.startsWith("/manager/loyalty") ||
+        pathname.startsWith("/manager/invoices")
+      ) {
+        const url = request.nextUrl.clone();
+        url.pathname = homePath;
+        return applySecurityHeaders(NextResponse.redirect(url));
+      }
     }
 
     if (pathname.startsWith("/livreur")) {
@@ -133,6 +142,12 @@ export async function updateSession(request: NextRequest) {
       if (!role || !STAFF_ROLES.includes(role)) {
         const url = request.nextUrl.clone();
         url.pathname = "/login";
+        return applySecurityHeaders(NextResponse.redirect(url));
+      }
+
+      if (isCashierPosRoute(pathname) && role === "manager") {
+        const url = request.nextUrl.clone();
+        url.pathname = homePath;
         return applySecurityHeaders(NextResponse.redirect(url));
       }
 

@@ -42,12 +42,12 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "stores", label: "Magasins", description: "Points de vente et paramètres", group: "admin" },
   { key: "activity", label: "Activité", description: "Journal des actions récentes", group: "admin" },
   { key: "reclamations", label: "Réclamations", description: "Suivi des réclamations clients", group: "clients" },
-  { key: "loyalty", label: "Fidélité", description: "Programme fidélité et clients", group: "clients" },
+  { key: "loyalty", label: "Clients & Fidélité", description: "Cartes fidélité, clients Pro et programme", group: "clients" },
   { key: "invoices", label: "Factures", description: "Factures et documents de vente", group: "clients" },
   { key: "actualites", label: "Actualités", description: "Annonces et communications internes", group: "admin" },
   { key: "users", label: "Utilisateurs", description: "Gestion des comptes équipe", group: "admin" },
   { key: "hub_stock", label: "Hub stock", description: "Stock entrepôt central", group: "admin" },
-  { key: "hubs", label: "Hubs", description: "Comptes hub et logistique", group: "admin" },
+  { key: "hubs", label: "Dépôts", description: "Comptes dépôt ville (indépendants des gérants)", group: "admin" },
   { key: "notes", label: "Notes", description: "Notes clients et suivi caisse", group: "clients" },
   { key: "transfers", label: "Hub / transferts", description: "Réceptions et envois hub", group: "operations" },
   { key: "returns", label: "Retours", description: "Retours produits et SAV", group: "clients" },
@@ -66,15 +66,15 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
     "hub_stock", "hubs",
   ],
   manager: [
-    "dashboard", "planning", "pos", "sales", "stock", "products", "stores",
-    "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
+    "dashboard", "planning", "sales", "stock", "products", "stores",
+    "activity", "reclamations", "actualites", "users",
   ],
   cashier: [
     "pos", "planning", "actualites", "sales", "notes", "transfers",
     "customers", "returns", "invoices",
   ],
   livreur: ["actualites", "returns"],
-  hub: ["dashboard", "stock", "hub_stock", "activity", "actualites"],
+  hub: ["dashboard", "pos", "stock", "hub_stock", "activity", "actualites"],
 };
 
 const PAGE_HOME_PRIORITY: UserPageKey[] = [
@@ -141,6 +141,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
     case "reclamations":
       return base ? `${base}/reclamations` : null;
     case "loyalty":
+      if (role === "directeur" || role === "admin") return "/director/clients";
       return base ? `${base}/loyalty` : null;
     case "invoices":
       return role === "cashier" ? "/cashier/invoices" : base ? `${base}/invoices` : null;
@@ -206,6 +207,13 @@ export function getAllowedHrefsForProfile(
   const hrefs = keys
     .map((key) => resolvePageHref(key, profile.role))
     .filter((href): href is string => Boolean(href));
+
+  if (
+    (profile.role === "directeur" || profile.role === "admin") &&
+    keys.includes("loyalty")
+  ) {
+    hrefs.push("/director/loyalty");
+  }
 
   hrefs.push(getSettingsPath(profile.role));
   return [...new Set(hrefs)];

@@ -15,6 +15,7 @@ export function formatDate(date: string): string {
   return new Intl.DateTimeFormat("fr-MA", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "Africa/Casablanca",
   }).format(new Date(date));
 }
 

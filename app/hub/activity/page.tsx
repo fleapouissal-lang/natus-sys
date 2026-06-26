@@ -23,7 +23,7 @@ export default async function HubActivityPage({
 
   const { store: storeParam } = await searchParams;
   const hubStore = await getHubStoreByCity(profile.city);
-  const retailStores = await getHubRetailStoresForTransfer(profile.city);
+  const retailStores = await getHubRetailStoresForTransfer(profile.id);
   const stores = hubStore ? [hubStore, ...retailStores] : retailStores;
 
   const storeId = resolveSelectedStoreId(stores, storeParam || hubStore?.id);

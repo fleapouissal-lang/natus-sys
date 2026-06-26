@@ -48,7 +48,7 @@ async function resolveStoreScope(
       return { stores: [], storeIds: [], scopeLabel: "Ville non définie", selectedStoreId: "" };
     }
 
-    const stores = await getHubRetailStoresForTransfer(city);
+    const stores = await getHubRetailStoresForTransfer(profile.id);
     const selectedStoreId =
       storeParam && stores.some((store) => store.id === storeParam) ? storeParam : "";
     const selectedStore = getSelectedStore(stores, selectedStoreId);

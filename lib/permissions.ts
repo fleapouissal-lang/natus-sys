@@ -39,7 +39,7 @@ export function getRoleLabel(role: UserRole): string {
     case "manager":
       return "Gérant";
     case "hub":
-      return "Hub stock";
+      return "Dépôt";
     case "cashier":
       return "Caissier";
     case "livreur":

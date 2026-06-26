@@ -31,6 +31,7 @@ import { ProductCatalog } from "@/components/pos/product-catalog";
 import { PosCheckoutPanel } from "@/components/pos/pos-checkout-panel";
 import {
   PosScanAlertToast,
+  createLoyaltyScanAlert,
   type PosScanAlert,
 } from "@/components/pos/pos-scan-alert-modal";
 import {
@@ -303,7 +304,7 @@ export function PosTerminal({
             setPointsToRedeem(0);
             setError("");
           } else {
-            setError(result.error);
+            setScanAlert(createLoyaltyScanAlert(trimmed, result.error));
           }
         });
         return;
@@ -1063,6 +1064,9 @@ export function PosTerminal({
         onCustomerChange={setLoyaltyCustomer}
         onPointsToRedeemChange={setPointsToRedeem}
         onPromoChange={setAppliedPromo}
+        onLoyaltyLookupError={(code, error) => {
+          setScanAlert(createLoyaltyScanAlert(code, error));
+        }}
         loyaltySettings={loyaltySettings}
       />
     );

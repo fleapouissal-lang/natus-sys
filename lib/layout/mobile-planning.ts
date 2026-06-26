@@ -9,14 +9,9 @@ export function isMobilePlanningOnlyMode(input: {
   return Boolean(input.isPersonalCashier || input.isStorePos);
 }
 
-/** Caisse POS réservée au desktop pour direction, gérants et hub inventaire */
+/** Caisse POS réservée au desktop pour direction et hub inventaire */
 export function isMobilePosDesktopOnlyRole(role: UserRole): boolean {
-  return (
-    role === "directeur" ||
-    role === "admin" ||
-    role === "manager" ||
-    role === "hub"
-  );
+  return role === "directeur" || role === "admin" || role === "hub";
 }
 
 export function getMobilePosRedirectPath(role: UserRole): string {

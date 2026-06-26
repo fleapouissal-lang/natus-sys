@@ -5,6 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 /** Taille par défaut des tableaux (commandes, ventes, réclamations…). */
 export const DEFAULT_PAGE_SIZE = 10;
 
+/** Catalogue produits (directeur / gérant). */
+export const PRODUCT_PAGE_SIZE = 50;
+
 /** Cartes magasins et stock déplié par magasin. */
 export const STORE_PAGE_SIZE = 6;
 

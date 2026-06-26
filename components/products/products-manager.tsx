@@ -40,7 +40,7 @@ import {
   productHasCategory,
 } from "@/lib/products/product-utils";
 import { cn } from "@/lib/utils";
-import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
+import { PRODUCT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, Store } from "@/lib/types";
 
 function ParentVariantsToggle({
@@ -377,7 +377,7 @@ export function ProductsManager({
     rangeStart: productsRangeStart,
     rangeEnd: productsRangeEnd,
     totalItems: productsTotalItems,
-  } = usePagination(topLevelProducts, DEFAULT_PAGE_SIZE, productsFilterToken);
+  } = usePagination(topLevelProducts, PRODUCT_PAGE_SIZE, productsFilterToken);
 
   function renderProductRow(
     product: Product,

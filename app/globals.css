@@ -297,8 +297,9 @@
 
 .loyalty-portal-sidebar-footer-btn--primary:hover:not(:disabled) {
   border-color: var(--primary);
-  color: #fff;
-  opacity: 0.92;
+  background: linear-gradient(135deg, #2a2210 0%, #1a1408 100%);
+  color: var(--champagne);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
 .loyalty-client-portal-main {
