@@ -987,6 +987,33 @@ export async function cancelSale(
   return { success: true };
 }
 
+function revalidateInvoicePaths() {
+  revalidatePath("/cashier/invoices");
+  revalidatePath("/manager/invoices");
+  revalidatePath("/director/invoices");
+  revalidatePath("/hub/invoices");
+}
+
+export async function validateSaleInvoice(
+  saleId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Seul le directeur peut valider une facture" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("validate_sale_invoice", { p_sale_id: saleId });
+
+  if (error) return { error: error.message };
+
+  revalidateInvoicePaths();
+  revalidatePath(`/director/invoices/${saleId}`);
+  revalidatePath("/cashier/sales");
+  revalidatePath("/manager/sales");
+  revalidatePath("/director/sales");
+
+  return { success: true };
+}
+
 export async function createLoyaltyCustomer(input: {
   fullName: string;
   phone: string;

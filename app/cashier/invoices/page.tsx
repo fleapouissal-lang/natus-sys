@@ -13,7 +13,7 @@ export default async function CashierInvoicesPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Factures</h1>
         <p className="mt-1 text-muted">
-          Toutes les factures du magasin — caisse et commandes
+          Factures validées par le directeur — visibles après validation uniquement
         </p>
       </div>
 

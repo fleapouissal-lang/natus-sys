@@ -107,6 +107,8 @@ export interface Sale {
   pro_client_discount: number;
   cancelled_at: string | null;
   cancelled_by: string | null;
+  invoice_validated_at: string | null;
+  invoice_validated_by: string | null;
   created_at: string;
   profiles?: Pick<Profile, "full_name" | "email">;
   stores?: Pick<Store, "name" | "city"> | null;

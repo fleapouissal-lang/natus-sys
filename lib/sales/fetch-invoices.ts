@@ -7,16 +7,23 @@ const INVOICE_FETCH_LIMIT = 500;
 
 export async function fetchInvoicesByStoreIds(
   supabase: SupabaseClient,
-  storeIds: string[]
+  storeIds: string[],
+  options?: { includePending?: boolean }
 ): Promise<{ sales: InvoiceSale[]; error: string | null }> {
   if (storeIds.length === 0) {
     return { sales: [], error: null };
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("sales")
     .select(INVOICE_SALE_SELECT)
-    .in("store_id", storeIds)
+    .in("store_id", storeIds);
+
+  if (!options?.includePending) {
+    query = query.not("invoice_validated_at", "is", null);
+  }
+
+  const { data, error } = await query
     .order("created_at", { ascending: false })
     .limit(INVOICE_FETCH_LIMIT);
 

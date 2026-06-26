@@ -20,13 +20,16 @@ export default async function DirectorInvoicesPage({
     scopeLabel,
     showStore,
     showCashier,
+    canValidateInvoices,
   } = await loadInvoicesListPage("director", params);
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Factures</h1>
-        <p className="mt-1 text-muted">Toutes les factures caisse et commandes</p>
+        <p className="mt-1 text-muted">
+          Validation des factures caisse — les magasins ne voient que les factures validées
+        </p>
       </div>
 
       {error && (
@@ -47,6 +50,7 @@ export default async function DirectorInvoicesPage({
             selectedStoreId={selectedStoreId}
             showStore={showStore}
             showCashier={showCashier}
+            canValidateInvoices={canValidateInvoices}
             defaultDatePreset="all"
           />
         </Suspense>

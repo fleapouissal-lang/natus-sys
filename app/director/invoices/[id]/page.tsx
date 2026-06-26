@@ -9,11 +9,19 @@ export default async function DirectorInvoiceDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { sale, listPath, scopeLabel } = await loadInvoiceDetailPage("director", id);
+  const { sale, listPath, scopeLabel, canValidateInvoices } = await loadInvoiceDetailPage(
+    "director",
+    id
+  );
 
   return (
     <div className="animate-fade-in">
-      <InvoiceDetailClient sale={sale} listPath={listPath} scopeLabel={scopeLabel} />
+      <InvoiceDetailClient
+        sale={sale}
+        listPath={listPath}
+        scopeLabel={scopeLabel}
+        canValidateInvoices={canValidateInvoices}
+      />
     </div>
   );
 }

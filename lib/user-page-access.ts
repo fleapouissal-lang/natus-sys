@@ -78,9 +78,25 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
 };
 
 const PAGE_HOME_PRIORITY: UserPageKey[] = [
-  "dashboard", "pos", "planning", "sales", "stock", "activity", "actualites",
-  "products", "stores", "reclamations", "loyalty", "invoices", "users",
-  "notes", "transfers", "customers", "returns", "hub_stock", "hubs",
+  "dashboard",
+  "pos",
+  "planning",
+  "sales",
+  "stock",
+  "products",
+  "stores",
+  "reclamations",
+  "loyalty",
+  "invoices",
+  "activity",
+  "hub_stock",
+  "hubs",
+  "actualites",
+  "users",
+  "notes",
+  "transfers",
+  "customers",
+  "returns",
 ];
 
 const PAGE_GROUP_LABELS: Record<UserPageGroup, string> = {
@@ -249,6 +265,48 @@ export function filterNavLinksByPages(
   if (!allowed) return links;
   const set = new Set(allowed);
   return links.filter((link) => set.has(link.href));
+}
+
+/** Clé de page associée à un lien sidebar (pour tri par priorité). */
+export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey | null {
+  for (const key of getDefaultPageKeysForRole(role)) {
+    if (resolvePageHref(key, role) === href) return key;
+  }
+  if (href === "/director/loyalty" && (role === "directeur" || role === "admin")) {
+    return "loyalty";
+  }
+  if (href === "/director/hub" && (role === "directeur" || role === "admin")) {
+    return "hub_stock";
+  }
+  return null;
+}
+
+function navLinkPriorityIndex(key: UserPageKey | null): number {
+  if (!key) return 500;
+  const idx = PAGE_HOME_PRIORITY.indexOf(key);
+  return idx >= 0 ? idx : 500;
+}
+
+/** Trie les liens sidebar / mobile selon la priorité métier (paramètres en dernier). */
+export function sortNavLinksByPriority(links: NavLinkItem[], role: UserRole): NavLinkItem[] {
+  const settingsPath = getSettingsPath(role);
+
+  return [...links]
+    .map((link, stableIndex) => {
+      const isSettings = link.href === settingsPath;
+      const pageKey = isSettings ? null : getPageKeyForNavHref(link.href, role);
+      const priority = isSettings ? 1000 : navLinkPriorityIndex(pageKey);
+      return {
+        link: {
+          ...link,
+          mobileOrder: isSettings ? 99 : priority,
+        },
+        priority,
+        stableIndex,
+      };
+    })
+    .sort((a, b) => a.priority - b.priority || a.stableIndex - b.stableIndex)
+    .map(({ link }) => link);
 }
 
 export function getCustomHomePath(

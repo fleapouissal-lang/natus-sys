@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Download, Printer } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Download, Printer, ShieldCheck } from "lucide-react";
 import { PosInvoice } from "@/components/pos/pos-invoice";
 import { saleDocumentNumber } from "@/components/pos/sale-document-types";
 import { printSaleDocument } from "@/components/pos/print-sale-document";
@@ -9,21 +11,41 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { invoiceTypeLabel } from "@/lib/sales/fetch-invoices";
+import { isSaleInvoiceValidated } from "@/lib/sales/invoice-validation";
 import { saleToDocumentData, type InvoiceSale } from "@/lib/sales/sale-to-document";
 import { downloadInvoiceHtml } from "@/lib/sales/download-invoice";
+import { validateSaleInvoice } from "@/lib/actions";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export function InvoiceDetailClient({
   sale,
   listPath,
   scopeLabel,
+  canValidateInvoices = false,
 }: {
   sale: InvoiceSale;
   listPath: string;
   scopeLabel: string;
+  canValidateInvoices?: boolean;
 }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState("");
   const documentData = saleToDocumentData(sale);
   const invoiceNo = saleDocumentNumber(sale.id);
+  const validated = isSaleInvoiceValidated(sale);
+
+  function handleValidate() {
+    setError("");
+    startTransition(async () => {
+      const result = await validateSaleInvoice(sale.id);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -46,6 +68,9 @@ export function InvoiceDetailClient({
             <Badge variant={sale.shopify_order_id ? "accent" : "default"}>
               {invoiceTypeLabel(sale)}
             </Badge>
+            <Badge variant={validated ? "success" : "warning"}>
+              {validated ? "Validée" : "En attente directeur"}
+            </Badge>
             {sale.cancelled_at && (
               <Badge variant="danger">Annulée</Badge>
             )}
@@ -56,20 +81,41 @@ export function InvoiceDetailClient({
         </div>
 
         <div className="flex flex-wrap gap-2 print:hidden">
-          <Button type="button" onClick={() => printSaleDocument("invoice")}>
-            <Printer className="h-4 w-4" />
-            Imprimer
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => downloadInvoiceHtml(documentData)}
-          >
-            <Download className="h-4 w-4" />
-            Télécharger
-          </Button>
+          {canValidateInvoices && !validated && (
+            <Button type="button" loading={isPending} onClick={handleValidate}>
+              <ShieldCheck className="h-4 w-4" />
+              Valider la facture
+            </Button>
+          )}
+          {validated && (
+            <>
+              <Button type="button" onClick={() => printSaleDocument("invoice")}>
+                <Printer className="h-4 w-4" />
+                Imprimer
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => downloadInvoiceHtml(documentData)}
+              >
+                <Download className="h-4 w-4" />
+                Télécharger
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
+      {error && (
+        <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>
+      )}
+
+      {!validated && canValidateInvoices && (
+        <p className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
+          Cette facture n&apos;est pas encore visible pour le caissier ni le gérant du magasin.
+          Validez-la pour la rendre accessible et imprimable en magasin.
+        </p>
+      )}
 
       <Card className="overflow-hidden p-0 print:border-0 print:shadow-none">
         <div className="flex justify-center bg-[#ebe6dc] p-4 print:bg-white print:p-0">

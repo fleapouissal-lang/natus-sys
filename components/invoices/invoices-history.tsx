@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { SalesAgendaFilter } from "@/components/sales/sales-agenda-filter";
@@ -14,7 +15,9 @@ import {
   type OrderDatePreset,
 } from "@/lib/store-tracking-period";
 import { saleDocumentNumber } from "@/components/pos/sale-document-types";
+import { isSaleInvoiceValidated } from "@/lib/sales/invoice-validation";
 import { saleInvoiceCustomerName } from "@/lib/sales/invoice-customer";
+import { validateSaleInvoice } from "@/lib/actions";
 import type { InvoiceSale } from "@/lib/sales/sale-to-document";
 import { toLocalDateKey } from "@/lib/utils";
 import type { PaymentMethod, Store } from "@/lib/types";
@@ -35,6 +38,7 @@ export function InvoicesHistory({
   selectedStoreId,
   showStore = false,
   showCashier = false,
+  canValidateInvoices = false,
   defaultDatePreset = "all",
 }: {
   sales: InvoiceSale[];
@@ -44,8 +48,14 @@ export function InvoicesHistory({
   selectedStoreId?: string;
   showStore?: boolean;
   showCashier?: boolean;
+  canValidateInvoices?: boolean;
   defaultDatePreset?: OrderDatePreset;
 }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [validatingId, setValidatingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
+
   const initialRange = useMemo(
     () => orderDatePresetToKeys(defaultDatePreset),
     [defaultDatePreset]
@@ -95,6 +105,11 @@ export function InvoicesHistory({
     });
   }, [sales, dateFrom, dateTo, paymentFilter, typeFilter, search, hideCancelled]);
 
+  const pendingCount = useMemo(
+    () => sales.filter((sale) => !sale.cancelled_at && !isSaleInvoiceValidated(sale)).length,
+    [sales]
+  );
+
   const hasDateFilter =
     dateFrom !== initialRange.from || dateTo !== initialRange.to;
   const hasFilters = Boolean(
@@ -114,6 +129,20 @@ export function InvoicesHistory({
     setTypeFilter("");
     setSearch("");
     setHideCancelled(true);
+  }
+
+  function handleValidate(saleId: string) {
+    setActionError("");
+    setValidatingId(saleId);
+    startTransition(async () => {
+      const result = await validateSaleInvoice(saleId);
+      setValidatingId(null);
+      if (result.error) {
+        setActionError(result.error);
+        return;
+      }
+      router.refresh();
+    });
   }
 
   const periodHint =
@@ -139,6 +168,17 @@ export function InvoicesHistory({
           selectedStoreId={selectedStoreId || ""}
           allowAll
         />
+      )}
+
+      {canValidateInvoices && pendingCount > 0 && (
+        <p className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
+          {pendingCount} facture{pendingCount !== 1 ? "s" : ""} en attente de validation — invisible
+          {pendingCount !== 1 ? "s" : ""} pour le caissier et le gérant jusqu&apos;à validation.
+        </p>
+      )}
+
+      {actionError && (
+        <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{actionError}</p>
       )}
 
       <SalesAgendaFilter
@@ -201,6 +241,9 @@ export function InvoicesHistory({
             detailBasePath={detailBasePath}
             showStore={showStore}
             showCashier={showCashier}
+            canValidateInvoices={canValidateInvoices}
+            validatingId={isPending ? validatingId : null}
+            onValidate={canValidateInvoices ? handleValidate : undefined}
             paginationKey={paginationKey}
           />
         </div>

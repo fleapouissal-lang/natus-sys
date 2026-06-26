@@ -26,7 +26,9 @@ export default async function ManagerInvoicesPage({
     <div className="animate-fade-in space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Factures</h1>
-        <p className="mt-1 text-muted">Factures caisse et commandes par magasin</p>
+        <p className="mt-1 text-muted">
+          Factures validées par le directeur pour vos magasins
+        </p>
       </div>
 
       {error && (

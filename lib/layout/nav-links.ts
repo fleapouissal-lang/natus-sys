@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { getManagementBasePath } from "@/lib/permissions";
 import { getSettingsPath } from "@/lib/layout/settings-path";
-import { filterNavLinksByPages } from "@/lib/user-page-access";
+import { filterNavLinksByPages, sortNavLinksByPriority } from "@/lib/user-page-access";
 import type { UserRole } from "@/lib/types";
 
 export type NavLinkItem = {
@@ -170,9 +170,11 @@ export function resolveNavLinks(input: {
 
   links = filterNavLinksByPages(links, pageProfile);
 
-  return [...links, getSettingsNavItem(input.role)].filter(
+  const deduped = [...links, getSettingsNavItem(input.role)].filter(
     (link, index, all) => all.findIndex((item) => item.href === link.href) === index
   );
+
+  return sortNavLinksByPriority(deduped, input.role);
 }
 
 export function isNavLinkActive(pathname: string, href: string): boolean {

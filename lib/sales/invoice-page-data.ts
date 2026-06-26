@@ -7,6 +7,7 @@ import { fetchInvoicesByStoreIds, fetchInvoiceById } from "@/lib/sales/fetch-inv
 import { getInvoicesBasePath } from "@/lib/sales/invoice-routes";
 import { getCityFilter, isDirector, isHub, isManager } from "@/lib/permissions";
 import { getSelectedStore } from "@/lib/management-store";
+import { isSaleInvoiceValidated } from "@/lib/sales/invoice-validation";
 import type { Profile, Store } from "@/lib/types";
 
 export type InvoicePageScope = "cashier" | "manager" | "director" | "hub";
@@ -126,7 +127,9 @@ export async function loadInvoicesListPage(
   );
 
   const supabase = await createClient();
-  const { sales, error } = await fetchInvoicesByStoreIds(supabase, storeIds);
+  const { sales, error } = await fetchInvoicesByStoreIds(supabase, storeIds, {
+    includePending: isDirector(profile),
+  });
 
   return {
     profile,
@@ -138,6 +141,7 @@ export async function loadInvoicesListPage(
     scopeLabel,
     showStore: scope !== "cashier" && !selectedStoreId,
     showCashier: scope !== "cashier",
+    canValidateInvoices: isDirector(profile),
   };
 }
 
@@ -164,11 +168,16 @@ export async function loadInvoiceDetailPage(scope: InvoicePageScope, saleId: str
     notFound();
   }
 
+  if (!isDirector(profile) && !isSaleInvoiceValidated(sale)) {
+    notFound();
+  }
+
   return {
     sale,
     listPath: basePath,
     scopeLabel: sale.stores?.name
       ? `${sale.stores.name}${sale.stores.city ? ` — ${sale.stores.city}` : ""}`
       : scopeLabel,
+    canValidateInvoices: isDirector(profile) && !isSaleInvoiceValidated(sale),
   };
 }
