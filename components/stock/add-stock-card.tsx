@@ -287,7 +287,7 @@ export function AddStockCard({
                           Stock actuel{storeName ? ` — ${storeName}` : " magasin"}
                         </th>
                         <th className="px-4 py-3 text-right font-medium text-muted">
-                          Stock à ajouter
+                          Ajout Q (+)
                         </th>
                         <th className="px-4 py-3 text-right font-medium text-muted">
                           Total en magasin

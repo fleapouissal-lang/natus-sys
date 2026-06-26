@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPublicLoyaltyCustomer } from "@/lib/loyalty/customers";
 import { toPublicLoyaltyCustomer } from "@/lib/loyalty/public";
 import { getPublicLoyaltySettings } from "@/lib/loyalty/settings.server";
+import { PRO_CLIENT_DISCOUNT_PERCENT } from "@/lib/pro-client/discount";
 import { LoyaltyCardClientView } from "@/components/loyalty/loyalty-card-client-view";
 
 export const viewport: Viewport = {
@@ -31,7 +32,9 @@ export async function generateMetadata({
 
   return {
     title: `${isPro ? "Client Pro" : "Espace client"} · ${data.customer.full_name} — Natus`,
-    description: `Carte fidélité Natus — ${data.customer.loyalty_points} points`,
+    description: isPro
+      ? `Carte Client Pro Natus — remise ${PRO_CLIENT_DISCOUNT_PERCENT}%`
+      : `Carte fidélité Natus — ${data.customer.loyalty_points} points`,
     manifest: `/api/loyalty/manifest/${token}`,
     appleWebApp: {
       capable: true,

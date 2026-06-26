@@ -145,7 +145,9 @@ function LoyaltyCardFront({
         >
           Natus Cosmétiques
         </p>
-        <CustomerPointsBadge points={customer.loyalty_points} compact={compact} />
+        {!isPro && (
+          <CustomerPointsBadge points={customer.loyalty_points} compact={compact} />
+        )}
       </div>
 
       <div className="mt-3 flex flex-1 flex-col items-center justify-center text-center">
@@ -235,6 +237,8 @@ function LoyaltyCardBack({
 }) {
   const tier = loyaltyTierFromPoints(customer.loyalty_points);
   const pad = compact ? "px-4 pb-3" : "px-5 pb-4";
+  const isPro = Boolean(customer.is_pro_client);
+  const isProActive = Boolean(customer.is_pro_client && customer.pro_client_active);
 
   return (
     <ChampagneCardFace flipped>
@@ -250,8 +254,8 @@ function LoyaltyCardBack({
           Natus
         </p>
 
-        <div className="mt-4 grid w-full grid-cols-2 gap-3">
-          <div className="text-center">
+        {isPro ? (
+          <div className="mt-6 text-center">
             <p
               className={cn(
                 "uppercase tracking-[0.12em] opacity-60",
@@ -259,41 +263,61 @@ function LoyaltyCardBack({
               )}
               style={{ fontFamily: SANS }}
             >
-              Solde points
+              Remise Client Pro
             </p>
             <p
-              className={cn("mt-0.5 font-bold", compact ? "text-sm" : "text-base")}
+              className={cn("mt-1 font-bold", compact ? "text-xl" : "text-2xl")}
               style={{ fontFamily: SERIF }}
             >
-              {customer.loyalty_points}
+              {isProActive ? `-${PRO_CLIENT_DISCOUNT_PERCENT}%` : "En attente"}
             </p>
           </div>
-          <div className="text-center">
-            <p
-              className={cn(
-                "uppercase tracking-[0.12em] opacity-60",
-                compact ? "text-[5px]" : "text-[6px]"
-              )}
-              style={{ fontFamily: SANS }}
-            >
-              Statut
-            </p>
-            <p
-              className={cn(
-                "mt-0.5 inline-block rounded-md border px-1.5 py-0.5 font-bold uppercase",
-                compact ? "text-[9px]" : "text-[10px]"
-              )}
-              style={{
-                fontFamily: SERIF,
-                backgroundColor: LOYALTY_TIER_BADGE_COLORS[tier].bg,
-                color: LOYALTY_TIER_BADGE_COLORS[tier].text,
-                borderColor: LOYALTY_TIER_BADGE_COLORS[tier].border,
-              }}
-            >
-              {loyaltyTierLabel(tier)}
-            </p>
+        ) : (
+          <div className="mt-4 grid w-full grid-cols-2 gap-3">
+            <div className="text-center">
+              <p
+                className={cn(
+                  "uppercase tracking-[0.12em] opacity-60",
+                  compact ? "text-[5px]" : "text-[6px]"
+                )}
+                style={{ fontFamily: SANS }}
+              >
+                Solde points
+              </p>
+              <p
+                className={cn("mt-0.5 font-bold", compact ? "text-sm" : "text-base")}
+                style={{ fontFamily: SERIF }}
+              >
+                {customer.loyalty_points}
+              </p>
+            </div>
+            <div className="text-center">
+              <p
+                className={cn(
+                  "uppercase tracking-[0.12em] opacity-60",
+                  compact ? "text-[5px]" : "text-[6px]"
+                )}
+                style={{ fontFamily: SANS }}
+              >
+                Statut
+              </p>
+              <p
+                className={cn(
+                  "mt-0.5 inline-block rounded-md border px-1.5 py-0.5 font-bold uppercase",
+                  compact ? "text-[9px]" : "text-[10px]"
+                )}
+                style={{
+                  fontFamily: SERIF,
+                  backgroundColor: LOYALTY_TIER_BADGE_COLORS[tier].bg,
+                  color: LOYALTY_TIER_BADGE_COLORS[tier].text,
+                  borderColor: LOYALTY_TIER_BADGE_COLORS[tier].border,
+                }}
+              >
+                {loyaltyTierLabel(tier)}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {showBarcode && (
           <div className="mt-auto w-full pt-3">

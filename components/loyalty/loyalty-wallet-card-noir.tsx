@@ -12,6 +12,11 @@ import {
   LoyaltyCardBrandCircles,
 } from "@/components/loyalty/loyalty-card-icons";
 import { LoyaltyCardFlipShell } from "@/components/loyalty/loyalty-card-flip-shell";
+import {
+  isActiveProClient,
+  isProClientCustomer,
+  PRO_CLIENT_DISCOUNT_PERCENT,
+} from "@/lib/pro-client/discount";
 import type { LoyaltyCustomer, LoyaltyTier } from "@/lib/types";
 
 const CARD_BG = "#0a0a0a";
@@ -81,6 +86,8 @@ function NoirCardFront({
   const numberGroups = displayNumber.split(" ");
   const memberSince = formatMemberSinceLuxury(customer.created_at);
   const padX = compact ? "px-4" : "px-5";
+  const isPro = isProClientCustomer(customer);
+  const isProActive = isActiveProClient(customer);
 
   return (
     <NoirCardFace>
@@ -112,7 +119,22 @@ function NoirCardFront({
               Maison de Prestige
             </p>
           </div>
-          <TierBadge tier={tier} compact={compact} />
+          {isPro ? (
+            <div
+              className={cn(
+                "shrink-0 rounded-full border px-2.5 py-0.5 font-bold uppercase",
+                compact ? "text-[7px] tracking-[0.08em]" : "text-[8px] tracking-[0.1em]"
+              )}
+              style={{
+                borderColor: CARD_GOLD,
+                color: CARD_GOLD,
+              }}
+            >
+              {isProActive ? `-${PRO_CLIENT_DISCOUNT_PERCENT}%` : "Pro"}
+            </div>
+          ) : (
+            <TierBadge tier={tier} compact={compact} />
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -189,6 +211,8 @@ function NoirCardBack({
 }) {
   const tier = loyaltyTierFromPoints(customer.loyalty_points);
   const padX = compact ? "px-4 pb-3" : "px-5 pb-4";
+  const isPro = isProClientCustomer(customer);
+  const isProActive = isActiveProClient(customer);
 
   return (
     <NoirCardFace flipped>
@@ -203,30 +227,39 @@ function NoirCardBack({
       </p>
 
       <div className={cn("flex flex-1 flex-col", padX)}>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-[6px] uppercase tracking-[0.14em] opacity-55">Solde points</p>
-            <p className={cn("mt-0.5 font-bold", compact ? "text-sm" : "text-base")}>
-              {customer.loyalty_points} pts
+        {isPro ? (
+          <div className="mt-6 text-center">
+            <p className="text-[6px] uppercase tracking-[0.14em] opacity-55">Remise Client Pro</p>
+            <p className={cn("mt-1 font-bold", compact ? "text-lg" : "text-xl")}>
+              {isProActive ? `-${PRO_CLIENT_DISCOUNT_PERCENT}%` : "En attente"}
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-[6px] uppercase tracking-[0.14em] opacity-55">Statut</p>
-            <p
-              className={cn(
-                "mt-0.5 inline-block rounded-full border px-1.5 py-0.5 font-bold uppercase",
-                compact ? "text-[9px]" : "text-[10px]"
-              )}
-              style={{
-                backgroundColor: LOYALTY_TIER_BADGE_COLORS[tier].bg,
-                color: LOYALTY_TIER_BADGE_COLORS[tier].text,
-                borderColor: LOYALTY_TIER_BADGE_COLORS[tier].border,
-              }}
-            >
-              {loyaltyTierLabel(tier)}
-            </p>
+        ) : (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[6px] uppercase tracking-[0.14em] opacity-55">Solde points</p>
+              <p className={cn("mt-0.5 font-bold", compact ? "text-sm" : "text-base")}>
+                {customer.loyalty_points} pts
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[6px] uppercase tracking-[0.14em] opacity-55">Statut</p>
+              <p
+                className={cn(
+                  "mt-0.5 inline-block rounded-full border px-1.5 py-0.5 font-bold uppercase",
+                  compact ? "text-[9px]" : "text-[10px]"
+                )}
+                style={{
+                  backgroundColor: LOYALTY_TIER_BADGE_COLORS[tier].bg,
+                  color: LOYALTY_TIER_BADGE_COLORS[tier].text,
+                  borderColor: LOYALTY_TIER_BADGE_COLORS[tier].border,
+                }}
+              >
+                {loyaltyTierLabel(tier)}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {showBarcode && (
           <div className="mt-auto pt-2">

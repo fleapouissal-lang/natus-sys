@@ -110,7 +110,8 @@ export async function updateSession(request: NextRequest) {
 
       if (
         pathname.startsWith("/manager/loyalty") ||
-        pathname.startsWith("/manager/invoices")
+        pathname.startsWith("/manager/invoices") ||
+        pathname.startsWith("/manager/products")
       ) {
         const url = request.nextUrl.clone();
         url.pathname = homePath;
@@ -136,6 +137,12 @@ export async function updateSession(request: NextRequest) {
       if (role === "livreur") {
         const url = request.nextUrl.clone();
         url.pathname = getHomePath("livreur");
+        return applySecurityHeaders(NextResponse.redirect(url));
+      }
+
+      if (role === "hub" && isCashierPosRoute(pathname)) {
+        const url = request.nextUrl.clone();
+        url.pathname = homePath;
         return applySecurityHeaders(NextResponse.redirect(url));
       }
 

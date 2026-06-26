@@ -6,33 +6,43 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { repairHubStockTransfer } from "@/lib/actions";
+import { SelectMenu } from "@/components/ui/select-menu";
+import {
+  assignHubTransferLivreur,
+  markHubTransferReady,
+  pickupHubTransfer,
+  repairHubStockTransfer,
+} from "@/lib/actions";
+import {
+  hubTransferStatusLabel,
+  hubTransferStatusVariant,
+} from "@/lib/hub-transfer-status";
 import { formatDate } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
-import type { HubStockTransfer } from "@/lib/types";
-
-function statusLabel(status: HubStockTransfer["status"]): string {
-  return status === "sent" ? "Envoyé" : "Reçu";
-}
-
-function statusVariant(
-  status: HubStockTransfer["status"]
-): "warning" | "success" {
-  return status === "sent" ? "warning" : "success";
-}
+import type { HubStockTransfer, Profile } from "@/lib/types";
 
 export function HubTransfersList({
   transfers,
-  title = "Transferts récents",
+  title = "Commandes de transfert",
   allowRepair = false,
+  allowManage = false,
+  livreurs = [],
 }: {
   transfers: HubStockTransfer[];
   title?: string;
   allowRepair?: boolean;
+  allowManage?: boolean;
+  livreurs?: Profile[];
 }) {
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [selectedLivreur, setSelectedLivreur] = useState<Record<string, string>>({});
+
+  const livreurOptions = livreurs.map((livreur) => ({
+    value: livreur.id,
+    label: livreur.full_name || livreur.email,
+  }));
 
   const {
     paginated,
@@ -44,29 +54,36 @@ export function HubTransfersList({
     totalItems,
   } = usePagination(transfers, DEFAULT_PAGE_SIZE);
 
-  async function handleRepair(transferId: string) {
+  async function runAction(
+    transferId: string,
+    action: () => Promise<{ success?: true; error?: string; credited?: number }>
+  ) {
     setMessage("");
     setLoadingId(transferId);
-    const result = await repairHubStockTransfer(transferId);
+    const result = await action();
     setLoadingId(null);
 
-    if ("error" in result) {
+    if ("error" in result && result.error) {
       setMessage(result.error);
       return;
     }
 
-    setMessage(
-      result.credited > 0
-        ? `Stock réparé pour ${result.credited} produit(s)`
-        : "Le stock était déjà à jour"
-    );
+    if ("credited" in result && typeof result.credited === "number") {
+      setMessage(
+        result.credited > 0
+          ? `Stock réparé pour ${result.credited} produit(s)`
+          : "Le stock était déjà à jour"
+      );
+    } else {
+      setMessage("Commande mise à jour");
+    }
     router.refresh();
   }
 
   if (transfers.length === 0) {
     return (
       <Card>
-        <p className="text-sm text-muted">Aucun transfert pour le moment</p>
+        <p className="text-sm text-muted">Aucune commande de transfert pour le moment</p>
       </Card>
     );
   }
@@ -86,7 +103,7 @@ export function HubTransfersList({
               <th className="px-6 py-3 text-left font-medium text-muted">Produits</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
               <th className="px-6 py-3 text-right font-medium text-muted">Unités</th>
-              {allowRepair && (
+              {(allowManage || allowRepair) && (
                 <th className="px-6 py-3 text-right font-medium text-muted">Action</th>
               )}
             </tr>
@@ -99,6 +116,9 @@ export function HubTransfersList({
                 </td>
                 <td className="px-6 py-4">
                   <p className="font-medium">{transfer.to_store_name || "—"}</p>
+                  {transfer.assigned_livreur_name && (
+                    <p className="text-xs text-muted">Livreur : {transfer.assigned_livreur_name}</p>
+                  )}
                   {transfer.receiver_name && transfer.status === "received" && (
                     <p className="text-xs text-muted">Reçu par {transfer.receiver_name}</p>
                   )}
@@ -118,9 +138,17 @@ export function HubTransfersList({
                   </ul>
                 </td>
                 <td className="px-6 py-4">
-                  <Badge variant={statusVariant(transfer.status)}>
-                    {statusLabel(transfer.status)}
+                  <Badge variant={hubTransferStatusVariant(transfer.status)}>
+                    {hubTransferStatusLabel(transfer.status)}
                   </Badge>
+                  {transfer.ready_at && transfer.status !== "en_cours" && (
+                    <p className="mt-1 text-xs text-muted">Prête : {formatDate(transfer.ready_at)}</p>
+                  )}
+                  {transfer.picked_up_at && (
+                    <p className="mt-1 text-xs text-muted">
+                      Prise en charge : {formatDate(transfer.picked_up_at)}
+                    </p>
+                  )}
                   {transfer.status === "received" && transfer.received_at && (
                     <p className="mt-1 text-xs text-muted">
                       {formatDate(transfer.received_at)}
@@ -130,19 +158,82 @@ export function HubTransfersList({
                 <td className="px-6 py-4 text-right font-medium">
                   {transfer.total_units}
                 </td>
-                {allowRepair && (
+                {(allowManage || allowRepair) && (
                   <td className="px-6 py-4 text-right">
-                    {transfer.status === "received" ? (
+                    {allowManage && transfer.status === "en_cours" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        loading={loadingId === transfer.id}
+                        onClick={() =>
+                          void runAction(transfer.id, () => markHubTransferReady(transfer.id))
+                        }
+                      >
+                        Marquer prête
+                      </Button>
+                    )}
+
+                    {allowManage && transfer.status === "pret" && (
+                      <div className="flex flex-col items-end gap-2">
+                        <SelectMenu
+                          value={selectedLivreur[transfer.id] || transfer.assigned_livreur_id || ""}
+                          onChange={(value) =>
+                            setSelectedLivreur((prev) => ({ ...prev, [transfer.id]: value }))
+                          }
+                          options={[
+                            { value: "", label: "Choisir un livreur" },
+                            ...livreurOptions,
+                          ]}
+                          size="sm"
+                        />
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            loading={loadingId === transfer.id}
+                            disabled={!(selectedLivreur[transfer.id] || transfer.assigned_livreur_id)}
+                            onClick={() =>
+                              void runAction(transfer.id, () =>
+                                assignHubTransferLivreur(
+                                  transfer.id,
+                                  selectedLivreur[transfer.id] || transfer.assigned_livreur_id || ""
+                                )
+                              )
+                            }
+                          >
+                            Assigner livreur
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            loading={loadingId === transfer.id}
+                            disabled={!transfer.assigned_livreur_id}
+                            onClick={() =>
+                              void runAction(transfer.id, () => pickupHubTransfer(transfer.id))
+                            }
+                          >
+                            Remettre au livreur
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {allowRepair && transfer.status === "received" && (
                       <Button
                         type="button"
                         variant="secondary"
                         size="sm"
                         loading={loadingId === transfer.id}
-                        onClick={() => void handleRepair(transfer.id)}
+                        onClick={() =>
+                          void runAction(transfer.id, () => repairHubStockTransfer(transfer.id))
+                        }
                       >
                         Réparer stock
                       </Button>
-                    ) : (
+                    )}
+
+                    {!allowManage && transfer.status !== "received" && (
                       <span className="text-xs text-muted">—</span>
                     )}
                   </td>

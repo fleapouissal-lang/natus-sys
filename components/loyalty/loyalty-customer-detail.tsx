@@ -11,6 +11,12 @@ import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
 import { loyaltyCardVariantLabel } from "@/lib/loyalty/card-variant";
 import { canRedeemLoyaltyPoints, pointsUntilRedemption } from "@/lib/loyalty/points";
 import { pointsValueInMad } from "@/lib/loyalty/settings";
+import {
+  isActiveProClient,
+  isProClientCustomer,
+  PRO_CLIENT_DISCOUNT_LABEL,
+  PRO_CLIENT_DISCOUNT_PERCENT,
+} from "@/lib/pro-client/discount";
 import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
@@ -33,6 +39,8 @@ export function LoyaltyCustomerDetailView({
   const tier = loyaltyTierFromPoints(customer.loyalty_points);
   const redeemEligible = canRedeemLoyaltyPoints(customer.loyalty_points, loyaltySettings);
   const publicUrl = loyaltyCardPublicUrl(customer.qr_token);
+  const isPro = isProClientCustomer(customer);
+  const isProActive = isActiveProClient(customer);
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -52,7 +60,13 @@ export function LoyaltyCustomerDetailView({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <LoyaltyTierBadge tier={tier} />
+          {isPro ? (
+            <Badge variant={isProActive ? "success" : "warning"}>
+              Client Pro {isProActive ? "actif" : "en attente"}
+            </Badge>
+          ) : (
+            <LoyaltyTierBadge tier={tier} />
+          )}
           <Badge variant="default">
             {loyaltyCardVariantLabel(customer.card_variant ?? "champagne")}
           </Badge>
@@ -76,13 +90,23 @@ export function LoyaltyCustomerDetailView({
                 <dd className="font-mono font-medium">{customer.card_number}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-muted">Solde points</dt>
-                <dd className="font-bold text-primary">{customer.loyalty_points} pts</dd>
+                <dt className="text-muted">
+                  {isPro ? PRO_CLIENT_DISCOUNT_LABEL : "Solde points"}
+                </dt>
+                <dd className="font-bold text-primary">
+                  {isPro
+                    ? isProActive
+                      ? `-${PRO_CLIENT_DISCOUNT_PERCENT}%`
+                      : "En attente d'activation"
+                    : `${customer.loyalty_points} pts`}
+                </dd>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted">Valeur estimée</dt>
-                <dd>{formatCurrency(pointsValueInMad(customer.loyalty_points, loyaltySettings))}</dd>
-              </div>
+              {!isPro && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted">Valeur estimée</dt>
+                  <dd>{formatCurrency(pointsValueInMad(customer.loyalty_points, loyaltySettings))}</dd>
+                </div>
+              )}
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">Membre depuis</dt>
                 <dd>{formatDate(customer.created_at)}</dd>
@@ -90,7 +114,13 @@ export function LoyaltyCustomerDetailView({
             </dl>
 
             <div className="mt-4 rounded-lg border border-border bg-page/60 px-3 py-2.5 text-xs text-muted">
-              {redeemEligible ? (
+              {isPro ? (
+                <p className="font-medium text-primary">
+                  {isProActive
+                    ? `Remise automatique de ${PRO_CLIENT_DISCOUNT_PERCENT}% en caisse.`
+                    : "Compte en attente d'activation par le directeur."}
+                </p>
+              ) : redeemEligible ? (
                 <p className="text-success font-medium">
                   Client éligible à l&apos;utilisation des points en caisse.
                 </p>

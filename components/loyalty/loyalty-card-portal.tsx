@@ -134,7 +134,7 @@ function ClientPortalMobileBottomNav({
         aria-label="Navigation espace client"
       >
         <ul className="natus-mobile-bottom-nav-list">
-          {TABS.map(({ id, short, icon: Icon }) => {
+          {visibleTabs.map(({ id, short, icon: Icon }) => {
             const isActive = tab === id;
             return (
               <li key={id} className="min-w-0 flex-1">
@@ -261,6 +261,13 @@ export function LoyaltyCardPortal({
   const cardUrl = loyaltyCardPublicUrl(customer.qr_token);
   const isPro = Boolean(customer.is_pro_client);
   const isProActive = Boolean(customer.is_pro_client && customer.pro_client_active);
+  const visibleTabs = useMemo(
+    () =>
+      isPro
+        ? TABS.filter((item) => item.id !== "points" && item.id !== "historique")
+        : TABS,
+    [isPro]
+  );
   const firstName = customer.full_name.trim().split(/\s+/)[0] || "Client";
   const initial = firstName.charAt(0).toUpperCase();
   const tier = loyaltyTierFromPoints(customer.loyalty_points);
@@ -301,6 +308,12 @@ export function LoyaltyCardPortal({
   }, [customer.qr_token, tab, loadInvoices]);
 
   useEffect(() => {
+    if (isPro && (tab === "points" || tab === "historique")) {
+      setTab("carte");
+    }
+  }, [isPro, tab]);
+
+  useEffect(() => {
     if (tab === "factures") {
       void loadInvoices();
     }
@@ -321,7 +334,9 @@ export function LoyaltyCardPortal({
       try {
         await navigator.share({
           title: "Mon espace client Natus",
-          text: `${customer.full_name} — ${customer.loyalty_points} points`,
+          text: isProActive
+            ? `${customer.full_name} — remise Client Pro ${PRO_CLIENT_DISCOUNT_PERCENT}%`
+            : `${customer.full_name} — ${customer.loyalty_points} points`,
           url: cardUrl,
         });
         return;
@@ -388,21 +403,36 @@ export function LoyaltyCardPortal({
             </div>
 
             <div className="loyalty-portal-metrics">
-              <SidebarMetric
-                label="Points"
-                value={String(customer.loyalty_points)}
-                gold
-              />
-              <SidebarMetric label="Statut" value={loyaltyTierLabel(tier)} />
-              <SidebarMetric
-                label={isPro ? "Remise Pro" : "Valeur"}
-                value={
-                  isProActive
-                    ? `-${PRO_CLIENT_DISCOUNT_PERCENT}%`
-                    : formatCurrency(pointsValueInMad(customer.loyalty_points, settings))
-                }
-                gold={isProActive}
-              />
+              {isPro ? (
+                <>
+                  <SidebarMetric
+                    label="Remise Pro"
+                    value={
+                      isProActive
+                        ? `-${PRO_CLIENT_DISCOUNT_PERCENT}%`
+                        : "En attente d'activation"
+                    }
+                    gold
+                  />
+                  <SidebarMetric
+                    label="Statut compte"
+                    value={isProActive ? "Actif" : "En attente"}
+                  />
+                </>
+              ) : (
+                <>
+                  <SidebarMetric
+                    label="Points"
+                    value={String(customer.loyalty_points)}
+                    gold
+                  />
+                  <SidebarMetric label="Statut" value={loyaltyTierLabel(tier)} />
+                  <SidebarMetric
+                    label="Valeur"
+                    value={formatCurrency(pointsValueInMad(customer.loyalty_points, settings))}
+                  />
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -415,7 +445,7 @@ export function LoyaltyCardPortal({
 
         <nav className="natus-sidebar-nav min-h-0 flex-1">
           <ul className="m-0 list-none p-0 pr-1">
-            {TABS.map(({ id, label, icon: Icon }) => {
+            {visibleTabs.map(({ id, label, icon: Icon }) => {
               const isActive = tab === id;
               return (
                 <li
@@ -497,20 +527,35 @@ export function LoyaltyCardPortal({
               </div>
             </div>
             <div className="loyalty-portal-metrics mt-3 border-primary/10">
-              <SidebarMetric
-                label="Points"
-                value={String(customer.loyalty_points)}
-                gold
-              />
-              <SidebarMetric
-                label={isPro ? "Remise Pro" : "Valeur"}
-                value={
-                  isProActive
-                    ? `-${PRO_CLIENT_DISCOUNT_PERCENT}%`
-                    : formatCurrency(pointsValueInMad(customer.loyalty_points, settings))
-                }
-                gold={isProActive}
-              />
+              {isPro ? (
+                <>
+                  <SidebarMetric
+                    label="Remise Pro"
+                    value={
+                      isProActive
+                        ? `-${PRO_CLIENT_DISCOUNT_PERCENT}%`
+                        : "En attente d'activation"
+                    }
+                    gold
+                  />
+                  <SidebarMetric
+                    label="Statut compte"
+                    value={isProActive ? "Actif" : "En attente"}
+                  />
+                </>
+              ) : (
+                <>
+                  <SidebarMetric
+                    label="Points"
+                    value={String(customer.loyalty_points)}
+                    gold
+                  />
+                  <SidebarMetric
+                    label="Valeur"
+                    value={formatCurrency(pointsValueInMad(customer.loyalty_points, settings))}
+                  />
+                </>
+              )}
             </div>
           </div>
         </header>
@@ -519,7 +564,8 @@ export function LoyaltyCardPortal({
           <div className="w-full">
             <div className="mb-6">
               <h2 className="text-xl font-bold tracking-tight text-foreground">
-                {TABS.find((t) => t.id === tab)?.label}
+                {visibleTabs.find((t) => t.id === tab)?.label ??
+                  TABS.find((t) => t.id === tab)?.label}
               </h2>
               <p className="mt-1 text-sm text-muted">{tabDescription(tab)}</p>
             </div>
@@ -561,14 +607,16 @@ export function LoyaltyCardPortal({
                   <span className="text-primary">1.</span>
                   Présentez le code-barres en caisse Natus
                 </li>
-                <li className="flex gap-2">
-                  <span className="text-primary">2.</span>
-                  Cumulez et utilisez vos points fidélité
-                </li>
-                {isPro && (
+                {isPro ? (
                   <li className="flex gap-2">
-                    <span className="text-primary">3.</span>
-                    Remise professionnelle appliquée si compte actif
+                    <span className="text-primary">2.</span>
+                    Bénéficiez de {PRO_CLIENT_DISCOUNT_PERCENT}% de remise professionnelle
+                    {isProActive ? " (compte actif)" : " après activation"}
+                  </li>
+                ) : (
+                  <li className="flex gap-2">
+                    <span className="text-primary">2.</span>
+                    Cumulez et utilisez vos points fidélité
                   </li>
                 )}
               </ul>
@@ -589,7 +637,7 @@ export function LoyaltyCardPortal({
           </div>
         )}
 
-        {tab === "points" && (
+        {tab === "points" && !isPro && (
           <div className="space-y-5 animate-fade-in">
             <div className="overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/15 to-surface p-6 text-center shadow-sm">
               <p className="text-xs font-medium uppercase tracking-widest text-muted">Solde fidélité</p>
@@ -640,7 +688,7 @@ export function LoyaltyCardPortal({
           </div>
         )}
 
-        {tab === "historique" && (
+        {tab === "historique" && !isPro && (
           <div className="rounded-2xl border border-border bg-surface shadow-sm animate-fade-in">
             <div className="border-b border-border px-5 py-4">
               <h2 className="text-sm font-semibold text-foreground">Historique des points</h2>

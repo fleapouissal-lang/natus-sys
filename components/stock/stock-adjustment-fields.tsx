@@ -56,7 +56,7 @@ export function StockAdjustmentFields({
       {canEditTotal ? (
         <div className="grid grid-cols-2 gap-4">
           <Input
-            label="Stock à ajouter"
+            label="Ajout Q (+)"
             type="number"
             min="0"
             step="1"
@@ -79,7 +79,7 @@ export function StockAdjustmentFields({
       ) : (
         <div className="space-y-4">
           <Input
-            label="Quantité à ajouter"
+            label="Ajout Q (+)"
             type="number"
             min="1"
             step="1"

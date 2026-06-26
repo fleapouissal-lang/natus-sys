@@ -97,3 +97,16 @@ export async function getHubCityStaff(city: string): Promise<{
     stores: (stores || []) as Store[],
   };
 }
+
+export async function getHubCityLivreurs(city: string): Promise<Profile[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("role", "livreur")
+    .eq("city", city)
+    .eq("is_active", true)
+    .order("full_name");
+
+  return (data || []) as Profile[];
+}

@@ -66,15 +66,15 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
     "hub_stock", "hubs",
   ],
   manager: [
-    "dashboard", "planning", "sales", "stock", "products", "stores",
+    "dashboard", "planning", "sales", "stock", "stores",
     "activity", "reclamations", "actualites", "users",
   ],
   cashier: [
     "pos", "planning", "actualites", "sales", "notes", "transfers",
     "customers", "returns", "invoices",
   ],
-  livreur: ["actualites", "returns"],
-  hub: ["dashboard", "pos", "stock", "hub_stock", "activity", "actualites"],
+  livreur: ["actualites", "transfers", "returns"],
+  hub: ["dashboard", "stock", "hub_stock", "activity", "actualites"],
 };
 
 const PAGE_HOME_PRIORITY: UserPageKey[] = [
@@ -143,6 +143,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
           ? `${base}/planning`
           : null;
     case "pos":
+      if (role === "hub") return null;
       return "/cashier/pos";
     case "sales":
       return role === "cashier" ? "/cashier/sales" : base ? `${base}/sales` : null;
@@ -178,7 +179,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
     case "notes":
       return "/cashier/notes";
     case "transfers":
-      return "/cashier/transfers";
+      return role === "livreur" ? "/livreur/transfers" : "/cashier/transfers";
     case "returns":
       return role === "livreur" ? "/livreur/returns" : "/cashier/returns";
     case "customers":

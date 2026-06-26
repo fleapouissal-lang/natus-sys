@@ -136,10 +136,11 @@ export function canModifyStock(
   return false;
 }
 
-/** Peut saisir le stock total (même règles que canModifyStock). */
+/** Peut saisir le stock total (directeur partout ; dépôt : ajout uniquement). */
 export function canEditStockTotal(
   profile: Pick<Profile, "role">,
   store?: Pick<Store, "is_hub"> | null
 ): boolean {
+  if (isHub(profile)) return false;
   return canModifyStock(profile, store);
 }

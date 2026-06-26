@@ -19,6 +19,9 @@ function mapTransferRow(row: Record<string, unknown>): HubStockTransfer {
   const receiver = unwrapOne(
     row.receiver as { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null
   );
+  const livreur = unwrapOne(
+    row.livreur as { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null
+  );
   const rawItems = (row.items as Array<Record<string, unknown>>) || [];
 
   return {
@@ -29,12 +32,17 @@ function mapTransferRow(row: Record<string, unknown>): HubStockTransfer {
     notes: (row.notes as string | null) ?? null,
     created_by: row.created_by as string,
     received_by: (row.received_by as string | null) ?? null,
+    assigned_livreur_id: (row.assigned_livreur_id as string | null) ?? null,
     sent_at: row.sent_at as string,
+    ready_at: (row.ready_at as string | null) ?? null,
+    picked_up_at: (row.picked_up_at as string | null) ?? null,
+    delivered_at: (row.delivered_at as string | null) ?? null,
     received_at: (row.received_at as string | null) ?? null,
     from_store_name: fromStore?.name ?? null,
     to_store_name: toStore?.name ?? null,
     creator_name: creator?.full_name || creator?.email || null,
     receiver_name: receiver?.full_name || receiver?.email || null,
+    assigned_livreur_name: livreur?.full_name || livreur?.email || null,
     items: rawItems.map((item) => {
       const product = unwrapOne(
         item.products as { name: string; barcode: string } | { name: string; barcode: string }[] | null
@@ -59,12 +67,17 @@ const TRANSFER_SELECT = `
   notes,
   created_by,
   received_by,
+  assigned_livreur_id,
   sent_at,
+  ready_at,
+  picked_up_at,
+  delivered_at,
   received_at,
   from_store:from_store_id(id, name, city),
   to_store:to_store_id(id, name, city),
   creator:created_by(full_name, email),
   receiver:received_by(full_name, email),
+  livreur:assigned_livreur_id(full_name, email),
   items:hub_stock_transfer_items(
     id,
     product_id,
@@ -107,7 +120,39 @@ export async function getHubStockTransfers(options: {
 }
 
 export async function getCashierPendingTransfers(storeId: string): Promise<HubStockTransfer[]> {
-  return getHubStockTransfers({ toStoreId: storeId, status: "sent", limit: 30 });
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("hub_stock_transfers")
+    .select(TRANSFER_SELECT)
+    .eq("to_store_id", storeId)
+    .in("status", ["en_cours", "pret", "en_livraison", "livre", "sent"])
+    .order("sent_at", { ascending: false })
+    .limit(30);
+
+  if (error) {
+    console.error("getCashierPendingTransfers:", error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+}
+
+export async function getLivreurHubTransfers(livreurId: string): Promise<HubStockTransfer[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("hub_stock_transfers")
+    .select(TRANSFER_SELECT)
+    .eq("assigned_livreur_id", livreurId)
+    .in("status", ["pret", "en_livraison", "livre"])
+    .order("sent_at", { ascending: false })
+    .limit(30);
+
+  if (error) {
+    console.error("getLivreurHubTransfers:", error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
 }
 
 export async function getHubTransferById(transferId: string): Promise<HubStockTransfer | null> {

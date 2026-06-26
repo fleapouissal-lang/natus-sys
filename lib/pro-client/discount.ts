@@ -18,6 +18,16 @@ export function isActiveProClient(
   return Boolean(customer?.is_pro_client && customer?.pro_client_active);
 }
 
+export function isProClientCustomer(
+  customer: Pick<LoyaltyCustomer, "is_pro_client"> | null | undefined
+): boolean {
+  return Boolean(customer?.is_pro_client);
+}
+
+export function proClientRemiseDisplay(active: boolean): string {
+  return active ? `-${PRO_CLIENT_DISCOUNT_PERCENT}%` : `-${PRO_CLIENT_DISCOUNT_PERCENT}% (en attente)`;
+}
+
 export function proClientDiscountAmount(subtotalAfterLoyalty: number): number {
   return promoDiscountAmount(subtotalAfterLoyalty, PRO_CLIENT_DISCOUNT_PERCENT);
 }

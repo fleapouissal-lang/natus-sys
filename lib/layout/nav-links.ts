@@ -50,18 +50,18 @@ export const cashierLinks: NavLinkItem[] = [
 
 export const livreurLinks: NavLinkItem[] = [
   { href: "/livreur/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 0 },
-  { href: "/livreur/returns", label: "Retours", icon: RotateCcw, mobileOrder: 1 },
+  { href: "/livreur/transfers", label: "Hub", icon: Boxes, mobileOrder: 1 },
+  { href: "/livreur/returns", label: "Retours", icon: RotateCcw, mobileOrder: 2 },
 ];
 
 function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavLinkItem[] {
   if (basePath === "/hub") {
     return [
       { href: "/hub", label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
-      { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 1 },
-      { href: "/hub/stock", label: "Stock", icon: Warehouse, mobileOrder: 2 },
-      { href: "/hub/hub-stock", label: "Entrepôt", icon: Boxes, mobileOrder: 3 },
-      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 4 },
-      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 5 },
+      { href: "/hub/stock", label: "Stock", icon: Warehouse, mobileOrder: 1 },
+      { href: "/hub/hub-stock", label: "Entrepôt", icon: Boxes, mobileOrder: 2 },
+      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 3 },
+      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 4 },
     ];
   }
 
@@ -81,8 +81,19 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
 
   links.push(
     { href: `${basePath}/sales`, label: "Ventes", icon: Receipt, mobileOrder: 3 },
-    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 4 },
-    { href: `${basePath}/products`, label: "Produits", icon: Package, mobileOrder: 5 },
+    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 4 }
+  );
+
+  if (basePath !== "/manager") {
+    links.push({
+      href: `${basePath}/products`,
+      label: "Produits",
+      icon: Package,
+      mobileOrder: 5,
+    });
+  }
+
+  links.push(
     { href: `${basePath}/stores`, label: "Magasins", icon: Store, mobileOrder: 6 },
     { href: `${basePath}/activity`, label: "Historique", icon: ClipboardList, mobileOrder: 7 },
     { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 8 }

@@ -23,6 +23,10 @@ export default async function PosPage({
     redirect("/manager");
   }
 
+  if (profile?.role === "hub") {
+    redirect("/hub");
+  }
+
   const city = profile ? getCityFilter(profile) : null;
   const stores = await getActiveStores(city);
 
@@ -34,8 +38,7 @@ export default async function PosPage({
   const selectedStore = getSelectedStore(stores, storeId);
   const showStoreFilter =
     profile?.role === "directeur" ||
-    profile?.role === "admin" ||
-    profile?.role === "hub";
+    profile?.role === "admin";
 
   if (
     profile?.role === "cashier" &&

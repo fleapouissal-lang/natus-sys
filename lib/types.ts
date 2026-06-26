@@ -287,7 +287,13 @@ export interface StoreRecentStock {
   related_store_name?: string | null;
 }
 
-export type HubStockTransferStatus = "sent" | "received";
+export type HubStockTransferStatus =
+  | "en_cours"
+  | "pret"
+  | "en_livraison"
+  | "livre"
+  | "sent"
+  | "received";
 
 export interface HubStockTransferItem {
   id: string;
@@ -305,7 +311,12 @@ export interface HubStockTransfer {
   notes: string | null;
   created_by: string;
   received_by: string | null;
+  assigned_livreur_id: string | null;
+  assigned_livreur_name: string | null;
   sent_at: string;
+  ready_at: string | null;
+  picked_up_at: string | null;
+  delivered_at: string | null;
   received_at: string | null;
   from_store_name: string | null;
   to_store_name: string | null;

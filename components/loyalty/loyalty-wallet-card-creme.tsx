@@ -17,6 +17,10 @@ import { loyaltyCardScanPayload } from "@/lib/loyalty/qr";
 import { LoyaltyCardBarcode } from "@/components/loyalty/loyalty-card-barcode";
 import { LoyaltyCardQr } from "@/components/loyalty/loyalty-card-qr";
 import { LoyaltyCardFlipShell } from "@/components/loyalty/loyalty-card-flip-shell";
+import {
+  isActiveProClient,
+  PRO_CLIENT_DISCOUNT_PERCENT,
+} from "@/lib/pro-client/discount";
 import type { LoyaltyCustomer } from "@/lib/types";
 
 const STRIP = "#B38C4A";
@@ -167,6 +171,7 @@ function CremeCardFront({
   const qrPayload = loyaltyCardScanPayload(customer.card_number);
   const pad = compact ? "py-2.5 pr-3 pl-2.5" : "py-3 pr-4 pl-3";
   const iconSize = compact ? 7.5 : 8.5;
+  const isProActive = isActiveProClient(customer);
 
   return (
     <CremeCardFace>
@@ -286,11 +291,15 @@ function CremeCardFront({
 
               <CremeInfoRow
                 compact={compact}
-                label="Fidélité"
+                label={customer.is_pro_client ? "Remise Pro" : "Fidélité"}
                 accent
                 icon={<Star size={iconSize} strokeWidth={1.75} fill="currentColor" />}
               >
-                {customer.loyalty_points} points
+                {customer.is_pro_client
+                  ? isProActive
+                    ? `-${PRO_CLIENT_DISCOUNT_PERCENT}%`
+                    : "En attente"
+                  : `${customer.loyalty_points} points`}
               </CremeInfoRow>
 
               <CremeInfoRow

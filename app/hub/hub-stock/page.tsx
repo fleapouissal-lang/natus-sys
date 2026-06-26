@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
-import { getHubStoreByCity, getHubRetailStoresForTransfer } from "@/lib/hub";
+import { getHubStoreByCity, getHubRetailStoresForTransfer, getHubCityLivreurs } from "@/lib/hub";
 import { getProductsWithStoreStock } from "@/lib/inventory";
 import { getHubStockTransfers } from "@/lib/hub-transfers";
 import { HubWarehouseManager } from "@/components/hub/hub-warehouse-manager";
@@ -20,10 +20,11 @@ export default async function HubWarehousePage() {
     );
   }
 
-  const [products, retailStores, transfers] = await Promise.all([
+  const [products, retailStores, transfers, livreurs] = await Promise.all([
     getProductsWithStoreStock(hubStore.id),
     getHubRetailStoresForTransfer(profile.id),
     getHubStockTransfers({ fromStoreId: hubStore.id, limit: 20 }),
+    getHubCityLivreurs(profile.city),
   ]);
 
   return (
@@ -33,6 +34,7 @@ export default async function HubWarehousePage() {
         products={products}
         retailStores={retailStores}
         transfers={transfers}
+        livreurs={livreurs}
       />
     </div>
   );

@@ -604,6 +604,10 @@ export async function setProductStock(
   const access = await assertStockModifyAccess(profile, storeId);
   if (access.error) return { error: access.error };
 
+  if (isHub(profile)) {
+    return { error: "Le compte dépôt ne peut qu'ajouter du stock, pas modifier le total" };
+  }
+
   const supabase = await createClient();
 
   const { data: row } = await supabase
@@ -711,8 +715,8 @@ export async function confirmHubStockTransfer(
     return { error: "Transfert introuvable" };
   }
 
-  if (transfer.status !== "sent") {
-    return { error: "Ce transfert a déjà été reçu" };
+  if (transfer.status !== "livre" && transfer.status !== "sent") {
+    return { error: "Le livreur doit d'abord marquer la commande comme livrée" };
   }
 
   if (profile.role === "cashier" && profile.store_id !== transfer.to_store_id) {
@@ -783,6 +787,84 @@ export async function repairHubStockTransfer(
 
   revalidateManagement();
   return { success: true, credited };
+}
+
+export async function deliverHubTransfer(
+  transferId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["livreur"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("deliver_hub_transfer", {
+    p_transfer_id: transferId,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function markHubTransferReady(
+  transferId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["hub"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("mark_hub_transfer_ready", {
+    p_transfer_id: transferId,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function assignHubTransferLivreur(
+  transferId: string,
+  livreurId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["hub"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  if (!livreurId) return { error: "Sélectionnez un livreur" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("assign_hub_transfer_livreur", {
+    p_transfer_id: transferId,
+    p_livreur_id: livreurId,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function pickupHubTransfer(
+  transferId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["hub", "livreur"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("pickup_hub_transfer", {
+    p_transfer_id: transferId,
+  });
+
+  if (error) {
+    const msg = error.message;
+    if (msg.includes("Stock insuffisant")) {
+      return { error: "Stock insuffisant à l'entrepôt pour un ou plusieurs produits" };
+    }
+    return { error: msg };
+  }
+
+  revalidateManagement();
+  return { success: true };
 }
 
 export async function getProductStoreStock(productId: string, storeId: string) {

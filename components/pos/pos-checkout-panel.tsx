@@ -172,7 +172,16 @@ export function PosCheckoutPanel({
         <div className="space-y-2">
           <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-champagne/15 px-3 py-2 text-sm">
             <div className="min-w-0 flex-1 truncate text-foreground">
-              {customer && (
+              {customer && activeProClient && (
+                <span className="font-medium text-primary">
+                  {customer.full_name.split(/\s+/)[0]} · {PRO_CLIENT_DISCOUNT_LABEL} (-
+                  {PRO_CLIENT_DISCOUNT_PERCENT}%)
+                  {proClientDiscount > 0 && (
+                    <span className="text-muted"> · -{formatCurrency(proClientDiscount)}</span>
+                  )}
+                </span>
+              )}
+              {customer && !activeProClient && (
                 <span className="font-medium">
                   {customer.full_name.split(/\s+/)[0]} · {customer.loyalty_points} pts
                   {redeemEligible && (
@@ -183,15 +192,9 @@ export function PosCheckoutPanel({
                   )}
                 </span>
               )}
-              {customer && activeProClient && (
-                <span className="font-medium text-primary">
-                  {PRO_CLIENT_DISCOUNT_LABEL} (-{PRO_CLIENT_DISCOUNT_PERCENT}%)
-                  {proClientDiscount > 0 && (
-                    <span className="text-muted"> · -{formatCurrency(proClientDiscount)}</span>
-                  )}
-                </span>
+              {customer && !activeProClient && promo && (
+                <span className="text-muted"> · </span>
               )}
-              {customer && promo && !activeProClient && <span className="text-muted"> · </span>}
               {promo && !activeProClient && (
                 <span className="font-medium text-primary">
                   {promo.code} (-{formatCurrency(promoDiscount)})
@@ -213,7 +216,7 @@ export function PosCheckoutPanel({
             </Button>
           </div>
 
-          {customer && redeemEligible && maxRedeem > 0 && (
+          {customer && !activeProClient && redeemEligible && maxRedeem > 0 && (
             <div className="rounded-lg border border-success/35 bg-success/5 p-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -256,7 +259,7 @@ export function PosCheckoutPanel({
             </div>
           )}
 
-          {customer && !redeemEligible && (
+          {customer && !activeProClient && !redeemEligible && (
             <p className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">
               Paiement avec points dès {loyaltySettings.minPointsToRedeem} pts — encore{" "}
               <span className="font-semibold text-primary">{pointsRemaining} pts</span>.
@@ -478,7 +481,7 @@ export function PosCheckoutPanel({
 
             <LoyaltyCustomerNotes notes={customerNotes} compact />
 
-            {redeemEligible && maxRedeem > 0 && (
+            {!activeProClient && redeemEligible && maxRedeem > 0 && (
               <div className="rounded-lg border border-success/35 bg-success/5 p-3">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -524,7 +527,7 @@ export function PosCheckoutPanel({
               </div>
             )}
 
-            {!redeemEligible && (
+            {!activeProClient && !redeemEligible && (
               <p className="text-xs text-muted">
                 {loyaltySettings.minPointsToRedeem} pts min — encore {pointsRemaining} pts
               </p>

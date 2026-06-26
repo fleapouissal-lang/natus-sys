@@ -104,14 +104,24 @@ function orderRowToNotification(
 
 function hubTransferToNotification(
   row: Record<string, unknown>,
-  unitCount: number | null
+  unitCount: number | null,
+  title = "Commande dépôt"
 ): CashierNotification {
   const entityId = row.id as string;
+  const status = row.status as string;
+  const idSuffix =
+    status === "livre" ? "hub_transfer_validate" : "hub_transfer_order";
   return {
-    id: notificationKey(entityId, "hub_transfer"),
+    id: notificationKey(`${entityId}-${idSuffix}`, "hub_transfer"),
     kind: "hub_transfer",
     entityId,
-    title: "Envoi depuis l'entrepôt hub",
+    title:
+      title ||
+      (status === "livre"
+        ? "Livraison à valider"
+        : status === "en_cours"
+          ? "Commande dépôt en cours"
+          : "Commande dépôt"),
     subtitle: (row.notes as string | null)?.trim() || null,
     amount: unitCount,
     receivedAt: (row.sent_at as string) || new Date().toISOString(),
@@ -543,9 +553,9 @@ export function CashierNotificationsProvider({
           },
           async (payload) => {
             const row = payload.new as Record<string, unknown>;
-            if (row.status !== "sent") return;
+            if (row.status !== "en_cours") return;
 
-            const id = notificationKey(row.id as string, "hub_transfer");
+            const id = notificationKey(`${row.id as string}-hub_transfer_order`, "hub_transfer");
             if (seenEventIdsRef.current.has(id)) return;
             seenEventIdsRef.current.add(id);
 
@@ -565,7 +575,51 @@ export function CashierNotificationsProvider({
               // ignore
             }
 
-            pushNotification(hubTransferToNotification(row, unitCount));
+            pushNotification(
+              hubTransferToNotification(row, unitCount, "Commande dépôt en cours")
+            );
+            router.refresh();
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "hub_stock_transfers",
+            filter: `to_store_id=eq.${storeId}`,
+          },
+          async (payload) => {
+            const row = payload.new as Record<string, unknown>;
+            const oldRow = payload.old as Record<string, unknown>;
+            const becameDelivered =
+              row.status === "livre" && oldRow.status !== "livre";
+
+            if (!becameDelivered) return;
+
+            const id = notificationKey(`${row.id as string}-hub_transfer_validate`, "hub_transfer");
+            if (seenEventIdsRef.current.has(id)) return;
+            seenEventIdsRef.current.add(id);
+
+            let unitCount: number | null = null;
+            try {
+              const { data } = await supabase
+                .from("hub_stock_transfer_items")
+                .select("quantity")
+                .eq("transfer_id", row.id as string);
+              if (data?.length) {
+                unitCount = data.reduce(
+                  (sum, item) => sum + (Number(item.quantity) || 0),
+                  0
+                );
+              }
+            } catch {
+              // ignore
+            }
+
+            pushNotification(
+              hubTransferToNotification(row, unitCount, "Livraison à valider par le caissier")
+            );
             router.refresh();
           }
         );

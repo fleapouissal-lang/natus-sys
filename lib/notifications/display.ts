@@ -15,7 +15,7 @@ export function notificationHeadline(
     case "order_transferred":
       return short ? "Commande transférée" : "Commande transférée vers votre magasin";
     case "hub_transfer":
-      return short ? "Réception hub" : "Réception hub en attente";
+      return short ? "Commande dépôt" : "Commande ou livraison dépôt";
     case "stock_low":
       return short ? "Stock faible" : "Produit sous le seuil de stock (< 10)";
     case "stock_out":
