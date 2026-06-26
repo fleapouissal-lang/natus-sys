@@ -181,43 +181,47 @@ export function PosDayClosureModal({
             <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                <Card className="border-primary/15 bg-surface">
+              <div className="grid grid-cols-2 gap-3">
+                <Card padding={false} className="min-w-0 border-primary/15 bg-surface p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                     Ventes
                   </p>
-                  <p className="mt-1 font-heading text-2xl font-bold text-primary-dark">
+                  <p className="mt-1 font-heading text-xl font-bold tabular-nums text-primary-dark sm:text-2xl">
                     {stats.count}
                   </p>
                 </Card>
-                <Card className="border-primary/15 bg-surface">
+                <Card padding={false} className="min-w-0 border-primary/15 bg-surface p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                     Chiffre d&apos;affaires
                   </p>
-                  <p className="mt-1 font-heading text-2xl font-bold text-primary-dark">
+                  <p className="mt-1 font-heading text-xl font-bold tabular-nums text-primary-dark sm:text-2xl">
                     {formatCurrency(stats.total)}
                   </p>
                 </Card>
-                <Card className="border-primary/15 bg-surface">
+                <Card padding={false} className="min-w-0 border-primary/15 bg-surface p-4">
                   <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                    <Banknote className="h-3.5 w-3.5" />
+                    <Banknote className="h-3.5 w-3.5 shrink-0" />
                     Espèces
                   </p>
-                  <p className="mt-1 font-heading text-2xl font-bold">{formatCurrency(stats.cash)}</p>
+                  <p className="mt-1 font-heading text-xl font-bold tabular-nums sm:text-2xl">
+                    {formatCurrency(stats.cash)}
+                  </p>
                 </Card>
-                <Card className="border-primary/15 bg-surface">
+                <Card padding={false} className="min-w-0 border-primary/15 bg-surface p-4">
                   <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                    <CreditCard className="h-3.5 w-3.5" />
+                    <CreditCard className="h-3.5 w-3.5 shrink-0" />
                     TPE
                   </p>
-                  <p className="mt-1 font-heading text-2xl font-bold">{formatCurrency(stats.card)}</p>
+                  <p className="mt-1 font-heading text-xl font-bold tabular-nums sm:text-2xl">
+                    {formatCurrency(stats.card)}
+                  </p>
                 </Card>
-                <Card className="border-primary/15 bg-surface col-span-2 lg:col-span-1">
+                <Card padding={false} className="min-w-0 border-primary/15 bg-surface p-4">
                   <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                    <ScrollText className="h-3.5 w-3.5" />
+                    <ScrollText className="h-3.5 w-3.5 shrink-0" />
                     Chèque
                   </p>
-                  <p className="mt-1 font-heading text-2xl font-bold">
+                  <p className="mt-1 font-heading text-xl font-bold tabular-nums sm:text-2xl">
                     {formatCurrency(stats.cheque)}
                   </p>
                 </Card>

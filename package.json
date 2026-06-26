@@ -25,7 +25,8 @@
     "seed:loyalty-customer": "npm run db:migrate && node scripts/seed-loyalty-customer.mjs",
     "reset:demo": "node scripts/reset-demo-data.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
-    "upload-images": "node scripts/upload-product-images.mjs"
+    "upload-images": "node scripts/upload-product-images.mjs",
+    "import:products": "node scripts/import-pos-products.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
@@ -45,6 +46,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "xlsx": "^0.18.5"
   }
 }
