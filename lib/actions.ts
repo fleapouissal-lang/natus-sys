@@ -10,7 +10,7 @@ import { getStoreById } from "@/lib/inventory";
 import { PRODUCT_BRAND, PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { buildParentBarcode } from "@/lib/products/product-utils";
 import { uploadProductImage } from "@/lib/storage";
-import type { Profile } from "@/lib/types";
+import type { PaymentMethod, Profile } from "@/lib/types";
 
 const MANAGEMENT = ["directeur", "admin", "manager"] as const;
 const STOCK_MANAGEMENT = ["directeur", "admin", "manager", "hub"] as const;
@@ -771,7 +771,7 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
 
 export async function completeSale(
   items: { product_id: string; quantity: number }[],
-  paymentMethod: "cash" | "card" = "cash",
+  paymentMethod: PaymentMethod = "cash",
   storeId?: string,
   loyalty?: { customerId: string; pointsToRedeem?: number },
   promoCode?: string | null
@@ -1091,7 +1091,7 @@ export async function lookupLoyaltyCustomerByScan(
 export async function completeShopifyOrderSale(
   shopifyOrderId: string,
   items: { product_id: string; quantity: number }[],
-  _paymentMethod: "cash" | "card" = "cash",
+  _paymentMethod: PaymentMethod = "cash",
   storeId?: string
 ) {
   const profile = await requireRole(["directeur", "manager", "cashier"]);

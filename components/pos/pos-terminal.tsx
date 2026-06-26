@@ -16,6 +16,7 @@ import {
   ClipboardList,
   CheckCircle2,
   ChevronLeft,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -42,6 +43,11 @@ import {
 } from "@/components/pos/pos-payment-mode-selector";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
+import {
+  PosDayClosureButton,
+  PosDayClosureModal,
+} from "@/components/pos/pos-day-closure-modal";
+import { QuantityHoldButton } from "@/components/pos/quantity-hold-button";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
 import { notificationHref } from "@/lib/notifications/display";
 import { CountBadge } from "@/components/ui/count-badge";
@@ -79,6 +85,7 @@ type ManagerMode = "stock" | "sale";
 const PAYMENT_OPTIONS: PosPaymentOption[] = [
   { id: "cash", label: "Espèces", icon: Banknote },
   { id: "card", label: "TPE", icon: CreditCard },
+  { id: "cheque", label: "Chèque", icon: ScrollText },
 ];
 
 export function PosTerminal({
@@ -93,6 +100,8 @@ export function PosTerminal({
   missingShopifyProducts: initialMissingProducts = [],
   shopifyOrders = [],
   loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
+  isStorePos = false,
+  cashierUserId,
 }: {
   products: Product[];
   role: UserRole;
@@ -105,6 +114,8 @@ export function PosTerminal({
   missingShopifyProducts?: string[];
   shopifyOrders?: ShopifyOrder[];
   loyaltySettings?: LoyaltySettings;
+  isStorePos?: boolean;
+  cashierUserId?: string;
 }) {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
@@ -131,6 +142,7 @@ export function PosTerminal({
   const [scanListening, setScanListening] = useState(true);
   const [mobilePosView, setMobilePosView] = useState<"catalog" | "cart">("catalog");
   const [checkoutStep, setCheckoutStep] = useState<PosMobileCartStep>("loyalty");
+  const [showDayClosure, setShowDayClosure] = useState(false);
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cashCalculatorRef = useRef<HTMLDivElement>(null);
@@ -257,16 +269,9 @@ export function PosTerminal({
       }
 
       const validated = validatedQty[productId] ?? 0;
-      const next = validated + delta;
+      const next = Math.max(0, Math.min(cartItem.quantity, validated + delta));
 
-      if (next < 0) return;
-
-      if (next > cartItem.quantity) {
-        setError(
-          `${cartItem.product.name} — quantité commandée : ${cartItem.quantity}`
-        );
-        return;
-      }
+      if (next === validated) return;
 
       setValidatedQty((prev) => {
         if (next === 0) {
@@ -724,50 +729,50 @@ export function PosTerminal({
                           )}
                         </Badge>
                         <div className="avatar-round flex items-center gap-0.5 border border-border bg-page px-1 py-0.5">
-                          <button
-                            type="button"
-                            onClick={() => adjustOrderValidation(item.product.id, -1)}
+                          <QuantityHoldButton
+                            direction="down"
                             disabled={validated <= 0}
+                            onStep={(delta) => adjustOrderValidation(item.product.id, delta)}
+                            ariaLabel="Retirer une validation"
                             className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-                            aria-label="Retirer une validation"
                           >
                             <Minus className="h-4 w-4" />
-                          </button>
+                          </QuantityHoldButton>
                           <span className="min-w-[1.5rem] text-center text-sm font-bold">
                             {validated}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => adjustOrderValidation(item.product.id, 1)}
+                          <QuantityHoldButton
+                            direction="up"
                             disabled={validated >= item.quantity}
+                            onStep={(delta) => adjustOrderValidation(item.product.id, delta)}
+                            ariaLabel="Valider une unité"
                             className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-                            aria-label="Valider une unité"
                           >
                             <Plus className="h-4 w-4" />
-                          </button>
+                          </QuantityHoldButton>
                         </div>
                       </div>
                     ) : (
                       <div className="avatar-round mt-1 flex w-fit items-center gap-0.5 border border-border bg-page px-1 py-0.5">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.product.id, -1)}
+                        <QuantityHoldButton
+                          direction="down"
+                          onStep={(delta) => updateQuantity(item.product.id, delta)}
+                          ariaLabel="Diminuer"
                           className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 cursor-pointer"
-                          aria-label="Diminuer"
                         >
                           <Minus className="h-4 w-4" />
-                        </button>
+                        </QuantityHoldButton>
                         <span className="min-w-[1.5rem] text-center text-sm font-bold">
                           {item.quantity}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.product.id, 1)}
+                        <QuantityHoldButton
+                          direction="up"
+                          onStep={(delta) => updateQuantity(item.product.id, delta)}
+                          ariaLabel="Augmenter"
                           className="avatar-round flex h-8 w-8 items-center justify-center transition-colors hover:bg-champagne/50 cursor-pointer"
-                          aria-label="Augmenter"
                         >
                           <Plus className="h-4 w-4" />
-                        </button>
+                        </QuantityHoldButton>
                       </div>
                     )}
                   </div>
@@ -1302,6 +1307,7 @@ export function PosTerminal({
                         <CountBadge count={preparableOrderCount} />
                       </Button>
                     )}
+                    <PosDayClosureButton onClick={() => setShowDayClosure(true)} />
                     {orderNotifications && (
                       <div className="relative overflow-visible">
                         <CashierNotificationBell
@@ -1519,6 +1525,17 @@ export function PosTerminal({
           }
         />
       )}
+
+      <PosDayClosureModal
+        open={showDayClosure}
+        onClose={() => setShowDayClosure(false)}
+        storeId={defaultStoreId}
+        storeName={storeName}
+        cashierUserId={cashierUserId}
+        cashierName={cashierName}
+        isStorePos={isStorePos}
+        isManagementUser={isManagementUser}
+      />
 
       <PosScanAlertToast
         alert={scanAlert}

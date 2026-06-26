@@ -44,7 +44,7 @@ export function CashierSalesReport({
   generatedAt = new Date(),
 }: {
   sales: Sale[];
-  stats: { count: number; total: number; cash: number; card: number };
+  stats: { count: number; total: number; cash: number; card: number; cheque: number };
   dateFrom: string;
   dateTo: string;
   periodLabel: string;
@@ -111,12 +111,13 @@ export function CashierSalesReport({
           <NatusDocumentBrand variant="invoice" />
         </header>
 
-        <div className="natus-sales-report-stats mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="natus-sales-report-stats mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {[
             { label: "Ventes", value: String(stats.count) },
             { label: "Total CA", value: formatCurrency(stats.total) },
             { label: "Espèces", value: formatCurrency(stats.cash) },
             { label: "TPE", value: formatCurrency(stats.card) },
+            { label: "Chèque", value: formatCurrency(stats.cheque) },
           ].map((item) => (
             <div
               key={item.label}

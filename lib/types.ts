@@ -1,4 +1,4 @@
-export type PaymentMethod = "cash" | "card";
+export type PaymentMethod = "cash" | "card" | "cheque";
 
 export type UserRole = "directeur" | "admin" | "manager" | "cashier" | "livreur" | "hub";
 

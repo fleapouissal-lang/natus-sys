@@ -1,3 +1,5 @@
+import type { PaymentMethod } from "@/lib/types";
+
 /** Coordonnées affichées sur les factures client. */
 export const NATUS_INVOICE_COMPANY = {
   legalName: "Natus Cosmétiques",
@@ -14,9 +16,11 @@ export const NATUS_INVOICE_COMPANY = {
 } as const;
 
 export function invoicePaymentModeLabel(
-  method: "cash" | "card",
+  method: PaymentMethod,
   customLabel?: string
 ): string {
   if (customLabel) return customLabel;
-  return method === "card" ? "Carte bancaire (TPE)" : "Espèces";
+  if (method === "card") return "Carte bancaire (TPE)";
+  if (method === "cheque") return "Chèque bancaire";
+  return "Espèces";
 }

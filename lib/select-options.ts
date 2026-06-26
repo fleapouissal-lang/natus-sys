@@ -12,6 +12,7 @@ import {
   Shield,
   ShoppingBag,
   Store,
+  ScrollText,
   Tag,
   Truck,
   User,
@@ -51,6 +52,7 @@ export function paymentFilterOptions(): SelectMenuOption[] {
     { value: "", label: "Tous les paiements", icon: LayoutGrid },
     { value: "cash", label: "Espèces", icon: Banknote },
     { value: "card", label: "TPE", icon: CreditCard },
+    { value: "cheque", label: "Chèque", icon: ScrollText },
   ];
 }
 

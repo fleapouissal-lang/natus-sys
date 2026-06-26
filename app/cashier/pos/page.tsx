@@ -151,6 +151,8 @@ export default async function PosPage({
               missingShopifyProducts={shopifyLoad?.missingProducts}
               shopifyOrders={shopifyOrders}
               loyaltySettings={loyaltySettings}
+              isStorePos
+              cashierUserId={profile.id}
             />
           </div>
         </PosStoreShell>
@@ -175,6 +177,7 @@ export default async function PosPage({
               missingShopifyProducts={shopifyLoad?.missingProducts}
               shopifyOrders={shopifyOrders}
               loyaltySettings={loyaltySettings}
+              cashierUserId={profile?.id}
             />
           </div>
         </>

@@ -114,7 +114,10 @@ export function CashierSalesHistory({
     const card = active
       .filter((s) => s.payment_method === "card")
       .reduce((sum, s) => sum + Number(s.total), 0);
-    return { count: active.length, total, cash, card };
+    const cheque = active
+      .filter((s) => s.payment_method === "cheque")
+      .reduce((sum, s) => sum + Number(s.total), 0);
+    return { count: active.length, total, cash, card, cheque };
   }, [filtered]);
 
   const hasDateFilter =

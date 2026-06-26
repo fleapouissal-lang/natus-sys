@@ -7,11 +7,13 @@ export const TVA_RATE = 0.2;
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "Espèces",
   card: "TPE",
+  cheque: "Chèque",
 };
 
 export function paymentMethodLabel(method: PaymentMethod | string): string {
-  if (method === "card") return PAYMENT_METHOD_LABELS.card;
-  if (method === "cash") return PAYMENT_METHOD_LABELS.cash;
+  if (method in PAYMENT_METHOD_LABELS) {
+    return PAYMENT_METHOD_LABELS[method as PaymentMethod];
+  }
   return method;
 }
 

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Jost } from "next/font/google";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { PwaRegister } from "@/components/pwa/pwa-register";
+import { NatusShellEffects } from "@/components/layout/natus-shell-effects";
 import "./globals.css";
 
 const jost = Jost({
@@ -43,6 +44,7 @@ export default function RootLayout({
       style={{ colorScheme: "light" }}
     >
       <body className="min-h-full flex flex-col bg-background font-sans text-foreground">
+        <NatusShellEffects />
         {children}
         <PwaRegister />
         <InstallPrompt />

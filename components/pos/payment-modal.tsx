@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, CreditCard, X } from "lucide-react";
+import { Banknote, CreditCard, ScrollText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { formatCurrency } from "@/lib/utils";
@@ -55,6 +55,16 @@ export function PaymentModal({
           >
             <CreditCard className="h-6 w-6" />
             TPE
+          </Button>
+          <Button
+            size="lg"
+            variant="secondary"
+            className="h-16 w-full text-base"
+            loading={loading}
+            onClick={() => onPay("cheque")}
+          >
+            <ScrollText className="h-6 w-6" />
+            Chèque
           </Button>
         </div>
     </Modal>
