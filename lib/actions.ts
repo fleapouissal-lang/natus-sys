@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { canCreateRole, canCreateStoreInCity, canManageStore, isDirector } from "@/lib/permissions";
+import { canCreateRole, canCreateStoreInCity, canManageStore, isDirector, isHub, isManager } from "@/lib/permissions";
 import {
   parseAllowedPagesInput,
   validateAllowedPagesForRole,
@@ -17,7 +17,8 @@ import { uploadProductImage } from "@/lib/storage";
 import type { PaymentMethod, Profile } from "@/lib/types";
 
 const MANAGEMENT = ["directeur", "admin", "manager"] as const;
-const STOCK_MANAGEMENT = ["directeur", "admin", "manager", "hub"] as const;
+const STOCK_READ = ["directeur", "admin", "manager", "hub"] as const;
+const STOCK_MODIFY = ["directeur", "admin", "hub"] as const;
 
 type StoreStockRow = { store_id: string; quantity: number };
 
@@ -94,6 +95,19 @@ async function assertStoreAccess(profile: Profile, storeId: string) {
     return { error: "Vous n'avez pas accès à ce magasin" };
   }
   return { store };
+}
+
+async function assertStockModifyAccess(profile: Profile, storeId: string) {
+  const access = await assertStoreAccess(profile, storeId);
+  if (access.error) return access;
+
+  if (isManager(profile)) {
+    return { error: "Les gérants peuvent consulter le stock sans le modifier" };
+  }
+  if (isHub(profile) && !access.store.is_hub) {
+    return { error: "Le compte dépôt ne peut modifier que le stock des dépôts" };
+  }
+  return access;
 }
 
 function parseCategories(formData: FormData): string[] | null {
@@ -482,7 +496,7 @@ export async function addStock(
   storeId: string,
   notes?: string
 ) {
-  const profile = await requireRole([...STOCK_MANAGEMENT]);
+  const profile = await requireRole([...STOCK_MODIFY]);
   if (!profile) return { error: "Non autorisé" };
 
   if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -490,7 +504,7 @@ export async function addStock(
   }
   if (!storeId) return { error: "Veuillez sélectionner un magasin" };
 
-  const access = await assertStoreAccess(profile, storeId);
+  const access = await assertStockModifyAccess(profile, storeId);
   if (access.error) return { error: access.error };
 
   const supabase = await createClient();
@@ -524,18 +538,70 @@ export async function addStock(
   return { success: true };
 }
 
+/** Référence un produit au magasin avec un stock absolu (0 autorisé). */
+export async function registerStoreProductStock(
+  productId: string,
+  storeId: string,
+  stock: number,
+  notes?: string
+) {
+  const profile = await requireRole([...STOCK_MODIFY]);
+  if (!profile) return { error: "Non autorisé" };
+
+  if (!Number.isFinite(stock) || stock < 0) {
+    return { error: "Le stock ne peut pas être négatif" };
+  }
+  if (!storeId) return { error: "Veuillez sélectionner un magasin" };
+
+  const access = await assertStockModifyAccess(profile, storeId);
+  if (access.error) return { error: access.error };
+
+  const supabase = await createClient();
+
+  const { data: row } = await supabase
+    .from("store_inventory")
+    .select("stock")
+    .eq("store_id", storeId)
+    .eq("product_id", productId)
+    .maybeSingle();
+
+  const currentStock = row?.stock ?? 0;
+  const diff = stock - currentStock;
+
+  const { error: upsertError } = await supabase.from("store_inventory").upsert(
+    { store_id: storeId, product_id: productId, stock },
+    { onConflict: "store_id,product_id" }
+  );
+
+  if (upsertError) return { error: upsertError.message };
+
+  if (diff !== 0) {
+    await supabase.from("stock_movements").insert({
+      product_id: productId,
+      quantity: diff,
+      type: diff > 0 ? "add" : "adjustment",
+      notes: notes || null,
+      created_by: profile.id,
+      store_id: storeId,
+    });
+  }
+
+  revalidateManagement();
+  return { success: true };
+}
+
 export async function setProductStock(
   productId: string,
   stock: number,
   storeId: string
 ) {
-  const profile = await requireRole(["directeur", "admin", "hub"]);
-  if (!profile) return { error: "Seul le directeur ou le hub stock peut ajuster le stock actuel" };
+  const profile = await requireRole([...STOCK_MODIFY]);
+  if (!profile) return { error: "Non autorisé" };
 
   if (stock < 0) return { error: "Le stock ne peut pas être négatif" };
   if (!storeId) return { error: "Veuillez sélectionner un magasin" };
 
-  const access = await assertStoreAccess(profile, storeId);
+  const access = await assertStockModifyAccess(profile, storeId);
   if (access.error) return { error: access.error };
 
   const supabase = await createClient();
@@ -720,7 +786,7 @@ export async function repairHubStockTransfer(
 }
 
 export async function getProductStoreStock(productId: string, storeId: string) {
-  const profile = await requireRole([...STOCK_MANAGEMENT]);
+  const profile = await requireRole([...STOCK_READ]);
   if (!profile) return { error: "Non autorisé", stock: 0 };
 
   const access = await assertStoreAccess(profile, storeId);

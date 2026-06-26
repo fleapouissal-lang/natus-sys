@@ -4,11 +4,13 @@ import { useState, useCallback, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { StoreSelect } from "@/components/stores/store-select";
 import { AddStockCard } from "@/components/stock/add-stock-card";
 import { useStockAdjustment } from "@/components/stock/stock-adjustment-fields";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
-import { addStock, setProductStock } from "@/lib/actions";
+import { addStock, registerStoreProductStock, setProductStock } from "@/lib/actions";
+import { INVENTORY_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, Store } from "@/lib/types";
 
 type ProductPickMode = "select" | "scan";
@@ -22,11 +24,18 @@ function buildTotalsMap(products: Product[], ids: string[]) {
   return map;
 }
 
+function buildAddsMap(ids: string[]) {
+  const map: Record<string, string> = {};
+  for (const id of ids) map[id] = "";
+  return map;
+}
+
 export function StockManager({
   stores,
   products,
   defaultStoreId,
   cityLabel,
+  canModifyStock,
   canEditTotal,
   embedded = false,
 }: {
@@ -34,6 +43,7 @@ export function StockManager({
   products: Product[];
   defaultStoreId: string;
   cityLabel?: string;
+  canModifyStock: boolean;
   canEditTotal: boolean;
   embedded?: boolean;
 }) {
@@ -47,6 +57,7 @@ export function StockManager({
   const [storeId, setStoreId] = useState(defaultStoreId);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [perProductTotals, setPerProductTotals] = useState<Record<string, string>>({});
+  const [perProductAdds, setPerProductAdds] = useState<Record<string, string>>({});
   const [addQty, setAddQty] = useState("");
   const [newTotal, setNewTotal] = useState("");
   const [notes, setNotes] = useState("");
@@ -70,6 +81,7 @@ export function StockManager({
     setError("");
     setScanHint("");
     setPerProductTotals(buildTotalsMap(products, ids));
+    setPerProductAdds(buildAddsMap(ids));
 
     if (ids.length === 1) {
       const product = products.find((item) => item.id === ids[0]);
@@ -93,6 +105,7 @@ export function StockManager({
       }
       const next = [...prev, productId];
       setPerProductTotals(buildTotalsMap(products, next));
+      setPerProductAdds(buildAddsMap(next));
       setAddQty("");
       if (next.length === 1) {
         const product = products.find((item) => item.id === productId);
@@ -157,17 +170,30 @@ export function StockManager({
       return;
     }
 
-    if (selectedIds.length > 1 && canEditTotal) {
+    if (selectedIds.length > 1) {
       const add = Math.max(0, parseInt(value, 10) || 0);
-      setPerProductTotals(
-        Object.fromEntries(
-          selectedIds.map((id) => {
-            const product = products.find((item) => item.id === id);
-            return [id, String(Math.max(0, (product?.stock ?? 0) + add))];
-          })
-        )
+      const adds = Object.fromEntries(selectedIds.map((id) => [id, value]));
+      const totals = Object.fromEntries(
+        selectedIds.map((id) => {
+          const product = products.find((item) => item.id === id);
+          const stock = product?.stock ?? 0;
+          return [id, String(stock + (value === "" ? 0 : add))];
+        })
       );
+      setPerProductAdds(adds);
+      setPerProductTotals(totals);
     }
+  }
+
+  function handlePerProductAddChange(productId: string, value: string) {
+    setPerProductAdds((prev) => ({ ...prev, [productId]: value }));
+    const product = products.find((item) => item.id === productId);
+    const stock = product?.stock ?? 0;
+    const add = value === "" ? 0 : Math.max(0, parseInt(value, 10) || 0);
+    setPerProductTotals((prev) => ({
+      ...prev,
+      [productId]: String(stock + add),
+    }));
   }
 
   function handleNewTotalChange(value: string) {
@@ -177,6 +203,19 @@ export function StockManager({
 
   function handlePerProductTotalChange(productId: string, value: string) {
     setPerProductTotals((prev) => ({ ...prev, [productId]: value }));
+    const product = products.find((item) => item.id === productId);
+    const stock = product?.stock ?? 0;
+    if (value === "") {
+      setPerProductAdds((prev) => ({ ...prev, [productId]: "" }));
+      return;
+    }
+    const total = parseInt(value, 10);
+    if (!Number.isNaN(total)) {
+      setPerProductAdds((prev) => ({
+        ...prev,
+        [productId]: String(Math.max(0, total - stock)),
+      }));
+    }
   }
 
   async function handleAddStock(e: React.FormEvent) {
@@ -192,10 +231,11 @@ export function StockManager({
 
     if (canEditTotal) {
       for (const productId of selectedIds) {
+        const product = products.find((item) => item.id === productId);
         const total = parseInt(
           selectedIds.length === 1
             ? newTotal
-            : (perProductTotals[productId] ?? ""),
+            : (perProductTotals[productId] ?? String(product?.stock ?? "0")),
           10
         );
         if (isNaN(total) || total < 0) {
@@ -207,15 +247,20 @@ export function StockManager({
         else successCount += 1;
       }
     } else {
-      const add = parseInt(addQty, 10);
-      if (isNaN(add) || add <= 0) {
-        setError("La quantité doit être un nombre positif (minimum 1)");
-        setLoading(false);
-        return;
-      }
-
       for (const productId of selectedIds) {
-        const result = await addStock(productId, add, storeId, notes || undefined);
+        const rawAdd =
+          selectedIds.length > 1
+            ? (perProductAdds[productId] ?? addQty)
+            : addQty;
+        const add = rawAdd === "" ? NaN : parseInt(rawAdd, 10);
+        if (Number.isNaN(add) || add < 0) {
+          failures.push("Quantité à ajouter invalide pour un ou plusieurs produits");
+          continue;
+        }
+        const result =
+          add === 0
+            ? await registerStoreProductStock(productId, storeId, 0, notes || undefined)
+            : await addStock(productId, add, storeId, notes || undefined);
         if (result.error) failures.push(result.error);
         else successCount += 1;
       }
@@ -233,13 +278,16 @@ export function StockManager({
           ? `Stock mis à jour pour ${successCount} produit(s)`
           : canEditTotal
             ? "Stock mis à jour"
-            : "Stock ajouté avec succès"
+            : parseInt(addQty, 10) === 0
+              ? "Produit référencé au magasin (stock 0)"
+              : "Stock ajouté avec succès"
       );
       setAddQty("");
       setNotes("");
       setScanQuery("");
       setSelectedIds([]);
       setPerProductTotals({});
+      setPerProductAdds({});
       setNewTotal("");
       if (pickMode === "scan") focusInput();
       router.refresh();
@@ -249,6 +297,15 @@ export function StockManager({
   }
 
   const lowStockProducts = products.filter((p) => p.stock > 0 && p.stock < 10);
+  const {
+    paginated: paginatedProducts,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(products, INVENTORY_PAGE_SIZE, storeId);
 
   return (
     <div className={embedded ? "space-y-6" : "space-y-6 animate-fade-in"}>
@@ -256,9 +313,11 @@ export function StockManager({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Stock</h1>
           <p className="mt-1 text-muted">
-            {canEditTotal
-              ? "Modifier ou ajouter du stock par magasin"
-              : "Ajouter du stock par magasin"}
+            {canModifyStock
+              ? canEditTotal
+                ? "Modifier ou ajouter du stock par magasin"
+                : "Ajouter du stock par magasin"
+              : "Consultation du stock par magasin"}
             {cityLabel && ` — ${cityLabel}`}
           </p>
         </div>
@@ -274,6 +333,7 @@ export function StockManager({
               setStoreId(id);
               setSelectedIds([]);
               setPerProductTotals({});
+              setPerProductAdds({});
               router.push(`${basePath}/stock?store=${id}`);
             }}
           />
@@ -285,42 +345,46 @@ export function StockManager({
         </Card>
       )}
 
-      <AddStockCard
-        title={canEditTotal ? "Ajouter ou modifier le stock" : "Ajouter du stock"}
-        description={
-          canEditTotal
-            ? "Sélection multiple ou scan — ajustez puis enregistrez en une fois"
-            : "Sélection multiple ou scan — même quantité ajoutée à tous les produits"
-        }
-        storeName={selectedStore?.name}
-        canEditTotal={canEditTotal}
-        products={products}
-        selectedIds={selectedIds}
-        pickMode={pickMode}
-        addQty={addQty}
-        newTotal={newTotal}
-        perProductTotals={perProductTotals}
-        notes={notes}
-        loading={loading}
-        error={error}
-        success={success}
-        scanHint={scanHint}
-        scanQuery={scanQuery}
-        scannerActive={scannerActive}
-        inputRef={inputRef}
-        onPickModeChange={setPickMode}
-        onFocusScanner={() => focusInput()}
-        onSelectionChange={handleSelectionChange}
-        onRemoveProduct={handleRemoveProduct}
-        onClearSelection={() => handleSelectionChange([])}
-        onAddQtyChange={handleAddQtyChange}
-        onNewTotalChange={handleNewTotalChange}
-        onPerProductTotalChange={handlePerProductTotalChange}
-        onNotesChange={setNotes}
-        onScanKeyDown={handleKeyDown}
-        onScanChange={handleScanChange}
-        onSubmit={handleAddStock}
-      />
+      {canModifyStock && (
+        <AddStockCard
+          title={canEditTotal ? "Ajouter ou modifier le stock" : "Ajouter du stock"}
+          description={
+            canEditTotal
+              ? "Sélection multiple ou scan — ajustez puis enregistrez en une fois"
+              : "Sélection multiple ou scan — même quantité ajoutée à tous les produits"
+          }
+          storeName={selectedStore?.name}
+          canEditTotal={canEditTotal}
+          products={products}
+          selectedIds={selectedIds}
+          pickMode={pickMode}
+          addQty={addQty}
+          newTotal={newTotal}
+          perProductTotals={perProductTotals}
+          perProductAdds={perProductAdds}
+          notes={notes}
+          loading={loading}
+          error={error}
+          success={success}
+          scanHint={scanHint}
+          scanQuery={scanQuery}
+          scannerActive={scannerActive}
+          inputRef={inputRef}
+          onPickModeChange={setPickMode}
+          onFocusScanner={() => focusInput()}
+          onSelectionChange={handleSelectionChange}
+          onRemoveProduct={handleRemoveProduct}
+          onClearSelection={() => handleSelectionChange([])}
+          onAddQtyChange={handleAddQtyChange}
+          onNewTotalChange={handleNewTotalChange}
+          onPerProductTotalChange={handlePerProductTotalChange}
+          onPerProductAddChange={handlePerProductAddChange}
+          onNotesChange={setNotes}
+          onScanKeyDown={handleKeyDown}
+          onScanChange={handleScanChange}
+          onSubmit={handleAddStock}
+        />
+      )}
 
       {lowStockProducts.length > 0 && (
         <Card>
@@ -363,7 +427,7 @@ export function StockManager({
               </tr>
             </thead>
             <tbody>
-              {products.map((product) => (
+              {paginatedProducts.map((product) => (
                 <tr key={product.id} className="border-b border-border">
                   <td className="px-6 py-4 font-medium">{product.name}</td>
                   <td className="px-6 py-4 font-mono text-xs">{product.barcode}</td>
@@ -390,6 +454,16 @@ export function StockManager({
             </tbody>
           </table>
         </div>
+        {totalItems > 0 && (
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            totalItems={totalItems}
+            onPageChange={setPage}
+          />
+        )}
       </Card>
     </div>
   );

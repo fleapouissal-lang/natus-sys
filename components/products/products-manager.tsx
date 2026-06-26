@@ -89,6 +89,7 @@ function ParentVariantsToggle({
 
 function ProductActionsCell({
   product,
+  canModifyStock,
   canEditStockTotal,
   deleting,
   onView,
@@ -98,6 +99,7 @@ function ProductActionsCell({
   onDelete,
 }: {
   product: Product;
+  canModifyStock: boolean;
   canEditStockTotal: boolean;
   deleting: string | null;
   onView: () => void;
@@ -134,7 +136,7 @@ function ProductActionsCell({
             <GitBranchPlus className="h-4 w-4" />
           </Button>
         )}
-        {product.product_kind !== "parent" && (
+        {product.product_kind !== "parent" && canModifyStock && (
           <Button
             variant="ghost"
             size="sm"
@@ -163,6 +165,7 @@ function ProductDetailModal({
   onEdit,
   onEditStock,
   onAddVariant,
+  canModifyStock,
   canEditStockTotal,
 }: {
   product: Product;
@@ -172,6 +175,7 @@ function ProductDetailModal({
   onEdit: () => void;
   onEditStock: () => void;
   onAddVariant: () => void;
+  canModifyStock: boolean;
   canEditStockTotal: boolean;
 }) {
   return (
@@ -188,7 +192,7 @@ function ProductDetailModal({
               Ajouter une variante
             </Button>
           )}
-          {product.product_kind !== "parent" && (
+          {product.product_kind !== "parent" && canModifyStock && (
             <Button onClick={onEditStock}>
               <Warehouse className="h-4 w-4" />
               {canEditStockTotal ? "Modifier le stock" : "Ajouter du stock"}
@@ -210,6 +214,7 @@ export function ProductsManager({
   allStores,
   defaultStoreId,
   selectedStoreName,
+  canModifyStock,
   canEditStockTotal,
   canEditBarcode = false,
 }: {
@@ -218,6 +223,7 @@ export function ProductsManager({
   allStores: Store[];
   defaultStoreId: string;
   selectedStoreName?: string;
+  canModifyStock: boolean;
   canEditStockTotal: boolean;
   canEditBarcode?: boolean;
 }) {
@@ -482,6 +488,7 @@ export function ProductsManager({
         </td>
         <ProductActionsCell
           product={product}
+          canModifyStock={canModifyStock}
           canEditStockTotal={canEditStockTotal}
           deleting={deleting}
           onView={() => setSelectedProduct(product)}
@@ -622,7 +629,7 @@ export function ProductsManager({
                   <GitBranchPlus className="h-4 w-4" />
                   Ajouter une variante
                 </Button>
-              ) : (
+              ) : canModifyStock ? (
                 <>
                   <Button
                     size="sm"
@@ -646,6 +653,18 @@ export function ProductsManager({
                     Modifier
                   </Button>
                 </>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setEditingProduct(scannedPreview);
+                    setScannedPreview(null);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Modifier
+                </Button>
               )}
               <Button
                 size="sm"
@@ -792,6 +811,7 @@ export function ProductsManager({
           product={selectedProduct}
           parent={resolveParent(selectedProduct)}
           variants={variantsByParent.get(selectedProduct.id) ?? []}
+          canModifyStock={canModifyStock}
           canEditStockTotal={canEditStockTotal}
           onClose={() => setSelectedProduct(null)}
           onEdit={() => {

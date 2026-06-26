@@ -41,7 +41,7 @@ export default async function ManagerActivityPage({
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Activité</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Historique</h1>
         <p className="mt-1 text-muted">
           Historique des actions par magasin — stock et ventes
         </p>

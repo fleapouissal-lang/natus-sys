@@ -40,7 +40,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "stock", label: "Stock", description: "Vue globale et stock par magasin ou dépôt", group: "operations" },
   { key: "products", label: "Produits", description: "Catalogue et fiches produit", group: "admin" },
   { key: "stores", label: "Magasins", description: "Points de vente et paramètres", group: "admin" },
-  { key: "activity", label: "Activité", description: "Journal des actions récentes", group: "admin" },
+  { key: "activity", label: "Historique", description: "Historique des actions et mouvements", group: "admin" },
   { key: "reclamations", label: "Réclamations", description: "Suivi des réclamations clients", group: "clients" },
   { key: "loyalty", label: "Clients & Fidélité", description: "Cartes fidélité, clients Pro et programme", group: "clients" },
   { key: "invoices", label: "Factures", description: "Factures et documents de vente", group: "clients" },

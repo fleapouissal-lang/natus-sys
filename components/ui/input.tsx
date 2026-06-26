@@ -38,7 +38,7 @@ export function Input({
     <input
       id={inputId}
       className={cn(
-        "natus-field bg-surface transition-colors",
+        "natus-field w-full bg-surface transition-colors",
         inputSizeClasses[inputSize],
         Icon && "pl-10",
         "placeholder:text-muted",
@@ -50,7 +50,7 @@ export function Input({
   );
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex w-full flex-col gap-1.5">
       {label && (
         <label
           htmlFor={inputId}
@@ -60,7 +60,7 @@ export function Input({
         </label>
       )}
       {Icon ? (
-        <div className="relative">
+        <div className="relative w-full">
           <span className="pointer-events-none absolute left-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center bg-transparent text-primary">
             <Icon className="h-4 w-4" strokeWidth={2} />
           </span>

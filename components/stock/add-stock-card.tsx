@@ -5,6 +5,7 @@ import { List, PackagePlus, ScanBarcode, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader } from "@/components/ui/card";
 import { ProductImage } from "@/components/pos/product-image";
 import { ProductStockMultiSelect } from "@/components/stock/product-stock-multi-select";
 import {
@@ -16,64 +17,58 @@ import type { Product } from "@/lib/types";
 
 type ProductPickMode = "select" | "scan";
 
-function SelectedProductsBasket({
+function SelectedProductsPreview({
   products,
-  selectedIds,
   onRemove,
   onClear,
 }: {
   products: Product[];
-  selectedIds: string[];
   onRemove: (productId: string) => void;
   onClear: () => void;
 }) {
-  const selectedProducts = selectedIds
-    .map((id) => products.find((product) => product.id === id))
-    .filter((product): product is Product => Boolean(product));
-
-  if (selectedProducts.length === 0) {
-    return (
-      <div className="flex min-h-[120px] items-center justify-center border border-dashed border-primary/25 bg-background/60 px-4 text-center text-sm text-muted">
-        Sélectionnez ou scannez un ou plusieurs produits
-      </div>
-    );
-  }
+  if (products.length === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">
-          {selectedProducts.length} produit{selectedProducts.length !== 1 ? "s" : ""} retenu
-          {selectedProducts.length !== 1 ? "s" : ""}
+    <div className="rounded-xl border border-border bg-surface p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium text-foreground">
+          {products.length} produit{products.length !== 1 ? "s" : ""} sélectionné
+          {products.length !== 1 ? "s" : ""}
         </p>
         <button
           type="button"
           onClick={onClear}
-          className="cursor-pointer text-xs font-medium text-primary underline-offset-2 hover:underline"
+          className="cursor-pointer text-xs font-medium text-muted hover:text-foreground"
         >
           Tout effacer
         </button>
       </div>
-      <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-primary/20 bg-background/50 p-2">
-        {selectedProducts.map((product) => (
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {products.map((product) => (
           <div
             key={product.id}
-            className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2"
+            className="relative flex w-36 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-page"
           >
-            <ProductImage product={product} size="sm" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{product.name}</p>
-              <p className="font-mono text-xs text-muted">{product.barcode}</p>
-            </div>
-            <Badge variant={product.stock < 10 ? "warning" : "success"}>{product.stock}</Badge>
             <button
               type="button"
               onClick={() => onRemove(product.id)}
-              className="cursor-pointer rounded-md p-1 text-muted hover:bg-danger/10 hover:text-danger"
+              className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-surface/90 text-muted shadow-sm hover:bg-danger/10 hover:text-danger"
               aria-label={`Retirer ${product.name}`}
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
+            <div className="flex h-28 items-center justify-center bg-surface p-2">
+              <ProductImage product={product} size="sm" className="h-24 w-24 object-contain" />
+            </div>
+            <div className="flex flex-1 flex-col gap-1.5 border-t border-border p-2.5">
+              <p className="line-clamp-2 text-xs font-medium leading-tight">{product.name}</p>
+              <Badge
+                variant={product.stock < 10 ? "warning" : "default"}
+                className="w-fit text-[10px]"
+              >
+                Stock : {product.stock}
+              </Badge>
+            </div>
           </div>
         ))}
       </div>
@@ -92,6 +87,7 @@ export function AddStockCard({
   addQty,
   newTotal,
   perProductTotals,
+  perProductAdds,
   notes,
   loading,
   error,
@@ -108,6 +104,7 @@ export function AddStockCard({
   onAddQtyChange,
   onNewTotalChange,
   onPerProductTotalChange,
+  onPerProductAddChange,
   onNotesChange,
   onScanKeyDown,
   onScanChange,
@@ -123,6 +120,7 @@ export function AddStockCard({
   addQty: string;
   newTotal: string;
   perProductTotals: Record<string, string>;
+  perProductAdds: Record<string, string>;
   notes: string;
   loading: boolean;
   error: string;
@@ -139,6 +137,7 @@ export function AddStockCard({
   onAddQtyChange: (value: string) => void;
   onNewTotalChange: (value: string) => void;
   onPerProductTotalChange: (productId: string, value: string) => void;
+  onPerProductAddChange: (productId: string, value: string) => void;
   onNotesChange: (value: string) => void;
   onScanKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onScanChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -150,93 +149,59 @@ export function AddStockCard({
   const singleProduct = selectedProducts.length === 1 ? selectedProducts[0] : null;
   const currentStock = singleProduct?.stock ?? 0;
   const parsedAdd = Math.max(0, parseInt(addQty, 10) || 0);
-  const previewTotal = canEditTotal
-    ? parseInt(newTotal, 10) || currentStock
-    : currentStock + parsedAdd;
   const hasSelection = selectedProducts.length > 0;
   const isBatch = selectedProducts.length > 1;
 
   return (
-    <div className="overflow-hidden border border-primary/25 bg-surface shadow-sm">
-      <div className="h-1 bg-primary" />
+    <Card padding={false} className="overflow-hidden">
+      <div className="border-b border-border p-6">
+        <CardHeader
+          title={title}
+          description={description}
+          action={storeName ? <Badge>{storeName}</Badge> : undefined}
+        />
 
-      <div className="border-b border-primary/15 bg-primary/8 px-6 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-primary/15 text-primary">
-              <PackagePlus className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-              <p className="mt-0.5 text-sm text-muted">{description}</p>
-            </div>
-          </div>
-          {storeName && <Badge className="shrink-0">{storeName}</Badge>}
+        <div className="flex gap-2">
+          {(
+            [
+              { id: "select" as const, label: "Liste", icon: List },
+              { id: "scan" as const, label: "Scanner", icon: ScanBarcode },
+            ] as const
+          ).map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onPickModeChange(id)}
+              className={cn(
+                "inline-flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer sm:flex-none sm:min-w-[9rem]",
+                pickMode === id
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border bg-surface text-muted hover:border-primary/25 hover:text-foreground"
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
-      <form onSubmit={onSubmit} className="p-6">
-        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-          <section className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center bg-primary text-xs font-bold text-black">
-                1
-              </span>
-              <p className="text-sm font-semibold text-foreground">Choisir le(s) produit(s)</p>
-            </div>
-
-            <div className="inline-flex w-full border border-primary/30 bg-background p-1">
-              <button
-                type="button"
-                onClick={() => onPickModeChange("select")}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
-                  pickMode === "select"
-                    ? "bg-champagne text-black"
-                    : "text-muted hover:text-foreground"
-                )}
-              >
-                <List className="h-4 w-4" />
-                Liste
-              </button>
-              <button
-                type="button"
-                onClick={() => onPickModeChange("scan")}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
-                  pickMode === "scan"
-                    ? "bg-champagne text-black"
-                    : "text-muted hover:text-foreground"
-                )}
-              >
-                <ScanBarcode className="h-4 w-4" />
-                Scanner
-              </button>
-            </div>
-
-            {pickMode === "select" ? (
-              <ProductStockMultiSelect
-                products={products}
-                value={selectedIds}
-                onChange={onSelectionChange}
-              />
-            ) : (
-              <div>
-                <div
-                  role="button"
-                  tabIndex={-1}
-                  onClick={() => onFocusScanner?.()}
-                  className={cn(
-                    "flex cursor-text items-center gap-2 rounded-full border bg-page px-4 py-2",
-                    scannerActive ? "border-primary" : "border-border"
-                  )}
-                >
-                  <ScanBarcode
-                    className={cn(
-                      "h-4 w-4 shrink-0",
-                      scannerActive ? "text-primary" : "text-muted"
-                    )}
-                  />
+      <form onSubmit={onSubmit} className="space-y-6 p-6">
+        <div className="w-full space-y-4">
+          {pickMode === "select" ? (
+            <ProductStockMultiSelect
+              products={products}
+              value={selectedIds}
+              onChange={onSelectionChange}
+            />
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-base font-medium text-foreground">Lecteur code-barres</label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-primary">
+                    <ScanBarcode className="h-4 w-4" strokeWidth={2} />
+                  </span>
                   <input
                     ref={inputRef}
                     type="text"
@@ -244,128 +209,151 @@ export function AddStockCard({
                     onKeyDown={onScanKeyDown}
                     onChange={onScanChange}
                     onFocus={() => onFocusScanner?.()}
-                    placeholder="Scannez plusieurs codes-barres…"
-                    className="natus-filter-inline-input w-full min-w-0 cursor-default border-0 bg-transparent py-0 text-sm font-mono outline-none placeholder:text-muted"
+                    placeholder="Scannez un ou plusieurs produits…"
                     autoComplete="off"
+                    className={cn(
+                      "natus-field w-full bg-surface px-4 py-3 pl-10 text-base font-mono transition-colors placeholder:text-muted",
+                      scannerActive && "border-primary ring-2 ring-primary/15"
+                    )}
                   />
-                  <Badge
-                    variant={scannerActive ? "accent" : "default"}
-                    className={cn("shrink-0", !scannerActive && "bg-page text-muted")}
-                  >
-                    {scannerActive ? "Actif" : "Inactif"}
-                  </Badge>
                 </div>
-                <p className="mt-1.5 text-xs text-muted">
-                  Chaque scan ajoute le produit à la sélection — continuez à scanner
-                </p>
-                {scanHint && <p className="mt-2 text-sm text-danger">{scanHint}</p>}
               </div>
-            )}
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={scannerActive ? "accent" : "default"}>
+                  {scannerActive ? "Prêt" : "Pause"}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted">
+                Chaque scan ajoute le produit à la sélection. Continuez à scanner avant de valider.
+              </p>
+              {scanHint && <p className="text-sm text-danger">{scanHint}</p>}
+            </div>
+          )}
+        </div>
 
-            {pickMode === "scan" && (
-              <SelectedProductsBasket
-                products={products}
-                selectedIds={selectedIds}
-                onRemove={onRemoveProduct}
-                onClear={onClearSelection}
-              />
-            )}
-          </section>
+        <SelectedProductsPreview
+          products={selectedProducts}
+          onRemove={onRemoveProduct}
+          onClear={onClearSelection}
+        />
 
-          <section className={cn("space-y-4", !hasSelection && "opacity-50 pointer-events-none")}>
-            <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center bg-primary text-xs font-bold text-black">
-                2
-              </span>
-              <p className="text-sm font-semibold text-foreground">
-                {isBatch ? "Quantités pour la sélection" : "Quantité à ajouter"}
+        {hasSelection && (
+          <div className="space-y-4 rounded-xl border border-primary/15 bg-gradient-to-b from-primary/5 to-surface p-5">
+            <div>
+              <h3 className="font-heading text-base font-semibold text-primary">
+                {isBatch ? "Ajuster la sélection" : "Ajuster le stock"}
+              </h3>
+              <p className="mt-1 text-sm text-muted">
+                {isBatch
+                  ? canEditTotal
+                    ? "Stock actuel du magasin, quantité à ajouter (positive) et total modifiable par ligne."
+                    : "Stock actuel du magasin — saisissez la quantité à ajouter (positive) par produit."
+                  : canEditTotal
+                    ? "Saisissez la quantité à ajouter ou le nouveau total."
+                    : "Indiquez combien d'unités ajouter au stock actuel."}
               </p>
             </div>
 
-            {!hasSelection ? (
-              <div className="flex min-h-[160px] items-center justify-center border border-dashed border-primary/25 bg-background/60 px-4 text-center text-sm text-muted">
-                Ajoutez des produits à l&apos;étape 1
-              </div>
-            ) : isBatch ? (
-              <div className="space-y-4">
-                {canEditTotal && (
+            {isBatch ? (
+              <div className="w-full space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <Input
-                    label="Ajouter la même quantité à tous"
+                    label={`Ajouter la même quantité à tous (${selectedProducts.length})`}
                     type="number"
                     min="0"
                     step="1"
                     value={addQty}
                     onChange={(e) => onAddQtyChange(sanitizeStockQtyInput(e.target.value))}
-                    placeholder="Ex: 5"
+                    placeholder="Ex: 10 (0 = référencer au magasin)"
+                    inputSize="lg"
                   />
-                )}
-
-                {!canEditTotal && (
-                  <>
-                    <Input
-                      label={`Quantité à ajouter à chaque produit (${selectedProducts.length})`}
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={addQty}
-                      onChange={(e) => onAddQtyChange(sanitizeStockQtyInput(e.target.value))}
-                      placeholder="Ex: 10"
-                      required
-                      autoFocus
-                    />
+                  {!canEditTotal && (
                     <Input
                       label="Notes (optionnel)"
                       value={notes}
                       onChange={(e) => onNotesChange(e.target.value)}
-                      placeholder="Ex: Livraison fournisseur, réassort..."
+                      placeholder="Livraison, réassort…"
+                      inputSize="lg"
                     />
-                  </>
-                )}
+                  )}
+                </div>
 
-                <div className="overflow-hidden rounded-lg border border-border">
-                  <table className="w-full text-sm">
+                <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+                  <table className="w-full min-w-[640px] text-sm">
                     <thead>
-                      <tr className="border-b border-border bg-primary-light/40">
-                        <th className="px-3 py-2 text-left font-medium text-muted">Produit</th>
-                        <th className="px-3 py-2 text-right font-medium text-muted">Actuel</th>
-                        {canEditTotal ? (
-                          <th className="px-3 py-2 text-right font-medium text-muted">Nouveau</th>
-                        ) : (
-                          <th className="px-3 py-2 text-right font-medium text-muted">Après</th>
-                        )}
+                      <tr className="border-b border-border bg-primary-light/30">
+                        <th className="px-4 py-3 text-left font-medium text-muted">Produit</th>
+                        <th className="px-4 py-3 text-right font-medium text-muted">
+                          Stock actuel{storeName ? ` — ${storeName}` : " magasin"}
+                        </th>
+                        <th className="px-4 py-3 text-right font-medium text-muted">
+                          Stock à ajouter
+                        </th>
+                        <th className="px-4 py-3 text-right font-medium text-muted">
+                          Total en magasin
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedProducts.map((product) => {
-                        const afterQty = canEditTotal
-                          ? parseInt(perProductTotals[product.id] ?? String(product.stock), 10) ||
-                            product.stock
+                        const rowAddRaw = perProductAdds[product.id] ?? addQty;
+                        const parsedAdd = Math.max(0, parseInt(rowAddRaw, 10) || 0);
+                        const rawTotal = perProductTotals[product.id] ?? String(product.stock);
+                        const parsedTotal = parseInt(rawTotal, 10);
+                        const totalInStore = canEditTotal
+                          ? Number.isNaN(parsedTotal)
+                            ? product.stock
+                            : parsedTotal
                           : product.stock + parsedAdd;
+
                         return (
                           <tr key={product.id} className="border-b border-border last:border-b-0">
-                            <td className="px-3 py-2">
-                              <p className="truncate font-medium">{product.name}</p>
-                              <p className="font-mono text-xs text-muted">{product.barcode}</p>
+                            <td className="px-4 py-3">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <ProductImage product={product} size="sm" className="h-12 w-12 shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="truncate font-medium">{product.name}</p>
+                                  <p className="font-mono text-xs text-muted">{product.barcode}</p>
+                                </div>
+                              </div>
                             </td>
-                            <td className="px-3 py-2 text-right tabular-nums">{product.stock}</td>
-                            <td className="px-3 py-2 text-right">
+                            <td className="px-4 py-3 text-right tabular-nums font-medium">
+                              {product.stock}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={rowAddRaw}
+                                onChange={(e) =>
+                                  onPerProductAddChange(
+                                    product.id,
+                                    sanitizeStockQtyInput(e.target.value)
+                                  )
+                                }
+                                placeholder="0"
+                                className="natus-field ml-auto w-28 bg-page px-3 py-2.5 text-right text-base tabular-nums"
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-right">
                               {canEditTotal ? (
                                 <input
                                   type="number"
                                   min="0"
                                   step="1"
-                                  value={perProductTotals[product.id] ?? String(product.stock)}
+                                  value={rawTotal}
                                   onChange={(e) =>
                                     onPerProductTotalChange(
                                       product.id,
                                       sanitizeStockQtyInput(e.target.value)
                                     )
                                   }
-                                  className="natus-field w-20 bg-surface py-1 text-right text-sm tabular-nums"
+                                  className="natus-field ml-auto w-28 bg-page px-3 py-2.5 text-right text-base tabular-nums"
                                 />
                               ) : (
                                 <span className="font-semibold text-primary tabular-nums">
-                                  {afterQty}
+                                  {totalInStore}
                                 </span>
                               )}
                             </td>
@@ -377,37 +365,18 @@ export function AddStockCard({
                 </div>
               </div>
             ) : singleProduct ? (
-              <>
-                <div className="border border-primary/25 bg-primary/5 p-4">
-                  <div className="flex items-center gap-3">
-                    <ProductImage product={singleProduct} size="md" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold leading-tight">{singleProduct.name}</p>
-                      <p className="mt-1 font-mono text-xs text-muted">{singleProduct.barcode}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="border border-border bg-background px-2 py-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
-                      Actuel
-                    </p>
-                    <p className="mt-1 text-xl font-bold">{currentStock}</p>
-                  </div>
-                  <div className="border border-primary/30 bg-primary/10 px-2 py-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-primary">
-                      {canEditTotal ? "Ajust." : "Ajout"}
-                    </p>
-                    <p className="mt-1 text-xl font-bold text-primary">
-                      {canEditTotal ? (parsedAdd > 0 ? `+${parsedAdd}` : "—") : addQty || "—"}
-                    </p>
-                  </div>
-                  <div className="border border-primary/40 bg-primary/15 px-2 py-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-foreground">
-                      Nouveau
-                    </p>
-                    <p className="mt-1 text-xl font-bold">{previewTotal}</p>
+              <div className="w-full space-y-4">
+                <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center">
+                  <ProductImage product={singleProduct} size="sm" className="h-20 w-20 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold leading-tight">{singleProduct.name}</p>
+                    <p className="mt-1 font-mono text-xs text-muted">{singleProduct.barcode}</p>
+                    <Badge
+                      variant={currentStock < 10 ? "warning" : "success"}
+                      className="mt-3 w-fit"
+                    >
+                      Stock actuel : {currentStock}
+                    </Badge>
                   </div>
                 </div>
 
@@ -426,56 +395,51 @@ export function AddStockCard({
                     label="Notes (optionnel)"
                     value={notes}
                     onChange={(e) => onNotesChange(e.target.value)}
-                    placeholder="Ex: Livraison fournisseur, réassort..."
+                    placeholder="Livraison, réassort…"
                   />
                 )}
-              </>
+              </div>
             ) : null}
-          </section>
-        </div>
 
-        {(error || success) && (
-          <div className="mt-6">
-            {error && (
-              <p className="rounded-lg bg-danger/10 px-4 py-2.5 text-sm text-danger">{error}</p>
+            {(error || success) && (
+              <div className="space-y-2">
+                {error && (
+                  <p className="rounded-lg bg-danger/10 px-4 py-2.5 text-sm text-danger">{error}</p>
+                )}
+                {success && (
+                  <p className="rounded-lg bg-success/10 px-4 py-2.5 text-sm text-success">
+                    {success}
+                  </p>
+                )}
+              </div>
             )}
-            {success && (
-              <p className="rounded-lg bg-success/10 px-4 py-2.5 text-sm text-success">
-                {success}
+
+            <div className="flex flex-col gap-3 border-t border-border/80 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted">
+                {isBatch
+                  ? canEditTotal
+                    ? `${selectedProducts.length} produits — stock actuel, ajout et total modifiables`
+                    : parsedAdd === 0 && !addQty
+                      ? `${selectedProducts.length} produit(s) — quantité 0 = référencer au magasin`
+                      : `Ajout par produit · total calculé automatiquement`
+                  : canEditTotal
+                    ? "Enregistrement du nouveau stock total (0 autorisé)"
+                    : "Quantité 0 = référencer au magasin sans ajout"}
               </p>
-            )}
+              <Button type="submit" loading={loading} className="w-full sm:w-auto sm:min-w-[220px]">
+                <PackagePlus className="h-4 w-4" />
+                {isBatch
+                  ? canEditTotal
+                    ? `Enregistrer ${selectedProducts.length} produits`
+                    : `Ajouter à ${selectedProducts.length} produits`
+                  : canEditTotal
+                    ? "Enregistrer le stock"
+                    : "Ajouter au stock"}
+              </Button>
+            </div>
           </div>
         )}
-
-        <div className="mt-6 flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-muted">
-            {hasSelection
-              ? isBatch
-                ? canEditTotal
-                  ? `${selectedProducts.length} produits seront mis à jour`
-                  : `+${parsedAdd || "…"} unité(s) par produit (${selectedProducts.length} produits)`
-                : canEditTotal
-                  ? "Modification directe du stock total"
-                  : "Seules les quantités positives sont acceptées"
-              : "Complétez l'étape 1 pour valider"}
-          </p>
-          <Button
-            type="submit"
-            loading={loading}
-            disabled={!hasSelection}
-            className="w-full sm:w-auto sm:min-w-[200px]"
-          >
-            <PackagePlus className="h-4 w-4" />
-            {isBatch
-              ? canEditTotal
-                ? `Enregistrer (${selectedProducts.length})`
-                : `Ajouter à ${selectedProducts.length} produits`
-              : canEditTotal
-                ? "Enregistrer le stock"
-                : "Ajouter au stock"}
-          </Button>
-        </div>
       </form>
-    </div>
+    </Card>
   );
 }

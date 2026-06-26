@@ -4,7 +4,8 @@ import { getCustomHomePath, isStoreScopedManager } from "@/lib/user-page-access"
 export const MANAGEMENT_ROLES = ["directeur", "admin", "manager"] as const;
 export type ManagementRole = (typeof MANAGEMENT_ROLES)[number];
 
-export const STOCK_MANAGEMENT_ROLES = ["directeur", "admin", "manager", "hub"] as const;
+export const STOCK_MANAGEMENT_ROLES = ["directeur", "admin", "hub"] as const;
+export const STOCK_READ_ROLES = ["directeur", "admin", "manager", "hub"] as const;
 
 export function isDirector(profile: Pick<Profile, "role">): boolean {
   return profile.role === "directeur" || profile.role === "admin";
@@ -125,6 +126,20 @@ export function canManageStore(
   return false;
 }
 
-export function canEditStockTotal(profile: Pick<Profile, "role">): boolean {
-  return isDirector(profile) || isHub(profile);
+/** Peut modifier le stock (directeur : partout, dépôt : dépôts uniquement, gérant : non). */
+export function canModifyStock(
+  profile: Pick<Profile, "role">,
+  store?: Pick<Store, "is_hub"> | null
+): boolean {
+  if (isDirector(profile)) return true;
+  if (isHub(profile)) return Boolean(store?.is_hub);
+  return false;
+}
+
+/** Peut saisir le stock total (même règles que canModifyStock). */
+export function canEditStockTotal(
+  profile: Pick<Profile, "role">,
+  store?: Pick<Store, "is_hub"> | null
+): boolean {
+  return canModifyStock(profile, store);
 }

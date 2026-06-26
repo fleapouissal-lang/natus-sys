@@ -90,12 +90,6 @@ export default async function ManagerPlanningPage({
         </p>
       </div>
 
-      <PlanningCashierRoster
-        storeId={selectedStoreId}
-        storeName={selectedStore?.name || "—"}
-        cashiers={rosterCashiers}
-      />
-
       <Suspense fallback={null}>
         <CashierScheduleManager
           stores={stores}
@@ -108,6 +102,12 @@ export default async function ManagerPlanningPage({
           selectedStoreId={selectedStoreId}
         />
       </Suspense>
+
+      <PlanningCashierRoster
+        storeId={selectedStoreId}
+        storeName={selectedStore?.name || "—"}
+        cashiers={rosterCashiers}
+      />
     </div>
   );
 }

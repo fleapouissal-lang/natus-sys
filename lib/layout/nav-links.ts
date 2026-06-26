@@ -60,7 +60,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 1 },
       { href: "/hub/stock", label: "Stock", icon: Warehouse, mobileOrder: 2 },
       { href: "/hub/hub-stock", label: "Entrepôt", icon: Boxes, mobileOrder: 3 },
-      { href: "/hub/activity", label: "Activité", icon: ClipboardList, mobileOrder: 4 },
+      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 4 },
       { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 5 },
     ];
   }
@@ -84,7 +84,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 4 },
     { href: `${basePath}/products`, label: "Produits", icon: Package, mobileOrder: 5 },
     { href: `${basePath}/stores`, label: "Magasins", icon: Store, mobileOrder: 6 },
-    { href: `${basePath}/activity`, label: "Activité", icon: ClipboardList, mobileOrder: 7 },
+    { href: `${basePath}/activity`, label: "Historique", icon: ClipboardList, mobileOrder: 7 },
     { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 8 }
   );
 

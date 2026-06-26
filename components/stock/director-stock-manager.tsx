@@ -12,11 +12,13 @@ export function DirectorStockManager({
   stores,
   products,
   selectedStoreId,
+  canModifyStock,
   canEditTotal,
 }: {
   stores: Store[];
   products: Product[];
   selectedStoreId: string | null;
+  canModifyStock: boolean;
   canEditTotal: boolean;
 }) {
   const router = useRouter();
@@ -77,6 +79,7 @@ export function DirectorStockManager({
           stores={stores}
           products={products}
           defaultStoreId={selectedStoreId}
+          canModifyStock={canModifyStock}
           canEditTotal={canEditTotal}
         />
       ) : (

@@ -1,6 +1,11 @@
 import { Suspense } from "react";
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter } from "@/lib/permissions";
+import {
+  canEditStockTotal,
+  canModifyStock,
+  getCityFilter,
+  isDirector,
+} from "@/lib/permissions";
 import { getActiveStores, getProductsWithStoreStock } from "@/lib/inventory";
 import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store";
 import { ProductsManager } from "@/components/products/products-manager";
@@ -22,6 +27,10 @@ export default async function ProductsPage({
     ? await getProductsWithStoreStock(storeId, { includeParents: true })
     : [];
 
+  const canModify = profile && selectedStore ? canModifyStock(profile, selectedStore) : false;
+  const canEditTotal =
+    profile && selectedStore ? canEditStockTotal(profile, selectedStore) : false;
+
   return (
     <div className="animate-fade-in space-y-4">
       <Suspense fallback={null}>
@@ -35,8 +44,9 @@ export default async function ProductsPage({
           allStores={allStores}
           defaultStoreId={storeId}
           selectedStoreName={selectedStore.name}
-          canEditStockTotal={profile?.role === "directeur"}
-          canEditBarcode={profile?.role === "directeur"}
+          canModifyStock={canModify}
+          canEditStockTotal={canEditTotal}
+          canEditBarcode={profile ? isDirector(profile) : false}
         />
       ) : (
         <p className="text-center text-muted py-12">

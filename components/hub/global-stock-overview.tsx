@@ -11,7 +11,7 @@ import { ProductImage } from "@/components/pos/product-image";
 import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { formatCurrency } from "@/lib/utils";
-import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
+import { INVENTORY_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product } from "@/lib/types";
 
 export function GlobalStockOverview({
@@ -50,7 +50,7 @@ export function GlobalStockOverview({
     rangeStart,
     rangeEnd,
     totalItems,
-  } = usePagination(filteredProducts, DEFAULT_PAGE_SIZE, filterToken);
+  } = usePagination(filteredProducts, INVENTORY_PAGE_SIZE, filterToken);
 
   const totalUnits = useMemo(
     () => products.reduce((sum, p) => sum + p.stock, 0),
