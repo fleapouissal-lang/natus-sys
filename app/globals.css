@@ -118,9 +118,255 @@
   filter: none;
 }
 
-/* Page publique carte fidélité */
+/* Page publique carte fidélité / espace client */
 .loyalty-carte-page {
-  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--page);
+}
+
+.loyalty-client-portal {
+  min-height: 100dvh;
+}
+
+.loyalty-client-portal-sidebar {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  background: linear-gradient(
+    175deg,
+    #f7ead8 0%,
+    var(--sidebar) 38%,
+    #dcc4a3 100%
+  ) !important;
+  box-shadow: inset -1px 0 0 rgba(179, 140, 74, 0.12);
+}
+
+.loyalty-portal-brand {
+  position: relative;
+}
+
+.loyalty-portal-brand::after {
+  content: "";
+  display: block;
+  width: 2.5rem;
+  height: 1px;
+  margin-top: 0.65rem;
+  background: linear-gradient(90deg, var(--primary), transparent);
+}
+
+.loyalty-portal-profile-card {
+  margin: 0 0.65rem;
+  padding: 1rem 0.85rem;
+  border: 1px solid rgba(179, 140, 74, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 253, 249, 0.72) 0%,
+    rgba(255, 255, 255, 0.38) 100%
+  );
+  box-shadow:
+    0 8px 24px rgba(74, 58, 38, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.loyalty-portal-avatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #1a1408 0%, #000000 100%);
+  color: var(--champagne);
+  font-family: var(--font-serif);
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.loyalty-portal-avatar::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(145deg, #d4b87a, var(--primary), #8a6835);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.loyalty-portal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(179, 140, 74, 0.35);
+  border-radius: 9999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary-dark);
+  background: rgba(255, 253, 249, 0.55);
+}
+
+.loyalty-portal-badge--active {
+  border-color: rgba(179, 140, 74, 0.55);
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+}
+
+.loyalty-portal-badge--pending {
+  border-color: rgba(179, 140, 74, 0.45);
+  color: var(--primary-dark);
+  background: rgba(250, 234, 161, 0.35);
+}
+
+.loyalty-portal-metrics {
+  margin-top: 0.85rem;
+  border-top: 1px solid rgba(179, 140, 74, 0.18);
+  padding-top: 0.75rem;
+}
+
+.loyalty-portal-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+}
+
+.loyalty-portal-metric-row + .loyalty-portal-metric-row {
+  border-top: 1px solid rgba(179, 140, 74, 0.12);
+}
+
+.loyalty-portal-metric-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.loyalty-portal-metric-value {
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a1408;
+  font-variant-numeric: tabular-nums;
+}
+
+.loyalty-portal-metric-value--gold {
+  color: var(--primary-dark);
+}
+
+.loyalty-portal-sidebar-divider {
+  height: 1px;
+  margin: 0 0.85rem;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(179, 140, 74, 0.35),
+    transparent
+  );
+}
+
+.loyalty-portal-sidebar-footer-btn {
+  border: 1px solid rgba(179, 140, 74, 0.28);
+  border-radius: 10px;
+  background: rgba(255, 253, 249, 0.45);
+  color: rgba(0, 0, 0, 0.72);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.loyalty-portal-sidebar-footer-btn:hover:not(:disabled) {
+  border-color: rgba(179, 140, 74, 0.5);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--primary-dark);
+}
+
+.loyalty-portal-sidebar-footer-btn--primary {
+  border-color: rgba(26, 20, 8, 0.85);
+  background: linear-gradient(135deg, #1a1408 0%, #000000 100%);
+  color: var(--champagne);
+}
+
+.loyalty-portal-sidebar-footer-btn--primary:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: #fff;
+  opacity: 0.92;
+}
+
+.loyalty-client-portal-main {
+  background: var(--page);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.loyalty-client-portal-sidebar .natus-sidebar-nav {
+  padding-right: 0;
+}
+
+.loyalty-client-portal-sidebar .natus-nav-link {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.loyalty-client-portal-sidebar--compact .natus-nav-link {
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0;
+}
+
+.loyalty-client-portal-sidebar--compact .natus-nav-link-active {
+  margin-left: 0;
+  padding: 0;
+  border-radius: 10px !important;
+  transform: none;
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.loyalty-client-portal-sidebar--compact .natus-nav-link-active::before,
+.loyalty-client-portal-sidebar--compact .natus-nav-link-active::after {
+  display: none;
+}
+
+.loyalty-client-portal-sidebar--compact .natus-nav-item-active {
+  margin: 0.35rem 0;
+}
+
+@media (min-width: 768px) {
+  .loyalty-client-portal-sidebar--compact .natus-nav-link {
+    justify-content: flex-start;
+    min-height: 48px;
+    padding: 0.7rem 1rem 0.7rem 1.15rem;
+  }
+
+  .loyalty-client-portal-sidebar--compact .natus-nav-link-active {
+    margin-left: -0.75rem;
+    padding-left: 1.9rem;
+    padding-right: 1.35rem;
+    border-radius: 24px 0 0 24px !important;
+    transform: translateX(4px);
+    background: var(--page) !important;
+    box-shadow: none;
+  }
+
+  .loyalty-client-portal-sidebar--compact .natus-nav-link-active::before,
+  .loyalty-client-portal-sidebar--compact .natus-nav-link-active::after {
+    display: block;
+  }
+
+  .loyalty-client-portal-sidebar--compact .natus-nav-item-active {
+    margin: 0.75rem 0;
+  }
 }
 
 .natus-nav-link:not(.natus-nav-link-active),

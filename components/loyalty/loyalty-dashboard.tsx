@@ -40,7 +40,11 @@ export function LoyaltyDashboard({
             <p className="text-sm text-muted">Classement par solde de points</p>
           </div>
           <Link
-            href={`${customerBasePath}/customers`}
+            href={
+              customerBasePath.startsWith("/director")
+                ? "/director/clients"
+                : `${customerBasePath}/customers`
+            }
             className="text-sm font-medium text-primary hover:underline"
           >
             Voir tous les clients →

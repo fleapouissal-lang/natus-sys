@@ -12,6 +12,7 @@ import { LoyaltyCardFlipShell } from "@/components/loyalty/loyalty-card-flip-she
 import { LoyaltyWalletCardNoir } from "@/components/loyalty/loyalty-wallet-card-noir";
 import { LoyaltyWalletCardCreme } from "@/components/loyalty/loyalty-wallet-card-creme";
 import { resolveLoyaltyCardVariant } from "@/lib/loyalty/card-variant";
+import { PRO_CLIENT_DISCOUNT_PERCENT } from "@/lib/pro-client/discount";
 import type { LoyaltyCardVariant, LoyaltyCustomer } from "@/lib/types";
 
 /** Palette référence carte champagne */
@@ -128,6 +129,8 @@ function LoyaltyCardFront({
   validUntil: string;
 }) {
   const pad = compact ? "px-4 py-3.5" : "px-5 py-4";
+  const isPro = Boolean(customer.is_pro_client);
+  const isProActive = Boolean(customer.is_pro_client && customer.pro_client_active);
 
   return (
     <ChampagneCardFace>
@@ -153,8 +156,23 @@ function LoyaltyCardFront({
           )}
           style={{ fontFamily: SERIF, color: BRONZE, letterSpacing: "0.06em" }}
         >
-          Loyalty Card
+          {isPro ? "Client Pro" : "Loyalty Card"}
         </p>
+        {isProActive && (
+          <p
+            className={cn(
+              "mt-1.5 rounded-full px-2 py-0.5 font-semibold uppercase tracking-[0.14em]",
+              compact ? "text-[7px]" : "text-[8px]"
+            )}
+            style={{
+              fontFamily: SANS,
+              color: METAL_BRONZE,
+              background: "rgba(197,179,153,0.35)",
+            }}
+          >
+            -{PRO_CLIENT_DISCOUNT_PERCENT}%
+          </p>
+        )}
         <p
           className={cn(
             "mt-3 font-medium tracking-[0.14em]",

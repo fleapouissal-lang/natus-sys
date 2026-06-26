@@ -9,6 +9,7 @@ export const viewport: Viewport = {
   themeColor: "#B38C4A",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export async function generateMetadata({
@@ -21,14 +22,15 @@ export async function generateMetadata({
 
   if (!data) {
     return {
-      title: "Carte fidélité — Natus",
+      title: "Espace client — Natus",
     };
   }
 
   const firstName = data.customer.full_name.trim().split(/\s+/)[0] || "Client";
+  const isPro = Boolean(data.customer.is_pro_client);
 
   return {
-    title: `Espace client ${data.customer.full_name} — Natus`,
+    title: `${isPro ? "Client Pro" : "Espace client"} · ${data.customer.full_name} — Natus`,
     description: `Carte fidélité Natus — ${data.customer.loyalty_points} points`,
     manifest: `/api/loyalty/manifest/${token}`,
     appleWebApp: {
@@ -67,12 +69,10 @@ export default async function LoyaltyCardPage({
   const loyaltySettings = await getPublicLoyaltySettings();
 
   return (
-    <div className="px-4 py-8 sm:px-6">
-      <LoyaltyCardClientView
-        initialCustomer={toPublicLoyaltyCustomer(data.customer)}
-        initialTransactions={data.transactions}
-        loyaltySettings={loyaltySettings}
-      />
-    </div>
+    <LoyaltyCardClientView
+      initialCustomer={toPublicLoyaltyCustomer(data.customer)}
+      initialTransactions={data.transactions}
+      loyaltySettings={loyaltySettings}
+    />
   );
 }

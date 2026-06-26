@@ -136,6 +136,7 @@ export interface LoyaltyCustomer {
   company_name?: string | null;
   city?: string | null;
   address?: string | null;
+  is_active?: boolean;
   apple_wallet_pass_id: string | null;
   google_wallet_pass_id: string | null;
   created_at: string;

@@ -15,7 +15,6 @@ import {
   AlertTriangle,
   MessageSquare,
   FileText,
-  BriefcaseBusiness,
   CalendarClock,
   Newspaper,
   Settings,
@@ -89,9 +88,9 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       mobileOrder: 6,
     });
     links.splice(11, 0, {
-      href: "/director/pro-clients",
-      label: "Client Pro",
-      icon: BriefcaseBusiness,
+      href: "/director/clients",
+      label: "Clients",
+      icon: Users,
       mobileOrder: 10,
     });
     links.splice(12, 0, {

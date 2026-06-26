@@ -1029,7 +1029,7 @@ export async function lookupLoyaltyCustomerByPhone(
   const supabase = await createClient();
   const customer = await getCustomerByPhone(supabase, phone);
   if (!customer) return { error: "Client introuvable" };
-  const blocked = proClientLookupError(customer);
+  const blocked = customerLookupError(customer);
   if (blocked) return { error: blocked };
   const notes = await getCustomerNotes(supabase, customer.id, 8);
   return { customer, notes };
@@ -1056,7 +1056,7 @@ export async function lookupLoyaltyCustomer(
     const supabase = await createClient();
     const customer = await getCustomerByCardOrToken(supabase, scanPayload);
     if (!customer) return { error: "Carte fidélité introuvable" };
-    const blocked = proClientLookupError(customer);
+    const blocked = customerLookupError(customer);
     if (blocked) return { error: blocked };
     const notes = await getCustomerNotes(supabase, customer.id, 8);
     return { customer, notes };
@@ -3029,9 +3029,12 @@ export async function deactivatePlanningCashier(
   return { success: true };
 }
 
-function proClientLookupError(
+function customerLookupError(
   customer: import("@/lib/types").LoyaltyCustomer
 ): string | null {
+  if (customer.is_active === false) {
+    return "Client désactivé par le directeur";
+  }
   if (customer.is_pro_client && !customer.pro_client_active) {
     return "Client pro en attente d'activation par le directeur";
   }
@@ -3088,12 +3091,64 @@ export async function toggleProClientActive(
 
   if (error) return { error: error.message };
 
+  revalidatePath("/director/clients");
   revalidatePath("/director/pro-clients");
   revalidatePath("/director/loyalty");
   revalidatePath("/director/loyalty/customers");
   revalidatePath("/manager/loyalty");
   revalidatePath("/cashier/pos");
   return { success: true, customer: data as import("@/lib/types").LoyaltyCustomer };
+}
+
+export async function toggleLoyaltyCustomerActive(
+  customerId: string,
+  active: boolean
+): Promise<{ success: true; customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("toggle_loyalty_customer_active", {
+    p_customer_id: customerId,
+    p_active: active,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/director/clients");
+  revalidatePath("/director/loyalty/customers");
+  revalidatePath("/director/loyalty");
+  revalidatePath("/cashier/pos");
+  return { success: true, customer: data as import("@/lib/types").LoyaltyCustomer };
+}
+
+export async function deleteLoyaltyCustomer(
+  customerId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_loyalty_customer", {
+    p_customer_id: customerId,
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (message.includes("foreign key") || message.includes("violates")) {
+      return {
+        error:
+          "Suppression impossible : ce client a de l'historique (ventes, points…). Désactivez-le à la place.",
+      };
+    }
+    return { error: error.message };
+  }
+
+  revalidatePath("/director/clients");
+  revalidatePath("/director/loyalty/customers");
+  revalidatePath("/director/loyalty");
+  revalidatePath("/cashier/pos");
+  return { success: true };
 }
 
 export async function deleteProClientCustomer(
@@ -3118,6 +3173,7 @@ export async function deleteProClientCustomer(
     return { error: error.message };
   }
 
+  revalidatePath("/director/clients");
   revalidatePath("/director/pro-clients");
   revalidatePath("/director/loyalty");
   revalidatePath("/director/loyalty/customers");
