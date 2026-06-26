@@ -17,9 +17,13 @@ import type { Product } from "@/lib/types";
 export function GlobalStockOverview({
   products,
   storeCount,
+  retailStoreCount,
+  hubStoreCount = 0,
 }: {
   products: Product[];
   storeCount: number;
+  retailStoreCount?: number;
+  hubStoreCount?: number;
 }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -59,16 +63,28 @@ export function GlobalStockOverview({
 
   const hasFilters = Boolean(search || category);
 
+  const retailCount = retailStoreCount ?? storeCount;
+  const depotCount = hubStoreCount;
+
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <p className="text-sm text-muted">Magasins actifs</p>
+          <p className="text-sm text-muted">Magasins retail</p>
           <p className="mt-1 flex items-center gap-2 text-3xl font-bold">
             <Store className="h-7 w-7 text-primary" />
-            {storeCount}
+            {retailCount}
           </p>
         </Card>
+        {depotCount > 0 && (
+          <Card>
+            <p className="text-sm text-muted">Dépôts / entrepôts</p>
+            <p className="mt-1 flex items-center gap-2 text-3xl font-bold">
+              <Package className="h-7 w-7 text-primary" />
+              {depotCount}
+            </p>
+          </Card>
+        )}
         <Card>
           <p className="text-sm text-muted">Produits en stock</p>
           <p className="mt-1 text-3xl font-bold">
@@ -79,7 +95,7 @@ export function GlobalStockOverview({
           </p>
         </Card>
         <Card>
-          <p className="text-sm text-muted">Unités totales (tous magasins)</p>
+          <p className="text-sm text-muted">Unités totales (réseau)</p>
           <p className="mt-1 flex items-center gap-2 text-3xl font-bold">
             <Package className="h-7 w-7 text-primary" />
             {totalUnits}
@@ -95,7 +111,7 @@ export function GlobalStockOverview({
         <div className="natus-filter-bar overflow-visible border-b border-border p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-medium text-primary">
-              Stock global — tous les magasins
+              Stock global — magasins + dépôts
             </p>
             <div className="flex items-center gap-3">
               {hasFilters && (

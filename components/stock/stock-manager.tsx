@@ -13,18 +13,29 @@ import type { Product, Store } from "@/lib/types";
 
 type ProductPickMode = "select" | "scan";
 
+function buildTotalsMap(products: Product[], ids: string[]) {
+  const map: Record<string, string> = {};
+  for (const id of ids) {
+    const product = products.find((item) => item.id === id);
+    if (product) map[id] = String(product.stock);
+  }
+  return map;
+}
+
 export function StockManager({
   stores,
   products,
   defaultStoreId,
   cityLabel,
   canEditTotal,
+  embedded = false,
 }: {
   stores: Store[];
   products: Product[];
   defaultStoreId: string;
   cityLabel?: string;
   canEditTotal: boolean;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -34,7 +45,8 @@ export function StockManager({
       ? "/hub"
       : "/manager";
   const [storeId, setStoreId] = useState(defaultStoreId);
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [perProductTotals, setPerProductTotals] = useState<Record<string, string>>({});
   const [addQty, setAddQty] = useState("");
   const [newTotal, setNewTotal] = useState("");
   const [notes, setNotes] = useState("");
@@ -46,18 +58,51 @@ export function StockManager({
   const [scanQuery, setScanQuery] = useState("");
 
   const selectedStore = stores.find((s) => s.id === storeId);
-  const selectedProduct = products.find((p) => p.id === selectedId);
-  const currentStock = selectedProduct?.stock ?? 0;
+  const singleProduct =
+    selectedIds.length === 1
+      ? products.find((product) => product.id === selectedIds[0])
+      : undefined;
+  const currentStock = singleProduct?.stock ?? 0;
   const { syncFromAdd, syncFromTotal } = useStockAdjustment(currentStock);
 
-  function handleProductChange(id: string) {
-    setSelectedId(id);
+  function handleSelectionChange(ids: string[]) {
+    setSelectedIds(ids);
     setError("");
     setScanHint("");
-    const product = products.find((p) => p.id === id);
-    const stock = product?.stock ?? 0;
+    setPerProductTotals(buildTotalsMap(products, ids));
+
+    if (ids.length === 1) {
+      const product = products.find((item) => item.id === ids[0]);
+      setNewTotal(String(product?.stock ?? 0));
+    } else {
+      setNewTotal("");
+    }
     setAddQty("");
-    setNewTotal(String(stock));
+  }
+
+  function handleRemoveProduct(productId: string) {
+    handleSelectionChange(selectedIds.filter((id) => id !== productId));
+  }
+
+  function addProductToSelection(productId: string) {
+    setSelectedIds((prev) => {
+      if (prev.includes(productId)) {
+        setScanHint("Produit déjà dans la sélection");
+        setTimeout(() => setScanHint(""), 2000);
+        return prev;
+      }
+      const next = [...prev, productId];
+      setPerProductTotals(buildTotalsMap(products, next));
+      setAddQty("");
+      if (next.length === 1) {
+        const product = products.find((item) => item.id === productId);
+        setNewTotal(String(product?.stock ?? 0));
+      } else {
+        setNewTotal("");
+      }
+      return next;
+    });
+    setError("");
   }
 
   const handleBarcodeScan = useCallback(
@@ -65,9 +110,9 @@ export function StockManager({
       const trimmed = code.trim();
       if (!trimmed) return;
       setScanQuery(trimmed);
-      const found = products.find((p) => p.barcode === trimmed);
+      const found = products.find((product) => product.barcode === trimmed);
       if (found) {
-        handleProductChange(found.id);
+        addProductToSelection(found.id);
         setScanHint("");
         setScanQuery("");
       } else {
@@ -106,7 +151,23 @@ export function StockManager({
 
   function handleAddQtyChange(value: string) {
     setAddQty(value);
-    setNewTotal(syncFromAdd(value));
+
+    if (selectedIds.length === 1 && singleProduct) {
+      setNewTotal(syncFromAdd(value));
+      return;
+    }
+
+    if (selectedIds.length > 1 && canEditTotal) {
+      const add = Math.max(0, parseInt(value, 10) || 0);
+      setPerProductTotals(
+        Object.fromEntries(
+          selectedIds.map((id) => {
+            const product = products.find((item) => item.id === id);
+            return [id, String(Math.max(0, (product?.stock ?? 0) + add))];
+          })
+        )
+      );
+    }
   }
 
   function handleNewTotalChange(value: string) {
@@ -114,99 +175,132 @@ export function StockManager({
     setAddQty(syncFromTotal(value));
   }
 
+  function handlePerProductTotalChange(productId: string, value: string) {
+    setPerProductTotals((prev) => ({ ...prev, [productId]: value }));
+  }
+
   async function handleAddStock(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedId || !storeId) return;
+    if (selectedIds.length === 0 || !storeId) return;
 
     setLoading(true);
     setError("");
     setSuccess("");
 
-    let result;
+    const failures: string[] = [];
+    let successCount = 0;
+
     if (canEditTotal) {
-      const total = parseInt(newTotal);
-      if (isNaN(total) || total < 0) {
-        setError("Stock invalide");
-        setLoading(false);
-        return;
+      for (const productId of selectedIds) {
+        const total = parseInt(
+          selectedIds.length === 1
+            ? newTotal
+            : (perProductTotals[productId] ?? ""),
+          10
+        );
+        if (isNaN(total) || total < 0) {
+          failures.push("Stock invalide pour un ou plusieurs produits");
+          continue;
+        }
+        const result = await setProductStock(productId, total, storeId);
+        if (result.error) failures.push(result.error);
+        else successCount += 1;
       }
-      result = await setProductStock(selectedId, total, storeId);
     } else {
-      const add = parseInt(addQty);
+      const add = parseInt(addQty, 10);
       if (isNaN(add) || add <= 0) {
         setError("La quantité doit être un nombre positif (minimum 1)");
         setLoading(false);
         return;
       }
-      result = await addStock(selectedId, add, storeId, notes || undefined);
+
+      for (const productId of selectedIds) {
+        const result = await addStock(productId, add, storeId, notes || undefined);
+        if (result.error) failures.push(result.error);
+        else successCount += 1;
+      }
     }
 
-    if (result.error) {
-      setError(result.error);
+    if (failures.length > 0) {
+      setError(
+        successCount > 0
+          ? `${successCount} produit(s) mis à jour · ${failures[0]}`
+          : failures[0]
+      );
     } else {
-      setSuccess(canEditTotal ? "Stock mis à jour" : "Stock ajouté avec succès");
+      setSuccess(
+        selectedIds.length > 1
+          ? `Stock mis à jour pour ${successCount} produit(s)`
+          : canEditTotal
+            ? "Stock mis à jour"
+            : "Stock ajouté avec succès"
+      );
       setAddQty("");
       setNotes("");
       setScanQuery("");
-      if (!canEditTotal) {
-        setSelectedId("");
-      }
-      if (pickMode === "scan") {
-        focusInput();
-      }
+      setSelectedIds([]);
+      setPerProductTotals({});
+      setNewTotal("");
+      if (pickMode === "scan") focusInput();
       router.refresh();
     }
+
     setLoading(false);
   }
 
   const lowStockProducts = products.filter((p) => p.stock > 0 && p.stock < 10);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Stock</h1>
-        <p className="mt-1 text-muted">
-          {canEditTotal
-            ? "Modifier ou ajouter du stock par magasin"
-            : "Ajouter du stock par magasin"}
-          {cityLabel && ` — ${cityLabel}`}
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader title="Magasin" description="Sélectionnez le magasin à gérer" />
-        <StoreSelect
-          stores={stores}
-          value={storeId}
-          onChange={(id) => {
-            setStoreId(id);
-            router.push(`${basePath}/stock?store=${id}`);
-          }}
-        />
-        {selectedStore && (
-          <p className="mt-2 text-sm text-muted">
-            {selectedStore.address}, {selectedStore.city}
+    <div className={embedded ? "space-y-6" : "space-y-6 animate-fade-in"}>
+      {!embedded && (
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Stock</h1>
+          <p className="mt-1 text-muted">
+            {canEditTotal
+              ? "Modifier ou ajouter du stock par magasin"
+              : "Ajouter du stock par magasin"}
+            {cityLabel && ` — ${cityLabel}`}
           </p>
-        )}
-      </Card>
+        </div>
+      )}
+
+      {!embedded && (
+        <Card>
+          <CardHeader title="Magasin" description="Sélectionnez le magasin à gérer" />
+          <StoreSelect
+            stores={stores}
+            value={storeId}
+            onChange={(id) => {
+              setStoreId(id);
+              setSelectedIds([]);
+              setPerProductTotals({});
+              router.push(`${basePath}/stock?store=${id}`);
+            }}
+          />
+          {selectedStore && (
+            <p className="mt-2 text-sm text-muted">
+              {selectedStore.address}, {selectedStore.city}
+            </p>
+          )}
+        </Card>
+      )}
 
       <AddStockCard
         title={canEditTotal ? "Ajouter ou modifier le stock" : "Ajouter du stock"}
         description={
           canEditTotal
-            ? "Ajustement direct réservé au directeur"
-            : "Réapprovisionnez le magasin en quelques étapes"
+            ? "Sélection multiple ou scan — ajustez puis enregistrez en une fois"
+            : "Sélection multiple ou scan — même quantité ajoutée à tous les produits"
         }
         storeName={selectedStore?.name}
         canEditTotal={canEditTotal}
         products={products}
-        selectedId={selectedId}
-        selectedProduct={selectedProduct}
+        selectedIds={selectedIds}
         pickMode={pickMode}
         addQty={addQty}
         newTotal={newTotal}
+        perProductTotals={perProductTotals}
         notes={notes}
-        currentStock={currentStock}
         loading={loading}
         error={error}
         success={success}
@@ -214,13 +308,14 @@ export function StockManager({
         scanQuery={scanQuery}
         scannerActive={scannerActive}
         inputRef={inputRef}
-        onPickModeChange={(mode) => {
-          setPickMode(mode);
-        }}
+        onPickModeChange={setPickMode}
         onFocusScanner={() => focusInput()}
-        onProductChange={handleProductChange}
+        onSelectionChange={handleSelectionChange}
+        onRemoveProduct={handleRemoveProduct}
+        onClearSelection={() => handleSelectionChange([])}
         onAddQtyChange={handleAddQtyChange}
         onNewTotalChange={handleNewTotalChange}
+        onPerProductTotalChange={handlePerProductTotalChange}
         onNotesChange={setNotes}
         onScanKeyDown={handleKeyDown}
         onScanChange={handleScanChange}

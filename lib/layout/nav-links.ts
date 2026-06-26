@@ -101,12 +101,6 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   );
 
   if (basePath === "/director") {
-    links.splice(6, 0, {
-      href: "/director/hub",
-      label: "Hub stock",
-      icon: Boxes,
-      mobileOrder: 6,
-    });
     const loyaltyIdx = links.findIndex((link) => link.href === `${basePath}/loyalty`);
     if (loyaltyIdx >= 0) {
       links[loyaltyIdx] = {
@@ -188,6 +182,11 @@ export function isNavLinkActive(pathname: string, href: string): boolean {
   if (href === "/director/clients") {
     if (pathname === href) return true;
     if (pathname.startsWith("/director/loyalty")) return true;
+    return pathname.startsWith(`${href}/`);
+  }
+  if (href === "/director/stock") {
+    if (pathname === href || pathname.startsWith(`${href}?`)) return true;
+    if (pathname === "/director/hub" || pathname.startsWith("/director/hub/")) return true;
     return pathname.startsWith(`${href}/`);
   }
   if (pathname === href) return true;

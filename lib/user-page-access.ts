@@ -37,7 +37,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "planning", label: "Planning", description: "Horaires et équipes magasin", group: "operations" },
   { key: "pos", label: "Caisse", description: "Point de vente et encaissement", group: "operations" },
   { key: "sales", label: "Ventes", description: "Historique des ventes POS", group: "operations" },
-  { key: "stock", label: "Stock", description: "Inventaire et quantités magasin", group: "operations" },
+  { key: "stock", label: "Stock", description: "Vue globale et stock par magasin ou dépôt", group: "operations" },
   { key: "products", label: "Produits", description: "Catalogue et fiches produit", group: "admin" },
   { key: "stores", label: "Magasins", description: "Points de vente et paramètres", group: "admin" },
   { key: "activity", label: "Activité", description: "Journal des actions récentes", group: "admin" },
@@ -153,7 +153,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       return base ? `${base}/users` : null;
     case "hub_stock":
       return role === "directeur" || role === "admin"
-        ? "/director/hub"
+        ? "/director/stock"
         : base === "/hub"
           ? "/hub/hub-stock"
           : null;
@@ -213,6 +213,13 @@ export function getAllowedHrefsForProfile(
     keys.includes("loyalty")
   ) {
     hrefs.push("/director/loyalty");
+  }
+
+  if (
+    (profile.role === "directeur" || profile.role === "admin") &&
+    (keys.includes("stock") || keys.includes("hub_stock"))
+  ) {
+    hrefs.push("/director/hub");
   }
 
   hrefs.push(getSettingsPath(profile.role));

@@ -61,7 +61,7 @@ export async function getProductsWithStoreStock(
   });
 }
 
-/** Stock total par produit, agrégé sur tous les magasins actifs (optionnellement filtrés par ville). */
+/** Stock total par produit, agrégé sur tous les magasins et dépôts actifs (optionnellement filtrés par ville). */
 export async function getProductsWithTotalStock(
   city?: string | null
 ): Promise<Product[]> {

@@ -1,22 +1,8 @@
 import { redirect } from "next/navigation";
-import dynamic from "next/dynamic";
 import { requireRole } from "@/lib/auth";
 import { getActiveStores } from "@/lib/inventory";
 import { getHubAccounts, getHubStoreAssignmentsMap } from "@/lib/hub";
-
-const HubAccountsManager = dynamic(
-  () =>
-    import("@/components/hub/hub-accounts-manager").then((mod) => mod.HubAccountsManager),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="space-y-6" aria-busy="true" aria-label="Chargement des comptes dépôt">
-        <div className="h-9 w-56 animate-pulse rounded bg-primary-light/30" />
-        <div className="h-72 animate-pulse rounded-xl bg-primary-light/20" />
-      </div>
-    ),
-  }
-);
+import { HubAccountsManager } from "@/components/hub/hub-accounts-manager";
 
 export default async function DirectorHubsPage() {
   const profile = await requireRole(["directeur", "admin"]);
