@@ -81,19 +81,8 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
 
   links.push(
     { href: `${basePath}/sales`, label: "Ventes", icon: Receipt, mobileOrder: 3 },
-    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 4 }
-  );
-
-  if (basePath !== "/manager") {
-    links.push({
-      href: `${basePath}/products`,
-      label: "Produits",
-      icon: Package,
-      mobileOrder: 5,
-    });
-  }
-
-  links.push(
+    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 4 },
+    { href: `${basePath}/products`, label: "Produits", icon: Package, mobileOrder: 5 },
     { href: `${basePath}/stores`, label: "Magasins", icon: Store, mobileOrder: 6 },
     { href: `${basePath}/activity`, label: "Historique", icon: ClipboardList, mobileOrder: 7 },
     { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 8 }

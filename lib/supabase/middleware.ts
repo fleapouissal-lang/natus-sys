@@ -110,8 +110,7 @@ export async function updateSession(request: NextRequest) {
 
       if (
         pathname.startsWith("/manager/loyalty") ||
-        pathname.startsWith("/manager/invoices") ||
-        pathname.startsWith("/manager/products")
+        pathname.startsWith("/manager/invoices")
       ) {
         const url = request.nextUrl.clone();
         url.pathname = homePath;
