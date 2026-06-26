@@ -50,7 +50,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "hub_stock", label: "Hub stock", description: "Stock entrepôt central", group: "admin" },
   { key: "hubs", label: "Dépôts", description: "Comptes dépôt ville (indépendants des gérants)", group: "admin" },
   { key: "notes", label: "Notes", description: "Notes clients et suivi caisse", group: "clients" },
-  { key: "transfers", label: "Hub / transferts", description: "Réceptions et envois hub", group: "operations" },
+  { key: "transfers", label: "Commande hub", description: "Réceptions et envois hub", group: "operations" },
   { key: "hub_orders", label: "Commandes dépôt", description: "Commandes entrepôt vers magasins", group: "operations" },
   { key: "returns", label: "Retours", description: "Retours produits et SAV", group: "clients" },
   { key: "customers", label: "Fidélité caisse", description: "Clients fidélité en magasin", group: "clients" },

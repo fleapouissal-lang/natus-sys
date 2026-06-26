@@ -42,7 +42,7 @@ export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 2 },
   { href: "/cashier/sales", label: "Ventes", icon: History, mobileOrder: 3 },
   { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 4 },
-  { href: "/cashier/transfers", label: "Hub", icon: Boxes, mobileOrder: 5 },
+  { href: "/cashier/transfers", label: "Commande hub", icon: Boxes, mobileOrder: 5 },
   { href: "/cashier/customers", label: "Fidélité", icon: Gift, mobileOrder: 6 },
   { href: "/cashier/returns", label: "Retours", icon: RotateCcw, mobileOrder: 7 },
   { href: "/cashier/invoices", label: "Factures", icon: FileText, mobileOrder: 8 },
@@ -50,7 +50,7 @@ export const cashierLinks: NavLinkItem[] = [
 
 export const livreurLinks: NavLinkItem[] = [
   { href: "/livreur/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 0 },
-  { href: "/livreur/transfers", label: "Hub", icon: Boxes, mobileOrder: 1 },
+  { href: "/livreur/transfers", label: "Commande hub", icon: Boxes, mobileOrder: 1 },
   { href: "/livreur/returns", label: "Retours", icon: RotateCcw, mobileOrder: 2 },
 ];
 
@@ -88,7 +88,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   if (basePath === "/manager") {
     links.push({
       href: `${basePath}/hub-orders`,
-      label: "Cmd. dépôt",
+      label: "Commande hub",
       icon: Boxes,
       mobileOrder: 5,
     });
