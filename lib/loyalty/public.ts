@@ -17,7 +17,36 @@ export type PublicLoyaltyCustomer = Pick<
   | "qr_token"
   | "card_variant"
   | "created_at"
+  | "is_pro_client"
+  | "pro_client_active"
+  | "pro_client_type"
+  | "company_name"
 >;
+
+export type PublicCustomerInvoice = {
+  id: string;
+  total: number;
+  created_at: string;
+  payment_method: string;
+  store_name: string | null;
+  cancelled_at: string | null;
+};
+
+export type PublicCustomerInvoiceDetail = {
+  id: string;
+  total: number;
+  created_at: string;
+  payment_method: string;
+  loyalty_discount: number;
+  pro_client_discount: number;
+  promo_discount: number;
+  promo_code: string | null;
+  customer_name: string;
+  store_name: string | null;
+  cashier_name: string;
+  cancelled_at: string | null;
+  items: { name: string; quantity: number; unit_price: number }[];
+};
 
 export function toPublicLoyaltyCustomer(
   row: PublicLoyaltyCustomer
@@ -28,6 +57,10 @@ export function toPublicLoyaltyCustomer(
     phone: "",
     email: null,
     store_id: null,
+    is_pro_client: row.is_pro_client ?? false,
+    pro_client_active: row.pro_client_active ?? false,
+    pro_client_type: row.pro_client_type ?? null,
+    company_name: row.company_name ?? null,
     apple_wallet_pass_id: null,
     google_wallet_pass_id: null,
     updated_at: row.created_at,

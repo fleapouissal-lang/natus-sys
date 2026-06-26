@@ -24,7 +24,7 @@ export async function getCashierWeekOffs(input: {
       cashier_id,
       week_start,
       off_date,
-      cashier:profiles!cashier_id ( full_name, email )
+      cashier:store_planning_cashiers!cashier_id ( full_name )
     `
     )
     .eq("week_start", input.weekStart)
@@ -42,6 +42,9 @@ export async function getCashierWeekOffs(input: {
     const cashierRel = raw.cashier;
     const cashier = Array.isArray(cashierRel) ? cashierRel[0] : cashierRel;
     const { cashier: _c, ...rest } = raw;
-    return { ...rest, profiles: cashier ?? null };
+    return {
+      ...rest,
+      profiles: cashier ? { full_name: cashier.full_name, email: "" } : null,
+    };
   });
 }

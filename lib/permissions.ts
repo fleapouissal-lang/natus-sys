@@ -1,4 +1,5 @@
 import type { Profile, Store, UserRole } from "@/lib/types";
+import { getCustomHomePath, isStoreScopedManager } from "@/lib/user-page-access";
 
 export const MANAGEMENT_ROLES = ["directeur", "admin", "manager"] as const;
 export type ManagementRole = (typeof MANAGEMENT_ROLES)[number];
@@ -46,11 +47,17 @@ export function getRoleLabel(role: UserRole): string {
   }
 }
 
-export function getHomePath(role: UserRole): string {
+export function getHomePath(
+  role: UserRole,
+  profile?: Pick<Profile, "access_preset" | "allowed_pages" | "store_id" | "role">
+): string {
+  const customHome = profile ? getCustomHomePath(profile) : null;
+  if (customHome) return customHome;
+
   if (role === "directeur" || role === "admin") return "/director";
   if (role === "manager") return "/manager";
   if (role === "hub") return "/hub";
-  if (role === "livreur") return "/livreur/orders";
+  if (role === "livreur") return "/livreur/actualites";
   return "/cashier/pos";
 }
 
@@ -70,10 +77,13 @@ export function getCityFilter(profile: Profile): string | null {
   return null;
 }
 
-export function filterStoresByProfile<T extends Pick<Store, "city">>(
+export function filterStoresByProfile<T extends Pick<Store, "city" | "id">>(
   stores: T[],
   profile: Profile
 ): T[] {
+  if (isStoreScopedManager(profile) && profile.store_id) {
+    return stores.filter((s) => s.id === profile.store_id);
+  }
   const city = getCityFilter(profile);
   if (!city) return stores;
   return stores.filter((s) => s.city === city);
@@ -100,9 +110,18 @@ export function canCreateStoreInCity(profile: Profile, city: string): boolean {
   return false;
 }
 
-export function canManageStore(profile: Profile, store: Pick<Store, "city">): boolean {
+export function canManageStore(
+  profile: Profile,
+  store: Pick<Store, "city" | "id">
+): boolean {
   if (isDirector(profile)) return true;
-  if (isManager(profile) || isHub(profile)) return profile.city === store.city;
+  if (isManager(profile)) {
+    if (isStoreScopedManager(profile) && profile.store_id) {
+      return profile.store_id === store.id;
+    }
+    return profile.city === store.city;
+  }
+  if (isHub(profile)) return profile.city === store.city;
   return false;
 }
 

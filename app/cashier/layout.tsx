@@ -31,6 +31,8 @@ export default async function CashierLayout({
       storeId={profile.store_id}
       isStorePos={profile.is_store_pos === true}
       isPersonalCashier={isPersonalCashier}
+      accessPreset={profile.access_preset}
+      allowedPages={profile.allowed_pages}
     >
       {children}
     </DashboardShell>

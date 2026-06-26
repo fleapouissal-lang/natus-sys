@@ -96,12 +96,16 @@ export function MobileBottomNav({
   isStorePos = false,
   isPersonalCashier = false,
   hasPosOperator = false,
+  accessPreset,
+  allowedPages,
   hidden = false,
 }: {
   role: UserRole;
   isStorePos?: boolean;
   isPersonalCashier?: boolean;
   hasPosOperator?: boolean;
+  accessPreset?: string | null;
+  allowedPages?: string[] | null;
   hidden?: boolean;
 }) {
   const pathname = usePathname();
@@ -144,6 +148,8 @@ export function MobileBottomNav({
 
   const allLinks = resolveNavLinks({
     role,
+    accessPreset,
+    allowedPages,
     isStorePos,
     isPersonalCashier,
     hasPosOperator,

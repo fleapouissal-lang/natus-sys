@@ -5,6 +5,7 @@ export interface SaleDocumentData {
   total: number;
   subtotal?: number;
   loyaltyDiscount?: number;
+  proClientDiscount?: number;
   promoCode?: string;
   promoDiscount?: number;
   pointsEarned?: number;

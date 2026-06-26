@@ -78,9 +78,6 @@ export function StoreOverviewChart({
                   {row.periodSales} vente{row.periodSales !== 1 ? "s" : ""} POS
                 </span>
                 <span>
-                  {row.periodOrders} commande{row.periodOrders !== 1 ? "s" : ""} web
-                </span>
-                <span>
                   {row.periodStockActions} action
                   {row.periodStockActions !== 1 ? "s" : ""} stock
                 </span>

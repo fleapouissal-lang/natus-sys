@@ -1,5 +1,5 @@
 /**
- * Demo complète : reset (sauf products) + users + commandes + actualités.
+ * Demo complète : reset (sauf products) + users + actualités.
  *
  * Usage : npm run seed:demo
  */
@@ -27,8 +27,6 @@ console.log("🚀 Seed demo Natus\n");
 run("Migrations", "npm run db:migrate");
 run("Reset données (products conservés)", "node scripts/reset-demo-data.mjs");
 run("Utilisateurs (Marrakech & Casa)", "node scripts/seed-users.mjs");
-run("Commandes Shopify", "node scripts/seed-shopify-orders.mjs");
-run("Affectation livreurs", "node scripts/backfill-livreur-orders.mjs");
 run("Actualités exemple", "node scripts/seed-actualites.mjs");
 
 console.log("\n✅ Demo prête — mot de passe : Natus2026!");

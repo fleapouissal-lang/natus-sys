@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getPlanningCashiersByStore } from "@/lib/scheduling/planning-cashiers";
 import type { CashierSummary, Product, Store, StoreWithStats } from "@/lib/types";
 import { isSellableProduct } from "@/lib/products/product-utils";
 
@@ -12,31 +13,6 @@ export async function getActiveStores(city?: string | null): Promise<Store[]> {
 
   const { data } = await query;
   return data || [];
-}
-
-export async function getCashiersByStore(): Promise<Record<string, CashierSummary[]>> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, is_active, store_id")
-    .eq("role", "cashier")
-    .eq("is_store_pos", false)
-    .not("store_id", "is", null);
-
-  const map: Record<string, CashierSummary[]> = {};
-
-  for (const cashier of data || []) {
-    if (!cashier.store_id) continue;
-    if (!map[cashier.store_id]) map[cashier.store_id] = [];
-    map[cashier.store_id].push({
-      id: cashier.id,
-      full_name: cashier.full_name,
-      email: cashier.email,
-      is_active: cashier.is_active,
-    });
-  }
-
-  return map;
 }
 
 export async function getProductsWithStoreStock(
@@ -156,7 +132,16 @@ export async function getStoreInventory(storeId: string) {
 export async function getStoresWithStats(city?: string | null): Promise<StoreWithStats[]> {
   const supabase = await createClient();
   const stores = await getActiveStores(city);
-  const cashiersByStore = await getCashiersByStore();
+  const planningByStore = await getPlanningCashiersByStore();
+  const cashiersByStore: Record<string, CashierSummary[]> = {};
+  for (const [storeId, list] of Object.entries(planningByStore)) {
+    cashiersByStore[storeId] = list.map(({ id, full_name, email, is_active }) => ({
+      id,
+      full_name,
+      email,
+      is_active,
+    }));
+  }
 
   const stats = await Promise.all(
     stores.map(async (store) => {

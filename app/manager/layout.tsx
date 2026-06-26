@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { getStoreById } from "@/lib/inventory";
 
 export default async function ManagerLayout({
   children,
@@ -10,6 +11,8 @@ export default async function ManagerLayout({
   const profile = await requireRole(["manager"]);
   if (!profile) redirect("/cashier/pos");
 
+  const store = profile.store_id ? await getStoreById(profile.store_id) : null;
+
   return (
     <DashboardShell
       role="manager"
@@ -17,6 +20,10 @@ export default async function ManagerLayout({
       avatarUrl={profile.avatar_url}
       cityLabel={profile.city || undefined}
       city={profile.city}
+      storeId={profile.store_id}
+      storeName={store?.name}
+      accessPreset={profile.access_preset}
+      allowedPages={profile.allowed_pages}
     >
       {children}
     </DashboardShell>

@@ -43,6 +43,7 @@ import {
 } from "@/components/pos/pos-payment-mode-selector";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
+import { ProClientQrButton } from "@/components/pro-client/pro-client-qr-modal";
 import {
   PosDayClosureButton,
   PosDayClosureModal,
@@ -67,11 +68,8 @@ import {
   discountFromPoints,
   pointsEarnedForAmount,
 } from "@/lib/loyalty/points";
-import {
-  checkoutTotal,
-  promoDiscountAmount,
-  type AppliedPosPromo,
-} from "@/lib/marketing/pos-promo";
+import { type AppliedPosPromo } from "@/lib/marketing/pos-promo";
+import { computePosCheckoutDiscounts } from "@/lib/pro-client/discount";
 import { PosLuxuryCartFab } from "@/components/pos/pos-luxury-cart-fab";
 import {
   PosMobileCartStepBar,
@@ -564,11 +562,12 @@ export function PosTerminal({
       0
     );
     const loyaltyDiscount = discountFromPoints(pointsToRedeem, loyaltySettings);
-    const afterLoyalty = Math.max(0, subtotal - loyaltyDiscount);
-    const promoDiscount = appliedPromo
-      ? promoDiscountAmount(afterLoyalty, appliedPromo.discountPercent)
-      : 0;
-    const total = checkoutTotal(subtotal, loyaltyDiscount, appliedPromo);
+    const { total, proClientDiscount, promoDiscount } = computePosCheckoutDiscounts(
+      subtotal,
+      loyaltyDiscount,
+      appliedPromo,
+      loyaltyCustomer
+    );
     const pointsEarned = loyaltyCustomer ? pointsEarnedForAmount(total, loyaltySettings) : 0;
 
     setReceipt({
@@ -576,6 +575,7 @@ export function PosTerminal({
       total,
       subtotal,
       loyaltyDiscount,
+      proClientDiscount: proClientDiscount || undefined,
       promoCode: appliedPromo?.code,
       promoDiscount,
       pointsEarned,
@@ -636,11 +636,12 @@ export function PosTerminal({
     0
   );
   const loyaltyDiscount = discountFromPoints(pointsToRedeem, loyaltySettings);
-  const afterLoyalty = Math.max(0, subtotal - loyaltyDiscount);
-  const promoDiscount = appliedPromo
-    ? promoDiscountAmount(afterLoyalty, appliedPromo.discountPercent)
-    : 0;
-  const total = checkoutTotal(subtotal, loyaltyDiscount, appliedPromo);
+  const { total, proClientDiscount, promoDiscount } = computePosCheckoutDiscounts(
+    subtotal,
+    loyaltyDiscount,
+    appliedPromo,
+    loyaltyCustomer
+  );
   const { ht: totalHt, tva: totalTva, ttc: totalTtc } = computeTvaBreakdown(total);
   const tvaPercent = Math.round(TVA_RATE * 100);
   const cashReceived = parseCashReceived(cashReceivedInput);
@@ -794,7 +795,7 @@ export function PosTerminal({
 
     return (
       <div className={cn("space-y-2", isDock ? "text-xs" : "text-sm")}>
-        {(loyaltyDiscount > 0 || promoDiscount > 0) && (
+        {(loyaltyDiscount > 0 || proClientDiscount > 0 || promoDiscount > 0) && (
           <>
             <div className="flex items-center justify-between text-muted">
               <span>Sous-total</span>
@@ -804,6 +805,12 @@ export function PosTerminal({
               <div className="flex items-center justify-between text-success">
                 <span>Points fidélité</span>
                 <span>-{formatCurrency(loyaltyDiscount)}</span>
+              </div>
+            )}
+            {proClientDiscount > 0 && (
+              <div className="flex items-center justify-between text-success">
+                <span>Client Pro (-34%)</span>
+                <span>-{formatCurrency(proClientDiscount)}</span>
               </div>
             )}
             {promoDiscount > 0 && appliedPromo && (
@@ -870,7 +877,7 @@ export function PosTerminal({
   function renderCartFixedTotal() {
     return (
       <div className="natus-pos-cart-total-bar">
-        {(loyaltyDiscount > 0 || promoDiscount > 0) && (
+        {(loyaltyDiscount > 0 || proClientDiscount > 0 || promoDiscount > 0) && (
           <div className="natus-pos-cart-total-discounts">
             <div className="flex items-center justify-between text-xs text-muted">
               <span>Sous-total</span>
@@ -880,6 +887,12 @@ export function PosTerminal({
               <div className="flex items-center justify-between text-xs text-success">
                 <span>Fidélité</span>
                 <span>-{formatCurrency(loyaltyDiscount)}</span>
+              </div>
+            )}
+            {proClientDiscount > 0 && (
+              <div className="flex items-center justify-between text-xs text-success">
+                <span>Client Pro (-34%)</span>
+                <span>-{formatCurrency(proClientDiscount)}</span>
               </div>
             )}
             {promoDiscount > 0 && appliedPromo && (
@@ -1308,6 +1321,11 @@ export function PosTerminal({
                       </Button>
                     )}
                     <PosDayClosureButton onClick={() => setShowDayClosure(true)} />
+                    <ProClientQrButton
+                      storeId={defaultStoreId}
+                      storeName={storeName}
+                      disabled={!defaultStoreId}
+                    />
                     {orderNotifications && (
                       <div className="relative overflow-visible">
                         <CashierNotificationBell

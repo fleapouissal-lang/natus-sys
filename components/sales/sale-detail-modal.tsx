@@ -41,6 +41,7 @@ export function SaleDetailModal({
   const invoiceCustomerPhone = saleInvoiceCustomerPhone(sale);
   const subtotal = lineSubtotal(sale);
   const loyaltyDiscount = Number(sale.loyalty_discount || 0);
+  const proClientDiscount = Number(sale.pro_client_discount || 0);
   const promoDiscount = Number(sale.promo_discount || 0);
   const isCancelled = Boolean(sale.cancelled_at);
 
@@ -158,7 +159,7 @@ export function SaleDetailModal({
             )}
           </tbody>
           <tfoot>
-            {subtotal > 0 && (loyaltyDiscount > 0 || promoDiscount > 0) && (
+            {subtotal > 0 && (loyaltyDiscount > 0 || proClientDiscount > 0 || promoDiscount > 0) && (
               <tr className="border-t border-border">
                 <td colSpan={3} className="px-4 py-2 text-right text-muted">
                   Sous-total
@@ -176,6 +177,16 @@ export function SaleDetailModal({
                 </td>
                 <td className="px-4 py-2 text-right text-success">
                   -{formatCurrency(loyaltyDiscount)}
+                </td>
+              </tr>
+            )}
+            {proClientDiscount > 0 && (
+              <tr>
+                <td colSpan={3} className="px-4 py-2 text-right text-success">
+                  Remise Client Pro (-34%)
+                </td>
+                <td className="px-4 py-2 text-right text-success">
+                  -{formatCurrency(proClientDiscount)}
                 </td>
               </tr>
             )}

@@ -26,6 +26,7 @@ export function saleToDocumentData(sale: InvoiceSale): SaleDocumentData {
     total: Number(sale.total),
     subtotal,
     loyaltyDiscount: Number(sale.loyalty_discount) || undefined,
+    proClientDiscount: Number(sale.pro_client_discount) || undefined,
     promoCode: sale.promo_code || undefined,
     promoDiscount: Number(sale.promo_discount) || undefined,
     pointsEarned: sale.loyalty_points_earned || undefined,

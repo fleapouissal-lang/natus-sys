@@ -28,7 +28,7 @@ export async function generateMetadata({
   const firstName = data.customer.full_name.trim().split(/\s+/)[0] || "Client";
 
   return {
-    title: `Carte ${data.customer.full_name} — Natus`,
+    title: `Espace client ${data.customer.full_name} — Natus`,
     description: `Carte fidélité Natus — ${data.customer.loyalty_points} points`,
     manifest: `/api/loyalty/manifest/${token}`,
     appleWebApp: {

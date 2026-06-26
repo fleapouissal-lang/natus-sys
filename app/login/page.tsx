@@ -6,7 +6,7 @@ import { LoginForm } from "@/components/auth/login-form";
 export default async function LoginPage() {
   const profile = await getCurrentProfile();
   if (profile) {
-    redirect(getHomePath(profile.role));
+    redirect(getHomePath(profile.role, profile));
   }
 
   return <LoginForm />;

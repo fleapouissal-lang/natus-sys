@@ -57,6 +57,8 @@ export interface Profile {
   city: string | null;
   store_id: string | null;
   is_store_pos?: boolean;
+  access_preset?: string | null;
+  allowed_pages?: string[] | null;
   avatar_url?: string | null;
   created_at: string;
   updated_at: string;
@@ -102,6 +104,7 @@ export interface Sale {
   loyalty_points_earned: number;
   promo_code: string | null;
   promo_discount: number;
+  pro_client_discount: number;
   cancelled_at: string | null;
   cancelled_by: string | null;
   created_at: string;
@@ -127,6 +130,12 @@ export interface LoyaltyCustomer {
   qr_token: string;
   store_id: string | null;
   card_variant?: LoyaltyCardVariant;
+  is_pro_client?: boolean;
+  pro_client_active?: boolean;
+  pro_client_type?: "entreprise" | "particulier" | null;
+  company_name?: string | null;
+  city?: string | null;
+  address?: string | null;
   apple_wallet_pass_id: string | null;
   google_wallet_pass_id: string | null;
   created_at: string;

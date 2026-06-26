@@ -192,6 +192,38 @@ async function assignHubManagers(supabase) {
   }
 }
 
+async function seedPlanningCashiers(supabase, stores) {
+  const demoNames = ["Fatima", "Youssef", "Sara"];
+
+  for (const store of stores) {
+    for (let i = 0; i < demoNames.length; i += 1) {
+      const fullName = `${demoNames[i]} (${store.name.split(" ").pop()})`;
+      const { data: existing } = await supabase
+        .from("store_planning_cashiers")
+        .select("id")
+        .eq("store_id", store.id)
+        .eq("full_name", fullName)
+        .maybeSingle();
+
+      if (existing?.id) continue;
+
+      const { error } = await supabase.from("store_planning_cashiers").insert({
+        store_id: store.id,
+        full_name: fullName,
+        sort_order: i,
+      });
+
+      if (error?.code === "42P01") {
+        console.warn("⚠  Table store_planning_cashiers absente — lancez npm run db:apply:078");
+        return;
+      }
+      if (error) throw error;
+    }
+  }
+
+  console.log("✓  Caissiers planning (noms par magasin)");
+}
+
 async function main() {
   const env = loadEnv();
   const url = env.NEXT_PUBLIC_SUPABASE_URL;
@@ -231,6 +263,7 @@ async function main() {
   }
 
   await assignHubManagers(supabase);
+  await seedPlanningCashiers(supabase, storeRows);
 
   console.log(`\n✅ ${users.length} comptes — mot de passe : ${PASSWORD}`);
   console.log("\nMarrakech :");

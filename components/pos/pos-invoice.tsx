@@ -225,7 +225,8 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
           style={{ borderColor: NATUS_BRAND.borderSoft }}
         >
           <div className="ml-auto w-full max-w-sm space-y-0 text-sm">
-            {data.subtotal != null && (data.loyaltyDiscount || data.promoDiscount) ? (
+            {data.subtotal != null &&
+            (data.loyaltyDiscount || data.proClientDiscount || data.promoDiscount) ? (
               <div
                 className="flex justify-between border-b px-4 py-2"
                 style={{ borderColor: NATUS_BRAND.borderSoft, color: NATUS_BRAND.inkSoft }}
@@ -241,6 +242,15 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
               >
                 <span>Réduction fidélité</span>
                 <span className="tabular-nums">-{formatCurrency(data.loyaltyDiscount)}</span>
+              </div>
+            ) : null}
+            {data.proClientDiscount ? (
+              <div
+                className="flex justify-between border-b px-4 py-2"
+                style={{ borderColor: NATUS_BRAND.borderSoft, color: NATUS_BRAND.inkSoft }}
+              >
+                <span>Remise Client Pro (-34 %)</span>
+                <span className="tabular-nums">-{formatCurrency(data.proClientDiscount)}</span>
               </div>
             ) : null}
             {data.promoDiscount ? (

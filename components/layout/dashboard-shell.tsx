@@ -49,6 +49,8 @@ export function DashboardShell({
   hasPosOperator = false,
   posOperatorName,
   posOperatorAvatarUrl,
+  accessPreset,
+  allowedPages,
   children,
 }: {
   role: UserRole;
@@ -63,6 +65,8 @@ export function DashboardShell({
   hasPosOperator?: boolean;
   posOperatorName?: string | null;
   posOperatorAvatarUrl?: string | null;
+  accessPreset?: string | null;
+  allowedPages?: string[] | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -127,6 +131,8 @@ export function DashboardShell({
             hasPosOperator={hasPosOperator}
             posOperatorName={posOperatorName}
             posOperatorAvatarUrl={posOperatorAvatarUrl}
+            accessPreset={accessPreset}
+            allowedPages={allowedPages}
           />
         </div>
 
@@ -183,6 +189,8 @@ export function DashboardShell({
           isStorePos={isStorePos}
           isPersonalCashier={isPersonalCashier}
           hasPosOperator={hasPosOperator}
+          accessPreset={accessPreset}
+          allowedPages={allowedPages}
           hidden={isPos}
         />
       </div>

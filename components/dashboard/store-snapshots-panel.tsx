@@ -1,13 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, MapPin, Package, ShoppingBag, ShoppingCart } from "lucide-react";
+import { ChevronDown, MapPin, Package, ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
-import {
-  paymentTypeLabel,
-  workflowStatusLabel,
-} from "@/lib/shopify/order-status";
 import { formatCurrency, formatDate, formatPaymentMethod, cn } from "@/lib/utils";
 import type { StoreOverviewRow, StoreSnapshot } from "@/lib/types";
 
@@ -99,7 +95,6 @@ function StoreSnapshotCard({
 }) {
   const periodRevenue = snapshot.recentSales.reduce((s, sale) => s + sale.total, 0);
   const salesShown = snapshot.recentSales.slice(0, displayLimit);
-  const ordersShown = snapshot.recentOrders.slice(0, displayLimit);
   const stockShown = snapshot.recentStockAdds.slice(0, displayLimit);
 
   return (
@@ -119,8 +114,6 @@ function StoreSnapshotCard({
                 {snapshot.recentSales.length !== 1 ? "s" : ""}
                 {" · "}
                 {formatCurrency(periodRevenue)}
-                {" · "}
-                {snapshot.recentOrders.length} cmd
                 {overview ? (
                   <>
                     {" · "}
@@ -139,7 +132,7 @@ function StoreSnapshotCard({
         </div>
       </div>
 
-      <div className="grid gap-3 p-3 md:gap-4 md:p-4 lg:grid-cols-3">
+      <div className="grid gap-3 p-3 md:gap-4 md:p-4 lg:grid-cols-2">
         <MiniList
           title={`Ventes (${snapshot.recentSales.length})`}
           icon={ShoppingBag}
@@ -162,35 +155,6 @@ function StoreSnapshotCard({
               <p className="shrink-0 text-[11px] text-muted">
                 {formatDate(sale.created_at)}
               </p>
-            </div>
-          )}
-        />
-
-        <MiniList
-          title={`Commandes (${snapshot.recentOrders.length})`}
-          icon={ShoppingCart}
-          emptyLabel="Aucune commande sur cette période"
-          items={ordersShown}
-          mobileCollapsible
-          renderItem={(order) => (
-            <div
-              key={order.id}
-              className="flex items-center justify-between gap-2 border-b border-border/60 pb-2 last:border-0 last:pb-0"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium">{order.order_number}</p>
-                <p className="truncate text-xs text-muted">
-                  {order.customer_name || "Client"} ·{" "}
-                  {paymentTypeLabel(order.payment_type)}
-                </p>
-                <Badge className="mt-1 text-[10px]">
-                  {workflowStatusLabel(order.workflow_status)}
-                </Badge>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-sm font-medium">{formatCurrency(order.total)}</p>
-                <p className="text-[11px] text-muted">{formatDate(order.created_at)}</p>
-              </div>
             </div>
           )}
         />
@@ -243,7 +207,7 @@ export function StoreSnapshotsPanel({
       <div className="px-1 md:px-0">
         <CardHeader
           title="Vue détaillée par magasin"
-          description={`Ventes, commandes et stock — ${periodLabel}`}
+          description={`Ventes et stock — ${periodLabel}`}
         />
       </div>
 

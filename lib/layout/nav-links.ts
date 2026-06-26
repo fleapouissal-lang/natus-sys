@@ -9,20 +9,20 @@ import {
   ShoppingCart,
   History,
   ClipboardList,
-  ShoppingBag,
-  Truck,
   RotateCcw,
   Boxes,
   Gift,
   AlertTriangle,
   MessageSquare,
   FileText,
+  BriefcaseBusiness,
   CalendarClock,
   Newspaper,
   Settings,
 } from "lucide-react";
 import { getManagementBasePath } from "@/lib/permissions";
 import { getSettingsPath } from "@/lib/layout/settings-path";
+import { filterNavLinksByPages } from "@/lib/user-page-access";
 import type { UserRole } from "@/lib/types";
 
 export type NavLinkItem = {
@@ -34,26 +34,24 @@ export type NavLinkItem = {
 };
 
 export const personalCashierLinks: NavLinkItem[] = [
-  { href: "/cashier/planning", label: "Mon planning", icon: CalendarClock, mobileOrder: 0 },
+  { href: "/cashier/planning", label: "Planning", icon: CalendarClock, mobileOrder: 0 },
 ];
 
 export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 0 },
   { href: "/cashier/planning", label: "Planning", icon: CalendarClock, mobileOrder: 1 },
-  { href: "/cashier/orders", label: "Commandes", icon: ShoppingBag, mobileOrder: 2 },
-  { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 3 },
-  { href: "/cashier/sales", label: "Ventes", icon: History, mobileOrder: 4 },
-  { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 5 },
-  { href: "/cashier/transfers", label: "Hub", icon: Boxes, mobileOrder: 6 },
-  { href: "/cashier/customers", label: "Fidélité", icon: Gift, mobileOrder: 7 },
-  { href: "/cashier/returns", label: "Retours", icon: RotateCcw, mobileOrder: 8 },
-  { href: "/cashier/invoices", label: "Factures", icon: FileText, mobileOrder: 9 },
+  { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 2 },
+  { href: "/cashier/sales", label: "Ventes", icon: History, mobileOrder: 3 },
+  { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 4 },
+  { href: "/cashier/transfers", label: "Hub", icon: Boxes, mobileOrder: 5 },
+  { href: "/cashier/customers", label: "Fidélité", icon: Gift, mobileOrder: 6 },
+  { href: "/cashier/returns", label: "Retours", icon: RotateCcw, mobileOrder: 7 },
+  { href: "/cashier/invoices", label: "Factures", icon: FileText, mobileOrder: 8 },
 ];
 
 export const livreurLinks: NavLinkItem[] = [
-  { href: "/livreur/orders", label: "Livraisons", icon: Truck, mobileOrder: 0 },
-  { href: "/livreur/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 1 },
-  { href: "/livreur/returns", label: "Retours", icon: RotateCcw, mobileOrder: 2 },
+  { href: "/livreur/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 0 },
+  { href: "/livreur/returns", label: "Retours", icon: RotateCcw, mobileOrder: 1 },
 ];
 
 function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavLinkItem[] {
@@ -69,19 +67,18 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
 
   const links: NavLinkItem[] = [
     { href: basePath, label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
-    { href: `${basePath}/orders`, label: "Commandes", icon: ShoppingBag, mobileOrder: 1 },
-    { href: `${basePath}/planning`, label: "Planning", icon: CalendarClock, mobileOrder: 2 },
-    { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 3 },
-    { href: `${basePath}/sales`, label: "Ventes", icon: Receipt, mobileOrder: 4 },
-    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 5 },
-    { href: `${basePath}/products`, label: "Produits", icon: Package, mobileOrder: 6 },
-    { href: `${basePath}/stores`, label: "Magasins", icon: Store, mobileOrder: 7 },
-    { href: `${basePath}/activity`, label: "Activité", icon: ClipboardList, mobileOrder: 8 },
-    { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 9 },
-    { href: `${basePath}/loyalty`, label: "Fidélité", icon: Gift, mobileOrder: 10 },
-    { href: `${basePath}/invoices`, label: "Factures", icon: FileText, mobileOrder: 11 },
-    { href: `${basePath}/actualites`, label: "Actus", icon: Newspaper, mobileOrder: 12 },
-    { href: `${basePath}/users`, label: "Users", icon: Users, mobileOrder: 13 },
+    { href: `${basePath}/planning`, label: "Planning", icon: CalendarClock, mobileOrder: 1 },
+    { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 2 },
+    { href: `${basePath}/sales`, label: "Ventes", icon: Receipt, mobileOrder: 3 },
+    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 4 },
+    { href: `${basePath}/products`, label: "Produits", icon: Package, mobileOrder: 5 },
+    { href: `${basePath}/stores`, label: "Magasins", icon: Store, mobileOrder: 6 },
+    { href: `${basePath}/activity`, label: "Activité", icon: ClipboardList, mobileOrder: 7 },
+    { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 8 },
+    { href: `${basePath}/loyalty`, label: "Fidélité", icon: Gift, mobileOrder: 9 },
+    { href: `${basePath}/invoices`, label: "Factures", icon: FileText, mobileOrder: 10 },
+    { href: `${basePath}/actualites`, label: "Actus", icon: Newspaper, mobileOrder: 11 },
+    { href: `${basePath}/users`, label: "Users", icon: Users, mobileOrder: 12 },
   ];
 
   if (basePath === "/director") {
@@ -92,6 +89,12 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       mobileOrder: 6,
     });
     links.splice(11, 0, {
+      href: "/director/pro-clients",
+      label: "Client Pro",
+      icon: BriefcaseBusiness,
+      mobileOrder: 10,
+    });
+    links.splice(12, 0, {
       href: "/director/hubs",
       label: "Hubs",
       icon: Users,
@@ -113,25 +116,34 @@ export function getSettingsNavItem(role: UserRole): NavLinkItem {
 
 export function resolveNavLinks(input: {
   role: UserRole;
+  allowedPages?: string[] | null;
+  accessPreset?: string | null;
   isStorePos?: boolean;
   isPersonalCashier?: boolean;
   hasPosOperator?: boolean;
-  /** Mobile : navigation réduite au planning */
   planningOnlyNav?: boolean;
-  /** Mobile : masquer la caisse (direction, gérant, hub) */
   hideMobilePos?: boolean;
 }): NavLinkItem[] {
   const basePath = getManagementBasePath(input.role);
+  const pageProfile = {
+    role: input.role,
+    allowed_pages: input.allowedPages ?? null,
+    access_preset: input.accessPreset ?? null,
+  };
 
   if (input.role === "livreur") {
-    return [...livreurLinks, getSettingsNavItem(input.role)];
+    return filterNavLinksByPages(
+      [...livreurLinks, getSettingsNavItem(input.role)],
+      pageProfile
+    );
   }
 
   if (input.role === "cashier") {
-    const links = input.planningOnlyNav
-      ? personalCashierLinks
-      : cashierLinks;
-    return [...links, getSettingsNavItem(input.role)];
+    const links = input.planningOnlyNav ? personalCashierLinks : cashierLinks;
+    return filterNavLinksByPages(
+      [...links, getSettingsNavItem(input.role)],
+      pageProfile
+    );
   }
 
   let links = basePath ? buildManagementLinks(basePath) : cashierLinks;
@@ -140,7 +152,11 @@ export function resolveNavLinks(input: {
     links = links.filter((link) => link.href !== "/cashier/pos");
   }
 
-  return [...links, getSettingsNavItem(input.role)];
+  links = filterNavLinksByPages(links, pageProfile);
+
+  return [...links, getSettingsNavItem(input.role)].filter(
+    (link, index, all) => all.findIndex((item) => item.href === link.href) === index
+  );
 }
 
 export function isNavLinkActive(pathname: string, href: string): boolean {

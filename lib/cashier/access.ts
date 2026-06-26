@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Profile, UserRole } from "@/lib/types";
 import { getHomePath } from "@/lib/permissions";
+import { getCustomHomePath } from "@/lib/user-page-access";
 
 export const CASHIER_PLANNING_PATH = "/cashier/planning";
 
@@ -41,11 +42,14 @@ export async function isPersonalCashierPlanningMode(
 
 export async function resolveStaffHomePath(
   supabase: SupabaseClient,
-  profile: CashierProfile & { role: UserRole },
+  profile: CashierProfile & Pick<Profile, "access_preset" | "allowed_pages"> & { role: UserRole },
   options?: { isMobile?: boolean }
 ): Promise<string> {
+  const customHome = getCustomHomePath(profile);
+  if (customHome) return customHome;
+
   if (profile.role !== "cashier") {
-    return getHomePath(profile.role);
+    return getHomePath(profile.role, profile);
   }
 
   if (profile.is_store_pos) {

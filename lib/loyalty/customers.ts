@@ -145,7 +145,7 @@ export async function getPublicLoyaltyCustomer(
     "get_public_loyalty_transactions",
     {
       p_token: qrToken,
-      p_limit: 15,
+      p_limit: 30,
     }
   );
 
@@ -160,9 +160,46 @@ export async function getPublicLoyaltyCustomer(
       qr_token: row.qr_token,
       card_variant: (row.card_variant ?? "champagne") as PublicLoyaltyCustomer["card_variant"],
       created_at: row.created_at,
+      is_pro_client: Boolean(row.is_pro_client),
+      pro_client_active: Boolean(row.pro_client_active),
+      pro_client_type: (row.pro_client_type as PublicLoyaltyCustomer["pro_client_type"]) ?? null,
+      company_name: row.company_name ?? null,
     },
     transactions: toPublicLoyaltyTransactions(
       (txRows || []) as LoyaltyTransaction[]
     ),
   };
+}
+
+export async function getPublicCustomerInvoices(
+  qrToken: string,
+  limit = 20
+): Promise<import("@/lib/loyalty/public").PublicCustomerInvoice[]> {
+  if (!isValidLoyaltyQrToken(qrToken)) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_public_customer_invoices", {
+    p_token: qrToken,
+    p_limit: limit,
+  });
+
+  if (error || !data) return [];
+
+  return (Array.isArray(data) ? data : []) as import("@/lib/loyalty/public").PublicCustomerInvoice[];
+}
+
+export async function getPublicCustomerInvoice(
+  qrToken: string,
+  saleId: string
+): Promise<import("@/lib/loyalty/public").PublicCustomerInvoiceDetail | null> {
+  if (!isValidLoyaltyQrToken(qrToken)) return null;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_public_customer_invoice", {
+    p_token: qrToken,
+    p_sale_id: saleId,
+  });
+
+  if (error || !data) return null;
+  return data as import("@/lib/loyalty/public").PublicCustomerInvoiceDetail;
 }

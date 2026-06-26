@@ -1,8 +1,12 @@
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter, isDirector } from "@/lib/permissions";
+import { getCityFilter, filterStoresByProfile, isDirector } from "@/lib/permissions";
 import { getActiveStores, getStoresWithStats } from "@/lib/inventory";
 import { getDashboardStats, getStoreOverviewStats, getStoresSnapshots } from "@/lib/dashboard";
-import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store";
+import {
+  resolveSelectedStoreId,
+  getSelectedStore,
+  getProfileLockedStoreId,
+} from "@/lib/management-store";
 import { getActivityLog } from "@/lib/activity";
 import { ManagerDashboardTabs } from "@/components/dashboard/manager-dashboard-tabs";
 
@@ -14,15 +18,23 @@ export default async function ManagerDashboard({
   const { store: storeParam } = await searchParams;
   const profile = await getCurrentProfile();
   const city = profile ? getCityFilter(profile) : null;
-  const stores = await getActiveStores(city);
-  const storesWithStats = await getStoresWithStats(city);
-  const storeId = resolveSelectedStoreId(stores, storeParam);
+  const storesAll = await getActiveStores(city);
+  const stores = profile ? filterStoresByProfile(storesAll, profile) : storesAll;
+  const storesWithStatsAll = await getStoresWithStats(city);
+  const storesWithStatsFiltered = profile
+    ? filterStoresByProfile(storesWithStatsAll, profile)
+    : storesWithStatsAll;
+  const storeId = resolveSelectedStoreId(
+    stores,
+    storeParam,
+    getProfileLockedStoreId(profile)
+  );
   const selectedStore = getSelectedStore(stores, storeId);
   const [stats, storeSnapshots, storeActivities, storeOverview] = await Promise.all([
     storeId ? getDashboardStats(storeId) : Promise.resolve(null),
     getStoresSnapshots(stores),
     storeId ? getActivityLog([storeId], 12) : Promise.resolve([]),
-    getStoreOverviewStats(storesWithStats),
+    getStoreOverviewStats(storesWithStatsFiltered),
   ]);
 
   const overviewByStore = Object.fromEntries(

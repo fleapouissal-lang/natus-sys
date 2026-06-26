@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { canCreateRole, canCreateStoreInCity, canManageStore } from "@/lib/permissions";
+import { canCreateRole, canCreateStoreInCity, canManageStore, isDirector } from "@/lib/permissions";
+import {
+  parseAllowedPagesInput,
+  validateAllowedPagesForRole,
+} from "@/lib/user-page-access";
 import { NATUS_CITIES } from "@/lib/constants/cities";
 import { getStoreById } from "@/lib/inventory";
 import { PRODUCT_BRAND, PRODUCT_CATEGORIES } from "@/lib/constants/products";
@@ -758,12 +762,68 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
   if (userId === profile.id) return { error: "Vous ne pouvez pas désactiver votre propre compte" };
 
   const supabase = await createClient();
+  const { data: target, error: targetError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (targetError || !target) return { error: "Utilisateur introuvable" };
+  if (target.role === "directeur" || target.role === "admin") {
+    return { error: "Impossible de modifier ce compte" };
+  }
+  if (!isDirector(profile) && target.role === "manager") {
+    return { error: "Seul le directeur peut modifier un gérant" };
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({ is_active: isActive })
     .eq("id", userId);
 
   if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function deleteUser(userId: string) {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  if (userId === profile.id) {
+    return { error: "Vous ne pouvez pas supprimer votre propre compte" };
+  }
+
+  const supabase = await createClient();
+  const { data: target, error: targetError } = await supabase
+    .from("profiles")
+    .select("role, email")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (targetError || !target) return { error: "Utilisateur introuvable" };
+  if (target.role === "directeur" || target.role === "admin") {
+    return { error: "Impossible de supprimer ce compte" };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(userId);
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (
+      message.includes("foreign key") ||
+      message.includes("violates") ||
+      message.includes("constraint")
+    ) {
+      return {
+        error:
+          "Suppression impossible : cet utilisateur a de l'historique (ventes, planning…). Désactivez-le à la place.",
+      };
+    }
+    return { error: error.message };
+  }
 
   revalidateManagement();
   return { success: true };
@@ -969,6 +1029,8 @@ export async function lookupLoyaltyCustomerByPhone(
   const supabase = await createClient();
   const customer = await getCustomerByPhone(supabase, phone);
   if (!customer) return { error: "Client introuvable" };
+  const blocked = proClientLookupError(customer);
+  if (blocked) return { error: blocked };
   const notes = await getCustomerNotes(supabase, customer.id, 8);
   return { customer, notes };
 }
@@ -994,6 +1056,8 @@ export async function lookupLoyaltyCustomer(
     const supabase = await createClient();
     const customer = await getCustomerByCardOrToken(supabase, scanPayload);
     if (!customer) return { error: "Carte fidélité introuvable" };
+    const blocked = proClientLookupError(customer);
+    if (blocked) return { error: blocked };
     const notes = await getCustomerNotes(supabase, customer.id, 8);
     return { customer, notes };
   }
@@ -1241,6 +1305,16 @@ export async function createUser(formData: FormData) {
   const city = ((formData.get("city") as string) || "").trim() || null;
   const storeId = (formData.get("store_id") as string) || null;
   const isStorePos = formData.get("is_store_pos") === "on";
+  const limitToStore = formData.get("limit_to_store") === "on";
+  const useCustomPages = formData.get("use_custom_pages") === "on";
+  const allowedPagesRaw = parseAllowedPagesInput(formData.get("allowed_pages"));
+  const allowedPages = useCustomPages
+    ? validateAllowedPagesForRole(role, allowedPagesRaw)
+    : null;
+
+  if (useCustomPages && !isDirector(profile)) {
+    return { error: "Seul le directeur peut personnaliser les pages visibles" };
+  }
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { error: "Adresse email invalide" };
@@ -1257,10 +1331,16 @@ export async function createUser(formData: FormData) {
   }
 
   if (role === "manager" || role === "hub") {
-    if (!city) {
+    if (role === "manager" && limitToStore) {
+      if (!storeId) return { error: "Magasin requis pour un gérant limité à un point de vente" };
+      const store = await getStoreById(storeId);
+      if (!store) return { error: "Magasin introuvable" };
+      if (!canManageStore(profile, store)) {
+        return { error: "Ce magasin n'est pas dans votre périmètre" };
+      }
+    } else if (!city) {
       return { error: role === "hub" ? "Ville requise pour le hub stock" : "Ville requise pour le gérant" };
-    }
-    if (!canCreateStoreInCity(profile, city)) {
+    } else if (!canCreateStoreInCity(profile, city)) {
       return { error: "Vous ne pouvez créer ce compte que pour votre ville" };
     }
   }
@@ -1274,7 +1354,7 @@ export async function createUser(formData: FormData) {
     if (!canManageStore(profile, store)) {
       return { error: "Ce magasin n'est pas dans votre périmètre" };
     }
-    if (role === "cashier" && isStorePos) {
+    if (role === "cashier") {
       const supabaseCheck = await createClient();
       const { data: existingPos } = await supabaseCheck
         .from("profiles")
@@ -1328,8 +1408,14 @@ export async function createUser(formData: FormData) {
     };
 
     if (role === "manager" || role === "hub") {
-      updates.city = city;
-      updates.store_id = null;
+      if (role === "manager" && limitToStore && storeId) {
+        const store = await getStoreById(storeId);
+        updates.store_id = storeId;
+        updates.city = store?.city || null;
+      } else {
+        updates.city = city;
+        updates.store_id = null;
+      }
     }
 
     if ((role === "cashier" || role === "livreur") && storeId) {
@@ -1337,9 +1423,12 @@ export async function createUser(formData: FormData) {
       const store = await getStoreById(storeId);
       updates.city = store?.city || null;
       if (role === "cashier") {
-        updates.is_store_pos = isStorePos;
+        updates.is_store_pos = true;
       }
     }
+
+    updates.access_preset = "full";
+    updates.allowed_pages = allowedPages;
 
     await admin.from("profiles").update(updates).eq("id", data.user.id);
 
@@ -1349,6 +1438,171 @@ export async function createUser(formData: FormData) {
         p_city: city,
       });
     }
+  }
+
+  revalidateManagement();
+  revalidatePath("/director/hubs");
+  return { success: true };
+}
+
+export async function updateUser(formData: FormData) {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const userId = (formData.get("user_id") as string) || "";
+  const email = normalizeUserEmail((formData.get("email") as string) || "");
+  const password = ((formData.get("password") as string) || "").trim();
+  const fullName = ((formData.get("full_name") as string) || "").trim();
+  const city = ((formData.get("city") as string) || "").trim() || null;
+  const storeId = (formData.get("store_id") as string) || null;
+  const limitToStore = formData.get("limit_to_store") === "on";
+  const useCustomPages = formData.get("use_custom_pages") === "on";
+  const allowedPagesRaw = parseAllowedPagesInput(formData.get("allowed_pages"));
+
+  if (!userId) return { error: "Utilisateur introuvable" };
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Adresse email invalide" };
+  }
+  if (!fullName) return { error: "Le nom est requis" };
+  if (password && password.length < 6) {
+    return { error: "Le mot de passe doit contenir au moins 6 caractères" };
+  }
+
+  const supabase = await createClient();
+  const { data: target, error: targetError } = await supabase
+    .from("profiles")
+    .select("id, role, email, store_id, is_store_pos")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (targetError || !target) return { error: "Utilisateur introuvable" };
+  if (target.role === "directeur" || target.role === "admin") {
+    return { error: "Impossible de modifier ce compte" };
+  }
+
+  const role = target.role as Profile["role"];
+  const allowedPages = useCustomPages
+    ? validateAllowedPagesForRole(role, allowedPagesRaw)
+    : null;
+
+  if (useCustomPages && !allowedPages?.length) {
+    return { error: "Sélectionnez au moins une page" };
+  }
+
+  if (role === "manager") {
+    if (limitToStore) {
+      if (!storeId) return { error: "Magasin requis pour un gérant limité à un point de vente" };
+      const store = await getStoreById(storeId);
+      if (!store) return { error: "Magasin introuvable" };
+      if (!canManageStore(profile, store)) {
+        return { error: "Ce magasin n'est pas dans votre périmètre" };
+      }
+    } else if (!city) {
+      return { error: "Ville requise pour le gérant" };
+    } else if (!canCreateStoreInCity(profile, city)) {
+      return { error: "Vous ne pouvez modifier ce compte que pour votre ville" };
+    }
+  }
+
+  if (role === "cashier" || role === "livreur") {
+    if (!storeId) {
+      return { error: role === "livreur" ? "Magasin requis pour le livreur" : "Magasin requis pour le caissier" };
+    }
+    const store = await getStoreById(storeId);
+    if (!store) return { error: "Magasin introuvable" };
+    if (!canManageStore(profile, store)) {
+      return { error: "Ce magasin n'est pas dans votre périmètre" };
+    }
+    if (role === "cashier" && target.is_store_pos && storeId !== target.store_id) {
+      const { data: existingPos } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("role", "cashier")
+        .eq("store_id", storeId)
+        .eq("is_store_pos", true)
+        .eq("is_active", true)
+        .neq("id", userId)
+        .maybeSingle();
+      if (existingPos) {
+        return { error: "Ce magasin a déjà un compte caisse partagé actif" };
+      }
+    }
+    if (role === "livreur" && storeId !== target.store_id) {
+      const { data: existingLivreur } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("role", "livreur")
+        .eq("store_id", storeId)
+        .eq("is_active", true)
+        .neq("id", userId)
+        .maybeSingle();
+      if (existingLivreur) {
+        return { error: "Ce magasin a déjà un livreur actif" };
+      }
+    }
+  }
+
+  if (role === "hub") {
+    if (!city) return { error: "Ville requise pour le hub stock" };
+    if (!canCreateStoreInCity(profile, city)) {
+      return { error: "Vous ne pouvez modifier ce compte que pour votre ville" };
+    }
+  }
+
+  const updates: Record<string, unknown> = {
+    full_name: fullName,
+    email,
+    access_preset: useCustomPages ? "custom" : "full",
+    allowed_pages: allowedPages,
+  };
+
+  if (role === "manager") {
+    if (limitToStore && storeId) {
+      const store = await getStoreById(storeId);
+      updates.store_id = storeId;
+      updates.city = store?.city || null;
+    } else {
+      updates.city = city;
+      updates.store_id = null;
+    }
+  }
+
+  if (role === "cashier" || role === "livreur") {
+    updates.store_id = storeId;
+    const store = await getStoreById(storeId!);
+    updates.city = store?.city || null;
+  }
+
+  if (role === "hub") {
+    updates.city = city;
+    updates.store_id = null;
+  }
+
+  const admin = createAdminClient();
+
+  if (email !== normalizeUserEmail(target.email)) {
+    const { error: emailError } = await admin.auth.admin.updateUserById(userId, {
+      email,
+      email_confirm: true,
+    });
+    if (emailError) return { error: mapCreateUserAuthError(emailError.message) };
+  }
+
+  if (password) {
+    const { error: passwordError } = await admin.auth.admin.updateUserById(userId, {
+      password,
+    });
+    if (passwordError) return { error: passwordError.message };
+  }
+
+  const { error: profileError } = await admin.from("profiles").update(updates).eq("id", userId);
+  if (profileError) return { error: profileError.message };
+
+  if (role === "hub" && city) {
+    await admin.rpc("auto_assign_hub_managers", {
+      p_hub_user_id: userId,
+      p_city: city,
+    });
   }
 
   revalidateManagement();
@@ -2188,19 +2442,14 @@ async function assertCashierCanWorkAtStore(
   cityStoreIds: string[]
 ): Promise<{ error?: string }> {
   const { data } = await supabase
-    .from("profiles")
-    .select("id, role, store_id, is_store_pos")
+    .from("store_planning_cashiers")
+    .select("id, store_id, is_active")
     .eq("id", cashierId)
-    .eq("role", "cashier")
     .eq("is_active", true)
     .maybeSingle();
 
   if (!data?.store_id || !cityStoreIds.includes(data.store_id)) {
     return { error: "Caissier invalide pour cette ville" };
-  }
-
-  if (data.is_store_pos) {
-    return { error: "Le compte caisse magasin ne peut pas avoir de créneau" };
   }
 
   if (data.store_id === storeId) return {};
@@ -2417,10 +2666,10 @@ export async function createCashierStoreTransfer(input: {
 
   const supabase = await createClient();
   const { data: cashier } = await supabase
-    .from("profiles")
-    .select("id, store_id, role")
+    .from("store_planning_cashiers")
+    .select("id, store_id")
     .eq("id", input.cashierId)
-    .eq("role", "cashier")
+    .eq("is_active", true)
     .maybeSingle();
 
   if (!cashier?.store_id) return { error: "Caissier introuvable" };
@@ -2450,12 +2699,11 @@ export async function createCashierStoreTransfer(input: {
 
   if (input.kind === "permanent") {
     const { error: updateError } = await admin
-      .from("profiles")
+      .from("store_planning_cashiers")
       .update({ store_id: input.toStoreId })
       .eq("id", input.cashierId);
 
     if (updateError) return { error: updateError.message };
-    revalidateManagement();
   }
 
   revalidatePath("/manager/planning");
@@ -2489,26 +2737,8 @@ export async function planCashierWeek(input: {
     .eq("city", access.store!.city);
   const storeIds = (cityStores || []).map((s) => s.id);
 
-  const { data: cashierRows } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, is_active, store_id, stores(name)")
-    .eq("role", "cashier")
-    .in("store_id", storeIds);
-
-  const allCashiers = (cashierRows || []).map((row) => {
-    const storeRel = row.stores as unknown;
-    const storeRow = Array.isArray(storeRel)
-      ? (storeRel[0] as { name?: string } | undefined)
-      : (storeRel as { name?: string } | null);
-    return {
-      id: row.id as string,
-      full_name: row.full_name as string | null,
-      email: row.email as string,
-      is_active: row.is_active as boolean,
-      store_id: row.store_id as string,
-      store_name: storeRow?.name || "—",
-    };
-  });
+  const { getCityCashiers } = await import("@/lib/scheduling/shifts");
+  const allCashiers = await getCityCashiers(storeIds);
 
   const { getCashierStoreTransfers } = await import("@/lib/scheduling/transfers");
   const { getPlanningCashiersForStore, cashierWorksAtStoreOnDate } = await import(
@@ -2646,16 +2876,13 @@ export async function setCashierWeekOff(input: {
 
   const supabase = await createClient();
   const { data: cashier } = await supabase
-    .from("profiles")
-    .select("id, store_id, is_store_pos")
+    .from("store_planning_cashiers")
+    .select("id, store_id")
     .eq("id", input.cashierId)
-    .eq("role", "cashier")
+    .eq("is_active", true)
     .maybeSingle();
 
   if (!cashier?.store_id) return { error: "Caissier introuvable" };
-  if (cashier.is_store_pos) {
-    return { error: "Le compte caisse magasin ne peut pas avoir de jour de repos" };
-  }
 
   const access = await assertStoreAccess(profile, cashier.store_id);
   if (access.error) return { error: access.error };
@@ -2703,10 +2930,9 @@ export async function clearCashierWeekOff(input: {
   const weekStart = normalizeWeekStart(input.weekStart);
   const supabase = await createClient();
   const { data: cashier } = await supabase
-    .from("profiles")
+    .from("store_planning_cashiers")
     .select("id, store_id")
     .eq("id", input.cashierId)
-    .eq("role", "cashier")
     .maybeSingle();
 
   if (!cashier?.store_id) return { error: "Caissier introuvable" };
@@ -2726,5 +2952,175 @@ export async function clearCashierWeekOff(input: {
   revalidatePath("/manager/planning");
   revalidatePath("/director/planning");
   revalidatePath("/cashier/planning");
+  return { success: true };
+}
+
+export async function createPlanningCashier(input: {
+  storeId: string;
+  fullName: string;
+}): Promise<{ success: true; id: string } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const access = await assertStoreAccess(profile, input.storeId);
+  if (access.error) return { error: access.error };
+
+  const fullName = input.fullName.trim();
+  if (!fullName) return { error: "Le nom est requis" };
+
+  const supabase = await createClient();
+  const { data: lastRow } = await supabase
+    .from("store_planning_cashiers")
+    .select("sort_order")
+    .eq("store_id", input.storeId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("store_planning_cashiers")
+    .insert({
+      store_id: input.storeId,
+      full_name: fullName,
+      sort_order: (lastRow?.sort_order ?? -1) + 1,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/manager/planning");
+  revalidatePath("/director/planning");
+  revalidatePath("/cashier/planning");
+  return { success: true, id: data.id };
+}
+
+export async function deactivatePlanningCashier(
+  cashierId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole([...MANAGEMENT]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { data: cashier } = await supabase
+    .from("store_planning_cashiers")
+    .select("id, store_id")
+    .eq("id", cashierId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!cashier?.store_id) return { error: "Caissier introuvable" };
+
+  const access = await assertStoreAccess(profile, cashier.store_id);
+  if (access.error) return { error: access.error };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("store_planning_cashiers")
+    .update({ is_active: false })
+    .eq("id", cashierId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/manager/planning");
+  revalidatePath("/director/planning");
+  revalidatePath("/cashier/planning");
+  return { success: true };
+}
+
+function proClientLookupError(
+  customer: import("@/lib/types").LoyaltyCustomer
+): string | null {
+  if (customer.is_pro_client && !customer.pro_client_active) {
+    return "Client pro en attente d'activation par le directeur";
+  }
+  return null;
+}
+
+export async function getStoreProClientLink(
+  storeId: string
+): Promise<
+  | { success: true; storeToken: string; url: string; storeName: string }
+  | { error: string }
+> {
+  const profile = await requireRole([...MANAGEMENT, "cashier", "hub"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  if (!storeId) return { error: "Magasin requis" };
+
+  const access = await assertStoreAccess(profile, storeId);
+  if (access.error) return { error: access.error };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_store_pro_client_link", {
+    p_store_id: storeId,
+  });
+
+  if (error) return { error: error.message };
+
+  const row = data as { store_token?: string; store_name?: string };
+  if (!row?.store_token) return { error: "QR code magasin indisponible" };
+
+  const { proClientStoreRegistrationUrl } = await import("@/lib/pro-client/urls");
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || undefined;
+
+  return {
+    success: true,
+    storeToken: row.store_token,
+    storeName: row.store_name || "Magasin",
+    url: proClientStoreRegistrationUrl(row.store_token, baseUrl),
+  };
+}
+
+export async function toggleProClientActive(
+  customerId: string,
+  active: boolean
+): Promise<{ success: true; customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("toggle_pro_client_active", {
+    p_customer_id: customerId,
+    p_active: active,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/director/pro-clients");
+  revalidatePath("/director/loyalty");
+  revalidatePath("/director/loyalty/customers");
+  revalidatePath("/manager/loyalty");
+  revalidatePath("/cashier/pos");
+  return { success: true, customer: data as import("@/lib/types").LoyaltyCustomer };
+}
+
+export async function deleteProClientCustomer(
+  customerId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_pro_client_customer", {
+    p_customer_id: customerId,
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (message.includes("foreign key") || message.includes("violates")) {
+      return {
+        error:
+          "Suppression impossible : ce client a de l'historique (ventes, points…). Désactivez-le à la place.",
+      };
+    }
+    return { error: error.message };
+  }
+
+  revalidatePath("/director/pro-clients");
+  revalidatePath("/director/loyalty");
+  revalidatePath("/director/loyalty/customers");
+  revalidatePath("/cashier/pos");
   return { success: true };
 }

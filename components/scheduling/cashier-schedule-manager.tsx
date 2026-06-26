@@ -54,6 +54,8 @@ type Props = {
   transfers: CashierStoreTransfer[];
   weekStart: string;
   selectedStoreId: string;
+  readOnly?: boolean;
+  hideStoreFilter?: boolean;
 };
 
 export function CashierScheduleManager({
@@ -65,6 +67,8 @@ export function CashierScheduleManager({
   transfers,
   weekStart,
   selectedStoreId,
+  readOnly = false,
+  hideStoreFilter = false,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -241,17 +245,21 @@ export function CashierScheduleManager({
           </Button>
         </div>
 
-        <Button
-          type="button"
-          onClick={() => setWeekPlanOpen(true)}
-          disabled={!selectedStoreId || planningCashiers.length === 0}
-        >
-          <CalendarRange className="h-4 w-4" />
-          Planifier la semaine
-        </Button>
+        {!readOnly && (
+          <Button
+            type="button"
+            onClick={() => setWeekPlanOpen(true)}
+            disabled={!selectedStoreId || planningCashiers.length === 0}
+          >
+            <CalendarRange className="h-4 w-4" />
+            Planifier la semaine
+          </Button>
+        )}
       </div>
 
-      <PlanningFilterBar stores={stores} selectedStoreId={selectedStoreId} />
+      {!hideStoreFilter && (
+        <PlanningFilterBar stores={stores} selectedStoreId={selectedStoreId} />
+      )}
 
       {!selectedStoreId ? (
         <Card className="py-10 text-center text-muted">
@@ -259,12 +267,12 @@ export function CashierScheduleManager({
         </Card>
       ) : planningCashiers.length === 0 ? (
         <Card className="py-10 text-center text-muted">
-          Aucun caissier affecté à {selectedStore?.name}. Ajoutez des caissiers dans Utilisateurs
-          ou transférez-en depuis un autre magasin.
+          Aucun caissier planifié pour {selectedStore?.name}. Ajoutez des noms dans la liste
+          caissiers ci-dessus.
         </Card>
       ) : (
         <>
-          {cashiersWithoutOff.length > 0 && (
+          {cashiersWithoutOff.length > 0 && !readOnly && (
             <p className="text-sm text-warning">
               {cashiersWithoutOff.length} caissier(s) sans jour de repos cette semaine
             </p>
@@ -298,27 +306,39 @@ export function CashierScheduleManager({
                               <p className="text-[10px] text-warning">Prêté · {cashier.store_name}</p>
                             )}
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="shrink-0"
-                            title="Transférer vers un autre magasin"
-                            onClick={() => setTransferCashier(cashier)}
-                          >
-                            <ArrowRightLeft className="h-3.5 w-3.5" />
-                          </Button>
+                          {!readOnly && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="shrink-0"
+                              title="Transférer vers un autre magasin"
+                              onClick={() => setTransferCashier(cashier)}
+                            >
+                              <ArrowRightLeft className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                       <td className="px-2 py-2">
-                        <SelectMenu
-                          value={weekOffByCashier.get(cashier.id) || ""}
-                          onChange={(value) => handleWeekOffChange(cashier.id, value)}
-                          options={dayOffOptions}
-                          defaultIcon={CalendarOff}
-                          disabled={pending}
-                          size="sm"
-                        />
+                        {readOnly ? (
+                          weekOffByCashier.get(cashier.id) ? (
+                            <Badge variant="default">
+                              {formatShiftDate(weekOffByCashier.get(cashier.id)!)}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted">—</span>
+                          )
+                        ) : (
+                          <SelectMenu
+                            value={weekOffByCashier.get(cashier.id) || ""}
+                            onChange={(value) => handleWeekOffChange(cashier.id, value)}
+                            options={dayOffOptions}
+                            defaultIcon={CalendarOff}
+                            disabled={pending}
+                            size="sm"
+                          />
+                        )}
                       </td>
                       {weekDays.map((day) => {
                         const shift = shiftByCashierDay.get(`${cashier.id}:${day}`);
@@ -350,15 +370,17 @@ export function CashierScheduleManager({
                                 <p className="text-xs font-medium text-primary">
                                   {formatTimeLabel(shift.start_time)} – {formatTimeLabel(shift.end_time)}
                                 </p>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDelete(shift.id)}
-                                  className="mt-1 inline-flex items-center gap-0.5 text-[10px] text-danger hover:underline cursor-pointer"
-                                  disabled={pending}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                  Retirer
-                                </button>
+                                {!readOnly && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDelete(shift.id)}
+                                    className="mt-1 inline-flex items-center gap-0.5 text-[10px] text-danger hover:underline cursor-pointer"
+                                    disabled={pending}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                    Retirer
+                                  </button>
+                                )}
                               </div>
                             </td>
                           );
@@ -366,14 +388,18 @@ export function CashierScheduleManager({
 
                         return (
                           <td key={day} className="px-2 py-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() => openAddModal(cashier.id, day)}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border text-muted hover:border-primary hover:text-primary cursor-pointer"
-                              title="Ajouter un créneau"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </button>
+                            {readOnly ? (
+                              <span className="text-xs text-muted">—</span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => openAddModal(cashier.id, day)}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border text-muted hover:border-primary hover:text-primary cursor-pointer"
+                                title="Ajouter un créneau"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            )}
                           </td>
                         );
                       })}
@@ -393,7 +419,7 @@ export function CashierScheduleManager({
         <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
-      {modalOpen && selectedStoreId && (
+      {!readOnly && modalOpen && selectedStoreId && (
         <Modal onClose={() => setModalOpen(false)} size="md">
           <h3 className="text-lg font-semibold">Nouveau créneau</h3>
           <p className="mt-1 text-sm text-muted">
@@ -462,7 +488,7 @@ export function CashierScheduleManager({
         </Modal>
       )}
 
-      {weekPlanOpen && selectedStoreId && selectedStore && (
+      {!readOnly && weekPlanOpen && selectedStoreId && selectedStore && (
         <WeekPlanModal
           storeId={selectedStoreId}
           storeName={selectedStore.name}
@@ -472,7 +498,7 @@ export function CashierScheduleManager({
         />
       )}
 
-      {transferCashier && selectedStoreId && (
+      {!readOnly && transferCashier && selectedStoreId && (
         <CashierTransferModal
           cashier={transferCashier}
           stores={stores}

@@ -3,7 +3,6 @@ import type {
   DashboardStats,
   Store,
   StoreOverviewRow,
-  StoreRecentOrder,
   StoreRecentSale,
   StoreRecentStock,
   StoreSnapshot,
@@ -74,7 +73,7 @@ export async function getStoresSnapshots(
   const fetchLimit = Math.max(storeIds.length * RECENT_LIMIT, 50);
   const since = snapshotSinceIso();
 
-  const [{ data: sales }, { data: orders }, { data: movements }] = await Promise.all([
+  const [{ data: sales }, { data: movements }] = await Promise.all([
     supabase
       .from("sales")
       .select(
@@ -83,15 +82,6 @@ export async function getStoresSnapshots(
       .in("store_id", storeIds)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
-      .limit(fetchLimit),
-    supabase
-      .from("shopify_orders")
-      .select(
-        "id, order_number, total, payment_type, workflow_status, customer_name, created_at, shopify_created_at, store_id"
-      )
-      .in("store_id", storeIds)
-      .gte("shopify_created_at", since)
-      .order("shopify_created_at", { ascending: false })
       .limit(fetchLimit),
     supabase
       .from("stock_movements")
@@ -124,7 +114,6 @@ export async function getStoresSnapshots(
   }
 
   const salesByStore = takePerStore(sales || [], storeIds, RECENT_LIMIT);
-  const ordersByStore = takePerStore(orders || [], storeIds, RECENT_LIMIT);
   const stockByStore = takePerStore(movements || [], storeIds, RECENT_LIMIT);
 
   return stores.map((store) => ({
@@ -142,15 +131,7 @@ export async function getStoresSnapshots(
           | null
       ),
     })) satisfies StoreRecentSale[],
-    recentOrders: (ordersByStore.get(store.id) || []).map((row) => ({
-      id: row.id,
-      order_number: row.order_number,
-      total: Number(row.total),
-      payment_type: row.payment_type,
-      workflow_status: row.workflow_status,
-      customer_name: row.customer_name,
-      created_at: row.shopify_created_at || row.created_at,
-    })) satisfies StoreRecentOrder[],
+    recentOrders: [],
     recentStockAdds: (stockByStore.get(store.id) || []).map((row) => ({
       id: row.id,
       product_name: unwrapProductName(

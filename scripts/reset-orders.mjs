@@ -24,8 +24,18 @@ async function main() {
 
   if (fetchError) throw fetchError;
 
+  const { data: linkedSales, error: salesError } = await supabase
+    .from("sales")
+    .select("id")
+    .not("shopify_order_id", "is", null);
+
+  if (salesError) throw salesError;
+
   const saleIds = [
-    ...new Set((orders || []).map((o) => o.sale_id).filter(Boolean)),
+    ...new Set([
+      ...(orders || []).map((o) => o.sale_id).filter(Boolean),
+      ...(linkedSales || []).map((s) => s.id),
+    ]),
   ];
 
   const { error: deleteOrdersError } = await supabase

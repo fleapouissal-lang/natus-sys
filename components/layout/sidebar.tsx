@@ -157,6 +157,8 @@ export function Sidebar({
   hasPosOperator = false,
   posOperatorName,
   posOperatorAvatarUrl,
+  accessPreset,
+  allowedPages,
 }: {
   role: UserRole;
   userName: string;
@@ -168,6 +170,8 @@ export function Sidebar({
   hasPosOperator?: boolean;
   posOperatorName?: string | null;
   posOperatorAvatarUrl?: string | null;
+  accessPreset?: string | null;
+  allowedPages?: string[] | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -176,6 +180,8 @@ export function Sidebar({
 
   const links = resolveNavLinks({
     role,
+    accessPreset,
+    allowedPages,
     isStorePos,
     isPersonalCashier,
     hasPosOperator,

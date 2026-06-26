@@ -9,5 +9,5 @@ export default async function HomePage() {
     redirect("/login");
   }
 
-  redirect(getHomePath(profile.role));
+  redirect(getHomePath(profile.role, profile));
 }

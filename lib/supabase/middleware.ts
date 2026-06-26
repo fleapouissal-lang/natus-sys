@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getHomePath } from "@/lib/permissions";
+import { isRouteAllowedForProfile } from "@/lib/access-presets";
 import { applySecurityHeaders } from "@/lib/security/headers";
 import { asSessionCookieOptions } from "@/lib/supabase/session-cookies";
 import { getCashierMobileRedirectPath } from "@/lib/cashier/mobile-access";
@@ -69,11 +70,12 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, is_active, city, is_store_pos, store_id")
+      .select("role, is_active, city, is_store_pos, store_id, access_preset, allowed_pages")
       .eq("id", user.id)
       .single();
 
     const role = profile?.role as UserRole | undefined;
+    const homePath = role && profile ? getHomePath(role, profile) : "/login";
 
     if (isAuthRoute && role && profile) {
       const url = request.nextUrl.clone();
@@ -86,7 +88,7 @@ export async function updateSession(request: NextRequest) {
     if (pathname.startsWith("/director")) {
       if ((role !== "directeur" && role !== "admin") || !profile?.is_active) {
         const url = request.nextUrl.clone();
-        url.pathname = role ? getHomePath(role) : "/login";
+        url.pathname = role ? homePath : "/login";
         return applySecurityHeaders(NextResponse.redirect(url));
       }
     }
@@ -94,7 +96,7 @@ export async function updateSession(request: NextRequest) {
     if (pathname.startsWith("/hub")) {
       if (role !== "hub" || !profile?.is_active) {
         const url = request.nextUrl.clone();
-        url.pathname = role ? getHomePath(role) : "/login";
+        url.pathname = role ? homePath : "/login";
         return applySecurityHeaders(NextResponse.redirect(url));
       }
     }
@@ -102,7 +104,7 @@ export async function updateSession(request: NextRequest) {
     if (pathname.startsWith("/manager")) {
       if (role !== "manager" || !profile?.is_active) {
         const url = request.nextUrl.clone();
-        url.pathname = role ? getHomePath(role) : "/login";
+        url.pathname = role ? homePath : "/login";
         return applySecurityHeaders(NextResponse.redirect(url));
       }
     }
@@ -110,7 +112,7 @@ export async function updateSession(request: NextRequest) {
     if (pathname.startsWith("/livreur")) {
       if (role !== "livreur" || !profile?.is_active) {
         const url = request.nextUrl.clone();
-        url.pathname = role ? getHomePath(role) : "/login";
+        url.pathname = role ? homePath : "/login";
         return applySecurityHeaders(NextResponse.redirect(url));
       }
     }
@@ -160,6 +162,17 @@ export async function updateSession(request: NextRequest) {
           return applySecurityHeaders(NextResponse.redirect(url));
         }
       }
+    }
+
+    if (
+      profile?.is_active &&
+      role &&
+      isProtected &&
+      !isRouteAllowedForProfile(pathname, profile)
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = homePath;
+      return applySecurityHeaders(NextResponse.redirect(url));
     }
   }
 

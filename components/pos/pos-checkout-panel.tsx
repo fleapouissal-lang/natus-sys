@@ -21,11 +21,13 @@ import {
   pointsUntilRedemption,
 } from "@/lib/loyalty/points";
 import { looksLikePromoCode } from "@/lib/marketing/promo-input";
+import { type AppliedPosPromo } from "@/lib/marketing/pos-promo";
 import {
-  checkoutTotal,
-  promoDiscountAmount,
-  type AppliedPosPromo,
-} from "@/lib/marketing/pos-promo";
+  computePosCheckoutDiscounts,
+  isActiveProClient,
+  PRO_CLIENT_DISCOUNT_LABEL,
+  PRO_CLIENT_DISCOUNT_PERCENT,
+} from "@/lib/pro-client/discount";
 import { formatLoyaltyEarnRule, formatLoyaltyRedeemRule, pointsValueInMad } from "@/lib/loyalty/settings";
 import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 import { formatCurrency } from "@/lib/utils";
@@ -75,6 +77,13 @@ export function PosCheckoutPanel({
   const lastScanKeyRef = useRef(0);
 
   const hasBenefits = Boolean(customer || promo);
+  const activeProClient = isActiveProClient(customer);
+
+  useEffect(() => {
+    if (activeProClient && promo) {
+      onPromoChange(null);
+    }
+  }, [activeProClient, promo, onPromoChange]);
 
   useEffect(() => {
     if (customer) {
@@ -134,11 +143,12 @@ export function PosCheckoutPanel({
   }
 
   const loyaltyDiscount = discountFromPoints(pointsToRedeem, loyaltySettings);
-  const afterLoyalty = Math.max(0, subtotal - loyaltyDiscount);
-  const promoDiscount = promo
-    ? promoDiscountAmount(afterLoyalty, promo.discountPercent)
-    : 0;
-  const payable = checkoutTotal(subtotal, loyaltyDiscount, promo);
+  const { total: payable, proClientDiscount, promoDiscount } = computePosCheckoutDiscounts(
+    subtotal,
+    loyaltyDiscount,
+    promo,
+    customer
+  );
   const maxRedeem = customer
     ? maxRedeemablePoints(customer.loyalty_points, subtotal, loyaltySettings)
     : 0;
@@ -167,13 +177,21 @@ export function PosCheckoutPanel({
                   )}
                 </span>
               )}
-              {customer && promo && <span className="text-muted"> · </span>}
-              {promo && (
+              {customer && activeProClient && (
+                <span className="font-medium text-primary">
+                  {PRO_CLIENT_DISCOUNT_LABEL} (-{PRO_CLIENT_DISCOUNT_PERCENT}%)
+                  {proClientDiscount > 0 && (
+                    <span className="text-muted"> · -{formatCurrency(proClientDiscount)}</span>
+                  )}
+                </span>
+              )}
+              {customer && promo && !activeProClient && <span className="text-muted"> · </span>}
+              {promo && !activeProClient && (
                 <span className="font-medium text-primary">
                   {promo.code} (-{formatCurrency(promoDiscount)})
                 </span>
               )}
-              {!customer && promo && (
+              {!customer && promo && !activeProClient && (
                 <span className="text-muted">{promo.label}</span>
               )}
             </div>
@@ -383,7 +401,7 @@ export function PosCheckoutPanel({
           </>
         )}
 
-        {promo && (
+        {promo && !activeProClient && (
           <div
             className={cn(
               "flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-champagne/20 px-3 py-2 text-sm",
@@ -428,8 +446,29 @@ export function PosCheckoutPanel({
 
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
               <span>{formatPhoneDisplay(customer.phone)}</span>
-              <span className="font-semibold text-success">+{pointsToEarn} pts</span>
+              {activeProClient ? (
+                <span className="font-semibold text-primary">
+                  -{PRO_CLIENT_DISCOUNT_PERCENT}% Client Pro
+                </span>
+              ) : (
+                <span className="font-semibold text-success">+{pointsToEarn} pts</span>
+              )}
             </div>
+
+            {activeProClient && proClientDiscount > 0 && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+                <p className="font-semibold text-primary">{PRO_CLIENT_DISCOUNT_LABEL}</p>
+                <p className="text-xs text-muted">
+                  Remise automatique de {PRO_CLIENT_DISCOUNT_PERCENT}% sur le panier
+                  {proClientDiscount > 0 && (
+                    <span className="font-medium text-foreground">
+                      {" "}
+                      · -{formatCurrency(proClientDiscount)}
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
 
             <LoyaltyCustomerNotes notes={customerNotes} compact />
 
@@ -485,7 +524,7 @@ export function PosCheckoutPanel({
               </p>
             )}
 
-            {!promo && (
+            {!promo && !activeProClient && (
               <div className="flex gap-2 pt-1">
                 <input
                   type="text"

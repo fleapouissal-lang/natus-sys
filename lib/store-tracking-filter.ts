@@ -6,7 +6,6 @@ export type StoreTrackingPeriodRow = {
   storeName: string;
   periodRevenue: number;
   periodSales: number;
-  periodOrders: number;
   periodStockActions: number;
   lowStockCount: number;
   totalUnits: number;
@@ -21,9 +20,6 @@ export function filterStoreSnapshot(
     ...snapshot,
     recentSales: snapshot.recentSales.filter((s) =>
       isDateInRange(s.created_at, from, to)
-    ),
-    recentOrders: snapshot.recentOrders.filter((o) =>
-      isDateInRange(o.created_at, from, to)
     ),
     recentStockAdds: snapshot.recentStockAdds.filter((m) =>
       isDateInRange(m.created_at, from, to)
@@ -46,7 +42,6 @@ export function buildStoreTrackingRows(
       storeName: snapshot.storeName,
       periodRevenue: filtered.recentSales.reduce((sum, s) => sum + s.total, 0),
       periodSales: filtered.recentSales.length,
-      periodOrders: filtered.recentOrders.length,
       periodStockActions: filtered.recentStockAdds.length,
       lowStockCount: overview?.lowStockCount ?? 0,
       totalUnits: overview?.totalUnits ?? 0,

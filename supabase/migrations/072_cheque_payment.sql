@@ -1,9 +1,9 @@
--- Paiement par ch�que en caisse
+-- Paiement par cheque en caisse
 
 ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_payment_method_check;
 ALTER TABLE sales ADD CONSTRAINT sales_payment_method_check
   CHECK (payment_method IN ('cash', 'card', 'cheque'));
--- complete_sale : attribution au caissier connecté sur terminal partagé
+
 CREATE OR REPLACE FUNCTION complete_sale(
   p_items JSONB,
   p_payment_method TEXT DEFAULT 'cash',
@@ -391,3 +391,4 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public;
+
