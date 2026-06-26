@@ -117,9 +117,17 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   }
 
   links.push(
-    { href: `${basePath}/actualites`, label: "Actus", icon: Newspaper, mobileOrder: 11 },
-    { href: `${basePath}/users`, label: "Users", icon: Users, mobileOrder: 12 }
+    { href: `${basePath}/actualites`, label: "Actus", icon: Newspaper, mobileOrder: 11 }
   );
+
+  if (basePath !== "/manager") {
+    links.push({
+      href: `${basePath}/users`,
+      label: "Users",
+      icon: Users,
+      mobileOrder: 12,
+    });
+  }
 
   if (basePath === "/director") {
     const loyaltyIdx = links.findIndex((link) => link.href === `${basePath}/loyalty`);

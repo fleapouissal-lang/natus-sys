@@ -108,7 +108,7 @@ export function canCreateRole(creator: Profile, targetRole: UserRole): boolean {
     );
   }
   if (isManager(creator)) {
-    return targetRole === "cashier" || targetRole === "livreur";
+    return targetRole === "cashier";
   }
   return false;
 }

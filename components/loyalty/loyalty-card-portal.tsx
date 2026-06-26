@@ -123,9 +123,11 @@ function ClientPortalMobileTopBar({
 function ClientPortalMobileBottomNav({
   tab,
   onTabChange,
+  visibleTabs,
 }: {
   tab: PortalTab;
   onTabChange: (tab: PortalTab) => void;
+  visibleTabs: typeof TABS;
 }) {
   return (
     <div className="natus-mobile-bottom-nav-shell md:hidden">
@@ -846,7 +848,11 @@ export function LoyaltyCardPortal({
           Lien personnel · sans mot de passe · Natus Cosmétiques
         </footer>
 
-        <ClientPortalMobileBottomNav tab={tab} onTabChange={switchTab} />
+        <ClientPortalMobileBottomNav
+          tab={tab}
+          onTabChange={switchTab}
+          visibleTabs={visibleTabs}
+        />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
@@ -80,11 +80,15 @@ export function CreateUserWizard({
   stores,
   cities,
   onClose,
+  cashierOnly = false,
+  defaultStoreId,
 }: {
   viewer: Profile;
   stores: Store[];
   cities: string[];
   onClose: () => void;
+  cashierOnly?: boolean;
+  defaultStoreId?: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
@@ -98,7 +102,7 @@ export function CreateUserWizard({
   const [city, setCity] = useState(
     isDirector(viewer) ? cities[0] || "" : viewer.city || ""
   );
-  const [storeId, setStoreId] = useState("");
+  const [storeId, setStoreId] = useState(defaultStoreId || "");
   const [limitManagerToStore, setLimitManagerToStore] = useState(false);
   const [useCustomPages, setUseCustomPages] = useState(false);
   const [selectedPages, setSelectedPages] = useState<UserPageKey[]>(() =>
@@ -116,6 +120,11 @@ export function CreateUserWizard({
   );
 
   const defaultPages = useMemo(() => getDefaultPageKeysForRole(role), [role]);
+  const skipPageStep = cashierOnly || isManager(viewer);
+
+  useEffect(() => {
+    if (defaultStoreId) setStoreId(defaultStoreId);
+  }, [defaultStoreId]);
 
   const needsStore =
     role === "cashier" || role === "livreur" || (role === "manager" && limitManagerToStore);
@@ -179,16 +188,15 @@ export function CreateUserWizard({
     onClose();
   }
 
-  const roleOptionsList: { value: CreateRole; label: string }[] = isDirector(viewer)
-    ? [
-        { value: "cashier", label: "Caissier" },
-        { value: "livreur", label: "Livreur (magasin)" },
-        { value: "manager", label: "Gérant" },
-      ]
-    : [
-        { value: "cashier", label: "Caissier" },
-        { value: "livreur", label: "Livreur (magasin)" },
-      ];
+  const roleOptionsList: { value: CreateRole; label: string }[] = cashierOnly
+    ? [{ value: "cashier", label: "Caissier" }]
+    : isDirector(viewer)
+      ? [
+          { value: "cashier", label: "Caissier" },
+          { value: "livreur", label: "Livreur (magasin)" },
+          { value: "manager", label: "Gérant" },
+        ]
+      : [{ value: "cashier", label: "Caissier" }];
 
   return (
     <Modal onClose={onClose} size="lg">
@@ -197,18 +205,22 @@ export function CreateUserWizard({
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
               <Sparkles className="h-3.5 w-3.5" />
-              Création avancée
+              {cashierOnly ? "Compte caisse" : "Création avancée"}
             </div>
             <CardHeader
-              title="Nouvel utilisateur"
-              description="Étape par étape : identité du compte, puis pages visibles dans l'application."
+              title={cashierOnly ? "Nouveau caissier" : "Nouvel utilisateur"}
+              description={
+                cashierOnly
+                  ? "Créez le compte de connexion caisse pour le magasin sélectionné."
+                  : "Étape par étape : identité du compte, puis pages visibles dans l'application."
+              }
             />
           </div>
         </div>
       </div>
 
       <div className="px-6 py-5">
-        <StepIndicator step={step} />
+        {!skipPageStep && <StepIndicator step={step} />}
 
         {step === 1 ? (
           <div className="space-y-4">
@@ -236,12 +248,14 @@ export function CreateUserWizard({
               required
             />
 
-            <SelectMenu
-              label="Rôle"
-              value={role}
-              onChange={(v) => handleRoleChange(v as CreateRole)}
-              options={roleOptions(roleOptionsList)}
-            />
+            {!cashierOnly && (
+              <SelectMenu
+                label="Rôle"
+                value={role}
+                onChange={(v) => handleRoleChange(v as CreateRole)}
+                options={roleOptions(roleOptionsList)}
+              />
+            )}
 
             {(role === "manager" || role === "cashier" || role === "livreur") && (
               <SelectMenu
@@ -280,13 +294,7 @@ export function CreateUserWizard({
             {needsStore && storesForCity.length > 0 && (
               <StoreSelect
                 stores={storesForCity}
-                label={
-                  role === "livreur"
-                    ? "Magasin du livreur"
-                    : role === "manager"
-                      ? "Magasin assigné"
-                      : "Magasin assigné"
-                }
+                label="Magasin assigné"
                 value={storeId}
                 onChange={setStoreId}
               />
@@ -443,14 +451,25 @@ export function CreateUserWizard({
             )}
 
             {step === 1 ? (
-              <Button
-                type="button"
-                onClick={() => setStep(2)}
-                disabled={!canContinueStep1()}
-              >
-                Continuer
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              skipPageStep ? (
+                <Button
+                  type="button"
+                  loading={loading}
+                  onClick={handleCreate}
+                  disabled={!canContinueStep1()}
+                >
+                  Créer le caissier
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  disabled={!canContinueStep1()}
+                >
+                  Continuer
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )
             ) : (
               <Button
                 type="button"

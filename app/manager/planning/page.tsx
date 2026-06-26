@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter, filterStoresByProfile } from "@/lib/permissions";
+import { getCityFilter, filterRetailStoresByProfile, isManager } from "@/lib/permissions";
 import { getActiveStores } from "@/lib/inventory";
 import { getProfileLockedStoreId } from "@/lib/management-store";
 import { getCityCashiers, getCashierShifts } from "@/lib/scheduling/shifts";
@@ -15,6 +15,7 @@ import { parseWeekParam } from "@/lib/scheduling/week";
 import { getStorePlanningCashiers } from "@/lib/scheduling/planning-cashiers";
 import { CashierScheduleManager } from "@/components/scheduling/cashier-schedule-manager";
 import { PlanningCashierRoster } from "@/components/scheduling/planning-cashier-roster";
+import { PlanningCreateCashierButton } from "@/components/scheduling/planning-create-cashier-button";
 import type { Store } from "@/lib/types";
 
 function resolvePlanningStoreId(
@@ -38,7 +39,7 @@ export default async function ManagerPlanningPage({
   const profile = await getCurrentProfile();
   const city = profile ? getCityFilter(profile) : null;
   const storesAll = await getActiveStores(city);
-  const stores = profile ? filterStoresByProfile(storesAll, profile) : storesAll;
+  const stores = profile ? filterRetailStoresByProfile(storesAll, profile) : storesAll;
   const storeIds = stores.map((s) => s.id);
   const selectedStoreId = resolvePlanningStoreId(
     stores,
@@ -83,11 +84,21 @@ export default async function ManagerPlanningPage({
 
   return (
     <div className="animate-fade-in space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Planning caissiers</h1>
-        <p className="mt-1 text-muted">
-          Noms par magasin pour le planning · un compte caisse partagé pour la connexion
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Planning caissiers</h1>
+          <p className="mt-1 text-muted">
+            Noms par magasin pour le planning · un compte caisse partagé pour la connexion
+          </p>
+        </div>
+        {profile && isManager(profile) && (
+          <PlanningCreateCashierButton
+            viewer={profile}
+            stores={stores}
+            selectedStoreId={selectedStoreId}
+            selectedStoreName={selectedStore?.name}
+          />
+        )}
       </div>
 
       <Suspense fallback={null}>
