@@ -10,7 +10,7 @@ type Locale = "fr" | "en";
 
 const COPY = {
   fr: {
-    title: "Avis Google — Natus Marrakech",
+    title: "Avis Google — Natus",
     subtitle: "Ce que nos clientes et clients disent de Natus Cosmétiques",
     average: "Note moyenne",
     reviews: "avis clients",
@@ -22,7 +22,7 @@ const COPY = {
     location: "Guéliz, Marrakech",
   },
   en: {
-    title: "Google Reviews — Natus Marrakech",
+    title: "Google Reviews — Natus",
     subtitle: "What our customers say about Natus Cosmetics",
     average: "Average rating",
     reviews: "customer reviews",

@@ -2,7 +2,7 @@
   <rect width="180" height="180" fill="#FFFFFF"/>
   <text
     x="90"
-    y="78"
+    y="98"
     text-anchor="middle"
     fill="#B38C4A"
     font-family="Georgia, 'Times New Roman', serif"
@@ -11,18 +11,5 @@
     letter-spacing="-0.02em"
   >
     natus
-  </text>
-  <text
-    x="90"
-    y="118"
-    text-anchor="middle"
-    fill="#B38C4A"
-    opacity="0.65"
-    font-family="Arial, Helvetica, sans-serif"
-    font-size="14"
-    font-weight="400"
-    letter-spacing="0.35em"
-  >
-    MARRAKECH
   </text>
 </svg>

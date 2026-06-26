@@ -92,7 +92,7 @@ export function LoginForm() {
 
             <Button
               type="submit"
-              className="natus-login-submit w-full !bg-[#B38C4A] !text-white hover:!brightness-110"
+              className="natus-login-submit w-full"
               size="lg"
               loading={loading}
             >

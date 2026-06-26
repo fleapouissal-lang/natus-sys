@@ -15,6 +15,7 @@ import {
 } from "@/lib/layout/nav-links";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { Logo } from "@/components/ui/logo";
 import type { UserRole } from "@/lib/types";
 import { isMobileBottomNavVisible, isMobilePosDesktopOnlyRole } from "@/lib/layout/mobile-planning";
 import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
@@ -55,11 +56,14 @@ export function MobileTopBar({
       )}
     >
       <div className="natus-mobile-topbar-pill">
-        <div className="natus-mobile-topbar-brand min-w-0 flex-1">
-          <p className="natus-mobile-topbar-logo">Natus</p>
-          {subtitle ? (
-            <p className="natus-mobile-topbar-subtitle">{subtitle}</p>
-          ) : null}
+        <div className="natus-mobile-topbar-brand min-w-0 flex flex-1 items-center gap-2.5">
+          <Logo size="sm" className="natus-mobile-topbar-mark h-9 w-9" />
+          <div className="min-w-0">
+            <p className="natus-mobile-topbar-logo">Natus</p>
+            {subtitle ? (
+              <p className="natus-mobile-topbar-subtitle">{subtitle}</p>
+            ) : null}
+          </div>
         </div>
 
         <div className="natus-mobile-topbar-actions flex shrink-0 items-center gap-2">

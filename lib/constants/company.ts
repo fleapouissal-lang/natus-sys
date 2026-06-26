@@ -3,7 +3,7 @@ import type { PaymentMethod } from "@/lib/types";
 /** Coordonnées affichées sur les factures client. */
 export const NATUS_INVOICE_COMPANY = {
   legalName: "Natus Cosmétiques",
-  brandLine: "Natus Marrakech",
+  brandLine: "Natus",
   address: "12 Rue de la Liberté, Guéliz",
   city: "40000 Marrakech, Maroc",
   phone: "+212 5 24 00 00 00",

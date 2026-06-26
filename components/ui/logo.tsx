@@ -24,7 +24,7 @@ export function Logo({
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={LOGO_SRC}
-      alt="Natus Marrakech"
+      alt="Natus"
       width={px}
       height={px}
       className={cn("shrink-0 object-contain", className)}

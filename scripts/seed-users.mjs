@@ -1,5 +1,6 @@
 /**
- * Seed utilisateurs — direction, gérants, 3 caissiers + caisse magasin par store, livreurs.
+ * Seed utilisateurs — Marrakech & Casablanca uniquement.
+ * Un compte caisse partagé par magasin (pas de comptes caissiers individuels).
  *
  * Usage : node scripts/seed-users.mjs
  * Mot de passe commun : Natus2026!
@@ -8,12 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 import { loadEnv } from "./lib/env.mjs";
 
 const PASSWORD = "Natus2026!";
-
-const CASHIER_NAMES = [
-  ["Oussal", "Alami"],
-  ["Hajar", "Bennani"],
-  ["Sara", "Tazi"],
-];
+const ALLOWED_CITIES = ["Marrakech", "Casablanca"];
 
 function storeEmailSlug(name) {
   return name
@@ -54,8 +50,7 @@ function buildUsers(stores) {
     },
   ];
 
-  const cities = [...new Set(stores.map((s) => s.city))].sort();
-  for (const city of cities) {
+  for (const city of ALLOWED_CITIES) {
     users.push({
       email: `manager.${citySlug(city)}@natus.ma`,
       password: PASSWORD,
@@ -89,19 +84,6 @@ function buildUsers(stores) {
       store: store.name,
       is_store_pos: true,
     });
-
-    for (let i = 0; i < CASHIER_NAMES.length; i++) {
-      const [first, last] = CASHIER_NAMES[i];
-      users.push({
-        email: `${first.toLowerCase()}.${slug}@natus.ma`,
-        password: PASSWORD,
-        full_name: `${first} ${last}`,
-        role: "cashier",
-        city: store.city,
-        store: store.name,
-        is_store_pos: false,
-      });
-    }
 
     users.push({
       email: `livreur.${slug}@natus.ma`,
@@ -186,9 +168,8 @@ async function upsertUser(supabase, user, storeByName) {
   console.log(`✓  ${user.email} (${label})`);
 }
 
-async function assignHubManagers(supabase, stores) {
-  const cities = [...new Set(stores.map((s) => s.city))];
-  for (const city of cities) {
+async function assignHubManagers(supabase) {
+  for (const city of ALLOWED_CITIES) {
     const { data: hub } = await supabase
       .from("profiles")
       .select("id")
@@ -225,17 +206,20 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  console.log("🌱 Seed utilisateurs Natus\n");
+  console.log("🌱 Seed utilisateurs — Marrakech & Casablanca\n");
 
   const { data: storeRows, error: storesError } = await supabase
     .from("stores")
-    .select("id, name, city")
+    .select("id, name, city, is_hub")
     .eq("is_active", true)
+    .eq("is_hub", false)
+    .in("city", ALLOWED_CITIES)
+    .order("city")
     .order("name");
 
   if (storesError) throw storesError;
   if (!storeRows?.length) {
-    console.error("❌ Aucun magasin actif — lancez npm run db:migrate");
+    console.error("❌ Aucun magasin actif à Marrakech / Casablanca — lancez npm run db:migrate");
     process.exit(1);
   }
 
@@ -246,14 +230,19 @@ async function main() {
     await upsertUser(supabase, user, storeByName);
   }
 
-  await assignHubManagers(supabase, storeRows);
+  await assignHubManagers(supabase);
 
   console.log(`\n✅ ${users.length} comptes — mot de passe : ${PASSWORD}`);
-  console.log("\nExemple Guéliz :");
-  console.log("  • caisse.natus.gueliz@natus.ma → terminal caisse (login app)");
-  console.log("  • oussal.natus.gueliz@natus.ma → caissier 1 (connexion caisse)");
-  console.log("  • hajar.natus.gueliz@natus.ma  → caissier 2");
-  console.log("  • sara.natus.gueliz@natus.ma   → caissier 3");
+  console.log("\nMarrakech :");
+  console.log("  • manager.marrakech@natus.ma");
+  console.log("  • hub.marrakech@natus.ma");
+  console.log("  • caisse.natus.gueliz@natus.ma");
+  console.log("  • caisse.natus.medina@natus.ma");
+  console.log("\nCasablanca :");
+  console.log("  • manager.casablanca@natus.ma");
+  console.log("  • hub.casablanca@natus.ma");
+  console.log("  • caisse.natus.casablanca.anfa@natus.ma");
+  console.log("\nDirection : directeur@natus.ma | Admin : admin@natus.ma");
 }
 
 main().catch((err) => {

@@ -12,13 +12,13 @@ const jost = Jost({
 });
 
 export const metadata: Metadata = {
-  title: "Natus POS — Marrakech",
-  description: "Application de caisse pour magasin de cosmétiques Natus Marrakech",
-  applicationName: "Natus",
+  title: "Natus POS",
+  description: "Application de caisse Natus Cosmétiques",
+  applicationName: "Natus POS",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Natus",
+    title: "Natus POS",
   },
   formatDetection: {
     telephone: false,
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#B38C4A",
+  themeColor: "#EBD4BA",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

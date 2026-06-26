@@ -39,19 +39,6 @@ export async function GET(
         >
           natus
         </div>
-        {px >= 192 ? (
-          <div
-            style={{
-              fontSize: Math.round(px * 0.05),
-              color: "#B38C4A",
-              opacity: 0.65,
-              letterSpacing: "0.35em",
-              marginTop: Math.round(px * 0.02),
-            }}
-          >
-            MARRAKECH
-          </div>
-        ) : null}
       </div>
     ),
     { width: px, height: px }

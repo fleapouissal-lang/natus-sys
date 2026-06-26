@@ -49,31 +49,14 @@ export async function getActivePosOperator(
 export async function requirePosOperatorId(
   profile: Profile
 ): Promise<{ operatorId: string | null; error?: string }> {
-  if (!profile.is_store_pos) {
-    return { operatorId: null };
-  }
-
-  const session = await getActivePosOperator(profile);
-  if (!session?.operator_id) {
-    return { operatorId: null, error: "Connectez un caissier à la caisse" };
-  }
-
-  return { operatorId: session.operator_id };
+  // Compte caisse magasin : ventes au nom du terminal (resolve_sale_cashier_id → auth.uid())
+  return { operatorId: null };
 }
 
 export async function getEffectiveCashierId(
   profile: Profile
 ): Promise<{ cashierId: string; error?: string }> {
-  if (!profile.is_store_pos) {
-    return { cashierId: profile.id };
-  }
-
-  const { operatorId, error } = await requirePosOperatorId(profile);
-  if (error || !operatorId) {
-    return { cashierId: profile.id, error: error ?? "Caissier requis" };
-  }
-
-  return { cashierId: operatorId };
+  return { cashierId: profile.id };
 }
 
 export async function getCashierNfcCard(

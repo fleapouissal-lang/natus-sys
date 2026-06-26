@@ -1,19 +1,13 @@
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { getCityFilter } from "@/lib/permissions";
 import { getActiveStores, getProductsWithStoreStock } from "@/lib/inventory";
 import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store";
 import { loadShopifyOrderForPos, getShopifyOrders } from "@/lib/orders";
 import { PosTerminal } from "@/components/pos/pos-terminal";
-import { PosStoreShell } from "@/components/pos/pos-store-shell";
-import { PosOperatorGate } from "@/components/pos/pos-operator-gate";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { getLoyaltySettings } from "@/lib/loyalty/settings.server";
-import {
-  getActivePosOperator,
-  getStorePosAccount,
-} from "@/lib/pos/operator-session";
+import { getStorePosAccount } from "@/lib/pos/operator-session";
 import { Card } from "@/components/ui/card";
 
 export default async function PosPage({
@@ -21,11 +15,7 @@ export default async function PosPage({
 }: {
   searchParams: Promise<{ store?: string; shopify_order?: string; switch?: string }>;
 }) {
-  const {
-    store: storeParam,
-    shopify_order: shopifyOrderId,
-    switch: switchParam,
-  } = await searchParams;
+  const { store: storeParam, shopify_order: shopifyOrderId } = await searchParams;
   const profile = await getCurrentProfile();
   const city = profile ? getCityFilter(profile) : null;
   const stores = await getActiveStores(city);
@@ -56,8 +46,8 @@ export default async function PosPage({
             </h1>
             <p className="mt-3 text-sm text-muted">
               Ce magasin utilise un compte caisse partagé. Connectez-vous avec{" "}
-              <strong>{storePosAccount.full_name || storePosAccount.email}</strong>,
-              puis identifiez-vous comme caissier (email/mot de passe ou carte NFC).
+              <strong>{storePosAccount.full_name || storePosAccount.email}</strong>{" "}
+              pour accéder à la caisse.
             </p>
           </Card>
         </div>
@@ -67,8 +57,6 @@ export default async function PosPage({
 
   const products = storeId ? await getProductsWithStoreStock(storeId) : [];
   const loyaltySettings = await getLoyaltySettings();
-  const activeOperator =
-    profile?.is_store_pos ? await getActivePosOperator(profile) : null;
 
   let shopifyLoad = null;
   let shopifyError: string | null = null;
@@ -83,24 +71,8 @@ export default async function PosPage({
     }
   }
 
-  const operatorName =
-    activeOperator?.operator?.full_name ||
-    activeOperator?.operator?.email ||
-    profile?.full_name ||
-    profile?.email ||
-    "Caissier";
-
-  if (profile?.is_store_pos && !activeOperator) {
-    return (
-      <div className="flex h-full min-h-0 flex-col">
-        <PosOperatorGate
-          storeName={selectedStore?.name}
-          terminalEmail={profile.email}
-          gateMode={switchParam === "1" ? "switch" : "initial"}
-        />
-      </div>
-    );
-  }
+  const cashierName =
+    profile?.full_name || profile?.email || "Caissier";
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -126,62 +98,29 @@ export default async function PosPage({
         </div>
       )}
 
-      {profile?.is_store_pos && activeOperator ? (
-        <PosStoreShell
-          hasOperator
-          storeName={selectedStore?.name}
-          terminalEmail={profile.email}
-        >
-          {shopifyError && (
-            <p className="shrink-0 mx-4 mt-3 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
-              {shopifyError}
-            </p>
-          )}
-
-          <div className="min-h-0 flex-1">
-            <PosTerminal
-              products={products}
-              role={profile?.role || "cashier"}
-              cashierName={operatorName}
-              stores={stores}
-              defaultStoreId={storeId}
-              storeName={selectedStore?.name}
-              initialCart={shopifyLoad?.cart}
-              shopifyOrder={shopifyLoad?.context}
-              missingShopifyProducts={shopifyLoad?.missingProducts}
-              shopifyOrders={shopifyOrders}
-              loyaltySettings={loyaltySettings}
-              isStorePos
-              cashierUserId={profile.id}
-            />
-          </div>
-        </PosStoreShell>
-      ) : (
-        <>
-          {shopifyError && (
-            <p className="shrink-0 mx-4 mt-3 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
-              {shopifyError}
-            </p>
-          )}
-
-          <div className="min-h-0 flex-1">
-            <PosTerminal
-              products={products}
-              role={profile?.role || "cashier"}
-              cashierName={operatorName}
-              stores={stores}
-              defaultStoreId={storeId}
-              storeName={selectedStore?.name}
-              initialCart={shopifyLoad?.cart}
-              shopifyOrder={shopifyLoad?.context}
-              missingShopifyProducts={shopifyLoad?.missingProducts}
-              shopifyOrders={shopifyOrders}
-              loyaltySettings={loyaltySettings}
-              cashierUserId={profile?.id}
-            />
-          </div>
-        </>
+      {shopifyError && (
+        <p className="shrink-0 mx-4 mt-3 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+          {shopifyError}
+        </p>
       )}
+
+      <div className="min-h-0 flex-1">
+        <PosTerminal
+          products={products}
+          role={profile?.role || "cashier"}
+          cashierName={cashierName}
+          stores={stores}
+          defaultStoreId={storeId}
+          storeName={selectedStore?.name}
+          initialCart={shopifyLoad?.cart}
+          shopifyOrder={shopifyLoad?.context}
+          missingShopifyProducts={shopifyLoad?.missingProducts}
+          shopifyOrders={shopifyOrders}
+          loyaltySettings={loyaltySettings}
+          isStorePos={profile?.is_store_pos === true}
+          cashierUserId={profile?.id}
+        />
+      </div>
     </div>
   );
 }

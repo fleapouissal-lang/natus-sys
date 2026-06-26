@@ -3,7 +3,7 @@ import { GoogleReviewsView } from "@/components/marketing/google-reviews-view";
 import { getPublicGoogleReviewsData } from "@/lib/marketing/public-reviews";
 
 export const metadata: Metadata = {
-  title: "Google Reviews — Natus Marrakech",
+  title: "Google Reviews — Natus",
   description:
     "Customer reviews for Natus Cosmetics Guéliz Marrakech. Leave your review on Google Maps.",
   alternates: {

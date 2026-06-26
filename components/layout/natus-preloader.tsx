@@ -70,7 +70,7 @@ export function NatusPreloader() {
         <div className="natus-preloader__progress" aria-hidden>
           <span className="natus-preloader__progress-bar" />
         </div>
-        <p className="natus-preloader__tagline">Marrakech · Cosmétiques</p>
+        <p className="natus-preloader__tagline">Cosmétiques</p>
       </div>
     </div>
   );

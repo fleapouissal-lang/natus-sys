@@ -66,7 +66,7 @@ export default async function ProductStoryPage({
             </p>
           )}
           <p className="mt-6 text-xs text-muted">
-            Disponible en magasin Natus — Marrakech
+            Disponible en magasin Natus
           </p>
         </div>
       </div>

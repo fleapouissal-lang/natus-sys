@@ -4,7 +4,7 @@ import { getPublicComplaintStoresData } from "@/lib/feedback/public-complaints";
 import { NATUS_WEBSITE_URL } from "@/lib/marketing/public-reviews";
 
 export const metadata: Metadata = {
-  title: "Réclamation client — Natus Marrakech",
+  title: "Réclamation client — Natus",
   description:
     "Formulaire de réclamation Natus Cosmétiques : service en magasin, commande en ligne ou autre demande.",
   robots: { index: true, follow: true },

@@ -14,7 +14,6 @@ export async function GET(
   }
 
   const fontSize = Math.round(size * 0.42);
-  const subSize = Math.round(size * 0.07);
 
   return new ImageResponse(
     (
@@ -41,16 +40,6 @@ export async function GET(
         >
           <span style={{ fontSize, fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em" }}>
             natus
-          </span>
-          <span
-            style={{
-              marginTop: size * 0.04,
-              fontSize: subSize,
-              letterSpacing: "0.32em",
-              opacity: 0.9,
-            }}
-          >
-            MARRAKECH
           </span>
         </div>
       </div>

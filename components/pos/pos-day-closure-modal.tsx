@@ -6,7 +6,6 @@ import {
   Banknote,
   CreditCard,
   Loader2,
-  LogOut,
   Printer,
   Receipt,
   ScrollText,
@@ -28,7 +27,6 @@ import {
   todayDateKey,
   uniqueCashierLabels,
 } from "@/lib/sales/day-closure";
-import { signOutPosOperator } from "@/lib/pos/actions";
 import { formatCurrency, formatPaymentMethod } from "@/lib/utils";
 import type { Sale } from "@/lib/types";
 
@@ -55,7 +53,6 @@ export function PosDayClosureModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
 
   const dateKey = todayDateKey();
   const storeMode = Boolean(isStorePos || isManagementUser);
@@ -124,18 +121,6 @@ export function PosDayClosureModal({
     }
     return cashierName || "—";
   }, [storeMode, todaySales, cashierName]);
-
-  async function handleSignOut() {
-    setSigningOut(true);
-    const result = await signOutPosOperator();
-    setSigningOut(false);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    onClose();
-    window.location.href = "/cashier/pos?switch=1";
-  }
 
   if (!open) return null;
 
@@ -325,18 +310,6 @@ export function PosDayClosureModal({
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {isStorePos && (
-              <Button
-                type="button"
-                variant="ghost"
-                loading={signingOut}
-                onClick={handleSignOut}
-                className="text-primary-dark"
-              >
-                <LogOut className="h-4 w-4" />
-                Terminer ma session
-              </Button>
-            )}
             <Button type="button" variant="ghost" onClick={onClose}>
               Fermer
             </Button>

@@ -2,16 +2,15 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Natus POS — Marrakech",
-    short_name: "Natus",
-    description:
-      "Application de caisse pour magasin de cosmétiques Natus Marrakech",
+    name: "Natus POS",
+    short_name: "Natus POS",
+    description: "Application de caisse Natus Cosmétiques",
     start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "any",
     background_color: "#FFFDF9",
-    theme_color: "#B38C4A",
+    theme_color: "#EBD4BA",
     lang: "fr",
     categories: ["business", "productivity"],
     icons: [

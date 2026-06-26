@@ -36,16 +36,6 @@ export function NatusDocumentBrand({
       >
         {isInvoiceLogo ? "Natus" : "natus"}
       </span>
-      {!isInvoiceLogo && (
-        <span
-          className={cn(
-            "mt-1 font-medium uppercase text-[#a07d3f]",
-            isTicket ? "text-[6px] tracking-[0.26em]" : "text-[7px] tracking-[0.28em]"
-          )}
-        >
-          Marrakech
-        </span>
-      )}
     </div>
   );
 }

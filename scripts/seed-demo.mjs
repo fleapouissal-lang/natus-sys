@@ -26,13 +26,12 @@ console.log("🚀 Seed demo Natus\n");
 
 run("Migrations", "npm run db:migrate");
 run("Reset données (products conservés)", "node scripts/reset-demo-data.mjs");
-run("Utilisateurs (3 caissiers + caisse magasin / store)", "node scripts/seed-users.mjs");
+run("Utilisateurs (Marrakech & Casa)", "node scripts/seed-users.mjs");
 run("Commandes Shopify", "node scripts/seed-shopify-orders.mjs");
 run("Affectation livreurs", "node scripts/backfill-livreur-orders.mjs");
 run("Actualités exemple", "node scripts/seed-actualites.mjs");
 
 console.log("\n✅ Demo prête — mot de passe : Natus2026!");
-console.log("\nGuéliz :");
-console.log("  Login caisse : caisse.natus.gueliz@natus.ma");
-console.log("  Caissiers    : oussal.natus.gueliz@ / hajar.natus.gueliz@ / sara.natus.gueliz@");
-console.log("\nDirection : directeur@natus.ma | Gérant : manager.marrakech@natus.ma\n");
+console.log("\nMarrakech — caisse Guéliz : caisse.natus.gueliz@natus.ma");
+console.log("Casablanca — caisse Anfa : caisse.natus.casablanca.anfa@natus.ma");
+console.log("\nDirection : directeur@natus.ma | Gérants : manager.marrakech@ / manager.casablanca@\n");
