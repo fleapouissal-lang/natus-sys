@@ -53,6 +53,33 @@ UPDATE hub_stock_transfers
 SET assigned_livreur_id = NULL
 WHERE assigned_livreur_id IN (SELECT id FROM profiles WHERE role = 'livreur');
 
+UPDATE stock_movements
+SET created_by = NULL
+WHERE created_by IN (SELECT id FROM profiles WHERE role = 'livreur');
+
+UPDATE hub_stock_transfers
+SET
+  created_by = COALESCE(
+    (
+      SELECT p.id
+      FROM profiles p
+      WHERE p.role IN ('directeur', 'admin', 'hub')
+        AND p.is_active = true
+      ORDER BY CASE p.role
+        WHEN 'directeur' THEN 0
+        WHEN 'admin' THEN 1
+        ELSE 2
+      END
+      LIMIT 1
+    ),
+    created_by
+  ),
+  picked_up_by = NULL,
+  delivered_by = NULL
+WHERE created_by IN (SELECT id FROM profiles WHERE role = 'livreur')
+   OR picked_up_by IN (SELECT id FROM profiles WHERE role = 'livreur')
+   OR delivered_by IN (SELECT id FROM profiles WHERE role = 'livreur');
+
 DELETE FROM auth.users
 WHERE id IN (SELECT id FROM profiles WHERE role = 'livreur');
 

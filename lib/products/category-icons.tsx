@@ -1,12 +1,16 @@
 import {
   Sparkles,
-  Palette,
   Droplets,
   Flower2,
   Heart,
   Scissors,
   Gift,
   Package,
+  Home,
+  Sun,
+  Plane,
+  Baby,
+  User,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,13 +18,17 @@ import { getProductCategories } from "@/lib/products/product-utils";
 import type { Product } from "@/lib/types";
 
 export const PRODUCT_CATEGORY_ICONS: Record<string, LucideIcon> = {
-  "Soin visage": Sparkles,
-  Maquillage: Palette,
-  Nettoyage: Droplets,
-  Parfum: Flower2,
+  Accueil: Home,
+  Visage: Sparkles,
   Corps: Heart,
   Cheveux: Scissors,
-  Accessoires: Gift,
+  Hammam: Droplets,
+  Maison: Flower2,
+  Coffrets: Gift,
+  Enfants: Baby,
+  Homme: User,
+  Soleil: Sun,
+  Voyage: Plane,
 };
 
 export function getProductCategoryIcon(category: string): LucideIcon {

@@ -331,6 +331,7 @@ export function ProductsManager({
       const displayName = productDisplayName(p, parent).toLowerCase();
       const matchSearch =
         displayName.includes(q) ||
+        (p.product_code?.toLowerCase().includes(q) ?? false) ||
         (p.barcode?.includes(q) ?? false) ||
         getProductCategories(p).some((c) => c.toLowerCase().includes(q));
       return matchSearch && matchCategory;
@@ -364,6 +365,7 @@ export function ProductsManager({
         const name = productDisplayName(v, parent).toLowerCase();
         return (
           name.includes(q) ||
+          (v.product_code?.toLowerCase().includes(q) ?? false) ||
           (v.barcode?.includes(q) ?? false) ||
           getProductCategories(v).some((c) => c.toLowerCase().includes(q))
         );
@@ -460,6 +462,7 @@ export function ProductsManager({
         <td className="px-6 py-4">
           <ProductKindBadgeForProduct product={product} />
         </td>
+        <td className="px-6 py-4 font-mono text-xs">{product.product_code || "—"}</td>
         <td className="px-6 py-4 font-mono text-xs">{product.barcode || "—"}</td>
         <td className="px-6 py-4">
           <div className="flex flex-wrap gap-1">
@@ -718,6 +721,7 @@ export function ProductsManager({
               <tr className="border-y border-border bg-primary-light/50">
                 <th className="px-6 py-3 text-left font-medium text-muted">Produit</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Type</th>
+                <th className="px-6 py-3 text-left font-medium text-muted">Code</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Code-barres</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Catégories</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">Prix</th>

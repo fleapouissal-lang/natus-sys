@@ -38,8 +38,12 @@ export function ProductInfoCard({
             </Badge>
           )}
         </div>
-        {product.barcode && (
-          <p className="mt-2 font-mono text-xs text-muted">{product.barcode}</p>
+        {(product.product_code || product.barcode) && (
+          <p className="mt-2 font-mono text-xs text-muted">
+            {product.product_code ? `COM ${product.product_code}` : null}
+            {product.product_code && product.barcode ? " · " : null}
+            {product.barcode ? product.barcode : null}
+          </p>
         )}
         {product.description && !compact && (
           <p className="mt-2 text-sm text-muted line-clamp-2">{product.description}</p>

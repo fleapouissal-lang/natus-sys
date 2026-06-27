@@ -190,6 +190,15 @@ export function ProductForm({
         )}
 
         {!isParent && (
+          <Input
+            label="Code produit (COM)"
+            name="product_code"
+            defaultValue={product?.product_code || ""}
+            placeholder="Ex. NAT-001"
+          />
+        )}
+
+        {!isParent && (
           <BarcodeInput
             value={barcode}
             onChange={setBarcode}

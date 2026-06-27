@@ -7,23 +7,31 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ASSETS_DIR = resolve(__dirname, "../assets/products");
 
 const PRODUCT_CATEGORIES = [
-  "Soin visage",
-  "Maquillage",
-  "Nettoyage",
-  "Parfum",
+  "Accueil",
+  "Visage",
   "Corps",
   "Cheveux",
-  "Accessoires",
+  "Hammam",
+  "Maison",
+  "Coffrets",
+  "Enfants",
+  "Homme",
+  "Soleil",
+  "Voyage",
 ];
 
 const CATEGORY_DEFAULT_IMAGES = {
-  "Soin visage": "mille-vertus.png",
-  Maquillage: "mille-vertus.png",
-  Nettoyage: "mille-vertus.png",
-  Parfum: "huile-precieuse.png",
+  Accueil: "mille-vertus.png",
+  Visage: "mille-vertus.png",
   Corps: "huile-precieuse.png",
   Cheveux: "huile-precieuse.png",
-  Accessoires: "mille-vertus.png",
+  Hammam: "mille-vertus.png",
+  Maison: "huile-precieuse.png",
+  Coffrets: "mille-vertus.png",
+  Enfants: "huile-precieuse.png",
+  Homme: "huile-precieuse.png",
+  Soleil: "huile-precieuse.png",
+  Voyage: "mille-vertus.png",
 };
 
 function getCategoryBucketSlug(category) {
@@ -128,10 +136,10 @@ async function main() {
     const category =
       (Array.isArray(product.categories) && product.categories[0]) ||
       product.category ||
-      "Soin visage";
+      "Corps";
     const imageUrl =
       uploadedByCategory[category] ||
-      getProductImagePublicUrl(url, category, CATEGORY_DEFAULT_IMAGES["Soin visage"]);
+      getProductImagePublicUrl(url, category, CATEGORY_DEFAULT_IMAGES.Corps);
 
     const { error } = await supabase
       .from("products")

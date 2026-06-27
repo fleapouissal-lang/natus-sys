@@ -71,9 +71,12 @@ export type ProductKind = "simple" | "parent" | "variant";
 export interface Product {
   id: string;
   name: string;
+  product_code?: string | null;
   barcode: string | null;
   description: string | null;
   price: number;
+  compare_at_price?: number | null;
+  classification?: string | null;
   stock: number;
   category: string | null;
   categories?: string[];

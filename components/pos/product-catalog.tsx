@@ -5,19 +5,12 @@ import {
   Search,
   CheckCircle2,
   LayoutGrid,
-  Sparkles,
-  Palette,
-  Droplets,
-  Flower2,
-  Heart,
-  Scissors,
-  Gift,
   Plus,
   Minus,
   Eye,
   ArrowLeft,
-  type LucideIcon,
 } from "lucide-react";
+import { getProductCategoryIcon } from "@/lib/products/category-icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -41,16 +34,6 @@ import {
 } from "@/lib/pos/product-sales-rank";
 import type { Product } from "@/lib/types";
 
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  "Soin visage": Sparkles,
-  Maquillage: Palette,
-  Nettoyage: Droplets,
-  Parfum: Flower2,
-  Corps: Heart,
-  Cheveux: Scissors,
-  Accessoires: Gift,
-};
-
 function CategoryCardsGrid({
   cards,
   onSelect,
@@ -68,7 +51,7 @@ function CategoryCardsGrid({
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 md:gap-4">
         {cards.map((card) => {
-          const Icon = CATEGORY_ICONS[card.name] ?? Sparkles;
+          const Icon = getProductCategoryIcon(card.name);
           const parentImage = card.coverProduct
             ? resolveParentImageSource(card.coverProduct)
             : null;
@@ -145,7 +128,7 @@ function CategoryStrip({
         </button>
 
         {categories.map((cat) => {
-          const Icon = CATEGORY_ICONS[cat] ?? Sparkles;
+          const Icon = getProductCategoryIcon(cat);
           const active = selected === cat;
           return (
             <button

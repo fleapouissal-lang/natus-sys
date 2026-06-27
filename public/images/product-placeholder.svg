@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none" role="img" aria-label="Image produit par défaut">
+  <rect width="400" height="400" fill="#E8E8E8"/>
+  <circle cx="200" cy="200" r="72" fill="#FFFFFF" stroke="#CFCFCF" stroke-width="2"/>
+  <text
+    x="200"
+    y="212"
+    text-anchor="middle"
+    fill="#B38C4A"
+    style="font-family: Georgia, 'Times New Roman', serif; font-size: 38px; font-weight: 600; letter-spacing: -0.02em;"
+  >natus</text>
+</svg>

@@ -253,7 +253,7 @@ export async function createProduct(formData: FormData) {
 
   const { data: existing } = await supabase
     .from("products")
-    .select("id, name, barcode, price, category, categories, stock, image_url, description, brand, product_kind, parent_id")
+    .select("id, name, barcode, product_code, price, category, categories, stock, image_url, description, brand, product_kind, parent_id")
     .eq("barcode", barcode)
     .maybeSingle();
 
@@ -264,6 +264,17 @@ export async function createProduct(formData: FormData) {
     };
   }
 
+  const productCode = ((formData.get("product_code") as string) || "").trim() || null;
+
+  if (productCode) {
+    const { data: codeDuplicate } = await supabase
+      .from("products")
+      .select("id")
+      .eq("product_code", productCode)
+      .maybeSingle();
+    if (codeDuplicate) return { error: "Ce code produit est déjà utilisé" };
+  }
+
   const imageResult = await resolveProductImageUrl(supabase, formData, primaryCategory, true);
   if ("error" in imageResult && imageResult.error) return { error: imageResult.error };
   if (!imageResult.url) return { error: "L'image du produit est obligatoire" };
@@ -272,6 +283,7 @@ export async function createProduct(formData: FormData) {
     .from("products")
     .insert({
       name: formData.get("name") as string,
+      product_code: productCode,
       barcode,
       description: (formData.get("description") as string) || null,
       price: parseFloat(formData.get("price") as string),
@@ -455,6 +467,20 @@ export async function updateProduct(id: string, formData: FormData) {
     categories,
     brand: PRODUCT_BRAND,
   };
+
+  const productCode = ((formData.get("product_code") as string) || "").trim() || null;
+  if (!isParent) {
+    if (productCode) {
+      const { data: codeDuplicate } = await supabase
+        .from("products")
+        .select("id")
+        .eq("product_code", productCode)
+        .neq("id", id)
+        .maybeSingle();
+      if (codeDuplicate) return { error: "Ce code produit est déjà utilisé" };
+    }
+    updatePayload.product_code = productCode;
+  }
 
   if (!isParent) {
     updatePayload.barcode = barcode;

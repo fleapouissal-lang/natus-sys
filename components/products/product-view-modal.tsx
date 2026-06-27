@@ -97,6 +97,12 @@ export function ProductViewModal({
             </DetailRow>
           )}
 
+          {product.product_code && (
+            <DetailRow label="Code produit">
+              <span className="font-mono text-xs">{product.product_code}</span>
+            </DetailRow>
+          )}
+
           {product.barcode && (
             <DetailRow label="Code-barres">
               <span className="inline-flex items-center gap-1.5 font-mono text-xs">

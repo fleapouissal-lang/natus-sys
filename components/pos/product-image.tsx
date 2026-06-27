@@ -8,6 +8,31 @@ import {
   type ProductImageSource,
 } from "@/lib/product-image";
 
+function ProductPlaceholder({
+  className,
+  imgClassName,
+}: {
+  className?: string;
+  imgClassName?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex h-full w-full items-center justify-center bg-[#E8E8E8]",
+        className
+      )}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo-natus.svg"
+        alt=""
+        aria-hidden
+        className={cn("h-[52%] w-[52%] max-h-28 max-w-28 object-contain", imgClassName)}
+      />
+    </div>
+  );
+}
+
 export function ProductImage({
   product,
   parent,
@@ -31,26 +56,33 @@ export function ProductImage({
     () => getProductImageUrl(product, { parent }),
     [product, parent]
   );
-  const [src, setSrc] = useState(primarySrc);
+  const [src, setSrc] = useState<string | null>(primarySrc);
+  const [showPlaceholder, setShowPlaceholder] = useState(primarySrc === null);
 
   useEffect(() => {
     setSrc(primarySrc);
+    setShowPlaceholder(primarySrc === null);
   }, [primarySrc]);
 
   function handleError() {
     const fallback = getProductImageFallbackUrl(product, {
       parent,
-      failedUrl: src,
+      failedUrl: src ?? undefined,
     });
     if (fallback && fallback !== src) {
       setSrc(fallback);
+      setShowPlaceholder(false);
+      return;
     }
+    setShowPlaceholder(true);
   }
 
-  const image = (
+  const content = showPlaceholder ? (
+    <ProductPlaceholder imgClassName={imgClassName} />
+  ) : (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src}
+      src={src!}
       alt={product.name}
       onError={handleError}
       loading={fill ? "eager" : "lazy"}
@@ -67,7 +99,7 @@ export function ProductImage({
           className
         )}
       >
-        {image}
+        {content}
       </div>
     );
   }
@@ -75,7 +107,7 @@ export function ProductImage({
   if (fill) {
     return (
       <div className={cn("absolute inset-0 overflow-hidden", className)}>
-        {image}
+        {content}
       </div>
     );
   }
@@ -88,7 +120,7 @@ export function ProductImage({
       )}
       style={className?.includes("!h-full") ? undefined : { width: px, height: px }}
     >
-      {image}
+      {content}
     </div>
   );
 }
