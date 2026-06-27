@@ -14,9 +14,9 @@ import { Card } from "@/components/ui/card";
 export default async function PosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ store?: string; switch?: string }>;
+  searchParams: Promise<{ store?: string; switch?: string; closure?: string }>;
 }) {
-  const { store: storeParam } = await searchParams;
+  const { store: storeParam, closure: closureParam } = await searchParams;
   const profile = await getCurrentProfile();
 
   if (profile?.role === "manager") {
@@ -109,6 +109,7 @@ export default async function PosPage({
           isStorePos={profile?.is_store_pos === true}
           cashierUserId={profile?.id}
           productSalesQty={productSalesQty}
+          openDayClosure={closureParam === "1"}
         />
       </div>
     </div>

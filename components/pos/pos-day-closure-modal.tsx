@@ -54,8 +54,14 @@ export function PosDayClosureModal({
   const [mounted, setMounted] = useState(false);
   const [businessDate, setBusinessDate] = useState<string>("");
   const [pendingClosure, setPendingClosure] = useState(false);
+  const [dayClosureValidated, setDayClosureValidated] = useState(false);
+  const [closedBusinessDate, setClosedBusinessDate] = useState<string>("");
+  const [autoValidatedClosure, setAutoValidatedClosure] = useState(false);
   const [printUnlocked, setPrintUnlocked] = useState(false);
+  const [canRequestClosure, setCanRequestClosure] = useState(true);
+  const [closureBlockedReason, setClosureBlockedReason] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState("");
+  const [codeExpiresAt, setCodeExpiresAt] = useState<string | null>(null);
   const [closureMessage, setClosureMessage] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [submitting, startSubmit] = useTransition();
@@ -73,8 +79,14 @@ export function PosDayClosureModal({
     }
     setBusinessDate(stateResult.state.business_date);
     const pending = stateResult.state.pending;
+    setDayClosureValidated(stateResult.state.day_closure_validated);
+    setClosedBusinessDate(stateResult.state.validated_closure?.business_date ?? "");
+    setAutoValidatedClosure(Boolean(stateResult.state.validated_closure?.auto_validated));
+    setCanRequestClosure(stateResult.state.can_request_closure);
+    setClosureBlockedReason(stateResult.state.closure_blocked_reason ?? null);
     setPendingClosure(Boolean(pending));
-    setPrintUnlocked(Boolean(pending?.cashier_code_confirmed));
+    setPrintUnlocked(Boolean(pending?.cashier_code_confirmed) || stateResult.state.day_closure_validated);
+    setCodeExpiresAt(pending?.code_expires_at ?? null);
   }
 
   useEffect(() => {
@@ -120,12 +132,22 @@ export function PosDayClosureModal({
           setError(stateResult.error);
           setBusinessDate("");
           setPendingClosure(false);
+          setDayClosureValidated(false);
+          setClosedBusinessDate("");
           setPrintUnlocked(false);
         } else {
           setBusinessDate(stateResult.state.business_date);
           const pending = stateResult.state.pending;
+          setDayClosureValidated(stateResult.state.day_closure_validated);
+          setClosedBusinessDate(stateResult.state.validated_closure?.business_date ?? "");
+          setAutoValidatedClosure(Boolean(stateResult.state.validated_closure?.auto_validated));
+          setCanRequestClosure(stateResult.state.can_request_closure);
+          setClosureBlockedReason(stateResult.state.closure_blocked_reason ?? null);
           setPendingClosure(Boolean(pending));
-          setPrintUnlocked(Boolean(pending?.cashier_code_confirmed));
+          setPrintUnlocked(
+            Boolean(pending?.cashier_code_confirmed) || stateResult.state.day_closure_validated
+          );
+          setCodeExpiresAt(pending?.code_expires_at ?? null);
         }
       } else {
         const { todayDateKey } = await import("@/lib/sales/day-closure");
@@ -144,7 +166,48 @@ export function PosDayClosureModal({
     };
   }, [open, storeMode, resolvedStoreId, cashierUserId]);
 
-  const dateKey = businessDate;
+  useEffect(() => {
+    if (!open || !pendingClosure || !codeExpiresAt || !resolvedStoreId) return;
+
+    const fireExpiryRefresh = () => {
+      void (async () => {
+        const stateResult = await getStorePosDayState(resolvedStoreId);
+        if ("error" in stateResult) return;
+
+        const pending = stateResult.state.pending;
+        setBusinessDate(stateResult.state.business_date);
+        setDayClosureValidated(stateResult.state.day_closure_validated);
+        setClosedBusinessDate(stateResult.state.validated_closure?.business_date ?? "");
+        setAutoValidatedClosure(Boolean(stateResult.state.validated_closure?.auto_validated));
+        setCanRequestClosure(stateResult.state.can_request_closure);
+        setClosureBlockedReason(stateResult.state.closure_blocked_reason ?? null);
+        setPendingClosure(Boolean(pending));
+        setPrintUnlocked(Boolean(pending?.cashier_code_confirmed));
+        setCodeExpiresAt(pending?.code_expires_at ?? null);
+        setCodeInput("");
+        setConfirmError(null);
+        setClosureMessage(
+          "Le code a expiré (2 h). Un nouveau code a été généré — demandez-le au gérant."
+        );
+      })();
+    };
+
+    const ms = new Date(codeExpiresAt).getTime() - Date.now();
+    if (ms <= 0) {
+      fireExpiryRefresh();
+      return;
+    }
+
+    const timer = window.setTimeout(fireExpiryRefresh, ms + 500);
+    return () => window.clearTimeout(timer);
+  }, [open, pendingClosure, codeExpiresAt, resolvedStoreId]);
+
+  const dateKey =
+    dayClosureValidated && closedBusinessDate
+      ? closedBusinessDate
+      : pendingClosure && businessDate
+        ? businessDate
+        : businessDate;
   const daySales = useMemo(
     () => (dateKey ? filterSalesForDateKey(sales, dateKey) : []),
     [sales, dateKey]
@@ -244,6 +307,26 @@ export function PosDayClosureModal({
                 </p>
               )}
 
+              {!canRequestClosure && closureBlockedReason && !pendingClosure && !dayClosureValidated && (
+                <div className="mb-4 border border-primary/20 bg-primary-light/40 px-4 py-3 text-sm text-foreground">
+                  {closureBlockedReason}
+                </div>
+              )}
+
+              {dayClosureValidated && autoValidatedClosure && (
+                <div className="mb-4 border border-primary/20 bg-primary-light/40 px-4 py-3 text-sm text-muted">
+                  Clôture automatique (caissier absent) — validée sans code gérant.
+                </div>
+              )}
+
+              {dayClosureValidated && (
+                <div className="mb-4 border border-success/35 bg-success/10 px-4 py-3 text-sm text-foreground">
+                  Jour métier clôturé ({formatDayClosureDate(closedBusinessDate || dateKey)}).
+                  Les nouvelles ventes sont enregistrées sur le jour suivant
+                  {businessDate ? ` (${formatDayClosureDate(businessDate)})` : ""}.
+                </div>
+              )}
+
               {pendingClosure && (
                 <div className="mb-4 border border-accent/35 bg-accent/10 px-4 py-3 text-sm text-foreground">
                   La caisse reste ouverte — vous pouvez continuer à encaisser des ventes pendant
@@ -251,7 +334,7 @@ export function PosDayClosureModal({
                 </div>
               )}
 
-              {pendingClosure && !printUnlocked && (
+              {pendingClosure && !dayClosureValidated && !printUnlocked && (
                 <div className="mb-4 border border-primary/25 bg-gradient-to-r from-champagne/50 to-page px-4 py-4">
                   <div className="flex flex-wrap items-end gap-3">
                     <div className="min-w-0 flex-1">
@@ -262,8 +345,8 @@ export function PosDayClosureModal({
                         </p>
                       </div>
                       <p className="mt-2 text-sm text-muted">
-                        Le gérant a reçu un code. Saisissez-le ici pour débloquer l&apos;impression du
-                        rapport.
+                        Le gérant a reçu un code valide 2 h. Saisissez-le ici pour débloquer
+                        l&apos;impression du rapport.
                       </p>
                       <input
                         inputMode="numeric"
@@ -309,8 +392,8 @@ export function PosDayClosureModal({
 
               {printUnlocked && (
                 <p className="mb-4 text-xs text-muted">
-                  Le gérant doit encore valider la clôture. Les ventes restent possibles aujourd&apos;hui
-                  — le jour métier suivant commencera demain matin.
+                  Le gérant doit encore valider la clôture. Les ventes restent comptées sur le jour
+                  en cours jusqu&apos;à validation.
                 </p>
               )}
 
@@ -385,7 +468,7 @@ export function PosDayClosureModal({
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {!pendingClosure && (
+            {!pendingClosure && !dayClosureValidated && canRequestClosure && (
               <Button
                 type="button"
                 onClick={handleRequestClosure}
@@ -436,9 +519,13 @@ export function PosDayClosureModal({
 export function PosDayClosureButton({
   onClick,
   className,
+  disabled,
+  title,
 }: {
   onClick: () => void;
   className?: string;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
     <Button
@@ -446,8 +533,9 @@ export function PosDayClosureButton({
       variant="secondary"
       size="sm"
       onClick={onClick}
+      disabled={disabled}
+      title={title}
       className={className}
-      title="Clôture du jour"
     >
       <ScrollText className="h-4 w-4" />
       <span className="hidden sm:inline">Clôture</span>

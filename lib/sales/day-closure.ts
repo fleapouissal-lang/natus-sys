@@ -116,3 +116,21 @@ export function printDayClosureTicket() {
 export function printDayClosureReport() {
   runPrintJob("a4-report", "day-closure-report");
 }
+
+export function formatClosureCodeExpiresAt(iso: string): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("fr-FR", {
+    timeZone: "Africa/Casablanca",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function closureCodeMsRemaining(iso: string): number {
+  if (!iso) return 0;
+  return Math.max(new Date(iso).getTime() - Date.now(), 0);
+}

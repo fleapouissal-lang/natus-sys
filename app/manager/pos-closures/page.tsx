@@ -25,8 +25,8 @@ export default async function ManagerPosClosuresPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Clôtures caisse</h1>
         <p className="mt-1 text-muted">
-          Recevez le code de clôture, transmettez-le au caissier pour l&apos;impression, puis validez
-          pour fermer le jour métier.
+          Recevez le code de clôture (valide 2 h), transmettez-le au caissier pour l&apos;impression,
+          puis validez pour fermer le jour métier.
         </p>
       </div>
 

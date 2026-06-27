@@ -1,18 +1,34 @@
 import type { DayClosureStats } from "@/lib/sales/day-closure";
 
+export const STORE_DAY_CLOSURE_CODE_TTL_HOURS = 2;
+
 export type StoreDayClosurePending = {
   id: string;
   validation_code?: string | null;
   business_date: string;
   stats: DayClosureStats;
   requested_at: string;
+  code_expires_at: string;
   cashier_code_confirmed: boolean;
+};
+
+export type StoreDayClosureValidated = {
+  id: string;
+  business_date: string;
+  validated_at: string;
+  auto_validated: boolean;
+  stats: DayClosureStats;
 };
 
 export type StorePosDayState = {
   store_id: string;
   store_name: string;
   business_date: string;
+  calendar_date: string;
+  can_request_closure: boolean;
+  closure_blocked_reason?: string | null;
+  day_closure_validated: boolean;
+  validated_closure: StoreDayClosureValidated | null;
   pending: StoreDayClosurePending | null;
 };
 
@@ -25,6 +41,7 @@ export type PendingStoreDayClosureRow = {
   validation_code: string;
   stats: DayClosureStats;
   requested_at: string;
+  code_expires_at: string;
   requested_by_name: string;
   cashier_code_confirmed: boolean;
 };
@@ -79,7 +96,24 @@ export function parseStorePosDayState(raw: unknown): StorePosDayState | null {
         business_date: String(p.business_date),
         stats: parseDayClosureStats(p.stats),
         requested_at: String(p.requested_at ?? ""),
+        code_expires_at: String(p.code_expires_at ?? ""),
         cashier_code_confirmed: Boolean(p.cashier_code_confirmed),
+      };
+    }
+  }
+
+  const validatedRaw = row.validated_closure;
+  let validated_closure: StoreDayClosureValidated | null = null;
+
+  if (validatedRaw && typeof validatedRaw === "object") {
+    const v = validatedRaw as Record<string, unknown>;
+    if (v.business_date) {
+      validated_closure = {
+        id: String(v.id ?? ""),
+        business_date: String(v.business_date),
+        validated_at: String(v.validated_at ?? ""),
+        auto_validated: Boolean(v.auto_validated),
+        stats: parseDayClosureStats(v.stats),
       };
     }
   }
@@ -88,6 +122,13 @@ export function parseStorePosDayState(raw: unknown): StorePosDayState | null {
     store_id: String(row.store_id),
     store_name: String(row.store_name ?? "Magasin"),
     business_date: String(row.business_date),
+    calendar_date: String(row.calendar_date ?? row.business_date ?? ""),
+    can_request_closure: row.can_request_closure !== false,
+    closure_blocked_reason: row.closure_blocked_reason
+      ? String(row.closure_blocked_reason)
+      : null,
+    day_closure_validated: Boolean(row.day_closure_validated),
+    validated_closure,
     pending,
   };
 }
@@ -106,6 +147,7 @@ export function parsePendingStoreDayClosureRow(raw: unknown): PendingStoreDayClo
     validation_code: String(row.validation_code),
     stats: parseDayClosureStats(row.stats),
     requested_at: String(row.requested_at ?? ""),
+    code_expires_at: String(row.code_expires_at ?? ""),
     requested_by_name: String(row.requested_by_name ?? "—"),
     cashier_code_confirmed: Boolean(row.cashier_code_confirmed),
   };

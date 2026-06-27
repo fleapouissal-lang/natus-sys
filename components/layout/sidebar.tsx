@@ -397,7 +397,7 @@ export function Sidebar({
             )}
           >
             <ScrollText className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Clôture</span>}
+            {!collapsed && <span>Clôture du jour</span>}
           </button>
         )}
         <button

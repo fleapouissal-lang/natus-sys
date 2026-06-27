@@ -43,7 +43,7 @@ export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 1 },
   { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 2 },
   { href: "/cashier/sales", label: "Ventes", icon: History, mobileOrder: 3 },
-  { href: "/cashier/pos-closures", label: "Clôtures", icon: ScrollText, mobileOrder: 3.5 },
+  { href: "/cashier/pos-closures", label: "Historique clôtures", icon: ScrollText, mobileOrder: 3.5 },
   { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 4 },
   { href: "/cashier/transfers", label: "Commande hub", icon: Boxes, mobileOrder: 5 },
   { href: "/cashier/customers", label: "Clients fidélité", icon: Gift, mobileOrder: 6 },
@@ -235,6 +235,10 @@ export function resolveNavLinks(input: {
 
   if (input.hideMobilePos) {
     links = links.filter((link) => link.href !== "/cashier/pos");
+  }
+
+  if (input.isStorePos) {
+    links = links.filter((link) => link.href !== "/cashier/pos-closures");
   }
 
   links = filterNavLinksByPages(links, pageProfile);

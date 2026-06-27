@@ -9,7 +9,7 @@ import {
   listPendingStoreDayClosures,
   validateStoreDayClosure,
 } from "@/lib/sales/store-day-closure-actions";
-import { formatDayClosureDate } from "@/lib/sales/day-closure";
+import { formatDayClosureDate, formatClosureCodeExpiresAt } from "@/lib/sales/day-closure";
 import type { PendingStoreDayClosureRow } from "@/lib/sales/store-day-closure";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -80,7 +80,8 @@ export function StoreDayClosureValidationPanel({
               <h2 className="text-lg font-semibold">Valider une clôture</h2>
             </div>
             <p className="mt-1 text-sm text-muted">
-              Saisissez le code communiqué par la caisse pour fermer le jour métier du magasin.
+              Saisissez le code communiqué par la caisse. Chaque code est valide 2 h puis renouvelé
+              automatiquement.
             </p>
           </div>
           <Button type="button" variant="secondary" size="sm" onClick={reload} disabled={refreshing}>
@@ -132,12 +133,13 @@ export function StoreDayClosureValidationPanel({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[920px] text-sm">
+          <table className="w-full min-w-[980px] text-sm">
             <thead>
               <tr className="border-b border-border bg-primary-light/40 text-left text-muted">
                 <th className="px-6 py-3 font-medium">Magasin</th>
                 <th className="px-6 py-3 font-medium">Jour métier</th>
                 <th className="px-6 py-3 font-medium">Code</th>
+                <th className="px-6 py-3 font-medium">Expire</th>
                 <th className="px-6 py-3 font-medium">Caissier</th>
                 <th className="px-6 py-3 font-medium">Impression</th>
                 <th className="px-6 py-3 text-right font-medium">Total</th>
@@ -159,6 +161,9 @@ export function StoreDayClosureValidationPanel({
                     <Badge variant="accent" className="font-mono text-base tracking-[0.25em]">
                       {closure.validation_code}
                     </Badge>
+                  </td>
+                  <td className="px-6 py-4 text-muted">
+                    {formatClosureCodeExpiresAt(closure.code_expires_at)}
                   </td>
                   <td className="px-6 py-4">{closure.requested_by_name}</td>
                   <td className="px-6 py-4">
@@ -186,7 +191,7 @@ export function StoreDayClosureValidationPanel({
               ))}
               {closures.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-muted">
+                  <td colSpan={9} className="px-6 py-12 text-center text-muted">
                     Aucune clôture en attente.
                   </td>
                 </tr>

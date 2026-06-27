@@ -105,6 +105,7 @@ export function PosTerminal({
   isStorePos = false,
   cashierUserId,
   productSalesQty = {},
+  openDayClosure = false,
 }: {
   products: Product[];
   role: UserRole;
@@ -120,6 +121,7 @@ export function PosTerminal({
   isStorePos?: boolean;
   cashierUserId?: string;
   productSalesQty?: ProductSalesQtyMap;
+  openDayClosure?: boolean;
 }) {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
@@ -148,6 +150,10 @@ export function PosTerminal({
   const [checkoutStep, setCheckoutStep] = useState<PosMobileCartStep>("loyalty");
   const [showDayClosure, setShowDayClosure] = useState(false);
   const [storeDayPending, setStoreDayPending] = useState(false);
+  const [storeDayValidated, setStoreDayValidated] = useState(false);
+  const [storeClosedDate, setStoreClosedDate] = useState<string | null>(null);
+  const [canRequestClosure, setCanRequestClosure] = useState(true);
+  const [closureBlockedReason, setClosureBlockedReason] = useState<string | null>(null);
   const [storeBusinessDate, setStoreBusinessDate] = useState<string | null>(null);
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -203,6 +209,8 @@ export function PosTerminal({
   const refreshStoreDayState = useCallback(async () => {
     if (!isStorePos || !defaultStoreId) {
       setStoreDayPending(false);
+      setStoreDayValidated(false);
+      setStoreClosedDate(null);
       setStoreBusinessDate(null);
       return;
     }
@@ -210,6 +218,10 @@ export function PosTerminal({
     if ("error" in result) return;
     setStoreBusinessDate(result.state.business_date);
     setStoreDayPending(Boolean(result.state.pending));
+    setStoreDayValidated(result.state.day_closure_validated);
+    setStoreClosedDate(result.state.validated_closure?.business_date ?? null);
+    setCanRequestClosure(result.state.can_request_closure);
+    setClosureBlockedReason(result.state.closure_blocked_reason ?? null);
   }, [isStorePos, defaultStoreId]);
 
   useEffect(() => {
@@ -220,6 +232,12 @@ export function PosTerminal({
     }, 20000);
     return () => window.clearInterval(timer);
   }, [isStorePos, defaultStoreId, refreshStoreDayState]);
+
+  useEffect(() => {
+    if (openDayClosure && isStorePos) {
+      setShowDayClosure(true);
+    }
+  }, [openDayClosure, isStorePos]);
 
   useEffect(() => {
     if (!orderNotifications) return;
@@ -544,6 +562,10 @@ export function PosTerminal({
       setError(result.error);
       setLoading(false);
       return;
+    }
+
+    if (isStorePos) {
+      void refreshStoreDayState();
     }
 
     const wasShopifyOrder = !!activeShopifyOrder;
@@ -1197,6 +1219,17 @@ export function PosTerminal({
           </div>
         )}
 
+        {isStorePos && storeDayValidated && !storeDayPending && (
+          <div className="mx-4 mt-3 shrink-0 rounded-lg border border-success/35 bg-success/10 px-4 py-2.5 text-sm text-foreground">
+            Jour clôturé
+            {(storeClosedDate || storeBusinessDate)
+              ? ` (${formatDayClosureDate(storeClosedDate || storeBusinessDate!)})`
+              : ""}{" "}
+            — nouvelles ventes enregistrées sur le jour métier suivant
+            {storeBusinessDate ? ` (${formatDayClosureDate(storeBusinessDate)})` : ""}.
+          </div>
+        )}
+
         {isStockScan && (
           <>
             <div className="mb-6 flex flex-wrap items-start justify-between gap-4 px-4 pt-4">
@@ -1371,6 +1404,9 @@ export function PosTerminal({
                       </Button>
                     )}
                     {canDayClosure && !isStorePos && (
+                      <PosDayClosureButton onClick={() => setShowDayClosure(true)} />
+                    )}
+                    {isStorePos && (
                       <PosDayClosureButton onClick={() => setShowDayClosure(true)} />
                     )}
                     <ProClientQrButton
@@ -1597,7 +1633,7 @@ export function PosTerminal({
         />
       )}
 
-      {canDayClosure && !isStorePos && (
+      {(canDayClosure || isStorePos) && (
         <PosDayClosureModal
           open={showDayClosure}
           onClose={() => setShowDayClosure(false)}
