@@ -10,7 +10,7 @@ export default async function CashierPosClosuresPage() {
   if (!profile.store_id) {
     return (
       <div className="animate-fade-in space-y-6">
-        <h1 className="text-2xl font-bold tracking-tight">Rapports de clôture</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Historique clôtures</h1>
         <p className="text-muted">Aucun magasin assigné à ce compte.</p>
       </div>
     );

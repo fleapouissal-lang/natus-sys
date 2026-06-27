@@ -7,7 +7,6 @@ import {
   Receipt,
   Users,
   ShoppingCart,
-  History,
   ClipboardList,
   RotateCcw,
   Boxes,
@@ -42,7 +41,8 @@ export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 0 },
   { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 1 },
   { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 2 },
-  { href: "/cashier/sales", label: "Historique de vente", icon: History, mobileOrder: 3 },
+  { href: "/cashier/sales", label: "Historique de vente", icon: Receipt, mobileOrder: 3 },
+  { href: "/cashier/pos-closures", label: "Historique clôtures", icon: ScrollText, mobileOrder: 3.5 },
   { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 4 },
   { href: "/cashier/transfers", label: "Commande hub", icon: Boxes, mobileOrder: 5 },
   { href: "/cashier/customers", label: "Clients fidélité", icon: Gift, mobileOrder: 6 },
@@ -227,8 +227,10 @@ export function resolveNavLinks(input: {
       ? [...personalCashierLinks]
       : [...cashierLinks];
     if (input.planningOnlyNav && input.isStorePos) {
-      const notesLink = cashierLinks.find((link) => link.href === "/cashier/notes");
-      if (notesLink) links.push(notesLink);
+      for (const href of ["/cashier/notes", "/cashier/pos-closures"] as const) {
+        const extra = cashierLinks.find((link) => link.href === href);
+        if (extra) links.push(extra);
+      }
     }
     if (!input.isStorePos) {
       links = links.filter((link) => link.href !== "/cashier/notes");
@@ -244,10 +246,6 @@ export function resolveNavLinks(input: {
 
   if (input.hideMobilePos) {
     links = links.filter((link) => link.href !== "/cashier/pos");
-  }
-
-  if (input.isStorePos) {
-    links = links.filter((link) => link.href !== "/cashier/pos-closures");
   }
 
   links = filterNavLinksByPages(links, pageProfile);
