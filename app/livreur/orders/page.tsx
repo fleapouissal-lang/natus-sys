@@ -1,26 +1,25 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
-import { getStoreById, getProductCatalog } from "@/lib/inventory";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
+import { getProductCatalog } from "@/lib/inventory";
 
 export default async function LivreurOrdersPage() {
   const profile = await getCurrentProfile();
   if (!profile || profile.role !== "livreur") redirect("/login");
 
-  if (!profile.store_id) {
+  if (!profile.city) {
     return (
       <div className="animate-fade-in space-y-6">
         <h1 className="text-2xl font-bold tracking-tight">Mes livraisons</h1>
-        <p className="text-muted">Aucun magasin assigné à votre compte livreur.</p>
+        <p className="text-muted">Aucune ville assignée à votre compte livreur.</p>
       </div>
     );
   }
 
-  const store = await getStoreById(profile.store_id);
   const orders = await getShopifyOrders(profile);
   const products = await getProductCatalog();
-  const scopeLabel = getOrdersScopeLabel(profile, { storeName: store?.name });
+  const scopeLabel = getOrdersScopeLabel(profile, { city: profile.city });
 
   return (
     <div className="animate-fade-in space-y-4 md:space-y-6">
@@ -36,18 +35,17 @@ export default async function LivreurOrdersPage() {
           >
             Mes retours
           </a>
-          {store ? (
-            <span className="mt-1 block text-xs md:inline md:mt-0">
-              — {store.name}, {store.city}
-            </span>
-          ) : null}
+          <span className="mt-1 block text-xs md:inline md:mt-0">
+            {" "}
+            — zone dépôt {profile.city} (magasins rattachés, toutes villes)
+          </span>
         </p>
       </div>
 
       <ShopifyOrdersManager
         orders={orders}
         scopeLabel={scopeLabel}
-        showStore={false}
+        showStore
         editable
         products={products}
         livreurMode

@@ -114,10 +114,8 @@ export async function getShopifyOrders(
       dbQuery = dbQuery.eq("workflow_status", query.workflowStatus);
     }
   } else if (profile.role === "livreur") {
-    if (!profile.store_id) return [];
-    dbQuery = dbQuery
-      .eq("store_id", profile.store_id)
-      .eq("assigned_livreur_id", profile.id);
+    if (!profile.city) return [];
+    dbQuery = dbQuery.eq("assigned_livreur_id", profile.id);
     if (query.workflowStatus === "returned") {
       dbQuery = dbQuery.eq("workflow_status", "returned");
     } else if (query.workflowStatuses?.length) {
@@ -154,6 +152,10 @@ export async function getShopifyOrders(
   }
 
   if (isDirector(profile) || isManager(profile)) {
+    return attachStoreNamesToOrders(orders);
+  }
+
+  if (profile.role === "livreur") {
     return attachStoreNamesToOrders(orders);
   }
 
@@ -239,6 +241,7 @@ export function getOrdersScopeLabel(
     return opts.storeName ? `Magasin — ${opts.storeName}` : "Mon magasin";
   }
   if (profile.role === "livreur") {
+    if (opts.city) return `Livraisons — ${opts.city}`;
     return opts.storeName ? `Livraisons — ${opts.storeName}` : "Mes livraisons";
   }
   if (opts.storeName) return `${opts.storeName}${opts.city ? ` — ${opts.city}` : ""}`;

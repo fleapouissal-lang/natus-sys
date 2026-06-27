@@ -2,7 +2,8 @@ export type NotificationScope =
   | { mode: "store"; storeId: string }
   | { mode: "city"; city: string }
   | { mode: "director" }
-  | { mode: "hub"; city: string; hubStoreId: string };
+  | { mode: "hub"; city: string; hubStoreId: string }
+  | { mode: "livreur"; livreurId: string; city: string };
 
 export function notificationStorageKey(scope: NotificationScope): string {
   switch (scope.mode) {
@@ -14,6 +15,8 @@ export function notificationStorageKey(scope: NotificationScope): string {
       return "director-all";
     case "hub":
       return `hub-${scope.hubStoreId}`;
+    case "livreur":
+      return `livreur-${scope.livreurId}`;
   }
 }
 
@@ -27,6 +30,8 @@ export function notificationChannelId(scope: NotificationScope): string {
       return "director-all";
     case "hub":
       return `hub-${scope.hubStoreId}`;
+    case "livreur":
+      return `livreur-${scope.livreurId}`;
   }
 }
 
@@ -35,6 +40,7 @@ export function resolveNotificationScope(input: {
   storeId?: string | null;
   city?: string | null;
   hubStoreId?: string | null;
+  livreurId?: string | null;
 }): NotificationScope | null {
   if (input.role === "directeur" || input.role === "admin") {
     return { mode: "director" };
@@ -42,6 +48,10 @@ export function resolveNotificationScope(input: {
 
   if (input.role === "hub" && input.city && input.hubStoreId) {
     return { mode: "hub", city: input.city, hubStoreId: input.hubStoreId };
+  }
+
+  if (input.role === "livreur" && input.city && input.livreurId) {
+    return { mode: "livreur", livreurId: input.livreurId, city: input.city };
   }
 
   if (input.storeId) {

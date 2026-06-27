@@ -37,7 +37,7 @@ export function SaleDocumentsModal({
         </p>
       </div>
 
-      <div className="flex justify-center rounded-lg border border-border bg-[#ebe6dc] p-4">
+      <div className="flex justify-center rounded-lg border border-border bg-white p-4">
         <Ticket data={data} />
       </div>
 

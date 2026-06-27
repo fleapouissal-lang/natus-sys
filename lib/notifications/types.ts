@@ -5,7 +5,7 @@ export type CashierNotificationKind =
   | "stock_low"
   | "stock_out";
 
-export type NotificationAudience = "store" | "city" | "director" | "hub";
+export type NotificationAudience = "store" | "city" | "director" | "hub" | "livreur";
 
 /** @deprecated alias */
 export type CashierOrderNotification = CashierNotification;

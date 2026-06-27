@@ -1449,10 +1449,7 @@ textarea:focus {
 }
 
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 10mm;
-  }
+  /* @page size/margin : défini dynamiquement via setPrintPageLayout() */
 
   body * {
     visibility: hidden;
@@ -1525,15 +1522,38 @@ textarea:focus {
 
   body[data-print-doc="ticket"] #ticket-print {
     position: static;
-    width: 100%;
+    width: 80mm;
     max-width: 80mm;
+    height: auto !important;
+    min-height: 0 !important;
     margin: 0 auto;
-    background: white !important;
-    padding: 0 !important;
+    padding: 2mm !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
   }
 
-  body[data-print-doc="ticket"] .natus-ticket > div {
-    border-color: #d4c4a8 !important;
+  body[data-print-doc="ticket"] #ticket-print,
+  body[data-print-doc="ticket"] #ticket-print * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
+  }
+
+  body[data-print-doc="ticket"] #ticket-print .natus-ticket > div {
+    border-color: #000 !important;
+    background: #fff !important;
+  }
+
+  body[data-print-doc="ticket"] #ticket-print thead tr,
+  body[data-print-doc="ticket"] #ticket-print tbody tr {
+    page-break-inside: avoid;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-print-only {

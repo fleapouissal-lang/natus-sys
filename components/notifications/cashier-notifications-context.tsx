@@ -31,6 +31,10 @@ import {
 } from "@/lib/notifications/show-browser-notification";
 import { evaluateStockChange, type StockChangeInput } from "@/lib/notifications/process-stock-change";
 import {
+  fetchStoreInventoryAlertRows,
+  fetchStoreInventoryRows,
+} from "@/lib/notifications/fetch-store-inventory-alerts";
+import {
   mergeActiveStockAlerts,
   stockAlertsChanged,
 } from "@/lib/notifications/sync-stock-alerts";
@@ -139,6 +143,8 @@ function scopeAudience(scope: NotificationScope): NotificationAudience {
       return "director";
     case "hub":
       return "hub";
+    case "livreur":
+      return "livreur";
     default:
       return "store";
   }
@@ -477,7 +483,86 @@ export function CashierNotificationsProvider({
       });
     }
 
+    function seedLastStockFromRows(
+      rows: { store_id: string; product_id: string; stock: number }[]
+    ) {
+      for (const row of rows) {
+        lastStockRef.current.set(
+          stockInventoryKey(row.store_id, row.product_id),
+          row.stock
+        );
+      }
+    }
+
+    async function bootstrapLivreurAssignments() {
+      if (scope.mode !== "livreur") return;
+
+      const pendingNotifications: CashierNotification[] = [];
+
+      const { data: transfers } = await supabase
+        .from("hub_stock_transfers")
+        .select(
+          "id, status, notes, sent_at, to_store_id, from_store_id, to_store:to_store_id(name, is_hub), from_store:from_store_id(name, is_hub)"
+        )
+        .eq("assigned_livreur_id", scope.livreurId)
+        .in("status", ["pret", "en_livraison"]);
+
+      if (cancelled) return;
+
+      for (const row of transfers || []) {
+        if ((row.status as string) !== "pret") continue;
+        const toStore = Array.isArray(row.to_store) ? row.to_store[0] : row.to_store;
+        const fromStore = Array.isArray(row.from_store) ? row.from_store[0] : row.from_store;
+        const isReturn = Boolean(toStore?.is_hub);
+        pendingNotifications.push(
+          hubTransferToNotification(
+            row as Record<string, unknown>,
+            null,
+            isReturn ? "Retour à transférer au dépôt" : "Commande hub à livrer",
+            "livreur"
+          )
+        );
+      }
+
+      const { data: orders } = await supabase
+        .from("shopify_orders")
+        .select("id, order_number, customer_name, total, workflow_status, updated_at")
+        .eq("assigned_livreur_id", scope.livreurId)
+        .in("workflow_status", ["ready", "shipping"]);
+
+      if (cancelled) return;
+
+      for (const row of orders || []) {
+        const kind =
+          row.workflow_status === "shipping" ? "order_transferred" : "order_new";
+        pendingNotifications.push({
+          ...orderRowToNotification(row as Record<string, unknown>, kind),
+          audience: "livreur",
+        });
+      }
+
+      if (pendingNotifications.length === 0) return;
+
+      setNotifications((prev) => {
+        const byId = new Map(prev.map((n) => [n.id, n]));
+        for (const notification of pendingNotifications) {
+          if (!byId.has(notification.id)) byId.set(notification.id, notification);
+        }
+        const next = [...byId.values()].sort(
+          (a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+        );
+        persist(next.slice(0, 80));
+        setBarVisible(hasNotificationAttention(next));
+        return next.slice(0, 80);
+      });
+    }
+
     async function bootstrapInventoryBaseline() {
+      if (scope.mode === "livreur") {
+        await bootstrapLivreurAssignments();
+        return;
+      }
+
       if (scope.mode === "director") {
         const { data: stores } = await supabase
           .from("stores")
@@ -486,37 +571,25 @@ export function CashierNotificationsProvider({
 
         if (cancelled) return;
 
-        monitoredStoreIdsRef.current = new Set((stores || []).map((s) => s.id as string));
+        const storeList = stores || [];
+        monitoredStoreIdsRef.current = new Set(storeList.map((s) => s.id as string));
         storeNamesRef.current = new Map(
-          (stores || []).map((s) => [s.id as string, s.name as string])
+          storeList.map((s) => [s.id as string, s.name as string])
         );
         storeIsHubRef.current = new Map(
-          (stores || []).map((s) => [s.id as string, Boolean(s.is_hub)])
+          storeList.map((s) => [s.id as string, Boolean(s.is_hub)])
         );
 
-        const storeIds = [...monitoredStoreIdsRef.current];
-        if (storeIds.length === 0) return;
+        if (monitoredStoreIdsRef.current.size === 0) return;
 
-        const { data: rows } = await supabase
-          .from("store_inventory")
-          .select("store_id, product_id, stock")
-          .in("store_id", storeIds);
-
-        for (const row of rows || []) {
-          lastStockRef.current.set(
-            stockInventoryKey(row.store_id as string, row.product_id as string),
-            Number(row.stock) || 0
-          );
-        }
-
-        await syncStockAlertsFromRows(
-          (rows || []).map((row) => ({
-            store_id: row.store_id as string,
-            product_id: row.product_id as string,
-            stock: Number(row.stock) || 0,
-          })),
-          "director"
+        const rows = await fetchStoreInventoryAlertRows(
+          supabase,
+          storeList.map((s) => ({ id: s.id as string, is_hub: s.is_hub }))
         );
+        if (cancelled) return;
+
+        seedLastStockFromRows(rows);
+        await syncStockAlertsFromRows(rows, "director");
         return;
       }
 
@@ -524,26 +597,11 @@ export function CashierNotificationsProvider({
         storeIsHubRef.current.set(scope.hubStoreId, true);
         monitoredStoreIdsRef.current = new Set([scope.hubStoreId]);
 
-        const { data: rows } = await supabase
-          .from("store_inventory")
-          .select("store_id, product_id, stock")
-          .eq("store_id", scope.hubStoreId);
+        const rows = await fetchStoreInventoryRows(supabase, scope.hubStoreId);
+        if (cancelled) return;
 
-        for (const row of rows || []) {
-          lastStockRef.current.set(
-            stockInventoryKey(row.store_id as string, row.product_id as string),
-            Number(row.stock) || 0
-          );
-        }
-
-        await syncStockAlertsFromRows(
-          (rows || []).map((row) => ({
-            store_id: row.store_id as string,
-            product_id: row.product_id as string,
-            stock: Number(row.stock) || 0,
-          })),
-          "hub"
-        );
+        seedLastStockFromRows(rows);
+        await syncStockAlertsFromRows(rows, "hub");
         return;
       }
 
@@ -557,68 +615,43 @@ export function CashierNotificationsProvider({
 
         if (cancelled) return;
 
-        cityStoreIdsRef.current = new Set((stores || []).map((s) => s.id as string));
+        const storeList = stores || [];
+        cityStoreIdsRef.current = new Set(storeList.map((s) => s.id as string));
         storeNamesRef.current = new Map(
-          (stores || []).map((s) => [s.id as string, s.name as string])
+          storeList.map((s) => [s.id as string, s.name as string])
         );
         storeIsHubRef.current = new Map(
-          (stores || []).map((s) => [s.id as string, Boolean(s.is_hub)])
+          storeList.map((s) => [s.id as string, Boolean(s.is_hub)])
         );
 
-        const storeIds = [...cityStoreIdsRef.current];
-        if (storeIds.length === 0) return;
+        if (cityStoreIdsRef.current.size === 0) return;
 
-        const { data: rows } = await supabase
-          .from("store_inventory")
-          .select("store_id, product_id, stock")
-          .in("store_id", storeIds);
-
-        for (const row of rows || []) {
-          lastStockRef.current.set(
-            stockInventoryKey(row.store_id as string, row.product_id as string),
-            Number(row.stock) || 0
-          );
-        }
-
-        await syncStockAlertsFromRows(
-          (rows || []).map((row) => ({
-            store_id: row.store_id as string,
-            product_id: row.product_id as string,
-            stock: Number(row.stock) || 0,
-          })),
-          "city"
+        const rows = await fetchStoreInventoryAlertRows(
+          supabase,
+          storeList.map((s) => ({ id: s.id as string, is_hub: false }))
         );
+        if (cancelled) return;
+
+        seedLastStockFromRows(rows);
+        await syncStockAlertsFromRows(rows, "city");
         return;
       }
 
       storeIsHubRef.current.set(scope.storeId, false);
       monitoredStoreIdsRef.current = new Set([scope.storeId]);
 
-      const { data: rows } = await supabase
-        .from("store_inventory")
-        .select("store_id, product_id, stock")
-        .eq("store_id", scope.storeId);
+      const rows = await fetchStoreInventoryRows(supabase, scope.storeId);
+      if (cancelled) return;
 
-      for (const row of rows || []) {
-        lastStockRef.current.set(
-          stockInventoryKey(row.store_id as string, row.product_id as string),
-          Number(row.stock) || 0
-        );
-      }
-
-      await syncStockAlertsFromRows(
-        (rows || []).map((row) => ({
-          store_id: row.store_id as string,
-          product_id: row.product_id as string,
-          stock: Number(row.stock) || 0,
-        })),
-        "store"
-      );
+      seedLastStockFromRows(rows);
+      await syncStockAlertsFromRows(rows, "store");
     }
 
-    void bootstrapInventoryBaseline();
+    async function startRealtime() {
+      await bootstrapInventoryBaseline();
+      if (cancelled) return;
 
-    const channel = supabase.channel(`natus-events-${notificationChannelId(scope)}`);
+      const channel = supabase.channel(`natus-events-${notificationChannelId(scope)}`);
 
     if (scope.mode === "store") {
       const { storeId } = scope;
@@ -807,40 +840,165 @@ export function CashierNotificationsProvider({
         );
     }
 
-    channel
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "store_inventory",
-        },
-        (payload) => {
-          void handleInventoryRow(
-            payload.new as Record<string, unknown>,
-            undefined
-          );
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "store_inventory",
-        },
-        (payload) => {
-          void handleInventoryRow(
-            payload.new as Record<string, unknown>,
-            payload.old as Record<string, unknown>
-          );
-        }
-      )
-      .subscribe();
+    if (scope.mode === "livreur") {
+      const { livreurId } = scope;
+
+      channel
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "hub_stock_transfers",
+            filter: `assigned_livreur_id=eq.${livreurId}`,
+          },
+          async (payload) => {
+            const row = payload.new as Record<string, unknown>;
+            if (row.status !== "pret") return;
+
+            const id = notificationKey(`${row.id as string}-hub_transfer_order`, "hub_transfer");
+            if (seenEventIdsRef.current.has(id)) return;
+            seenEventIdsRef.current.add(id);
+
+            const unitCount = await fetchHubTransferUnitCount(
+              supabase,
+              row.id as string
+            );
+
+            pushNotification(
+              hubTransferToNotification(
+                row,
+                unitCount,
+                "Nouveau transfert assigné",
+                "livreur"
+              )
+            );
+            router.refresh();
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "hub_stock_transfers",
+            filter: `assigned_livreur_id=eq.${livreurId}`,
+          },
+          async (payload) => {
+            const row = payload.new as Record<string, unknown>;
+            const oldRow = payload.old as Record<string, unknown>;
+            const becameReady =
+              row.status === "pret" &&
+              oldRow.status !== "pret" &&
+              row.assigned_livreur_id === livreurId;
+
+            if (!becameReady) return;
+
+            const id = notificationKey(`${row.id as string}-hub_transfer_order`, "hub_transfer");
+            if (seenEventIdsRef.current.has(id)) return;
+            seenEventIdsRef.current.add(id);
+
+            const unitCount = await fetchHubTransferUnitCount(
+              supabase,
+              row.id as string
+            );
+
+            pushNotification(
+              hubTransferToNotification(
+                row,
+                unitCount,
+                "Transfert prêt à récupérer",
+                "livreur"
+              )
+            );
+            router.refresh();
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "shopify_orders",
+            filter: `assigned_livreur_id=eq.${livreurId}`,
+          },
+          (payload) => {
+            const row = payload.new as Record<string, unknown>;
+            const oldRow = payload.old as Record<string, unknown>;
+
+            const newlyAssigned =
+              row.assigned_livreur_id === livreurId &&
+              oldRow.assigned_livreur_id !== livreurId;
+            const becameShipping =
+              row.workflow_status === "shipping" &&
+              oldRow.workflow_status !== "shipping";
+
+            if (!newlyAssigned && !becameShipping) return;
+
+            const kind = becameShipping ? "order_transferred" : "order_new";
+            const id = notificationKey(row.id as string, kind);
+            if (seenEventIdsRef.current.has(id)) return;
+            seenEventIdsRef.current.add(id);
+
+            pushNotification({
+              ...orderRowToNotification(row, kind),
+              audience: "livreur",
+            });
+            router.refresh();
+          }
+        );
+    }
+
+    if (scope.mode !== "livreur") {
+      channel
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "store_inventory",
+          },
+          (payload) => {
+            void handleInventoryRow(
+              payload.new as Record<string, unknown>,
+              undefined
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "store_inventory",
+          },
+          (payload) => {
+            void handleInventoryRow(
+              payload.new as Record<string, unknown>,
+              payload.old as Record<string, unknown>
+            );
+          }
+        );
+    }
+
+    channel.subscribe();
+
+      return channel;
+    }
+
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    void startRealtime().then((subscribedChannel) => {
+      if (cancelled) {
+        if (subscribedChannel) void supabase.removeChannel(subscribedChannel);
+        return;
+      }
+      channel = subscribedChannel ?? null;
+    });
 
     return () => {
       cancelled = true;
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [scope, pushNotification, router, handleInventoryRow]);
 

@@ -21,6 +21,7 @@ export type UserPageKey =
   | "hubs"
   | "notes"
   | "transfers"
+  | "orders"
   | "hub_orders"
   | "returns"
   | "writeoffs"
@@ -55,7 +56,8 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "hub_stock", label: "Hub stock", description: "Stock entrepôt central", group: "admin" },
   { key: "hubs", label: "Dépôts", description: "Comptes dépôt ville (indépendants des gérants)", group: "admin" },
   { key: "notes", label: "Notes", description: "Notes clients et suivi caisse", group: "clients" },
-  { key: "transfers", label: "Commande hub", description: "Réceptions et envois hub", group: "operations" },
+  { key: "transfers", label: "Transferts", description: "Livraisons hub et retours dépôt", group: "operations" },
+  { key: "orders", label: "Livraisons", description: "Commandes Shopify à livrer", group: "operations" },
   { key: "hub_orders", label: "Commandes dépôt", description: "Commandes entrepôt vers magasins", group: "operations" },
   { key: "returns", label: "Retours", description: "Retours produits et SAV", group: "clients" },
   { key: "writeoffs", label: "Retours stock", description: "Validation retours périmés ou cassés", group: "operations" },
@@ -83,7 +85,7 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
     "pos", "planning", "pos_closures", "actualites", "sales", "notes", "transfers",
     "customers", "returns", "invoices", "cheques",
   ],
-  livreur: ["actualites", "transfers", "returns"],
+  livreur: ["actualites", "orders", "transfers", "returns"],
   hub: ["dashboard", "stock", "hub_stock", "hub_orders", "activity", "actualites", "writeoffs"],
 };
 
@@ -200,6 +202,8 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       return "/cashier/notes";
     case "transfers":
       return role === "livreur" ? "/livreur/transfers" : "/cashier/transfers";
+    case "orders":
+      return role === "livreur" ? "/livreur/orders" : null;
     case "hub_orders":
       if (role === "hub") return "/hub/orders";
       if (role === "manager") return "/manager/hub-orders";

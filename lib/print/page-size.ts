@@ -6,7 +6,21 @@ const PAGE_RULES: Record<PrintPageLayout, string> = {
   a4: "@media print { @page { size: A4 portrait; margin: 10mm; } }",
   "a4-report":
     "@media print { @page { size: A4 portrait; margin: 12mm 10mm 16mm 10mm; @bottom-center { content: 'Page ' counter(page) ' / ' counter(pages); font-size: 8pt; color: #444; font-family: system-ui, sans-serif; } } }",
-  ticket: "@media print { @page { size: 80mm auto; margin: 4mm; } }",
+  ticket: `@media print {
+    @page {
+      size: 80mm auto;
+      margin: 0;
+    }
+    html, body {
+      width: 80mm !important;
+      height: auto !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: visible !important;
+      background: #fff !important;
+    }
+  }`,
 };
 
 export function setPrintPageLayout(layout: PrintPageLayout) {

@@ -35,6 +35,7 @@ export function DashboardShell({
   storeId,
   city,
   hubStoreId,
+  livreurId,
   isStorePos = false,
   isPersonalCashier = false,
   hasPosOperator = false,
@@ -52,6 +53,7 @@ export function DashboardShell({
   storeId?: string | null;
   city?: string | null;
   hubStoreId?: string | null;
+  livreurId?: string | null;
   isStorePos?: boolean;
   isPersonalCashier?: boolean;
   hasPosOperator?: boolean;
@@ -85,6 +87,7 @@ export function DashboardShell({
         storeId,
         city: city ?? cityLabel,
         hubStoreId,
+        livreurId,
       });
 
   const profileSubtitle = storeName || cityLabel || null;

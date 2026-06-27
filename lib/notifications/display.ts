@@ -34,15 +34,18 @@ export function notificationHref(
   switch (kind) {
     case "hub_transfer":
       if (audience === "city") return "/manager/hub-orders";
+      if (audience === "livreur") return "/livreur/transfers";
       return "/cashier/transfers";
     case "stock_low":
     case "stock_out":
       if (audience === "director") return "/director/stock";
+      if (audience === "livreur") return "/livreur/transfers";
       if (audience === "hub") return "/hub/hub-stock";
       if (audience === "city") return "/manager/stock";
       return "/cashier/pos";
     default:
       if (audience === "director") return "/director/orders";
+      if (audience === "livreur") return "/livreur/orders";
       if (audience === "city") return "/manager/orders";
       return "/cashier/orders";
   }

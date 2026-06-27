@@ -23,16 +23,21 @@ export default async function HubOrdersPage({
     );
   }
 
-  const [transfers, livreurs] = await Promise.all([
+  const [outboundTransfers, inboundTransfers, livreurs] = await Promise.all([
     getHubStockTransfers({ fromStoreId: hubStore.id, limit: 100 }),
+    getHubStockTransfers({ toStoreId: hubStore.id, limit: 100 }),
     getHubCityLivreurs(profile.city),
   ]);
+
+  const transfers = [...outboundTransfers, ...inboundTransfers].sort(
+    (a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
+  );
 
   return (
     <HubOrdersView
       transfers={transfers}
       title="Commandes dépôt"
-      description={`Suivi des envois depuis ${hubStore.name} vers les magasins associés`}
+      description={`Envois dépôt → magasins et retours magasin → ${hubStore.name}`}
       successMessage={
         created === "1"
           ? "Commande créée avec succès — statut En cours. Marquez-la prête dès que le colis est préparé."

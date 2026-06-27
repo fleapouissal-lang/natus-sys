@@ -16,6 +16,8 @@ export default async function LivreurLayout({
       userName={profile.full_name || profile.email}
       avatarUrl={profile.avatar_url}
       cityLabel={profile.city || undefined}
+      city={profile.city}
+      livreurId={profile.id}
     >
       {children}
     </DashboardShell>

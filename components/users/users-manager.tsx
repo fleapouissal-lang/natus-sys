@@ -250,7 +250,7 @@ export function UsersManager({
                       : user.city || storeMap[user.store_id || ""]?.city || "—"}
                   </td>
                   <td className="px-6 py-4">
-                    {user.role === "cashier" || user.role === "livreur" ? (
+                    {user.role === "cashier" ? (
                       <SelectMenu
                         value={user.store_id || ""}
                         onChange={(storeId) => handleStoreChange(user.id, storeId)}
@@ -264,7 +264,11 @@ export function UsersManager({
                         size="sm"
                         className="min-w-[140px]"
                       />
-                  ) : user.role === "hub" ? (
+                    ) : user.role === "livreur" ? (
+                      <span className="text-xs text-muted">
+                        Ville — {user.city || "—"}
+                      </span>
+                    ) : user.role === "hub" ? (
                       <span className="text-xs text-muted">
                         Dépôt — {user.city || "—"}
                       </span>

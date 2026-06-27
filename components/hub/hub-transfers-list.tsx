@@ -9,10 +9,12 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
 import {
   assignHubTransferLivreur,
+  confirmHubStockTransfer,
   markHubTransferReady,
   pickupHubTransfer,
   repairHubStockTransfer,
 } from "@/lib/actions";
+import { hubTransferDirection } from "@/lib/hub-transfer-direction";
 import { ProductImage } from "@/components/pos/product-image";
 import {
   hubTransferStatusLabel,
@@ -259,6 +261,23 @@ export function HubTransfersList({
                         </div>
                       </div>
                     )}
+
+                    {allowManage &&
+                      transfer.status === "livre" &&
+                      hubTransferDirection(transfer) === "store_to_depot" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          loading={loadingId === transfer.id}
+                          onClick={() =>
+                            void runAction(transfer.id, () =>
+                              confirmHubStockTransfer(transfer.id)
+                            )
+                          }
+                        >
+                          Valider réception dépôt
+                        </Button>
+                      )}
 
                     {allowRepair && transfer.status === "received" && (
                       <Button

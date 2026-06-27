@@ -56,8 +56,9 @@ export const cashierLinks: NavLinkItem[] = [
 
 export const livreurLinks: NavLinkItem[] = [
   { href: "/livreur/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 0 },
-  { href: "/livreur/transfers", label: "Commande hub", icon: Boxes, mobileOrder: 1 },
-  { href: "/livreur/returns", label: "Retours", icon: RotateCcw, mobileOrder: 2 },
+  { href: "/livreur/orders", label: "Livraisons", icon: Package, mobileOrder: 1 },
+  { href: "/livreur/transfers", label: "Transferts", icon: Boxes, mobileOrder: 2 },
+  { href: "/livreur/returns", label: "Retours", icon: RotateCcw, mobileOrder: 3 },
 ];
 
 function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavLinkItem[] {

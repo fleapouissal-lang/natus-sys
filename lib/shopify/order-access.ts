@@ -10,10 +10,7 @@ export async function canAccessShopifyOrder(
   if (isManager(profile)) return profile.city === order.city;
   if (profile.role === "cashier") return profile.store_id === order.store_id;
   if (isLivreur(profile)) {
-    return (
-      profile.store_id === order.store_id &&
-      order.assigned_livreur_id === profile.id
-    );
+    return order.assigned_livreur_id === profile.id;
   }
   return false;
 }

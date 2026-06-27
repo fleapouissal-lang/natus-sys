@@ -323,6 +323,10 @@ export interface HubStockTransfer {
   received_at: string | null;
   from_store_name: string | null;
   to_store_name: string | null;
+  from_store_city?: string | null;
+  to_store_city?: string | null;
+  from_store_is_hub?: boolean;
+  to_store_is_hub?: boolean;
   creator_name: string | null;
   receiver_name: string | null;
   items: HubStockTransferItem[];

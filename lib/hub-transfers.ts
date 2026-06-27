@@ -8,10 +8,10 @@ function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
 
 function mapTransferRow(row: Record<string, unknown>): HubStockTransfer {
   const fromStore = unwrapOne(
-    row.from_store as { id: string; name: string; city: string } | { id: string; name: string; city: string }[] | null
+    row.from_store as { id: string; name: string; city: string; is_hub?: boolean } | { id: string; name: string; city: string; is_hub?: boolean }[] | null
   );
   const toStore = unwrapOne(
-    row.to_store as { id: string; name: string; city: string } | { id: string; name: string; city: string }[] | null
+    row.to_store as { id: string; name: string; city: string; is_hub?: boolean } | { id: string; name: string; city: string; is_hub?: boolean }[] | null
   );
   const creator = unwrapOne(
     row.creator as { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null
@@ -40,6 +40,10 @@ function mapTransferRow(row: Record<string, unknown>): HubStockTransfer {
     received_at: (row.received_at as string | null) ?? null,
     from_store_name: fromStore?.name ?? null,
     to_store_name: toStore?.name ?? null,
+    from_store_city: fromStore?.city ?? null,
+    to_store_city: toStore?.city ?? null,
+    from_store_is_hub: fromStore?.is_hub ?? false,
+    to_store_is_hub: toStore?.is_hub ?? false,
     creator_name: creator?.full_name || creator?.email || null,
     receiver_name: receiver?.full_name || receiver?.email || null,
     assigned_livreur_name: livreur?.full_name || livreur?.email || null,
@@ -77,8 +81,8 @@ const TRANSFER_SELECT = `
   picked_up_at,
   delivered_at,
   received_at,
-  from_store:from_store_id(id, name, city),
-  to_store:to_store_id(id, name, city),
+  from_store:from_store_id(id, name, city, is_hub),
+  to_store:to_store_id(id, name, city, is_hub),
   creator:created_by(full_name, email),
   receiver:received_by(full_name, email),
   livreur:assigned_livreur_id(full_name, email),

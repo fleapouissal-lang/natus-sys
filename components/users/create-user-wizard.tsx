@@ -127,7 +127,7 @@ export function CreateUserWizard({
   }, [defaultStoreId]);
 
   const needsStore =
-    role === "cashier" || role === "livreur" || (role === "manager" && limitManagerToStore);
+    role === "cashier" || (role === "manager" && limitManagerToStore);
 
   function handleRoleChange(nextRole: CreateRole) {
     setRole(nextRole);
@@ -193,7 +193,7 @@ export function CreateUserWizard({
     : isDirector(viewer)
       ? [
           { value: "cashier", label: "Caissier" },
-          { value: "livreur", label: "Livreur (magasin)" },
+          { value: "livreur", label: "Livreur (ville)" },
           { value: "manager", label: "Gérant" },
         ]
       : [{ value: "cashier", label: "Caissier" }];

@@ -744,7 +744,7 @@ export async function transferHubStock(
 export async function confirmHubStockTransfer(
   transferId: string
 ): Promise<{ success: true } | { error: string }> {
-  const profile = await requireRole(["cashier", "manager", "directeur", "admin"]);
+  const profile = await requireRole(["cashier", "manager", "directeur", "admin", "hub"]);
   if (!profile) return { error: "Non autorisé" };
 
   const supabase = await createClient();
@@ -1606,41 +1606,35 @@ export async function createUser(formData: FormData) {
     }
   }
 
-  if (role === "cashier" || role === "livreur") {
+  if (role === "cashier") {
     if (!storeId) {
-      return { error: role === "livreur" ? "Magasin requis pour le livreur" : "Magasin requis pour le caissier" };
+      return { error: "Magasin requis pour le caissier" };
     }
     const store = await getStoreById(storeId);
     if (!store) return { error: "Magasin introuvable" };
     if (!canManageStore(profile, store)) {
       return { error: "Ce magasin n'est pas dans votre périmètre" };
     }
-    if (role === "cashier") {
-      const supabaseCheck = await createClient();
-      const { data: existingPos } = await supabaseCheck
-        .from("profiles")
-        .select("id")
-        .eq("role", "cashier")
-        .eq("store_id", storeId)
-        .eq("is_store_pos", true)
-        .eq("is_active", true)
-        .maybeSingle();
-      if (existingPos) {
-        return { error: "Ce magasin a déjà un compte caisse partagé actif" };
-      }
+    const supabaseCheck = await createClient();
+    const { data: existingPos } = await supabaseCheck
+      .from("profiles")
+      .select("id")
+      .eq("role", "cashier")
+      .eq("store_id", storeId)
+      .eq("is_store_pos", true)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (existingPos) {
+      return { error: "Ce magasin a déjà un compte caisse partagé actif" };
     }
-    if (role === "livreur") {
-      const supabaseCheck = await createClient();
-      const { data: existingLivreur } = await supabaseCheck
-        .from("profiles")
-        .select("id")
-        .eq("role", "livreur")
-        .eq("store_id", storeId)
-        .eq("is_active", true)
-        .maybeSingle();
-      if (existingLivreur) {
-        return { error: "Ce magasin a déjà un livreur actif" };
-      }
+  }
+
+  if (role === "livreur") {
+    if (!city) {
+      return { error: "Ville requise pour le livreur" };
+    }
+    if (!canCreateStoreInCity(profile, city)) {
+      return { error: "Vous ne pouvez créer ce livreur que pour votre ville" };
     }
   }
 
@@ -1654,7 +1648,7 @@ export async function createUser(formData: FormData) {
     user_metadata: {
       full_name: fullName,
       role,
-      city: role === "manager" || role === "hub" ? city : undefined,
+      city: role === "manager" || role === "hub" || role === "livreur" ? city : undefined,
     },
     app_metadata: { provider: "email", providers: ["email"] },
   });
@@ -1679,13 +1673,16 @@ export async function createUser(formData: FormData) {
       }
     }
 
-    if ((role === "cashier" || role === "livreur") && storeId) {
+    if (role === "cashier" && storeId) {
       updates.store_id = storeId;
       const store = await getStoreById(storeId);
       updates.city = store?.city || null;
-      if (role === "cashier") {
-        updates.is_store_pos = true;
-      }
+      updates.is_store_pos = true;
+    }
+
+    if (role === "livreur") {
+      updates.city = city;
+      updates.store_id = null;
     }
 
     updates.access_preset = "full";
@@ -1763,16 +1760,16 @@ export async function updateUser(formData: FormData) {
     }
   }
 
-  if (role === "cashier" || role === "livreur") {
+  if (role === "cashier") {
     if (!storeId) {
-      return { error: role === "livreur" ? "Magasin requis pour le livreur" : "Magasin requis pour le caissier" };
+      return { error: "Magasin requis pour le caissier" };
     }
     const store = await getStoreById(storeId);
     if (!store) return { error: "Magasin introuvable" };
     if (!canManageStore(profile, store)) {
       return { error: "Ce magasin n'est pas dans votre périmètre" };
     }
-    if (role === "cashier" && target.is_store_pos && storeId !== target.store_id) {
+    if (target.is_store_pos && storeId !== target.store_id) {
       const { data: existingPos } = await supabase
         .from("profiles")
         .select("id")
@@ -1786,18 +1783,14 @@ export async function updateUser(formData: FormData) {
         return { error: "Ce magasin a déjà un compte caisse partagé actif" };
       }
     }
-    if (role === "livreur" && storeId !== target.store_id) {
-      const { data: existingLivreur } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("role", "livreur")
-        .eq("store_id", storeId)
-        .eq("is_active", true)
-        .neq("id", userId)
-        .maybeSingle();
-      if (existingLivreur) {
-        return { error: "Ce magasin a déjà un livreur actif" };
-      }
+  }
+
+  if (role === "livreur") {
+    if (!city) {
+      return { error: "Ville requise pour le livreur" };
+    }
+    if (!canCreateStoreInCity(profile, city)) {
+      return { error: "Vous ne pouvez modifier ce livreur que pour votre ville" };
     }
   }
 
@@ -1826,10 +1819,15 @@ export async function updateUser(formData: FormData) {
     }
   }
 
-  if (role === "cashier" || role === "livreur") {
+  if (role === "cashier") {
     updates.store_id = storeId;
     const store = await getStoreById(storeId!);
     updates.city = store?.city || null;
+  }
+
+  if (role === "livreur") {
+    updates.city = city;
+    updates.store_id = null;
   }
 
   if (role === "hub") {
@@ -2295,12 +2293,23 @@ export async function confirmShopifyOrderReturn(
 
   if (error) return { error: error.message };
 
+  const { error: transferError } = await supabase.rpc("create_store_return_to_hub_transfer", {
+    p_order_id: orderId,
+    p_items: items,
+  });
+
+  if (transferError) {
+    console.error("create_store_return_to_hub_transfer:", transferError.message);
+  }
+
   revalidatePath("/cashier/returns");
   revalidatePath("/cashier/orders");
   revalidatePath("/manager/orders");
   revalidatePath("/director/orders");
   revalidatePath("/director/hub");
   revalidatePath("/livreur/returns");
+  revalidatePath("/livreur/transfers");
+  revalidatePath("/hub/orders");
 
   return { success: true };
 }
@@ -2331,9 +2340,9 @@ export async function handOrderToLivreur(
 
   const supabase = await createClient();
 
-  if (!order.assigned_livreur_id && order.store_id) {
+  if (!order.assigned_livreur_id && (order.store_id || order.city)) {
     const { assignOrderToStoreLivreur } = await import("@/lib/shopify/assign-livreur");
-    await assignOrderToStoreLivreur(orderId, order.store_id);
+    await assignOrderToStoreLivreur(orderId, order.store_id, order.city);
   }
 
   const { error } = await supabase

@@ -5,12 +5,16 @@ import { cn } from "@/lib/utils";
 export function NatusDocumentBrand({
   variant = "invoice",
   className,
+  monochrome = false,
 }: {
   variant?: "invoice" | "ticket" | "invoiceLogo";
   className?: string;
+  /** Ticket thermique : noir uniquement */
+  monochrome?: boolean;
 }) {
   const isTicket = variant === "ticket";
   const isInvoiceLogo = variant === "invoiceLogo";
+  const ink = monochrome ? "#000000" : NATUS_BRAND.gold;
 
   return (
     <div
@@ -22,8 +26,12 @@ export function NatusDocumentBrand({
         className
       )}
       style={{
-        color: NATUS_BRAND.gold,
-        ...(variant === "invoice" ? { borderColor: NATUS_BRAND.border } : {}),
+        color: ink,
+        ...(variant === "invoice" && !monochrome
+          ? { borderColor: NATUS_BRAND.border }
+          : variant === "invoice"
+            ? { borderColor: "#000" }
+            : {}),
       }}
       aria-hidden
     >

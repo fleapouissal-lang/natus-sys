@@ -126,7 +126,7 @@ export function EditUserWizard({
   const defaultPages = useMemo(() => getDefaultPageKeysForRole(role), [role]);
 
   const needsStore =
-    role === "cashier" || role === "livreur" || (role === "manager" && limitManagerToStore);
+    role === "cashier" || (role === "manager" && limitManagerToStore);
 
   function togglePage(key: UserPageKey) {
     setSelectedPages((current) =>
@@ -265,11 +265,7 @@ export function EditUserWizard({
               <StoreSelect
                 stores={storesForCity}
                 label={
-                  role === "livreur"
-                    ? "Magasin du livreur"
-                    : role === "manager"
-                      ? "Magasin assigné"
-                      : "Magasin assigné"
+                  role === "manager" ? "Magasin assigné" : "Magasin assigné"
                 }
                 value={storeId}
                 onChange={setStoreId}
