@@ -3,19 +3,15 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import {
-  AlertTriangle,
   BarChart3,
-  Package,
-  ShoppingBag,
   Store as StoreIcon,
-  TrendingUp,
 } from "lucide-react";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { StoreTrackingView } from "@/components/dashboard/store-tracking-view";
+import { DashboardStoreStatsPanel } from "@/components/dashboard/dashboard-store-stats-panel";
 import { RecentActivityPanel } from "@/components/activity/recent-activity-panel";
-import { MobileStatCard, MobileStatGrid, DesktopStatGrid } from "@/components/dashboard/mobile-stat-card";
-import { formatCurrency, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type {
   ActivityEntry,
   DashboardStats,
@@ -34,40 +30,6 @@ const TABS: {
   { id: "suivi", label: "Suivi des magasins", icon: StoreIcon },
   { id: "stats", label: "Statistiques", icon: BarChart3 },
 ];
-
-function StatCard({
-  title,
-  value,
-  subtitle,
-  icon: Icon,
-  accent,
-}: {
-  title: string;
-  value: string;
-  subtitle?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  accent?: string;
-}) {
-  return (
-    <Card>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-muted">{title}</p>
-          <p className="mt-1 text-2xl font-bold">{value}</p>
-          {subtitle && <p className="mt-1 text-xs text-muted">{subtitle}</p>}
-        </div>
-        <div
-          className={cn(
-            "flex h-10 w-10 items-center justify-center",
-            accent || "bg-primary/15"
-          )}
-        >
-          <Icon className={cn("h-5 w-5", accent ? "text-black" : "text-primary")} />
-        </div>
-      </div>
-    </Card>
-  );
-}
 
 function ManagerDashboardTabsInner({
   stores,
@@ -117,6 +79,13 @@ function ManagerDashboardTabsInner({
     <StoreFilterBar {...storeFilterProps} />
   ) : null;
 
+  const allStoresScopeLabel =
+    stores.length === 1
+      ? `${stores[0].name} — ${stores[0].city}`
+      : isDirector
+        ? `Tous les magasins (${stores.length})`
+        : `Magasins ${stores[0]?.city ?? ""} (${stores.length})`;
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="natus-mobile-tab-bar inline-flex w-full rounded-2xl border border-primary/25 bg-surface/80 p-1 shadow-[0_4px_20px_rgba(179,140,74,0.08)] backdrop-blur-sm sm:w-auto">
@@ -159,6 +128,8 @@ function ManagerDashboardTabsInner({
               selectedStoreId={selectedStoreId}
               selectedStoreLabel={selectedStoreLabel}
               hideStoreHeader={isDirector}
+              allStores={stores}
+              allStoresScopeLabel={allStoresScopeLabel}
             />
           ) : (
             <Card className="py-12 text-center text-muted">
@@ -181,78 +152,14 @@ function ManagerDashboardTabsInner({
             )}
           </Suspense>
 
-          <Card padding={false}>
-            <div className="p-6">
-              <CardHeader
-                title="Statistiques du magasin"
-                description={selectedStoreLabel || "Sélectionnez un magasin"}
-                descriptionClassName={isDirector ? "hidden md:block" : undefined}
-              />
-            </div>
-
-            {stats && selectedStoreId ? (
-              <>
-                <MobileStatGrid className="p-4 pt-0">
-                  <MobileStatCard
-                    label="Ventes"
-                    value={String(stats.todaySales)}
-                    subtitle={formatCurrency(stats.todayRevenue)}
-                    icon={TrendingUp}
-                    variant="gold"
-                  />
-                  <MobileStatCard
-                    label="CA total"
-                    value={formatCurrency(stats.totalRevenue)}
-                    subtitle={`${stats.totalSales} ventes`}
-                    icon={ShoppingBag}
-                  />
-                  <MobileStatCard
-                    label="Catalogue"
-                    value={String(stats.totalProducts)}
-                    icon={Package}
-                  />
-                  <MobileStatCard
-                    label="Stock faible"
-                    value={String(stats.lowStockCount)}
-                    subtitle="< 10 unités"
-                    icon={AlertTriangle}
-                    variant={stats.lowStockCount > 0 ? "warning" : "success"}
-                  />
-                </MobileStatGrid>
-                <DesktopStatGrid className="p-6 pt-0">
-                  <StatCard
-                    title="Ventes aujourd'hui"
-                    value={String(stats.todaySales)}
-                    subtitle={formatCurrency(stats.todayRevenue)}
-                    icon={TrendingUp}
-                  />
-                  <StatCard
-                    title="Chiffre d'affaires total"
-                    value={formatCurrency(stats.totalRevenue)}
-                    subtitle={`${stats.totalSales} ventes`}
-                    icon={ShoppingBag}
-                    accent="bg-primary"
-                  />
-                  <StatCard
-                    title="Produits en catalogue"
-                    value={String(stats.totalProducts)}
-                    icon={Package}
-                  />
-                  <StatCard
-                    title="Stock faible"
-                    value={String(stats.lowStockCount)}
-                    subtitle="Produits < 10 unités"
-                    icon={AlertTriangle}
-                    accent={stats.lowStockCount > 0 ? "bg-primary/30" : undefined}
-                  />
-                </DesktopStatGrid>
-              </>
-            ) : (
-              <p className="px-6 pb-12 text-center text-muted">
-                Sélectionnez un magasin pour voir les statistiques
-              </p>
-            )}
-          </Card>
+          <DashboardStoreStatsPanel
+            stores={stores}
+            selectedStoreId={selectedStoreId}
+            selectedStoreLabel={selectedStoreLabel}
+            stats={stats}
+            allStoresScopeLabel={allStoresScopeLabel}
+            hideDescription={isDirector}
+          />
 
           {selectedStoreId && (
             <RecentActivityPanel

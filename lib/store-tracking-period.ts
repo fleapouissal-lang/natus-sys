@@ -1,11 +1,12 @@
 import { toLocalDateKey } from "@/lib/utils";
 
-export type StoreTrackingPreset = "today" | "week" | "month" | "quarter" | "custom";
+export type StoreTrackingPreset = "today" | "week" | "month" | "all" | "quarter" | "custom";
 
 export const STORE_TRACKING_PRESETS: { id: StoreTrackingPreset; label: string }[] = [
   { id: "today", label: "Aujourd'hui" },
   { id: "week", label: "Cette semaine" },
   { id: "month", label: "Ce mois" },
+  { id: "all", label: "Tout" },
   { id: "quarter", label: "3 mois" },
   { id: "custom", label: "Date à date" },
 ];
@@ -135,6 +136,12 @@ export function resolveStoreTrackingRange(
         from: startOfMonth(now),
         to: todayEnd,
         label: "Ce mois",
+      };
+    case "all":
+      return {
+        from: new Date(0),
+        to: todayEnd,
+        label: "Tout",
       };
     case "quarter": {
       const from = startOfDay(now);
