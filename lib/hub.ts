@@ -103,14 +103,18 @@ export async function getHubCityStaff(city: string): Promise<{
 }
 
 export async function getHubCityLivreurs(city: string): Promise<Profile[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("role", "livreur")
-    .eq("city", city)
-    .eq("is_active", true)
-    .order("full_name");
+  if (!city?.trim()) return [];
 
-  return (data || []) as Profile[];
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_city_livreurs", {
+    p_city: city.trim(),
+  });
+
+  if (error) {
+    console.error("getHubCityLivreurs:", error.message);
+    return [];
+  }
+
+  if (!Array.isArray(data)) return [];
+  return data as Profile[];
 }

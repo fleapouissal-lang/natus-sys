@@ -218,6 +218,11 @@ export function StoreTransfersList({
                                 ]}
                                 size="sm"
                               />
+                              {livreurOptions.length === 0 && (
+                                <p className="text-xs text-muted">
+                                  Aucun livreur actif dans la ville du magasin source
+                                </p>
+                              )}
                               <div className="flex flex-wrap justify-end gap-2">
                                 <Button
                                   type="button"
