@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Boxes,
   Gift,
+  BriefcaseBusiness,
   AlertTriangle,
   MessageSquare,
   FileText,
@@ -43,9 +44,10 @@ export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/sales", label: "Ventes", icon: History, mobileOrder: 3 },
   { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 4 },
   { href: "/cashier/transfers", label: "Commande hub", icon: Boxes, mobileOrder: 5 },
-  { href: "/cashier/customers", label: "Fidélité", icon: Gift, mobileOrder: 6 },
-  { href: "/cashier/returns", label: "Retours", icon: RotateCcw, mobileOrder: 7 },
-  { href: "/cashier/invoices", label: "Factures", icon: FileText, mobileOrder: 8 },
+  { href: "/cashier/customers", label: "Clients fidélité", icon: Gift, mobileOrder: 6 },
+  { href: "/cashier/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness, mobileOrder: 7 },
+  { href: "/cashier/returns", label: "Retours", icon: RotateCcw, mobileOrder: 8 },
+  { href: "/cashier/invoices", label: "Factures", icon: FileText, mobileOrder: 9 },
 ];
 
 export const livreurLinks: NavLinkItem[] = [
@@ -109,6 +111,15 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 8 }
   );
 
+  if (basePath === "/manager" || basePath === "/director") {
+    links.push({
+      href: `${basePath}/writeoffs`,
+      label: "Retours stock",
+      icon: RotateCcw,
+      mobileOrder: 9,
+    });
+  }
+
   if (basePath !== "/manager") {
     links.push(
       { href: `${basePath}/loyalty`, label: "Fidélité", icon: Gift, mobileOrder: 9 },
@@ -132,12 +143,17 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   if (basePath === "/director") {
     const loyaltyIdx = links.findIndex((link) => link.href === `${basePath}/loyalty`);
     if (loyaltyIdx >= 0) {
-      links[loyaltyIdx] = {
+      links.splice(loyaltyIdx, 1, {
         href: "/director/clients",
-        label: "Clients & Fidélité",
+        label: "Clients fidélité",
         icon: Gift,
         mobileOrder: 9,
-      };
+      }, {
+        href: "/director/pro-clients",
+        label: "Clients Pro",
+        icon: BriefcaseBusiness,
+        mobileOrder: 10,
+      });
     }
     links.splice(11, 0, {
       href: "/director/hubs",
@@ -212,8 +228,19 @@ export function isNavLinkActive(pathname: string, href: string): boolean {
   }
   if (href === "/director/clients") {
     if (pathname === href) return true;
-    if (pathname.startsWith("/director/loyalty")) return true;
+    if (pathname === "/director/loyalty/customers") return true;
     return pathname.startsWith(`${href}/`);
+  }
+  if (href === "/director/pro-clients") {
+    if (pathname === href) return true;
+    return pathname.startsWith(`${href}/`);
+  }
+  if (href === "/director/loyalty") {
+    if (pathname === href) return true;
+    if (pathname.startsWith("/director/loyalty/") && !pathname.startsWith("/director/loyalty/customers")) {
+      return true;
+    }
+    return false;
   }
   if (href === "/director/stock") {
     if (pathname === href || pathname.startsWith(`${href}?`)) return true;

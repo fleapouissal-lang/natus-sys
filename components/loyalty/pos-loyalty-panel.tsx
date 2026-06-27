@@ -5,6 +5,7 @@ import { ScanLine, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { lookupLoyaltyCustomer } from "@/lib/actions";
+import { loyaltyLookupBlockedMessage } from "@/lib/loyalty/lookup-result";
 import {
   maxRedeemablePoints,
   discountFromPoints,
@@ -58,6 +59,10 @@ export function PosLoyaltyPanel({
       const result = await lookupLoyaltyCustomer(trimmed);
       if ("error" in result) {
         setError(result.error);
+        return;
+      }
+      if ("blocked" in result && result.blocked) {
+        setError(loyaltyLookupBlockedMessage(result.blocked));
         return;
       }
       onCustomerChange(result.customer);

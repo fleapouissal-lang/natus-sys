@@ -1,29 +1,33 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { getStoreById } from "@/lib/inventory";
-import { getLoyaltyCustomers } from "@/lib/loyalty/list-customers";
-import { CashierCustomersManager } from "@/components/loyalty/cashier-customers-manager";
+import { getProClientsForStaff } from "@/lib/loyalty/list-customers";
+import { CashierProClientsManager } from "@/components/loyalty/cashier-pro-clients-manager";
 
-export default async function CashierCustomersPage() {
+export default async function CashierProClientsPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
   const store = profile.store_id ? await getStoreById(profile.store_id) : null;
-  const customers = await getLoyaltyCustomers(profile, {
+  const customers = await getProClientsForStaff(profile, {
     storeOnly: Boolean(profile.store_id),
   });
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Clients fidélité</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Clients Pro</h1>
         <p className="mt-1 text-muted">
-          Cartes standard — points uniquement, sans remise Pro
+          Comptes professionnels — remise en caisse, sans points fidélité
           {store ? ` — ${store.name}, ${store.city}` : ""}
         </p>
       </div>
 
-      <CashierCustomersManager customers={customers} storeId={profile.store_id} />
+      <CashierProClientsManager
+        customers={customers}
+        storeId={profile.store_id}
+        storeName={store?.name}
+      />
     </div>
   );
 }

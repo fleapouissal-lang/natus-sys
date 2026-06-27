@@ -15,6 +15,10 @@ import { PRODUCT_BRAND, PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { buildParentBarcode } from "@/lib/products/product-utils";
 import { uploadProductImage } from "@/lib/storage";
 import type { PaymentMethod, Profile } from "@/lib/types";
+import {
+  resolveLoyaltyLookupResult,
+  type LoyaltyLookupResult,
+} from "@/lib/loyalty/lookup-result";
 
 const MANAGEMENT = ["directeur", "admin", "manager"] as const;
 const STOCK_READ = ["directeur", "admin", "manager", "hub"] as const;
@@ -88,6 +92,14 @@ function revalidateManagement() {
   revalidatePath("/hub/activity");
   revalidatePath("/cashier/transfers");
   revalidatePath("/cashier/pos");
+}
+
+function revalidateWriteoffPaths() {
+  revalidatePath("/cashier/returns");
+  revalidatePath("/manager/writeoffs");
+  revalidatePath("/director/writeoffs");
+  revalidatePath("/manager/stock");
+  revalidatePath("/director/stock");
 }
 
 async function assertStoreAccess(profile: Profile, storeId: string) {
@@ -1132,6 +1144,7 @@ export async function createLoyaltyCustomer(input: {
 
   revalidatePath("/cashier/pos");
   revalidatePath("/cashier/customers");
+  revalidatePath("/cashier/pro-clients");
   revalidatePath("/manager/loyalty");
   revalidatePath("/director/loyalty");
   return { success: true, customer: data as import("@/lib/types").LoyaltyCustomer };
@@ -1197,10 +1210,7 @@ export async function fetchLoyaltyCustomerNotes(
 
 export async function lookupLoyaltyCustomerByPhone(
   phone: string
-): Promise<
-  | { customer: import("@/lib/types").LoyaltyCustomer; notes: import("@/lib/types").CustomerNote[] }
-  | { error: string }
-> {
+): Promise<LoyaltyLookupResult> {
   const profile = await requireRole([...MANAGEMENT, "cashier"]);
   if (!profile) return { error: "Non autorisé" };
 
@@ -1209,19 +1219,12 @@ export async function lookupLoyaltyCustomerByPhone(
   const supabase = await createClient();
   const customer = await getCustomerByPhone(supabase, phone);
   if (!customer) return { error: "Client introuvable" };
-  const blocked = customerLookupError(customer);
-  if (blocked) return { error: blocked };
   const notes = await getCustomerNotes(supabase, customer.id, 8);
-  return { customer, notes };
+  return resolveLoyaltyLookupResult(customer, notes);
 }
 
 /** Téléphone, code-barres carte (FID-…) ou QR code (NATUS:LOYALTY:…) */
-export async function lookupLoyaltyCustomer(
-  raw: string
-): Promise<
-  | { customer: import("@/lib/types").LoyaltyCustomer; notes: import("@/lib/types").CustomerNote[] }
-  | { error: string }
-> {
+export async function lookupLoyaltyCustomer(raw: string): Promise<LoyaltyLookupResult> {
   const profile = await requireRole([...MANAGEMENT, "cashier"]);
   if (!profile) return { error: "Non autorisé" };
 
@@ -1235,11 +1238,9 @@ export async function lookupLoyaltyCustomer(
     const { getCustomerNotes } = await import("@/lib/loyalty/customer-notes");
     const supabase = await createClient();
     const customer = await getCustomerByCardOrToken(supabase, scanPayload);
-    if (!customer) return { error: "Carte fidélité introuvable" };
-    const blocked = customerLookupError(customer);
-    if (blocked) return { error: blocked };
+    if (!customer) return { error: "Carte introuvable" };
     const notes = await getCustomerNotes(supabase, customer.id, 8);
-    return { customer, notes };
+    return resolveLoyaltyLookupResult(customer, notes);
   }
 
   const { normalizePhone } = await import("@/lib/loyalty/phone");
@@ -1310,12 +1311,7 @@ export async function validatePosPromoCode(
   };
 }
 
-export async function lookupLoyaltyCustomerByScan(
-  raw: string
-): Promise<
-  | { customer: import("@/lib/types").LoyaltyCustomer; notes: import("@/lib/types").CustomerNote[] }
-  | { error: string }
-> {
+export async function lookupLoyaltyCustomerByScan(raw: string): Promise<LoyaltyLookupResult> {
   const profile = await requireRole([...MANAGEMENT, "cashier"]);
   if (!profile) return { error: "Non autorisé" };
 
@@ -1323,13 +1319,13 @@ export async function lookupLoyaltyCustomerByScan(
   const { getCustomerByCardOrToken } = await import("@/lib/loyalty/customers");
   const { getCustomerNotes } = await import("@/lib/loyalty/customer-notes");
   const identifier = parseLoyaltyQrPayload(raw);
-  if (!identifier) return { error: "QR Code fidélité invalide" };
+  if (!identifier) return { error: "Carte invalide (QR ou FID-…)" };
 
   const supabase = await createClient();
   const customer = await getCustomerByCardOrToken(supabase, identifier);
-  if (!customer) return { error: "Carte fidélité introuvable" };
+  if (!customer) return { error: "Carte introuvable" };
   const notes = await getCustomerNotes(supabase, customer.id, 8);
-  return { customer, notes };
+  return resolveLoyaltyLookupResult(customer, notes);
 }
 
 export async function completeShopifyOrderSale(
@@ -3299,17 +3295,6 @@ export async function deactivatePlanningCashier(
   return { success: true };
 }
 
-function customerLookupError(
-  customer: import("@/lib/types").LoyaltyCustomer
-): string | null {
-  if (customer.is_active === false) {
-    return "Client désactivé par le directeur";
-  }
-  if (customer.is_pro_client && !customer.pro_client_active) {
-    return "Client pro en attente d'activation par le directeur";
-  }
-  return null;
-}
 
 export async function getStoreProClientLink(
   storeId: string
@@ -3367,6 +3352,7 @@ export async function toggleProClientActive(
   revalidatePath("/director/loyalty/customers");
   revalidatePath("/manager/loyalty");
   revalidatePath("/cashier/pos");
+  revalidatePath("/cashier/pro-clients");
   return { success: true, customer: data as import("@/lib/types").LoyaltyCustomer };
 }
 
@@ -3448,5 +3434,69 @@ export async function deleteProClientCustomer(
   revalidatePath("/director/loyalty");
   revalidatePath("/director/loyalty/customers");
   revalidatePath("/cashier/pos");
+  revalidatePath("/cashier/pro-clients");
+  return { success: true };
+}
+
+export async function createStoreProductWriteoff(input: {
+  reason: "expired" | "broken";
+  items: { productId: string; quantity: number }[];
+  notes?: string;
+}): Promise<{ success: true; writeoffId: string } | { error: string }> {
+  const profile = await requireRole(["cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  if (!input.items.length) return { error: "Ajoutez au moins un produit" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_store_product_writeoff", {
+    p_reason: input.reason,
+    p_items: input.items.map((item) => ({
+      product_id: item.productId,
+      quantity: item.quantity,
+    })),
+    p_notes: input.notes?.trim() || null,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidateWriteoffPaths();
+  return { success: true, writeoffId: data as string };
+}
+
+export async function validateStoreProductWriteoff(
+  writeoffId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("validate_store_product_writeoff", {
+    p_writeoff_id: writeoffId,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidateWriteoffPaths();
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function rejectStoreProductWriteoff(
+  writeoffId: string,
+  note?: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reject_store_product_writeoff", {
+    p_writeoff_id: writeoffId,
+    p_note: note?.trim() || null,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidateWriteoffPaths();
   return { success: true };
 }

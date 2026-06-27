@@ -1603,7 +1603,12 @@ textarea:focus {
     radial-gradient(ellipse 80% 60% at 15% 20%, rgba(179, 140, 74, 0.07), transparent 55%),
     radial-gradient(ellipse 70% 50% at 85% 85%, rgba(235, 212, 186, 0.35), transparent 60%),
     linear-gradient(165deg, #fffdf9 0%, #fff8f0 48%, #fff6ec 100%);
-  border-right: 1px solid rgba(179, 140, 74, 0.1);
+}
+
+@media (min-width: 1024px) {
+  .natus-login-panel {
+    border-right: 1px solid rgba(179, 140, 74, 0.1);
+  }
 }
 
 .natus-login-panel__glow {

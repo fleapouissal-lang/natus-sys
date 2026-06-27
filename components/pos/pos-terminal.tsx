@@ -31,7 +31,7 @@ import { ProductCatalog } from "@/components/pos/product-catalog";
 import { PosCheckoutPanel } from "@/components/pos/pos-checkout-panel";
 import {
   PosScanAlertToast,
-  createLoyaltyScanAlert,
+  createLoyaltyScanAlertFromLookup,
   type PosScanAlert,
 } from "@/components/pos/pos-scan-alert-modal";
 import {
@@ -70,7 +70,7 @@ import {
   pointsEarnedForAmount,
 } from "@/lib/loyalty/points";
 import { type AppliedPosPromo } from "@/lib/marketing/pos-promo";
-import { computePosCheckoutDiscounts } from "@/lib/pro-client/discount";
+import { computePosCheckoutDiscounts, isActiveProClient } from "@/lib/pro-client/discount";
 import { PosLuxuryCartFab } from "@/components/pos/pos-luxury-cart-fab";
 import {
   PosMobileCartStepBar,
@@ -156,6 +156,7 @@ export function PosTerminal({
 
   const isManagementUser =
     role === "manager" || role === "directeur" || role === "admin";
+  const canDayClosure = role === "cashier";
   const isStockScan = isManagementUser && managerMode === "stock";
   const isOrderMode = !!activeShopifyOrder && !isStockScan;
   const isShopifyOrderCheckout = !!activeShopifyOrder;
@@ -299,13 +300,18 @@ export function PosTerminal({
       const loyaltyPayload = parseLoyaltyQrPayload(trimmed);
       if (loyaltyPayload && !isStockScan && !activeShopifyOrder) {
         void lookupLoyaltyCustomerByScan(trimmed).then((result) => {
-          if ("customer" in result) {
-            setLoyaltyCustomer(result.customer);
-            setPointsToRedeem(0);
-            setError("");
-          } else {
-            setScanAlert(createLoyaltyScanAlert(trimmed, result.error));
+          if ("error" in result) {
+            setScanAlert(createLoyaltyScanAlertFromLookup(trimmed, result));
+            return;
           }
+          if ("blocked" in result && result.blocked) {
+            setScanAlert(createLoyaltyScanAlertFromLookup(trimmed, result));
+            return;
+          }
+          setLoyaltyCustomer(result.customer);
+          setPointsToRedeem(0);
+          setError("");
+          setScanAlert(createLoyaltyScanAlertFromLookup(trimmed, result));
         });
         return;
       }
@@ -572,7 +578,10 @@ export function PosTerminal({
       appliedPromo,
       loyaltyCustomer
     );
-    const pointsEarned = loyaltyCustomer ? pointsEarnedForAmount(total, loyaltySettings) : 0;
+    const pointsEarned =
+      loyaltyCustomer && !isActiveProClient(loyaltyCustomer)
+        ? pointsEarnedForAmount(total, loyaltySettings)
+        : 0;
 
     setReceipt({
       saleId: result.saleId ?? activeShopifyOrder?.id ?? "web",
@@ -1064,8 +1073,8 @@ export function PosTerminal({
         onCustomerChange={setLoyaltyCustomer}
         onPointsToRedeemChange={setPointsToRedeem}
         onPromoChange={setAppliedPromo}
-        onLoyaltyLookupError={(code, error) => {
-          setScanAlert(createLoyaltyScanAlert(code, error));
+        onLoyaltyLookupError={(code, result) => {
+          setScanAlert(createLoyaltyScanAlertFromLookup(code, result));
         }}
         loyaltySettings={loyaltySettings}
       />
@@ -1327,7 +1336,9 @@ export function PosTerminal({
                         <CountBadge count={preparableOrderCount} />
                       </Button>
                     )}
-                    <PosDayClosureButton onClick={() => setShowDayClosure(true)} />
+                    {canDayClosure && (
+                      <PosDayClosureButton onClick={() => setShowDayClosure(true)} />
+                    )}
                     <ProClientQrButton
                       storeId={defaultStoreId}
                       storeName={storeName}
@@ -1552,16 +1563,18 @@ export function PosTerminal({
         />
       )}
 
-      <PosDayClosureModal
-        open={showDayClosure}
-        onClose={() => setShowDayClosure(false)}
-        storeId={defaultStoreId}
-        storeName={storeName}
-        cashierUserId={cashierUserId}
-        cashierName={cashierName}
-        isStorePos={isStorePos}
-        isManagementUser={isManagementUser}
-      />
+      {canDayClosure && (
+        <PosDayClosureModal
+          open={showDayClosure}
+          onClose={() => setShowDayClosure(false)}
+          storeId={defaultStoreId}
+          storeName={storeName}
+          cashierUserId={cashierUserId}
+          cashierName={cashierName}
+          isStorePos={isStorePos}
+          isManagementUser={isManagementUser}
+        />
+      )}
 
       <PosScanAlertToast
         alert={scanAlert}

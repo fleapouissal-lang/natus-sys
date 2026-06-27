@@ -64,12 +64,10 @@ function CategoryCardsGrid({
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary md:text-xs">
           Catégories
         </p>
-        <p className="mt-1 text-xs text-muted">
-          Classées par volume de ventes · choisissez une catégorie
-        </p>
+        <p className="mt-1 text-xs text-muted">Choisissez une catégorie</p>
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 md:gap-4">
-        {cards.map((card, index) => {
+        {cards.map((card) => {
           const Icon = CATEGORY_ICONS[card.name] ?? Sparkles;
           const parentImage = card.coverProduct
             ? resolveParentImageSource(card.coverProduct)
@@ -79,33 +77,28 @@ function CategoryCardsGrid({
               key={card.name}
               type="button"
               onClick={() => onSelect(card.name)}
-              className="group relative aspect-[4/5] overflow-hidden rounded-2xl border border-primary/20 bg-surface text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md cursor-pointer"
+              className="group flex flex-col overflow-hidden rounded-2xl border border-primary/20 bg-surface text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md cursor-pointer"
             >
-              <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/70" />
-              {card.coverProduct ? (
-                <ProductImage
-                  product={card.coverProduct}
-                  parent={parentImage}
-                  fill
-                  className="transition-transform duration-300 group-hover:scale-105"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-champagne/50 to-page">
-                  <Icon className="h-10 w-10 text-primary/70" />
-                </div>
-              )}
-              <div className="absolute inset-x-0 bottom-0 p-3 text-white">
-                {index < 3 && card.totalSold > 0 && (
-                  <span className="mb-2 inline-flex rounded-full bg-champagne/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-black">
-                    Top ventes
-                  </span>
+              <div className="relative aspect-[4/5] w-full overflow-hidden">
+                {card.coverProduct ? (
+                  <ProductImage
+                    product={card.coverProduct}
+                    parent={parentImage}
+                    fill
+                    className="transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex h-full w-full items-center justify-center bg-gradient-to-br from-champagne/50 to-page">
+                    <Icon className="h-10 w-10 text-primary/70" />
+                  </div>
                 )}
-                <p className="font-heading text-sm font-semibold leading-tight drop-shadow-sm md:text-base">
+              </div>
+              <div className="p-3 text-black">
+                <p className="font-heading text-sm font-semibold leading-tight md:text-base">
                   {card.name}
                 </p>
-                <p className="mt-1 text-[10px] text-white/85 md:text-xs">
+                <p className="mt-1 text-[10px] text-black/75 md:text-xs">
                   {card.productCount} produit{card.productCount > 1 ? "s" : ""}
-                  {card.totalSold > 0 ? ` · ${card.totalSold} vendus` : ""}
                 </p>
               </div>
             </button>

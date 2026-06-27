@@ -13,6 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { lookupLoyaltyCustomer, validatePosPromoCode, fetchLoyaltyCustomerNotes } from "@/lib/actions";
+import { loyaltyLookupBlockedMessage } from "@/lib/loyalty/lookup-result";
+import type { LoyaltyLookupResult } from "@/lib/loyalty/lookup-result";
 import {
   maxRedeemablePoints,
   discountFromPoints,
@@ -64,7 +66,7 @@ export function PosCheckoutPanel({
   onCustomerChange: (customer: LoyaltyCustomer | null) => void;
   onPointsToRedeemChange: (points: number) => void;
   onPromoChange: (promo: AppliedPosPromo | null) => void;
-  onLoyaltyLookupError?: (code: string, error: string) => void;
+  onLoyaltyLookupError?: (code: string, result: LoyaltyLookupResult) => void;
   loyaltySettings?: LoyaltySettings;
 }) {
   const [input, setInput] = useState("");
@@ -115,9 +117,17 @@ export function PosCheckoutPanel({
       const result = await lookupLoyaltyCustomer(trimmed);
       if ("error" in result) {
         if (onLoyaltyLookupError) {
-          onLoyaltyLookupError(trimmed, result.error);
+          onLoyaltyLookupError(trimmed, result);
         } else {
-          setError(result.error);
+          setError(result.error === "Carte introuvable" ? "Carte introuvable" : result.error);
+        }
+        return;
+      }
+      if ("blocked" in result && result.blocked) {
+        if (onLoyaltyLookupError) {
+          onLoyaltyLookupError(trimmed, result);
+        } else {
+          setError(loyaltyLookupBlockedMessage(result.blocked));
         }
         return;
       }
@@ -164,7 +174,8 @@ export function PosCheckoutPanel({
   const pointsRemaining = customer
     ? pointsUntilRedemption(customer.loyalty_points, loyaltySettings)
     : 0;
-  const pointsToEarn = customer ? pointsEarnedForAmount(payable, loyaltySettings) : 0;
+  const pointsToEarn =
+    customer && !activeProClient ? pointsEarnedForAmount(payable, loyaltySettings) : 0;
 
   if (hidden && hasBenefits) {
     return (

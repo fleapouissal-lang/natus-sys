@@ -22,6 +22,7 @@ export type UserPageKey =
   | "transfers"
   | "hub_orders"
   | "returns"
+  | "writeoffs"
   | "customers";
 
 export type UserPageGroup = "operations" | "clients" | "admin";
@@ -43,7 +44,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "stores", label: "Magasins", description: "Points de vente et paramètres", group: "admin" },
   { key: "activity", label: "Historique", description: "Historique des actions et mouvements", group: "admin" },
   { key: "reclamations", label: "Réclamations", description: "Suivi des réclamations clients", group: "clients" },
-  { key: "loyalty", label: "Clients & Fidélité", description: "Cartes fidélité, clients Pro et programme", group: "clients" },
+  { key: "loyalty", label: "Clients fidélité", description: "Cartes fidélité, clients Pro et programme", group: "clients" },
   { key: "invoices", label: "Factures", description: "Factures et documents de vente", group: "clients" },
   { key: "actualites", label: "Actualités", description: "Annonces et communications internes", group: "admin" },
   { key: "users", label: "Utilisateurs", description: "Gestion des comptes équipe", group: "admin" },
@@ -53,23 +54,24 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "transfers", label: "Commande hub", description: "Réceptions et envois hub", group: "operations" },
   { key: "hub_orders", label: "Commandes dépôt", description: "Commandes entrepôt vers magasins", group: "operations" },
   { key: "returns", label: "Retours", description: "Retours produits et SAV", group: "clients" },
-  { key: "customers", label: "Fidélité caisse", description: "Clients fidélité en magasin", group: "clients" },
+  { key: "writeoffs", label: "Retours stock", description: "Validation retours périmés ou cassés", group: "operations" },
+  { key: "customers", label: "Clients fidélité", description: "Clients fidélité en magasin", group: "clients" },
 ];
 
 const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
   directeur: [
     "dashboard", "planning", "pos", "sales", "stock", "products", "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
-    "hub_stock", "hubs",
+    "hub_stock", "hubs", "writeoffs",
   ],
   admin: [
     "dashboard", "planning", "pos", "sales", "stock", "products", "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
-    "hub_stock", "hubs",
+    "hub_stock", "hubs", "writeoffs",
   ],
   manager: [
     "dashboard", "planning", "sales", "stock", "hub_orders", "stores",
-    "activity", "reclamations", "actualites",
+    "activity", "reclamations", "writeoffs", "actualites",
   ],
   cashier: [
     "pos", "planning", "actualites", "sales", "notes", "transfers",
@@ -100,6 +102,7 @@ const PAGE_HOME_PRIORITY: UserPageKey[] = [
   "transfers",
   "customers",
   "returns",
+  "writeoffs",
 ];
 
 const PAGE_GROUP_LABELS: Record<UserPageGroup, string> = {
@@ -189,6 +192,8 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       return null;
     case "returns":
       return role === "livreur" ? "/livreur/returns" : "/cashier/returns";
+    case "writeoffs":
+      return base ? `${base}/writeoffs` : null;
     case "customers":
       return "/cashier/customers";
     default:
@@ -236,7 +241,11 @@ export function getAllowedHrefsForProfile(
     (profile.role === "directeur" || profile.role === "admin") &&
     keys.includes("loyalty")
   ) {
-    hrefs.push("/director/loyalty");
+    hrefs.push("/director/loyalty", "/director/pro-clients");
+  }
+
+  if (profile.role === "cashier" && keys.includes("customers")) {
+    hrefs.push("/cashier/pro-clients");
   }
 
   if (
@@ -282,6 +291,12 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
   }
   if (href === "/director/loyalty" && (role === "directeur" || role === "admin")) {
     return "loyalty";
+  }
+  if (href === "/director/pro-clients" && (role === "directeur" || role === "admin")) {
+    return "loyalty";
+  }
+  if (href === "/cashier/pro-clients" && role === "cashier") {
+    return "customers";
   }
   if (href === "/director/hub" && (role === "directeur" || role === "admin")) {
     return "hub_stock";

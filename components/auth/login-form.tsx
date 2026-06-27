@@ -44,9 +44,24 @@ export function LoginForm() {
   }
 
   return (
-    <div className="natus-login relative flex min-h-screen bg-[#FFFDF9]">
-      <div className="relative z-10 flex w-full flex-col lg:flex-row">
-        <div className="natus-login-panel relative flex flex-1 items-center justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-20">
+    <div className="natus-login relative flex min-h-screen flex-col bg-[#FFFDF9] lg:flex-row">
+      <div className="relative block h-44 w-full shrink-0 sm:h-52 md:h-60 lg:hidden">
+        <Image
+          src="/images/login-hero.png"
+          alt="Boutique Natus Marrakech"
+          fill
+          priority
+          className="object-cover object-[center_35%]"
+          sizes="100vw"
+        />
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#FFFDF9]/10 via-transparent to-[#FFFDF9]"
+          aria-hidden
+        />
+      </div>
+
+      <div className="relative z-10 flex w-full flex-1 flex-col lg:flex-row">
+        <div className="natus-login-panel relative flex flex-1 items-center justify-center px-6 py-10 sm:px-12 sm:py-12 lg:px-16 xl:px-20">
           <div className="natus-login-panel__glow pointer-events-none" aria-hidden />
 
           <div className="relative w-full max-w-[26rem] animate-fade-in">
@@ -128,10 +143,10 @@ export function LoginForm() {
         <div className="relative hidden min-h-[280px] flex-1 lg:block">
           <Image
             src="/images/login-hero.png"
-            alt="Boutique Natus"
+            alt="Boutique Natus Marrakech"
             fill
             priority
-            className="object-cover rounded-tl-[2.5rem] rounded-bl-[2.5rem]"
+            className="object-cover object-[center_35%] rounded-tl-[2.5rem] rounded-bl-[2.5rem]"
             sizes="50vw"
           />
           <div

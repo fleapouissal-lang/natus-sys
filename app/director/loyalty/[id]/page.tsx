@@ -21,14 +21,16 @@ export default async function DirectorLoyaltyCustomerPage({
   if (!data) notFound();
 
   const basePath = getManagementBasePath(profile.role)!;
-  const backTab = data.customer.is_pro_client ? "pro" : "normal";
+  const backHref = data.customer.is_pro_client
+    ? `${basePath}/pro-clients`
+    : `${basePath}/clients`;
 
   return (
     <LoyaltyCustomerDetailView
       customer={data.customer}
       transactions={data.transactions}
       notes={data.notes}
-      backHref={`${basePath}/clients?tab=${backTab}`}
+      backHref={backHref}
       loyaltySettings={loyaltySettings}
     />
   );

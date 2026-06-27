@@ -1,54 +1,37 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { getLoyaltyCustomers } from "@/lib/loyalty/list-customers";
-import { getLoyaltyStats } from "@/lib/loyalty/stats";
-import { getLoyaltySettings } from "@/lib/loyalty/settings.server";
-import { getAllProClients } from "@/lib/pro-client/invites";
 import { getManagementBasePath } from "@/lib/permissions";
-import { DirectorClientsManager } from "@/components/clients/director-clients-manager";
+import { DirectorLoyaltyClientsManager } from "@/components/clients/director-loyalty-clients-manager";
 
-export default async function DirectorClientsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>;
-}) {
+export default async function DirectorClientsPage() {
   const profile = await requireRole(["directeur", "admin"]);
   if (!profile) redirect("/login");
 
-  const { tab } = await searchParams;
-  const [allCustomers, proClients, stats, settings] = await Promise.all([
-    getLoyaltyCustomers(profile, { limit: 5000 }),
-    getAllProClients(),
-    getLoyaltyStats(profile),
-    getLoyaltySettings(),
-  ]);
-  const normalClients = allCustomers.filter((c) => !c.is_pro_client);
+  const allCustomers = await getLoyaltyCustomers(profile, { limit: 5000 });
   const basePath = getManagementBasePath(profile.role)!;
-  const initialTab =
-    tab === "programme" || tab === "loyalty"
-      ? ("programme" as const)
-      : tab === "pro"
-        ? ("pro" as const)
-        : ("normal" as const);
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Clients & Fidélité</h1>
+        <Link
+          href={`${basePath}/loyalty`}
+          className="text-sm font-medium text-muted hover:text-primary"
+        >
+          ← Programme fidélité
+        </Link>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">Clients fidélité</h1>
         <p className="mt-1 text-muted">
-          Cartes fidélité standard, clients Pro et paramètres du programme
+          Cartes fidélité standard — points uniquement, sans remise Pro
         </p>
       </div>
 
       <Suspense fallback={null}>
-        <DirectorClientsManager
-          normalClients={normalClients}
-          proClients={proClients}
+        <DirectorLoyaltyClientsManager
+          clients={allCustomers}
           detailBasePath={`${basePath}/loyalty`}
-          loyaltyStats={stats}
-          loyaltySettings={settings}
-          initialTab={initialTab}
         />
       </Suspense>
     </div>

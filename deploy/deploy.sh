@@ -13,6 +13,14 @@ if [ ! -f .env.local ]; then
   exit 1
 fi
 
+if ! grep -qE '^SUPABASE_ACCESS_TOKEN=' .env.local 2>/dev/null; then
+  echo "Attention: SUPABASE_ACCESS_TOKEN absent de .env.local — npm run db:migrate échouera"
+fi
+
+if ! grep -qE '^SUPABASE_DB_PASSWORD=' .env.local 2>/dev/null; then
+  echo "Attention: SUPABASE_DB_PASSWORD absent de .env.local — npm run db:migrate échouera"
+fi
+
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "→ git pull origin ${BRANCH}"
   git pull origin "${BRANCH}"
@@ -22,6 +30,9 @@ fi
 
 echo "→ npm install"
 npm install
+
+echo "→ npm run db:migrate"
+npm run db:migrate
 
 echo "→ npm run build"
 npm run build

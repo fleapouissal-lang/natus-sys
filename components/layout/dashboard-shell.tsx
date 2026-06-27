@@ -17,7 +17,6 @@ import {
   MobileManagementPosRedirect,
 } from "@/components/layout/mobile-planning-redirect";
 import { SessionGuard } from "@/components/auth/session-guard";
-import { ConnectionStatusBanner } from "@/components/network/connection-status-banner";
 import { CashierNotificationsProvider } from "@/components/notifications/cashier-notifications-context";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
@@ -137,7 +136,6 @@ export function DashboardShell({
         </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <ConnectionStatusBanner />
           {showMobileTopBar && (
             <MobileTopBar
               userName={displayUserName}

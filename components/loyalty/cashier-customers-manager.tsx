@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, UserPlus, ExternalLink, Eye, Gift } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export function CashierCustomersManager({
   }, [customers, search]);
 
   const totalPoints = customers.reduce((sum, c) => sum + c.loyalty_points, 0);
+  const inactiveCount = customers.filter((c) => c.is_active === false).length;
 
   return (
     <>
@@ -80,6 +82,9 @@ export function CashierCustomersManager({
         </div>
         <p className="mt-3 text-sm text-muted">
           {filtered.length} client{filtered.length !== 1 ? "s" : ""}
+          {inactiveCount > 0
+            ? ` · ${inactiveCount} désactivée${inactiveCount !== 1 ? "s" : ""}`
+            : ""}
         </p>
       </div>
       </FilterTogglePanel>
@@ -91,6 +96,7 @@ export function CashierCustomersManager({
               <tr className="border-b border-border bg-primary-light/50">
                 <th className="px-6 py-3 text-left font-medium text-muted">Client</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Carte</th>
+                <th className="px-6 py-3 text-left font-medium text-muted">Niveau</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">Points</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Adhésion</th>
@@ -112,6 +118,13 @@ export function CashierCustomersManager({
                     <td className="px-6 py-4 font-mono text-sm">{customer.card_number}</td>
                     <td className="px-6 py-4">
                       <LoyaltyTierBadge tier={tier} />
+                    </td>
+                    <td className="px-6 py-4">
+                      {customer.is_active === false ? (
+                        <Badge variant="danger">Désactivée</Badge>
+                      ) : (
+                        <Badge variant="success">Active</Badge>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-primary">
                       {customer.loyalty_points}
@@ -144,7 +157,7 @@ export function CashierCustomersManager({
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted">
+                  <td colSpan={7} className="px-6 py-12 text-center text-muted">
                     {customers.length === 0
                       ? "Aucun client fidélité — créez le premier"
                       : "Aucun résultat pour cette recherche"}

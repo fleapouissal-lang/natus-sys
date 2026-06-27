@@ -3,6 +3,7 @@ import { resolve } from "path";
 import { spawnSync } from "child_process";
 
 const root = resolve(process.cwd());
+const ifConfigured = process.argv.includes("--if-configured");
 
 function loadEnvLocal() {
   const envPath = resolve(root, ".env.local");
@@ -63,21 +64,35 @@ const childEnv = {
   ),
 };
 
+const hasToken = Boolean(
+  childEnv.SUPABASE_ACCESS_TOKEN || process.env.SUPABASE_ACCESS_TOKEN
+);
+const hasPassword = Boolean(
+  childEnv.SUPABASE_DB_PASSWORD || process.env.SUPABASE_DB_PASSWORD
+);
+
+if (ifConfigured && (!hasToken || !hasPassword)) {
+  console.log(
+    "⏭  Migrations ignorées (ajoutez SUPABASE_ACCESS_TOKEN et SUPABASE_DB_PASSWORD dans .env.local)\n"
+  );
+  process.exit(0);
+}
+
 console.log("\n▶ Migrations Supabase\n");
 
-if (!childEnv.SUPABASE_ACCESS_TOKEN && !process.env.SUPABASE_ACCESS_TOKEN) {
+if (!hasToken) {
   console.warn(
     "⚠️  SUPABASE_ACCESS_TOKEN absent — lancez « npx supabase login » ou ajoutez le token dans .env.local\n"
   );
 }
 
-if (!childEnv.SUPABASE_DB_PASSWORD && !process.env.SUPABASE_DB_PASSWORD) {
+if (!hasPassword) {
   console.warn(
     "⚠️  SUPABASE_DB_PASSWORD absent — ajoutez le mot de passe DB Supabase dans .env.local\n"
   );
 }
 
-const result = spawnSync("supabase db push --linked --yes", {
+const result = spawnSync("npx supabase db push --linked --yes", {
   cwd: root,
   stdio: "inherit",
   shell: true,
