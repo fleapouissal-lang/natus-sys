@@ -1,5 +1,10 @@
 import { NATUS_INVOICE_COMPANY } from "@/lib/constants/company";
 import {
+  PRINT_TABLE_PAGINATION_CSS,
+  PRINT_TICKET_MEDIA_CSS,
+  TICKET_PAGE_CSS,
+} from "@/lib/print/document-styles";
+import {
   aggregateDayProducts,
   dayClosureReference,
   formatDayClosureDate,
@@ -35,6 +40,9 @@ function ticketRow(label: string, value: string, bold = false): string {
 }
 
 const CLOSURE_DOC_STYLES = `
+  ${TICKET_PAGE_CSS}
+  ${PRINT_TABLE_PAGINATION_CSS}
+
   body { font-family: Arial, sans-serif; margin: 24px; color: #111; background: #f5f5f5; }
   .ticket { max-width: 300px; margin: 0 auto; background: #fff; padding: 12px 8px; border: 1px solid #ddd; }
   .center { text-align: center; }
@@ -47,11 +55,10 @@ const CLOSURE_DOC_STYLES = `
   .total-bar { display: flex; justify-content: space-between; align-items: center; border: 2px solid #111; padding: 8px; margin-top: 8px; }
   .footer { text-align: center; font-size: 8px; line-height: 1.4; margin-top: 8px; }
   .signature { margin-top: 12px; padding-top: 8px; font-size: 9px; }
-  .sale-items { font-size: 8px; line-height: 1.35; color: #333; padding: 2px 0 4px 4px; }
-  .sale-item-line { display: flex; justify-content: space-between; gap: 8px; margin: 1px 0; }
-  .sale-item-name { font-weight: 600; min-width: 0; }
-  .sale-item-qty { font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .signature-line { border-bottom: 1px solid #111; margin-top: 20px; }
+  .natus-print-footer-avoid { break-inside: avoid; page-break-inside: avoid; }
+
+  ${PRINT_TICKET_MEDIA_CSS}
 `;
 
 export function buildDayClosureHtml(data: DayClosureDownloadData): string {
@@ -106,8 +113,11 @@ export function buildDayClosureHtml(data: DayClosureDownloadData): string {
       }
       <div class="rule-heavy"></div>
       <p class="title" style="margin-bottom:4px">Articles vendus</p>
-      <table>
+      <table class="natus-print-table">
         <thead>
+          <tr class="natus-print-doc-banner">
+            <th colspan="4">Clôture ${escapeHtml(ref)} — Articles vendus</th>
+          </tr>
           <tr>
             <th style="text-align:left">Désignation</th>
             <th style="text-align:center;width:28px">Qté</th>
@@ -123,15 +133,15 @@ export function buildDayClosureHtml(data: DayClosureDownloadData): string {
         </tbody>
       </table>
       <div class="rule-heavy"></div>
-      <div class="total-bar">
+      <div class="total-bar natus-print-footer-avoid">
         <span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.04em">Total CA TTC</span>
         <span style="font-size:18px;font-weight:900;font-variant-numeric:tabular-nums">${formatCurrency(data.stats.total)}</span>
       </div>
       <div class="rule"></div>
       ${ticketRow("Panier moyen", formatCurrency(data.stats.averageTicket))}
       <div class="rule-heavy"></div>
-      <p class="footer">${escapeHtml(NATUS_INVOICE_COMPANY.legalMention)}</p>
-      <div class="signature">
+      <p class="footer natus-print-footer-avoid">${escapeHtml(NATUS_INVOICE_COMPANY.legalMention)}</p>
+      <div class="signature natus-print-footer-avoid">
         <p style="margin:0;font-weight:600">Signature caissier :</p>
         <div class="signature-line"></div>
       </div>

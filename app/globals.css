@@ -1512,8 +1512,60 @@ textarea:focus {
   border-radius: 0 !important;
 }
 
+/* Bandeau document — visible uniquement à l'impression (répété via thead) */
+.natus-print-doc-banner {
+  display: none;
+}
+
+table.natus-print-table thead {
+  display: table-header-group;
+}
+
+table.natus-print-table tfoot {
+  display: table-footer-group;
+}
+
 @media print {
   /* @page size/margin : défini dynamiquement via setPrintPageLayout() */
+
+  .natus-print-doc-banner {
+    display: table-row !important;
+  }
+
+  .natus-print-doc-banner th {
+    padding: 2mm 3mm !important;
+    font-size: 7pt !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    text-align: left !important;
+    border-bottom: 1px solid #000 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  table.natus-print-table thead {
+    display: table-header-group !important;
+  }
+
+  table.natus-print-table tfoot {
+    display: table-footer-group !important;
+  }
+
+  table.natus-print-table tr.natus-print-row-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  table.natus-print-table tr.natus-print-row-break {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  .natus-print-footer-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
 
   body * {
     visibility: hidden;
@@ -1579,7 +1631,7 @@ textarea:focus {
 
   body[data-print-doc="invoice"] .natus-invoice-sheet {
     border: none !important;
-    padding: 8mm 10mm !important;
+    padding: 0 !important;
     overflow: visible !important;
   }
 
@@ -1655,6 +1707,13 @@ textarea:focus {
   body[data-print-doc="invoice"] .natus-invoice-body {
     page-break-inside: auto !important;
     break-inside: auto !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-totals,
+  body[data-print-doc="invoice"] .natus-invoice-footer,
+  body[data-print-doc="invoice"] .natus-invoice-brand-bar {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-table-wrap {
@@ -1912,6 +1971,8 @@ textarea:focus {
   body[data-print-doc="sales-report"] .natus-sales-report tbody tr {
     background: #fff !important;
     border-color: #ccc !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
 
   body[data-print-doc="sales-report"] .natus-sales-report tbody td {
@@ -1920,7 +1981,8 @@ textarea:focus {
     vertical-align: top !important;
   }
 
-  body[data-print-doc="sales-report"] .natus-sales-report tbody tr[style] {
+  body[data-print-doc="sales-report"] .natus-sales-report tbody tr[style],
+  body[data-print-doc="sales-report"] .natus-sales-report tbody tr.natus-print-row-avoid {
     background: #fff !important;
     border-color: #000 !important;
     color: #000 !important;
@@ -1962,10 +2024,6 @@ textarea:focus {
     display: table-header-group;
   }
 
-  body[data-print-doc="sales-report"] .natus-sales-report tbody tr {
-    page-break-inside: avoid;
-  }
-
   body[data-print-doc="sales-report"] .natus-sales-report-report-header,
   body[data-print-doc="sales-report"] .natus-sales-report-stats {
     break-inside: avoid;
@@ -2002,6 +2060,34 @@ textarea:focus {
     overflow: visible !important;
     background: white !important;
     pointer-events: auto !important;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print table thead {
+    display: table-header-group !important;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print table tbody tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-print-doc-banner th {
+    text-align: center !important;
+    font-size: 7pt !important;
+  }
+
+  body[data-print-doc="ticket"] #ticket-print table thead {
+    display: table-header-group !important;
+  }
+
+  body[data-print-doc="ticket"] #ticket-print table tbody tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  body[data-print-doc="ticket"] #ticket-print .natus-print-doc-banner th {
+    text-align: center !important;
+    font-size: 7pt !important;
   }
 
   body[data-print-doc="day-closure"] #day-closure-ticket-print {
@@ -2247,8 +2333,8 @@ textarea:focus {
   }
 
   body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-row {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
 
   body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-row:nth-child(even) {
@@ -2258,17 +2344,9 @@ textarea:focus {
   }
 
   body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-total-bar {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 4mm !important;
-    white-space: nowrap !important;
+    display: table-row !important;
     background: #fff !important;
     border-top: 2px solid #000000 !important;
-    padding: 3mm 4mm !important;
-    font-size: 11pt !important;
-    font-weight: 700 !important;
     color: #000000 !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
@@ -2276,8 +2354,21 @@ textarea:focus {
     print-color-adjust: economy;
   }
 
-  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-total-bar span:last-child {
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-total-bar td {
+    display: table-cell !important;
+    padding: 3mm 4mm !important;
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    vertical-align: middle !important;
+    border: none !important;
+    background: #fff !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-total-bar td:last-child {
     font-size: 12pt !important;
+    text-align: right !important;
+    white-space: nowrap !important;
   }
 
   body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-footer {
@@ -2346,12 +2437,13 @@ textarea:focus {
   inset: 0;
   z-index: 1;
   background:
-    radial-gradient(ellipse 90% 70% at 50% 50%, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.42) 100%),
+    radial-gradient(ellipse 85% 65% at 50% 42%, transparent 0%, rgba(8, 6, 4, 0.55) 100%),
     linear-gradient(
       180deg,
-      rgba(12, 10, 8, 0.35) 0%,
-      rgba(12, 10, 8, 0.2) 45%,
-      rgba(12, 10, 8, 0.35) 100%
+      rgba(10, 8, 6, 0.55) 0%,
+      rgba(10, 8, 6, 0.15) 38%,
+      rgba(10, 8, 6, 0.2) 62%,
+      rgba(10, 8, 6, 0.65) 100%
     );
   pointer-events: none;
 }
@@ -2376,125 +2468,216 @@ textarea:focus {
     background: transparent;
   }
 
-  .natus-login-panel {
+  /* Mobile luxe — marque + panneau crème centré sur l'image */
+  .natus-login-mobile-luxe {
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 100dvh;
+    width: 100%;
     padding:
-      max(1rem, env(safe-area-inset-top))
-      0
-      max(1rem, env(safe-area-inset-bottom));
-    background: transparent !important;
+      max(1.25rem, env(safe-area-inset-top))
+      max(1.25rem, env(safe-area-inset-right))
+      max(1.25rem, env(safe-area-inset-bottom))
+      max(1.25rem, env(safe-area-inset-left));
   }
 
-  .natus-login-mobile-center {
+  .natus-login-mobile-luxe__inner {
+    display: flex;
+    width: 100%;
+    max-width: 22.5rem;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .natus-login-mobile-luxe__brand {
+    margin-bottom: 1.75rem;
+  }
+
+  .natus-login-mobile-luxe__eyebrow {
+    margin: 0 0 0.85rem;
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.38em;
+    text-transform: uppercase;
+    color: rgba(250, 234, 161, 0.92);
+  }
+
+  .natus-login-mobile-luxe__title {
+    margin: 0;
+    font-family: var(--font-jost), Georgia, "Times New Roman", serif;
+    font-size: clamp(3rem, 11vw, 3.5rem);
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #fffdf9;
+    text-shadow: 0 2px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  .natus-login-mobile-luxe__ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    margin: 1.15rem auto 0.85rem;
+    width: min(9rem, 52vw);
+  }
+
+  .natus-login-mobile-luxe__ornament > span:first-child,
+  .natus-login-mobile-luxe__ornament > span:last-child {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(212, 168, 90, 0.85) 50%,
+      transparent
+    );
+  }
+
+  .natus-login-mobile-luxe__ornament-diamond {
+    width: 0.35rem;
+    height: 0.35rem;
+    flex-shrink: 0;
+    rotate: 45deg;
+    background: #d4a85a;
+    box-shadow: 0 0 12px rgba(212, 168, 90, 0.65);
+  }
+
+  .natus-login-mobile-luxe__tagline {
+    margin: 0;
+    max-width: 16rem;
+    margin-inline: auto;
+    font-family: var(--font-jost), Georgia, serif;
+    font-size: 0.8125rem;
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.55;
+    letter-spacing: 0.02em;
+    color: rgba(255, 253, 249, 0.82);
+  }
+
+  .natus-login-mobile-luxe__panel {
+    position: relative;
+    width: 100%;
+    padding: 1.5rem 1.25rem 1.35rem;
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.14);
+    box-shadow:
+      0 24px 64px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    -webkit-backdrop-filter: blur(22px) saturate(1.35);
+    backdrop-filter: blur(22px) saturate(1.35);
+    text-align: left;
+  }
+
+  .natus-login-mobile-luxe__panel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 1.25rem;
+    right: 1.25rem;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      rgba(212, 168, 90, 0.15),
+      rgba(250, 234, 161, 0.85) 50%,
+      rgba(212, 168, 90, 0.15)
+    );
+    border-radius: 999px;
+  }
+
+  .natus-login-mobile-luxe__form {
     width: 100%;
   }
 
-  .natus-login-mobile-card {
-    margin-inline: 0;
-    padding: 1.75rem 1.35rem 1.4rem;
-    border-radius: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background:
-      linear-gradient(
-        165deg,
-        rgba(255, 253, 249, 0.16) 0%,
-        rgba(24, 20, 16, 0.55) 52%,
-        rgba(16, 13, 10, 0.72) 100%
-      );
-    -webkit-backdrop-filter: blur(24px) saturate(1.2);
-    backdrop-filter: blur(24px) saturate(1.2);
-    box-shadow:
-      0 24px 64px rgba(0, 0, 0, 0.42),
-      0 1px 0 rgba(255, 255, 255, 0.12) inset;
+  .natus-login-mobile-luxe__form > div {
+    align-items: stretch;
+    text-align: left;
   }
 
-  .natus-login-mobile-card-accent {
+  .natus-login-mobile-luxe__panel label {
     display: block;
-    width: 2.5rem;
-    height: 1px;
-    margin: 0 auto 1.25rem;
-    background: linear-gradient(90deg, transparent, rgba(212, 168, 90, 0.85), transparent);
+    width: 100%;
+    text-align: left !important;
+    color: rgba(255, 253, 249, 0.92) !important;
+    font-size: 0.625rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.16em !important;
+    text-transform: uppercase !important;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
   }
 
-  .natus-login-form-shell {
-    padding-top: 0;
-    border-top: none;
-  }
-
-  .natus-login-mobile-card .natus-login-form-shell label {
-    color: rgba(255, 255, 255, 0.72);
-  }
-
-  .natus-login-mobile-card .natus-login-field,
-  .natus-login-mobile-card .natus-login-field:-webkit-autofill,
-  .natus-login-mobile-card .natus-login-field:-webkit-autofill:hover,
-  .natus-login-mobile-card .natus-login-field:-webkit-autofill:focus {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(255, 255, 255, 0.28) !important;
-    -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.08) inset !important;
-    box-shadow:
-      0 0 0 1000px rgba(255, 255, 255, 0.08) inset,
-      0 1px 0 rgba(255, 255, 255, 0.06) !important;
-    -webkit-text-fill-color: #ffffff !important;
-    caret-color: #ffffff;
-    color: #ffffff !important;
-  }
-
-  .natus-login-mobile-card .natus-login-field:focus {
-    border-color: rgba(212, 168, 90, 0.65) !important;
+  .natus-login-mobile-luxe__panel .natus-login-field,
+  .natus-login-mobile-luxe__panel .natus-login-field:-webkit-autofill,
+  .natus-login-mobile-luxe__panel .natus-login-field:-webkit-autofill:hover,
+  .natus-login-mobile-luxe__panel .natus-login-field:-webkit-autofill:focus {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.42) !important;
+    border-radius: 0.65rem !important;
+    -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.12) inset !important;
     box-shadow:
       0 0 0 1000px rgba(255, 255, 255, 0.12) inset,
-      0 0 0 1px rgba(212, 168, 90, 0.35),
-      0 8px 24px rgba(0, 0, 0, 0.2) !important;
+      0 4px 16px rgba(0, 0, 0, 0.12) !important;
+    -webkit-text-fill-color: #1a1408 !important;
+    caret-color: #1a1408;
+    color: #1a1408 !important;
+    font-size: 0.9375rem !important;
   }
 
-  .natus-login-mobile-card .natus-login-field::placeholder,
-  .natus-login-mobile-card .natus-login-field::-webkit-input-placeholder {
-    color: rgba(255, 255, 255, 0.42) !important;
-    -webkit-text-fill-color: rgba(255, 255, 255, 0.42) !important;
+  .natus-login-mobile-luxe__panel .natus-login-field:focus {
+    background-color: rgba(255, 255, 255, 0.32) !important;
+    border-color: rgba(250, 234, 161, 0.75) !important;
+    box-shadow:
+      0 0 0 1000px rgba(255, 255, 255, 0.22) inset,
+      0 0 0 1px rgba(250, 234, 161, 0.45),
+      0 8px 24px rgba(0, 0, 0, 0.18) !important;
   }
 
-  .natus-login-mobile-card .natus-login-field::-moz-placeholder {
-    color: rgba(255, 255, 255, 0.42) !important;
+  .natus-login-mobile-luxe__panel .natus-login-field::placeholder,
+  .natus-login-mobile-luxe__panel .natus-login-field::-webkit-input-placeholder {
+    color: rgba(26, 20, 8, 0.45) !important;
+    -webkit-text-fill-color: rgba(26, 20, 8, 0.45) !important;
   }
 
-  .natus-login-mobile-card .natus-login-submit {
-    background: linear-gradient(135deg, #faeaa1 0%, #e8c96a 52%, #d4a85a 100%) !important;
-    color: #1a1612 !important;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28) !important;
-  }
-
-  .natus-login-mobile-card .natus-login-submit:hover:not(:disabled) {
-    background: linear-gradient(135deg, #fff0b8 0%, #f0d078 52%, #ddb868 100%) !important;
-  }
-
-  .natus-login-mobile-card .natus-login-download-app {
+  .natus-login-mobile-luxe__panel .natus-login-submit {
+    margin-top: 0.5rem !important;
     border: none !important;
-    background: #faeaa1 !important;
-    color: #1a1612 !important;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22) !important;
+    border-radius: 0.65rem !important;
+    background: linear-gradient(135deg, #faeaa1 0%, #e8c96a 48%, #c9983f 100%) !important;
+    color: #1a1408 !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.16em !important;
+    text-transform: uppercase !important;
+    font-size: 0.6875rem !important;
+    min-height: 3rem;
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
   }
 
-  .natus-login-mobile-card .natus-login-download-app:hover:not(:disabled) {
-    background: #f5e08a !important;
-    color: #1a1612 !important;
+  .natus-login-mobile-luxe__panel .natus-login-submit:hover:not(:disabled) {
+    background: linear-gradient(135deg, #fff0b8 0%, #f0d078 48%, #d4a85a 100%) !important;
   }
 
-  .natus-login-mobile-card [role="alert"] {
-    border-color: rgba(255, 120, 120, 0.35);
-    background: rgba(120, 20, 20, 0.35);
-    color: #ffcaca;
+  .natus-login-mobile-luxe__panel [role="alert"] {
+    border-color: rgba(255, 180, 180, 0.45);
+    background: rgba(255, 255, 255, 0.22);
+    color: #ffe8e8;
+    text-align: left;
+    backdrop-filter: blur(8px);
   }
 
-  .natus-login-mobile-card button[type="button"]:not(.natus-login-download-app) {
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  .natus-login-mobile-card button[type="button"]:not(.natus-login-download-app):hover {
-    color: rgba(255, 255, 255, 0.88);
+  .natus-login-mobile-luxe__footer {
+    margin: 1.35rem 0 0;
+    font-size: 0.5625rem;
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: rgba(255, 253, 249, 0.55);
   }
 }
 

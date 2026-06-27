@@ -93,7 +93,7 @@ export function InstallPrompt() {
       role="dialog"
       aria-label="Installer l'application Natus"
       aria-live="polite"
-      className="pointer-events-auto fixed left-1/2 top-4 z-[110] w-[min(100vw-2rem,24rem)] -translate-x-1/2 animate-fade-in overflow-hidden rounded-xl border border-black/15 bg-[#FAEAA1] shadow-lg"
+      className="natus-pwa-install-toast pointer-events-auto fixed left-1/2 z-[110] w-[min(100vw-2rem,24rem)] -translate-x-1/2 animate-fade-in overflow-hidden rounded-xl border border-black/15 bg-[#FAEAA1] shadow-lg max-lg:bottom-[max(1rem,env(safe-area-inset-bottom))] max-lg:top-auto lg:top-4"
     >
       <div className="flex items-start gap-3 px-4 py-3">
         <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/10 text-black">

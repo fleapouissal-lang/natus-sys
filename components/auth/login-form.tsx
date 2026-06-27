@@ -32,6 +32,18 @@ export function LoginForm() {
     };
   }, []);
 
+  useEffect(() => {
+    const standalone = window.matchMedia("(display-mode: standalone)");
+    if (standalone.matches) return;
+    if (localStorage.getItem("natus-pwa-install-dismissed")) return;
+
+    const timer = window.setTimeout(() => {
+      showPwaInstallToast();
+    }, 2400);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
@@ -62,110 +74,155 @@ export function LoginForm() {
       </div>
 
       <div className="relative z-10 flex min-h-[100dvh] w-full flex-col lg:min-h-screen lg:flex-row">
-        <div className="natus-login-panel relative flex w-full flex-1 flex-col lg:min-h-screen lg:w-1/2 lg:justify-center lg:px-16 lg:py-12 lg:pt-12 xl:px-20">
-          <div className="natus-login-panel__glow pointer-events-none hidden lg:block" aria-hidden />
-
-          <div className="natus-login-mobile-center mx-auto w-full max-w-[22.5rem] animate-fade-in px-5 sm:max-w-[24rem] lg:mx-0 lg:max-w-[26rem] lg:px-0">
-            <div className="natus-login-mobile-card relative lg:bg-transparent lg:p-0 lg:shadow-none">
-              <div className="natus-login-mobile-card-accent lg:hidden" aria-hidden />
-
-              <div className="mb-6 text-center lg:hidden">
-                <p className="natus-login-eyebrow mb-3 text-[0.625rem] font-medium uppercase tracking-[0.32em] text-[#e8d5a8]/95">
-                  Espace professionnel
-                </p>
-                <h1 className="font-heading text-[2.75rem] font-normal leading-none tracking-[0.06em] text-white drop-shadow-[0_2px_20px_rgba(0,0,0,0.45)]">
-                  Natus
-                </h1>
-                <div className="natus-login-mobile-brand-line mx-auto mt-4 h-px w-10" aria-hidden />
+        <div className="natus-login-mobile-luxe lg:hidden">
+          <div className="natus-login-mobile-luxe__inner animate-fade-in">
+            <header className="natus-login-mobile-luxe__brand">
+              <p className="natus-login-mobile-luxe__eyebrow">Espace professionnel</p>
+              <h1 className="natus-login-mobile-luxe__title">Natus</h1>
+              <div className="natus-login-mobile-luxe__ornament" aria-hidden>
+                <span />
+                <span className="natus-login-mobile-luxe__ornament-diamond" />
+                <span />
               </div>
+              <p className="natus-login-mobile-luxe__tagline">
+                L&apos;art du soin, au cœur de votre boutique
+              </p>
+            </header>
 
-              <div className="mb-8 hidden lg:block">
-                <p className="natus-login-eyebrow mb-5 text-[0.6875rem] font-medium uppercase tracking-[0.28em] text-primary/80">
-                  Espace professionnel
-                </p>
-                <h1 className="natus-login-logo font-heading text-[3.25rem] font-normal leading-none tracking-[0.04em] sm:text-[3.75rem]">
-                  Natus
-                </h1>
-                <div className="natus-login-divider my-6 h-px w-16" aria-hidden />
-                <p className="max-w-[18rem] font-heading text-[1.125rem] leading-snug text-foreground/88 sm:text-xl">
-                  L&apos;art du soin,
-                  <span className="block text-muted">au cœur de votre boutique.</span>
-                </p>
-              </div>
-
-              <div className="natus-login-form-shell">
-                <p className="mb-5 hidden text-sm tracking-[0.02em] text-muted lg:mb-6 lg:block">
-                  Identifiez-vous pour accéder à votre tableau de bord.
-                </p>
-
-                <form
-                  method="post"
-                  action="/login"
-                  onSubmit={handleSubmit}
-                  className="space-y-4 lg:space-y-5"
-                  autoComplete="on"
-                  noValidate
+            <div className="natus-login-mobile-luxe__panel">
+              <form
+                method="post"
+                action="/login"
+                onSubmit={handleSubmit}
+                className="natus-login-mobile-luxe__form space-y-5"
+                autoComplete="on"
+                noValidate
+              >
+                <Input
+                  label="Email"
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  inputSize="lg"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="votre@email.com"
+                  required
+                  autoComplete="username"
+                  className="natus-login-field"
+                />
+                <PasswordInput
+                  label="Mot de passe"
+                  name="password"
+                  inputSize="lg"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Votre mot de passe"
+                  required
+                  autoComplete="current-password"
+                  className="natus-login-field"
+                />
+                {error && (
+                  <p
+                    role="alert"
+                    className="rounded-lg border border-danger/20 bg-danger/5 px-3 py-2.5 text-sm leading-relaxed text-danger"
+                  >
+                    {error}
+                  </p>
+                )}
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  className="natus-login-submit mt-1 w-full shadow-none"
+                  size="lg"
+                  loading={loading}
                 >
-                  <Input
-                    label="Email"
-                    name="email"
-                    type="email"
-                    inputMode="email"
-                    inputSize="lg"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="votre@email.com"
-                    required
-                    autoComplete="username"
-                    className="natus-login-field"
-                  />
-                  <PasswordInput
-                    label="Mot de passe"
-                    name="password"
-                    inputSize="lg"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Votre mot de passe"
-                    required
-                    autoComplete="current-password"
-                    className="natus-login-field"
-                  />
+                  Se connecter
+                </Button>
+              </form>
+            </div>
 
-                  {error && (
-                    <p
-                      role="alert"
-                      className="rounded-lg border border-danger/20 bg-danger/5 px-3 py-2.5 text-sm leading-relaxed text-danger"
-                    >
-                      {error}
-                    </p>
-                  )}
+            <p className="natus-login-mobile-luxe__footer">Cosmétiques naturels · Marrakech</p>
+          </div>
+        </div>
 
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    className="natus-login-submit mt-1 w-full shadow-none lg:mt-2"
-                    size="lg"
-                    loading={loading}
-                  >
-                    Se connecter
-                  </Button>
+        <div className="natus-login-panel relative hidden w-full flex-1 flex-col lg:flex lg:min-h-screen lg:w-1/2 lg:justify-center lg:px-16 lg:py-12 lg:pt-12 xl:px-20">
+          <div className="natus-login-panel__glow pointer-events-none" aria-hidden />
 
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={showPwaInstallToast}
-                    className="natus-login-download-app mt-2 w-full border-0 bg-[#FAEAA1] text-black shadow-none hover:bg-[#F5E08A] lg:mt-3"
-                    size="lg"
-                  >
-                    Télécharger l&apos;app
-                  </Button>
-                </form>
-              </div>
-
-              <p className="mt-5 text-center text-[0.625rem] uppercase tracking-[0.24em] text-white/50 lg:mt-10 lg:text-left lg:text-[0.6875rem] lg:text-muted/70">
-                Cosmétiques naturels · Natus
+          <div className="mx-auto w-full max-w-[26rem] animate-fade-in lg:mx-0">
+            <div className="mb-8">
+              <p className="natus-login-eyebrow mb-5 text-[0.6875rem] font-medium uppercase tracking-[0.28em] text-primary/80">
+                Espace professionnel
+              </p>
+              <h1 className="natus-login-logo font-heading text-[3.25rem] font-normal leading-none tracking-[0.04em] sm:text-[3.75rem]">
+                Natus
+              </h1>
+              <div className="natus-login-divider my-6 h-px w-16" aria-hidden />
+              <p className="max-w-[18rem] font-heading text-[1.125rem] leading-snug text-foreground/88 sm:text-xl">
+                L&apos;art du soin,
+                <span className="block text-muted">au cœur de votre boutique.</span>
               </p>
             </div>
+
+            <div className="natus-login-form-shell">
+              <p className="mb-6 text-sm tracking-[0.02em] text-muted">
+                Identifiez-vous pour accéder à votre tableau de bord.
+              </p>
+              <form
+                method="post"
+                action="/login"
+                onSubmit={handleSubmit}
+                className="space-y-5"
+                autoComplete="on"
+                noValidate
+              >
+                <Input
+                  label="Email"
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  inputSize="lg"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="votre@email.com"
+                  required
+                  autoComplete="username"
+                  className="natus-login-field"
+                />
+                <PasswordInput
+                  label="Mot de passe"
+                  name="password"
+                  inputSize="lg"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Votre mot de passe"
+                  required
+                  autoComplete="current-password"
+                  className="natus-login-field"
+                />
+                {error && (
+                  <p
+                    role="alert"
+                    className="rounded-lg border border-danger/20 bg-danger/5 px-3 py-2.5 text-sm leading-relaxed text-danger"
+                  >
+                    {error}
+                  </p>
+                )}
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  className="natus-login-submit mt-2 w-full shadow-none"
+                  size="lg"
+                  loading={loading}
+                >
+                  Se connecter
+                </Button>
+              </form>
+            </div>
+
+            <p className="mt-10 text-[0.6875rem] uppercase tracking-[0.24em] text-muted/70">
+              Cosmétiques naturels · Natus
+            </p>
           </div>
         </div>
 

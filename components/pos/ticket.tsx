@@ -105,8 +105,11 @@ export function Ticket({ data }: { data: SaleDocumentData }) {
         <TicketRule heavy />
 
         {/* Lignes articles */}
-        <table className="w-full border-collapse text-[9px] text-black">
+        <table className="natus-print-table w-full border-collapse text-[9px] text-black">
           <thead>
+            <tr className="natus-print-doc-banner">
+              <th colSpan={4}>Ticket caisse — {NATUS_INVOICE_COMPANY.legalName}</th>
+            </tr>
             <tr className="border-b border-black text-left font-black uppercase">
               <th className="pb-1 pr-1">Désignation</th>
               <th className="w-7 pb-1 text-center">Qté</th>

@@ -1,3 +1,5 @@
+import type { SaleDocumentData } from "@/components/pos/sale-document-types";
+import { printInvoiceHtml } from "@/lib/sales/download-invoice";
 import {
   runAfterPrintLayout,
   setPrintPageLayout,
@@ -6,12 +8,23 @@ import {
 
 export type SalePrintTarget = "ticket" | "invoice";
 
-const TARGET_LAYOUT: Record<SalePrintTarget, PrintPageLayout> = {
-  invoice: "a4-report",
+const TARGET_LAYOUT: Record<Exclude<SalePrintTarget, "invoice">, PrintPageLayout> = {
   ticket: "ticket",
 };
 
-export function printSaleDocument(target: SalePrintTarget) {
+export function printSaleDocument(target: "ticket"): void;
+export function printSaleDocument(target: "invoice", data: SaleDocumentData): void;
+export function printSaleDocument(
+  target: SalePrintTarget,
+  invoiceData?: SaleDocumentData
+) {
+  if (target === "invoice") {
+    if (invoiceData) {
+      printInvoiceHtml(invoiceData);
+    }
+    return;
+  }
+
   setPrintPageLayout(TARGET_LAYOUT[target]);
   document.body.dataset.printDoc = target;
   runAfterPrintLayout(() => {

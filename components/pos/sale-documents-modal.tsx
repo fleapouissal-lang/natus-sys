@@ -5,7 +5,6 @@ import { ExternalLink, FileText, Receipt } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import type { SaleDocumentData } from "@/components/pos/sale-document-types";
-import { PosInvoice } from "@/components/pos/pos-invoice";
 import { printSaleDocument } from "@/components/pos/print-sale-document";
 import { invoiceDetailPath } from "@/lib/sales/invoice-routes";
 import { Ticket } from "@/components/pos/ticket";
@@ -41,12 +40,6 @@ export function SaleDocumentsModal({
         <Ticket data={data} />
       </div>
 
-      {showInvoiceActions && (
-        <div className="natus-invoice-print-only" aria-hidden>
-          <PosInvoice data={data} />
-        </div>
-      )}
-
       <div className="mt-6 flex flex-wrap justify-center gap-3 print:hidden">
         <Button type="button" onClick={() => printSaleDocument("ticket")}>
           <Receipt className="h-4 w-4" />
@@ -54,7 +47,11 @@ export function SaleDocumentsModal({
         </Button>
         {showInvoiceActions ? (
           <>
-            <Button type="button" variant="secondary" onClick={() => printSaleDocument("invoice")}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => printSaleDocument("invoice", data)}
+            >
               <FileText className="h-4 w-4" />
               Imprimer facture
             </Button>

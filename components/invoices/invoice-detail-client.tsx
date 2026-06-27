@@ -119,7 +119,10 @@ export function InvoiceDetailClient({
           )}
           {validated && (
             <>
-              <Button type="button" onClick={() => printSaleDocument("invoice")}>
+              <Button
+                type="button"
+                onClick={() => printSaleDocument("invoice", documentData)}
+              >
                 <Printer className="h-4 w-4" />
                 Imprimer
               </Button>

@@ -73,7 +73,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
       }}
     >
       <div
-        className="natus-invoice-sheet relative overflow-hidden px-8 py-8 print:overflow-visible print:px-[10mm] print:py-[8mm]"
+        className="natus-invoice-sheet relative overflow-hidden px-8 py-8 print:overflow-visible print:p-0"
         style={{ background: NATUS_BRAND_GRADIENTS.creamBg }}
       >
         <InvoiceMonogram />
@@ -181,7 +181,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
         {/* Lignes + totaux */}
         <div className="natus-invoice-body relative z-[1] w-full">
         <div className="natus-invoice-table-wrap w-full overflow-visible">
-          <table className="natus-invoice-table w-full table-fixed border-collapse text-sm print:text-xs">
+          <table className="natus-invoice-table natus-print-table w-full table-fixed border-collapse text-sm print:text-xs">
             <colgroup>
               <col className="w-[44%]" />
               <col className="w-[12%]" />
@@ -189,6 +189,11 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
               <col className="w-[22%]" />
             </colgroup>
             <thead>
+              <tr className="natus-print-doc-banner">
+                <th colSpan={4}>
+                  Facture N° {invoiceNo} — {NATUS_INVOICE_COMPANY.legalName}
+                </th>
+              </tr>
               <tr className="text-[11px] font-semibold uppercase tracking-wider print:text-[10px]">
                 <th className="px-3 py-3 text-left print:px-2 print:py-2">Description</th>
                 <th className="px-2 py-3 text-center print:px-1 print:py-2">Qté</th>

@@ -70,7 +70,7 @@ export function CashierSalesReport({
       id={printId ?? undefined}
       className={`natus-sales-report relative mx-auto w-full max-w-[210mm] bg-white text-sm text-black shadow-sm print:max-w-none print:shadow-none ${isClosureReport ? "natus-closure-doc natus-closure-report" : ""}`}
     >
-      <div className="relative overflow-hidden bg-white px-8 py-8 print:overflow-visible print:bg-white print:px-[12mm] print:py-[10mm] print:text-black">
+      <div className="relative overflow-hidden bg-white px-8 py-8 print:overflow-visible print:bg-white print:px-0 print:py-0 print:text-black">
         {!isClosureReport && <ReportMonogram />}
 
         <header
@@ -166,8 +166,15 @@ export function CashierSalesReport({
           }
           style={isClosureReport ? undefined : { borderColor: NATUS_BRAND.borderSoft }}
         >
-          <table className={`w-full border-collapse text-xs ${isClosureReport ? "natus-closure-table natus-closure-report-table" : ""}`}>
+          <table className={`natus-print-table w-full border-collapse text-xs ${isClosureReport ? "natus-closure-table natus-closure-report-table" : ""}`}>
             <thead>
+              <tr className="natus-print-doc-banner">
+                <th colSpan={6}>
+                  {NATUS_INVOICE_COMPANY.legalName} —{" "}
+                  {isClosureReport ? "Clôture journalière caisse" : "Rapport de ventes caisse"} —{" "}
+                  {periodText}
+                </th>
+              </tr>
               {isClosureReport ? (
                 <tr>
                   <th>Date / heure</th>
@@ -190,7 +197,14 @@ export function CashierSalesReport({
             </thead>
             <tbody>
               {activeSales.map((sale) => (
-                <tr key={sale.id} className={isClosureReport ? "natus-closure-report-row" : "border-t border-[#eee]"}>
+                <tr
+                  key={sale.id}
+                  className={
+                    isClosureReport
+                      ? "natus-closure-report-row natus-print-row-break"
+                      : "natus-print-row-break border-t border-[#eee]"
+                  }
+                >
                   <td className={isClosureReport ? "" : "px-3 py-2 whitespace-nowrap"}>
                     {formatDate(sale.created_at)}
                   </td>
@@ -231,7 +245,7 @@ export function CashierSalesReport({
               )}
               {!isClosureReport && activeSales.length > 0 && (
                 <tr
-                  className="border-t-2 font-semibold print:break-inside-avoid"
+                  className="natus-print-row-avoid border-t-2 font-semibold print:break-inside-avoid"
                   style={{
                     borderColor: NATUS_BRAND.gold,
                     background: "rgba(255,246,236,0.9)",
@@ -247,17 +261,20 @@ export function CashierSalesReport({
                 </tr>
               )}
             </tbody>
+            {isClosureReport && activeSales.length > 0 && (
+              <tfoot>
+                <tr className="natus-closure-report-total-bar natus-print-row-avoid">
+                  <td colSpan={4} className="text-sm font-semibold uppercase tracking-wide">
+                    Total des ventes ({stats.count} vente{stats.count > 1 ? "s" : ""})
+                  </td>
+                  <td className="text-right font-heading text-lg font-bold tabular-nums">
+                    {formatCurrency(stats.total)}
+                  </td>
+                  <td />
+                </tr>
+              </tfoot>
+            )}
           </table>
-          {isClosureReport && activeSales.length > 0 && (
-            <div className="natus-closure-report-total-bar flex items-center justify-between gap-4 whitespace-nowrap px-4 py-3">
-              <span className="text-sm font-semibold uppercase tracking-wide">
-                Total des ventes ({stats.count} vente{stats.count > 1 ? "s" : ""})
-              </span>
-              <span className="font-heading text-lg font-bold tabular-nums">
-                {formatCurrency(stats.total)}
-              </span>
-            </div>
-          )}
         </div>
 
         {cancelledSales.length > 0 && (

@@ -122,8 +122,13 @@ export function DayClosureTicket({
           Articles vendus
         </p>
 
-        <table className="w-full border-collapse text-[9px] text-black">
+        <table className="natus-print-table w-full border-collapse text-[9px] text-black">
           <thead>
+            <tr className="natus-print-doc-banner">
+              <th colSpan={4}>
+                Clôture {dayClosureReference(dateKey)} — Articles vendus
+              </th>
+            </tr>
             <tr className="border-b border-black text-left font-black uppercase">
               <th className="pb-1 pr-1">Désignation</th>
               <th className="w-7 pb-1 text-center">Qté</th>
@@ -156,7 +161,7 @@ export function DayClosureTicket({
 
         <TicketRule heavy />
 
-        <div className="flex items-center justify-between border-2 border-black px-2 py-2">
+        <div className="natus-print-footer-avoid flex items-center justify-between border-2 border-black px-2 py-2">
           <span className="text-[10px] font-black uppercase tracking-wide">Total CA TTC</span>
           <span className="text-lg font-black tabular-nums leading-none">
             {formatCurrency(stats.total)}
@@ -169,11 +174,11 @@ export function DayClosureTicket({
 
         <TicketRule heavy />
 
-        <p className="text-center text-[8px] font-semibold leading-relaxed">
+        <p className="natus-print-footer-avoid text-center text-[8px] font-semibold leading-relaxed">
           {NATUS_INVOICE_COMPANY.legalMention}
         </p>
 
-        <div className="mt-3 pt-2">
+        <div className="natus-print-footer-avoid mt-3 pt-2">
           <p className="text-[9px] font-semibold">Signature caissier :</p>
           <div className="mt-5 border-b border-black" />
         </div>
