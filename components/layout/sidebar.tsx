@@ -57,7 +57,7 @@ function SidebarCashierClock({ collapsed }: { collapsed: boolean }) {
   }
 
   return (
-    <div className="mx-4 mb-3 flex items-start gap-2 rounded-lg border border-black/10 bg-black/[0.03] px-3 py-2">
+    <div className="mb-3 flex items-start gap-2 px-4 py-1">
       <Clock className="mt-0.5 h-4 w-4 shrink-0 text-black/70" aria-hidden />
       <div className="min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-black/55">
@@ -226,7 +226,8 @@ export function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const prevPathnameRef = useRef(pathname);
-  const [collapsed, setCollapsed] = useState(() => isCashierPosRoute(pathname));
+  const isPos = isCashierPosRoute(pathname);
+  const [collapsed, setCollapsed] = useState(() => isPos);
   const [switchingCashier, setSwitchingCashier] = useState(false);
   const [showDayClosure, setShowDayClosure] = useState(false);
 
@@ -266,8 +267,11 @@ export function Sidebar({
   }, [pathname]);
 
   function toggleCollapsed() {
-    if (isCashierPosRoute(pathname)) return;
     setCollapsed((prev) => !prev);
+  }
+
+  function handleSidebarDoubleClick() {
+    toggleCollapsed();
   }
 
   async function handleSwitchCashier() {
@@ -297,12 +301,12 @@ export function Sidebar({
         "natus-sidebar relative flex h-full shrink-0 flex-col bg-sidebar transition-[width] duration-300 ease-in-out",
         collapsed ? "natus-sidebar--collapsed w-[4.5rem] overflow-visible" : "w-64"
       )}
-      onDoubleClick={() => {
-        if (!isCashierPosRoute(pathname)) toggleCollapsed();
-      }}
+      onDoubleClick={handleSidebarDoubleClick}
       title={
-        isCashierPosRoute(pathname)
-          ? "Sidebar masquée en caisse"
+        isPos
+          ? collapsed
+            ? "Double-clic pour agrandir le menu"
+            : "Double-clic pour réduire le menu"
           : collapsed
             ? "Double-clic pour agrandir"
             : "Double-clic pour réduire"

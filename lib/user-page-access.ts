@@ -56,7 +56,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "hub_stock", label: "Hub stock", description: "Stock entrepôt central", group: "admin" },
   { key: "hubs", label: "Dépôts", description: "Comptes dépôt ville (indépendants des gérants)", group: "admin" },
   { key: "notes", label: "Notes", description: "Notes clients et suivi caisse", group: "clients" },
-  { key: "transfers", label: "Transferts", description: "Livraisons hub et retours dépôt", group: "operations" },
+  { key: "transfers", label: "Transferts", description: "Commandes envoyées et reçues (hub et magasins)", group: "operations" },
   { key: "orders", label: "Livraisons", description: "Commandes Shopify à livrer", group: "operations" },
   { key: "hub_orders", label: "Commandes dépôt", description: "Commandes entrepôt vers magasins", group: "operations" },
   { key: "returns", label: "Retours", description: "Retours produits et SAV", group: "clients" },
@@ -201,12 +201,14 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
     case "notes":
       return "/cashier/notes";
     case "transfers":
-      return role === "livreur" ? "/livreur/transfers" : "/cashier/transfers";
+      if (role === "livreur") return "/livreur/transfers";
+      if (role === "cashier") return "/cashier/transfers/received";
+      return null;
     case "orders":
       return role === "livreur" ? "/livreur/orders" : null;
     case "hub_orders":
       if (role === "hub") return "/hub/orders";
-      if (role === "manager") return "/manager/hub-orders";
+      if (role === "manager") return "/manager/stock-transfers/received";
       return null;
     case "returns":
       return role === "livreur" ? "/livreur/returns" : "/cashier/returns";
@@ -273,6 +275,19 @@ export function getAllowedHrefsForProfile(
     hrefs.push("/cashier/pro-clients");
   }
 
+  if (profile.role === "cashier" && keys.includes("transfers")) {
+    hrefs.push("/cashier/transfers/sent", "/cashier/transfers/received", "/cashier/transfers");
+  }
+
+  if (profile.role === "manager") {
+    if (keys.includes("stock")) {
+      hrefs.push("/manager/stock-transfers", "/manager/stock-transfers/received");
+    }
+    if (keys.includes("hub_orders")) {
+      hrefs.push("/manager/stock-transfers/received", "/manager/hub-orders");
+    }
+  }
+
   if (
     (profile.role === "directeur" || profile.role === "admin") &&
     (keys.includes("stock") || keys.includes("hub_stock"))
@@ -334,6 +349,23 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
   }
   if (href === "/director/pos-closures" && (role === "directeur" || role === "admin")) {
     return "pos_closures";
+  }
+  if (
+    (href === "/cashier/transfers/sent" || href === "/cashier/transfers/received") &&
+    role === "cashier"
+  ) {
+    return "transfers";
+  }
+  if (
+    (href === "/manager/stock-transfers" && role === "manager") ||
+    (href === "/director/stock-transfers" && (role === "directeur" || role === "admin")) ||
+    (href === "/director/stock-transfers/received" &&
+      (role === "directeur" || role === "admin"))
+  ) {
+    return "stock";
+  }
+  if (href === "/manager/stock-transfers/received" && role === "manager") {
+    return "hub_orders";
   }
   return null;
 }

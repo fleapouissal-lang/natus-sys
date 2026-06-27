@@ -21,6 +21,7 @@ import {
   Settings,
   KeyRound,
   Landmark,
+  ArrowRightLeft,
 } from "lucide-react";
 import { getManagementBasePath } from "@/lib/permissions";
 import { getSettingsPath } from "@/lib/layout/settings-path";
@@ -46,7 +47,18 @@ export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/sales", label: "Historique de vente", icon: Receipt, mobileOrder: 3 },
   { href: "/cashier/pos-closures", label: "Historique clôtures", icon: ScrollText, mobileOrder: 3.5 },
   { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 4 },
-  { href: "/cashier/transfers", label: "Commande hub", icon: Boxes, mobileOrder: 5 },
+  {
+    href: "/cashier/transfers/sent",
+    label: "Commandes envoyées",
+    icon: ArrowRightLeft,
+    mobileOrder: 5,
+  },
+  {
+    href: "/cashier/transfers/received",
+    label: "Commandes reçues",
+    icon: Boxes,
+    mobileOrder: 5.1,
+  },
   { href: "/cashier/customers", label: "Clients fidélité", icon: Gift, mobileOrder: 6 },
   { href: "/cashier/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness, mobileOrder: 7 },
   { href: "/cashier/returns", label: "Retours", icon: RotateCcw, mobileOrder: 8 },
@@ -97,7 +109,19 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   links.push(
     { href: `${basePath}/sales`, label: "Ventes", icon: Receipt, mobileOrder: 3 },
     { href: `${basePath}/cheques`, label: "Chèques", icon: Landmark, mobileOrder: 3.5 },
-    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 4 }
+    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 4 },
+    {
+      href: `${basePath}/stock-transfers`,
+      label: "Commandes envoyées",
+      icon: ArrowRightLeft,
+      mobileOrder: 4.2,
+    },
+    {
+      href: `${basePath}/stock-transfers/received`,
+      label: "Commandes reçues",
+      icon: Boxes,
+      mobileOrder: 4.25,
+    }
   );
 
   if (basePath === "/manager") {
@@ -106,12 +130,6 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       label: "Clôtures caisse",
       icon: ScrollText,
       mobileOrder: 2.5,
-    });
-    links.push({
-      href: `${basePath}/hub-orders`,
-      label: "Commande hub",
-      icon: Boxes,
-      mobileOrder: 5,
     });
   }
 
@@ -295,6 +313,12 @@ export function isNavLinkActive(pathname: string, href: string): boolean {
     if (pathname === href || pathname.startsWith(`${href}?`)) return true;
     if (pathname === "/director/hub" || pathname.startsWith("/director/hub/")) return true;
     return pathname.startsWith(`${href}/`);
+  }
+  if (
+    href.endsWith("/stock-transfers") ||
+    href === "/cashier/transfers"
+  ) {
+    return pathname === href || pathname.startsWith(`${href}?`);
   }
   if (pathname === href) return true;
   return pathname.startsWith(`${href}/`);

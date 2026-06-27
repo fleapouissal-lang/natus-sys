@@ -9,6 +9,7 @@ import { getActiveStockModifyGrant } from "@/lib/stock-modify-access/queries";
 import {
   parseAllowedPagesInput,
   validateAllowedPagesForRole,
+  isStoreScopedManager,
 } from "@/lib/user-page-access";
 import { NATUS_CITIES } from "@/lib/constants/cities";
 import { getStoreById } from "@/lib/inventory";
@@ -74,13 +75,17 @@ function mapCreateUserAuthError(message: string): string {
 function revalidateManagement() {
   revalidatePath("/manager/products");
   revalidatePath("/manager/stock");
+  revalidatePath("/manager/stock-transfers");
+  revalidatePath("/manager/stock-transfers/received");
+  revalidatePath("/manager/hub-orders");
   revalidatePath("/manager/activity");
   revalidatePath("/manager/stores");
   revalidatePath("/manager/users");
   revalidatePath("/manager/planning");
-  revalidatePath("/manager/hub-orders");
   revalidatePath("/director/products");
   revalidatePath("/director/stock");
+  revalidatePath("/director/stock-transfers");
+  revalidatePath("/director/stock-transfers/received");
   revalidatePath("/director/activity");
   revalidatePath("/director/stores");
   revalidatePath("/director/users");
@@ -92,6 +97,9 @@ function revalidateManagement() {
   revalidatePath("/hub/orders");
   revalidatePath("/hub/activity");
   revalidatePath("/cashier/transfers");
+  revalidatePath("/cashier/transfers/sent");
+  revalidatePath("/cashier/transfers/received");
+  revalidatePath("/livreur/transfers");
   revalidatePath("/cashier/pos");
 }
 
@@ -112,6 +120,55 @@ async function assertStoreAccess(profile: Profile, storeId: string) {
     return { error: "Vous n'avez pas accès à ce magasin" };
   }
   return { store };
+}
+
+async function assertStoreTransferAccess(
+  profile: Profile,
+  fromStoreId: string,
+  toStoreId: string
+) {
+  if (fromStoreId === toStoreId) {
+    return { error: "Choisissez deux magasins différents" };
+  }
+
+  const fromStore = await getStoreById(fromStoreId);
+  const toStore = await getStoreById(toStoreId);
+
+  if (!fromStore || !toStore) {
+    return { error: "Magasin introuvable" };
+  }
+
+  if (fromStore.is_hub || toStore.is_hub) {
+    return { error: "Transfert réservé aux magasins de vente" };
+  }
+
+  if (!fromStore.is_active || !toStore.is_active) {
+    return { error: "Magasin inactif" };
+  }
+
+  if (isDirector(profile)) {
+    return { fromStore, toStore };
+  }
+
+  if (isManager(profile)) {
+    if (isStoreScopedManager(profile) && profile.store_id) {
+      if (profile.store_id !== fromStoreId) {
+        return { error: "Vous ne pouvez transférer que depuis votre magasin" };
+      }
+      if (toStore.city !== profile.city) {
+        return { error: "Magasin destination hors périmètre" };
+      }
+      return { fromStore, toStore };
+    }
+
+    if (!canManageStore(profile, fromStore) || !canManageStore(profile, toStore)) {
+      return { error: "Magasins hors périmètre" };
+    }
+
+    return { fromStore, toStore };
+  }
+
+  return { error: "Non autorisé" };
 }
 
 async function assertStockModifyAccess(profile: Profile, storeId: string) {
@@ -765,6 +822,165 @@ export async function transferHubStock(
       : "";
 
   return { success: true, storeName };
+}
+
+export async function transferStoreStock(
+  fromStoreId: string,
+  toStoreId: string,
+  items: HubStockTransferItem[],
+  notes?: string
+): Promise<
+  { success: true; transferId: string; toStoreName: string } | { error: string }
+> {
+  const profile = await requireRole(["directeur", "admin", "manager"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  if (!fromStoreId || !toStoreId) {
+    return { error: "Sélectionnez les magasins source et destination" };
+  }
+
+  const access = await assertStoreTransferAccess(profile, fromStoreId, toStoreId);
+  if ("error" in access && access.error) return { error: access.error };
+
+  const cleaned = items
+    .map((item) => ({
+      product_id: item.productId,
+      quantity: Math.floor(item.quantity),
+    }))
+    .filter((item) => item.product_id && item.quantity > 0);
+
+  if (cleaned.length === 0) {
+    return { error: "Indiquez au moins une quantité à transférer" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_store_stock_transfer", {
+    p_from_store_id: fromStoreId,
+    p_to_store_id: toStoreId,
+    p_items: cleaned,
+    p_notes: notes?.trim() || null,
+  });
+
+  if (error) {
+    const msg = error.message;
+    if (msg.includes("Stock insuffisant")) {
+      return { error: "Stock insuffisant au magasin source pour un ou plusieurs produits" };
+    }
+    if (msg.includes("hors périmètre") || msg.includes("invalide")) {
+      return { error: "Magasin non autorisé pour ce transfert" };
+    }
+    return { error: msg };
+  }
+
+  revalidateManagement();
+
+  const payload =
+    typeof data === "object" && data !== null
+      ? (data as { transfer_id?: string; to_store?: string })
+      : {};
+
+  return {
+    success: true,
+    transferId: String(payload.transfer_id || ""),
+    toStoreName: String(payload.to_store || access.toStore?.name || ""),
+  };
+}
+
+export async function markStoreTransferReady(
+  transferId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("mark_store_transfer_ready", {
+    p_transfer_id: transferId,
+  });
+  if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function assignStoreTransferLivreur(
+  transferId: string,
+  livreurId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+  if (!livreurId) return { error: "Sélectionnez un livreur" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("assign_store_transfer_livreur", {
+    p_transfer_id: transferId,
+    p_livreur_id: livreurId,
+  });
+  if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function shipStoreStockTransfer(
+  transferId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier", "livreur"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("ship_store_stock_transfer", {
+    p_transfer_id: transferId,
+  });
+  if (error) {
+    if (error.message.includes("Stock insuffisant")) {
+      return { error: "Stock insuffisant au magasin source" };
+    }
+    if (error.message.includes("livreur")) {
+      return { error: error.message };
+    }
+    return { error: error.message };
+  }
+
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function deliverStoreStockTransfer(
+  transferId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["livreur"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("deliver_store_stock_transfer", {
+    p_transfer_id: transferId,
+  });
+  if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function markStoreTransferDelivered(
+  transferId: string
+): Promise<{ success: true } | { error: string }> {
+  return deliverStoreStockTransfer(transferId);
+}
+
+export async function confirmStoreStockTransfer(
+  transferId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("confirm_store_stock_transfer", {
+    p_transfer_id: transferId,
+  });
+  if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
 }
 
 export async function confirmHubStockTransfer(

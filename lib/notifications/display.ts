@@ -33,9 +33,9 @@ export function notificationHref(
 ): string {
   switch (kind) {
     case "hub_transfer":
-      if (audience === "city") return "/manager/hub-orders";
+      if (audience === "city") return "/manager/stock-transfers/received";
       if (audience === "livreur") return "/livreur/transfers";
-      return "/cashier/transfers";
+      return "/cashier/transfers/received";
     case "stock_low":
     case "stock_out":
       if (audience === "director") return "/director/stock";

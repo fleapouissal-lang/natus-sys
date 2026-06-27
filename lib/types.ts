@@ -336,6 +336,50 @@ export interface HubStockTransfer {
   total_units: number;
 }
 
+export type StoreStockTransferStatus =
+  | "en_cours"
+  | "pret"
+  | "en_livraison"
+  | "livre"
+  | "received";
+
+export interface StoreStockTransferItem {
+  id: string;
+  product_id: string;
+  quantity: number;
+  product_name: string;
+  product_barcode: string;
+  product_code?: string | null;
+  product_image_url?: string | null;
+}
+
+export interface StoreStockTransfer {
+  id: string;
+  from_store_id: string;
+  to_store_id: string;
+  status: StoreStockTransferStatus;
+  notes: string | null;
+  created_by: string;
+  received_by: string | null;
+  assigned_livreur_id: string | null;
+  assigned_livreur_name?: string | null;
+  sent_at: string;
+  ready_at: string | null;
+  shipped_at: string | null;
+  picked_up_at?: string | null;
+  delivered_at: string | null;
+  received_at: string | null;
+  from_store_name: string | null;
+  to_store_name: string | null;
+  from_store_city?: string | null;
+  to_store_city?: string | null;
+  creator_name: string | null;
+  receiver_name: string | null;
+  shipper_name?: string | null;
+  items: StoreStockTransferItem[];
+  total_units: number;
+}
+
 export interface StoreSnapshot {
   storeId: string;
   storeName: string;

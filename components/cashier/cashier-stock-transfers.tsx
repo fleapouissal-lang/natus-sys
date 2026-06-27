@@ -137,11 +137,14 @@ export function CashierStockTransfers({
   storeName,
   productsById,
   storeStockByProductId,
+  variant = "page",
 }: {
   transfers: HubStockTransfer[];
   storeName: string;
   productsById: Record<string, Pick<Product, "id" | "name" | "barcode" | "image_url" | "category">>;
   storeStockByProductId: Record<string, number>;
+  /** page = titre principal · section = bloc dans une page combinée */
+  variant?: "page" | "section";
 }) {
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -182,15 +185,17 @@ export function CashierStockTransfers({
     : false;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl font-bold tracking-tight text-primary-dark">
-          Commandes dépôt
-        </h1>
-        <p className="mt-1 text-sm text-muted">
-          Suivi des commandes depuis l&apos;entrepôt hub vers {storeName}
-        </p>
-      </div>
+    <div className={variant === "page" ? "space-y-6" : "space-y-4"}>
+      {variant === "page" && (
+        <div>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-primary-dark">
+            Commandes dépôt
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            Suivi des commandes depuis l&apos;entrepôt hub vers {storeName}
+          </p>
+        </div>
+      )}
 
       {error && (
         <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>
@@ -202,7 +207,7 @@ export function CashierStockTransfers({
       <Card padding={false}>
         <div className="p-4 md:p-6">
           <CardHeader
-            title="Liste des commandes"
+            title={variant === "section" ? "Commandes dépôt (hub)" : "Liste des commandes"}
             description={`${totalItems} commande${totalItems !== 1 ? "s" : ""} dépôt`}
           />
         </div>
