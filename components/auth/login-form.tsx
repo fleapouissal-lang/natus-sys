@@ -8,6 +8,14 @@ import { Input, PasswordInput } from "@/components/ui/input";
 import { touchSessionActivity } from "@/components/auth/session-guard";
 import { signInStaff } from "@/lib/auth/sign-in";
 
+const LOGIN_HERO = {
+  src: "/images/login-hero.png",
+  alt: "Boutique Natus Marrakech",
+} as const;
+
+/** Résolution native — évite l'agrandissement au-delà de 576px (flou). */
+const LOGIN_HERO_NATIVE_WIDTH = 576;
+
 export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -45,13 +53,14 @@ export function LoginForm() {
 
   return (
     <div className="natus-login relative flex min-h-screen flex-col bg-[#FFFDF9] lg:flex-row">
-      <div className="relative block h-44 w-full shrink-0 sm:h-52 md:h-60 lg:hidden">
+      <div className="natus-login-hero relative block h-44 w-full shrink-0 sm:h-52 md:h-60 lg:hidden">
         <Image
-          src="/images/login-hero.png"
-          alt="Boutique Natus Marrakech"
+          {...LOGIN_HERO}
           fill
           priority
-          className="object-cover object-[center_35%]"
+          quality={100}
+          unoptimized
+          className="natus-login-hero__img object-cover object-center"
           sizes="100vw"
         />
       </div>
@@ -136,14 +145,18 @@ export function LoginForm() {
           </div>
         </div>
 
-        <div className="relative hidden min-h-[280px] flex-1 lg:block">
+        <div
+          className="natus-login-hero relative hidden min-h-screen shrink-0 lg:block"
+          style={{ width: LOGIN_HERO_NATIVE_WIDTH, maxWidth: "50vw" }}
+        >
           <Image
-            src="/images/login-hero.png"
-            alt="Boutique Natus Marrakech"
+            {...LOGIN_HERO}
             fill
             priority
-            className="object-cover object-[center_35%] rounded-tl-[2.5rem] rounded-bl-[2.5rem]"
-            sizes="50vw"
+            quality={100}
+            unoptimized
+            className="natus-login-hero__img object-cover object-center"
+            sizes="576px"
           />
         </div>
       </div>

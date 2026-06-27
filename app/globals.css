@@ -1972,6 +1972,26 @@ textarea:focus {
 }
 
 /* Page login — panneau luxe + champs crème */
+.natus-login-hero {
+  overflow: hidden;
+  background: #fffdf9;
+}
+
+.natus-login-hero::before,
+.natus-login-hero::after {
+  content: none;
+  display: none;
+}
+
+.natus-login-hero__img,
+.natus-login-hero img {
+  filter: none !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 .natus-login-panel {
   background:
     radial-gradient(ellipse 80% 60% at 15% 20%, rgba(179, 140, 74, 0.07), transparent 55%),
