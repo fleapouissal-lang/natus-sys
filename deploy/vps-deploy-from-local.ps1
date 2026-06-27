@@ -3,7 +3,7 @@
 #         powershell -File deploy/vps-deploy-from-local.ps1 -Host 161.97.134.231
 
 param(
-  [string]$Host = "161.97.134.231",
+  [string]$VpsHost = "161.97.134.231",
   [string]$User = "root",
   [string]$AppUrl = "http://161.97.134.231:3002"
 )
@@ -49,7 +49,7 @@ if (-not $seen.ContainsKey("NEXT_PUBLIC_APP_URL")) {
 $TempEnv = Join-Path $env:TEMP "natus-vps.env"
 $out | Set-Content -Path $TempEnv -Encoding UTF8
 
-$Remote = "${User}@${Host}"
+$Remote = "${User}@${VpsHost}"
 $AppDir = "/var/www/natus"
 
 Write-Host "→ Copie .env.local vers ${Remote}:${AppDir}/.env.local"
@@ -69,4 +69,4 @@ bash deploy/vps-first-install.sh
 "@
 
 Write-Host ""
-Write-Host "✓ Déploiement terminé : $AppUrl"
+Write-Host "Deploy termine : $AppUrl"
