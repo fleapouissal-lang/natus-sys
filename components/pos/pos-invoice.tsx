@@ -80,7 +80,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
 
         {/* En-tête */}
         <div
-          className="relative z-[1] mb-6 mt-2 flex items-start justify-between gap-6 border-b pb-5 pt-4 print:mt-4 print:pt-6"
+          className="natus-invoice-header relative z-[1] mb-6 mt-2 flex items-start justify-between gap-6 border-b pb-5 pt-4 print:mb-4 print:mt-0 print:pb-4 print:pt-0"
           style={{ borderColor: NATUS_BRAND.border }}
         >
           <div className="min-w-0">
@@ -105,7 +105,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
 
         {/* Émetteur | Client */}
         <div
-          className="relative z-[1] mb-8 grid gap-8 border-b pb-8 sm:grid-cols-2"
+          className="natus-invoice-parties relative z-[1] mb-8 grid gap-8 border-b pb-8 sm:grid-cols-2 print:mb-4 print:pb-4"
           style={{ borderColor: NATUS_BRAND.border }}
         >
           <div className="relative pl-4">
@@ -178,7 +178,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
 
         {/* Tableau */}
         <div className="natus-invoice-table-wrap relative z-[1] w-full overflow-visible">
-          <table className="w-full table-fixed border-collapse text-sm print:text-xs">
+          <table className="natus-invoice-table w-full table-fixed border-collapse text-sm print:text-xs">
             <colgroup>
               <col className="w-[44%]" />
               <col className="w-[12%]" />
@@ -186,10 +186,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
               <col className="w-[22%]" />
             </colgroup>
             <thead>
-              <tr
-                className="text-[11px] font-semibold uppercase tracking-wider text-white print:text-[10px]"
-                style={{ background: NATUS_BRAND_GRADIENTS.goldStrip }}
-              >
+              <tr className="text-[11px] font-semibold uppercase tracking-wider print:text-[10px]">
                 <th className="px-3 py-3 text-left print:px-2 print:py-2">Description</th>
                 <th className="px-2 py-3 text-center print:px-1 print:py-2">Qté</th>
                 <th className="px-2 py-3 text-right print:px-1 print:py-2">Prix HT</th>
@@ -231,7 +228,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
 
         {/* Totaux */}
         <div
-          className="relative z-[1] mt-0 overflow-hidden border border-t-0"
+          className="natus-invoice-totals relative z-[1] mt-0 overflow-hidden border border-t-0"
           style={{ borderColor: NATUS_BRAND.borderSoft }}
         >
           <div className="ml-auto w-full max-w-sm space-y-0 text-sm">
@@ -287,7 +284,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
               <span className="tabular-nums">{formatCurrency(tva)}</span>
             </div>
             <div
-              className="flex items-center justify-between px-4 py-3.5 font-semibold text-white"
+              className="natus-invoice-total-bar flex items-center justify-between px-4 py-3.5 font-semibold text-white"
               style={{ background: NATUS_BRAND_GRADIENTS.goldStrip }}
             >
               <span className="text-sm uppercase tracking-wide">Total TTC :</span>
@@ -298,7 +295,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
 
         {/* Pied de page */}
         <div
-          className="relative z-[1] mt-10 border-t pt-8"
+          className="natus-invoice-footer relative z-[1] mt-10 border-t pt-8 print:mt-6 print:pt-4"
           style={{ borderColor: NATUS_BRAND.border }}
         >
           <div className="text-sm" style={{ color: NATUS_BRAND.inkSoft }}>
@@ -316,7 +313,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
         </div>
 
         <div
-          className="relative z-[1] mt-8 py-3 text-center text-sm font-medium text-white"
+          className="natus-invoice-brand-bar relative z-[1] mt-8 py-3 text-center text-sm font-medium text-white print:mt-4"
           style={{ background: NATUS_BRAND_GRADIENTS.goldStrip }}
         >
           {NATUS_INVOICE_COMPANY.website}

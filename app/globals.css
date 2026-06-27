@@ -1457,6 +1457,61 @@ textarea:focus {
   border-radius: 0 !important;
 }
 
+/* Facture — tableau sans radius (aligné clôture) */
+.natus-invoice-table-wrap {
+  border: 1px solid rgba(179, 140, 74, 0.25);
+  border-radius: 0 !important;
+  overflow: hidden;
+  background: #fffdf9;
+}
+
+.natus-invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 0 !important;
+}
+
+.natus-invoice-table thead,
+.natus-invoice-table thead tr,
+.natus-invoice-table thead th,
+.natus-invoice-table thead th::before,
+.natus-invoice-table thead th::after {
+  border-radius: 0 !important;
+}
+
+.natus-invoice-table thead {
+  display: table-header-group;
+}
+
+.natus-invoice-table thead tr {
+  background: #2c2418;
+  color: #faeaa1;
+}
+
+.natus-invoice-table thead th {
+  padding: 0.75rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.natus-invoice-table tbody tr {
+  border-top: 1px solid rgba(44, 36, 24, 0.1);
+}
+
+.natus-invoice-table tbody td {
+  padding: 0.75rem 0.75rem;
+}
+
+.natus-invoice-total-bar {
+  border-radius: 0 !important;
+}
+
+.natus-invoice-brand-bar {
+  border-radius: 0 !important;
+}
+
 @media print {
   /* @page size/margin : défini dynamiquement via setPrintPageLayout() */
 
@@ -1494,35 +1549,126 @@ textarea:focus {
     padding: 0 !important;
     margin: 0;
     overflow: visible !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
+  }
+
+  body[data-print-doc="invoice"] #invoice-print,
+  body[data-print-doc="invoice"] #invoice-print * {
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice,
   body[data-print-doc="invoice"] .natus-invoice-sheet {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-sheet {
     border: none !important;
-    padding-top: 4mm !important;
+    padding: 0 !important;
     overflow: visible !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-monogram {
-    opacity: 0.07 !important;
+    display: none !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-header {
+    page-break-after: avoid;
+    break-after: avoid-page;
+    border-color: #000 !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-parties {
+    page-break-after: avoid;
+    break-after: avoid-page;
+    border-color: #000 !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-table-wrap {
     overflow: visible !important;
     max-width: 100%;
+    border: 1px solid #000 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-table-wrap table {
     width: 100% !important;
     max-width: 100%;
     table-layout: fixed;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-table thead {
+    display: table-header-group;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-table thead tr,
+  body[data-print-doc="invoice"] .natus-invoice-table thead th {
+    background: #000 !important;
+    color: #fff !important;
+    border-radius: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-table tbody tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #ccc !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-table tbody td {
+    border-color: #ccc !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-totals {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border-color: #000 !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-totals > div > div {
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #ccc !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-total-bar {
+    background: #000 !important;
+    color: #fff !important;
+    border-radius: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-footer,
+  body[data-print-doc="invoice"] .natus-invoice-brand-bar {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border-color: #000 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-brand-bar {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-sheet [style*="gradient"],
+  body[data-print-doc="invoice"] .natus-invoice-sheet [style*="linear-gradient"] {
+    background: #fff !important;
   }
 
   body[data-print-doc="ticket"] #day-closure-ticket-print,

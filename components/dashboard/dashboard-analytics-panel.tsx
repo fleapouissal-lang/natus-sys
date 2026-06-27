@@ -8,7 +8,6 @@ import {
   BarChart3,
   Clock,
   CreditCard,
-  Download,
   Loader2,
   Minus,
   Package,
@@ -18,11 +17,8 @@ import {
   Users,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { natusFilterChipClass } from "@/components/ui/natus-filter-chip";
 import { fetchDashboardAnalytics } from "@/lib/dashboard/dashboard-analytics-actions";
-import { fetchDashboardReport } from "@/lib/dashboard/dashboard-report-actions";
-import { downloadDashboardReportExcel } from "@/lib/dashboard/export-dashboard-report";
 import type { DashboardAnalyticsPayload } from "@/lib/dashboard/analytics-types";
 import {
   DASHBOARD_REPORT_PERIODS,
@@ -269,9 +265,8 @@ export function DashboardAnalyticsPanel({
   const [data, setData] = useState<DashboardAnalyticsPayload | null>(null);
   const [error, setError] = useState("");
   const [loading, startLoad] = useTransition();
-  const [exportPending, startExport] = useTransition();
 
-  const canExportAll = Boolean(allStoreIds && allStoreIds.length > 1);
+  const canToggleAllStores = Boolean(allStoreIds && allStoreIds.length > 1);
   const effectiveIds = useMemo(
     () => (multiStore && allStoreIds?.length ? allStoreIds : storeIds),
     [multiStore, allStoreIds, storeIds]
@@ -302,27 +297,6 @@ export function DashboardAnalyticsPanel({
     });
   }, [idsKey, period, effectiveScope]);
 
-  function handleExport() {
-    if (effectiveIds.length === 0) {
-      setError("Sélectionnez au moins un magasin.");
-      return;
-    }
-
-    startExport(async () => {
-      setError("");
-      const result = await fetchDashboardReport({
-        storeIds: effectiveIds,
-        period,
-        scopeLabel: effectiveScope,
-      });
-      if ("error" in result) {
-        setError(result.error);
-        return;
-      }
-      await downloadDashboardReportExcel(result.data, period);
-    });
-  }
-
   const cashShare =
     data && data.current.revenue > 0
       ? (data.current.cashRevenue / data.current.revenue) * 100
@@ -352,23 +326,9 @@ export function DashboardAnalyticsPanel({
                 </p>
               )}
             </div>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleExport}
-              disabled={exportPending || loading || effectiveIds.length === 0}
-              className="gap-2"
-            >
-              {exportPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              Export Excel
-            </Button>
           </div>
 
-          {canExportAll && (
+          {canToggleAllStores && (
             <div className="mt-4 flex flex-wrap gap-2">
               <button
                 type="button"

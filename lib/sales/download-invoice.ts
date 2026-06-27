@@ -35,7 +35,7 @@ function buildInvoiceBody(data: SaleDocumentData): string {
     .join("");
 
   return `
-  <p style="font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${NATUS_BRAND.gold}">Facture</p>
+  <p style="font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#000">Facture</p>
   <h1>${escapeHtml(NATUS_INVOICE_COMPANY.legalName)}</h1>
   <div class="meta">
     <div><strong>N° facture :</strong> ${invoiceNo}</div>
@@ -61,27 +61,84 @@ function buildInvoiceBody(data: SaleDocumentData): string {
   <div class="totals">
     <div><span>Total HT</span><span>${formatCurrency(ht)}</span></div>
     <div><span>TVA ${tvaPercent} %</span><span>${formatCurrency(tva)}</span></div>
-    <div><strong>Total TTC</strong><strong>${formatCurrency(ttc)}</strong></div>
+    <div class="total-ttc"><strong>Total TTC</strong><strong>${formatCurrency(ttc)}</strong></div>
   </div>
   <p class="footer">${escapeHtml(NATUS_INVOICE_COMPANY.legalMention)}</p>`;
 }
 
 const INVOICE_DOC_STYLES = `
-    body { font-family: Georgia, serif; margin: 24px; color: ${NATUS_BRAND.ink}; background: ${NATUS_BRAND_GRADIENTS.creamBg}; }
-    h1 { color: ${NATUS_BRAND.goldDeep}; font-weight: 400; margin: 0 0 8px; }
+    @page {
+      size: A4 portrait;
+      margin: 12mm 10mm 18mm 10mm;
+      @bottom-center {
+        content: "Page " counter(page) " / " counter(pages);
+        font-size: 8pt;
+        color: #000;
+        font-family: system-ui, sans-serif;
+      }
+    }
+    body {
+      font-family: Georgia, serif;
+      margin: 0;
+      color: #000;
+      background: #fff;
+    }
+    h1 { color: #000; font-weight: 400; margin: 0 0 8px; }
     .meta { font-size: 14px; margin-bottom: 24px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; background: rgba(255,255,255,0.7); }
-    th, td { border: 1px solid #e8dcc8; padding: 8px 10px; }
-    th { background: rgba(250,234,161,0.45); text-align: left; }
-    .totals { margin-top: 16px; width: 280px; margin-left: auto; font-size: 14px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      background: #fff;
+    }
+    thead { display: table-header-group; }
+    tbody tr { page-break-inside: avoid; break-inside: avoid; }
+    th, td { border: 1px solid #ccc; padding: 8px 10px; }
+    th {
+      background: #000;
+      color: #fff;
+      text-align: left;
+      border-radius: 0;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .totals {
+      margin-top: 16px;
+      width: 280px;
+      margin-left: auto;
+      font-size: 14px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
     .totals div { display: flex; justify-content: space-between; padding: 4px 0; }
-    .footer { margin-top: 32px; font-size: 11px; color: ${NATUS_BRAND.inkSoft}; text-align: center; }
+    .totals .total-ttc {
+      background: #000;
+      color: #fff;
+      padding: 10px 12px;
+      margin-top: 4px;
+      font-weight: 700;
+    }
+    .footer {
+      margin-top: 32px;
+      font-size: 11px;
+      color: #333;
+      text-align: center;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
     .invoice-page { page-break-after: always; break-after: page; padding-bottom: 24px; }
     .invoice-page:last-child { page-break-after: auto; break-after: auto; }
-    .export-summary { margin-bottom: 32px; padding: 20px; border: 1px solid #e8dcc8; background: rgba(255,255,255,0.85); }
+    .export-summary {
+      margin-bottom: 32px;
+      padding: 20px;
+      border: 1px solid #ccc;
+      background: #fff;
+    }
     @media print {
-      body { background: white; margin: 12mm; }
-      .export-summary { page-break-after: always; break-after: page; }
+      body { background: #fff; }
+      -webkit-print-color-adjust: economy;
+      print-color-adjust: economy;
     }`;
 
 export function buildInvoiceHtml(data: SaleDocumentData): string {
