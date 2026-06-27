@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInputField } from "@/components/ui/date-input-field";
 import { cn } from "@/lib/utils";
 import {
   ORDER_DATE_PRESETS,
@@ -11,23 +12,63 @@ export function OrderDatePeriodFilter({
   activePreset,
   onPresetChange,
   className,
+  customRange,
 }: {
   activePreset: OrderDatePreset | "custom";
   onPresetChange: (preset: OrderDatePreset) => void;
   className?: string;
+  customRange?: {
+    open: boolean;
+    dateFrom: string;
+    dateTo: string;
+    onDateFromChange: (value: string) => void;
+    onDateToChange: (value: string) => void;
+    onOpen: () => void;
+  };
 }) {
+  const customActive = activePreset === "custom" || Boolean(customRange?.open);
+
   return (
-    <div className={cn("flex flex-wrap gap-2", className)}>
+    <div className={cn("flex flex-wrap items-end gap-2", className)}>
       {ORDER_DATE_PRESETS.map(({ id, label }) => (
         <button
           key={id}
           type="button"
           onClick={() => onPresetChange(id)}
-          className={natusFilterChipClass(activePreset === id)}
+          className={natusFilterChipClass(activePreset === id && !customRange?.open)}
         >
           {label}
         </button>
       ))}
+      {customRange && (
+        <>
+          <button
+            type="button"
+            onClick={customRange.onOpen}
+            className={natusFilterChipClass(customActive)}
+          >
+            Date
+          </button>
+          {customRange.open && (
+            <>
+              <div className="w-full sm:w-auto sm:min-w-[9.5rem]">
+                <DateInputField
+                  label="Date début"
+                  value={customRange.dateFrom}
+                  onChange={customRange.onDateFromChange}
+                />
+              </div>
+              <div className="w-full sm:w-auto sm:min-w-[9.5rem]">
+                <DateInputField
+                  label="Date fin"
+                  value={customRange.dateTo}
+                  onChange={customRange.onDateToChange}
+                />
+              </div>
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }

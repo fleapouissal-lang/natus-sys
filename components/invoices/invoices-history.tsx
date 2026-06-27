@@ -59,6 +59,9 @@ export function InvoicesHistory({
 
   const [dateFrom, setDateFrom] = useState(initialRange.from);
   const [dateTo, setDateTo] = useState(initialRange.to);
+  const [customDateOpen, setCustomDateOpen] = useState(
+    () => detectOrderDatePreset(initialRange.from, initialRange.to) === "custom"
+  );
   const [paymentFilter, setPaymentFilter] = useState<"" | PaymentMethod>("");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -109,11 +112,24 @@ export function InvoicesHistory({
     const { from, to } = orderDatePresetToKeys(preset);
     setDateFrom(from);
     setDateTo(to);
+    setCustomDateOpen(false);
+  }
+
+  function openCustomDateRange() {
+    setCustomDateOpen(true);
+    if (activeDatePreset !== "custom") {
+      const { from, to } = orderDatePresetToKeys("month");
+      setDateFrom(from);
+      setDateTo(to);
+    }
   }
 
   function resetFilters() {
     setDateFrom(initialRange.from);
     setDateTo(initialRange.to);
+    setCustomDateOpen(
+      detectOrderDatePreset(initialRange.from, initialRange.to) === "custom"
+    );
     setPaymentFilter("");
     setSearch("");
   }
@@ -213,6 +229,7 @@ export function InvoicesHistory({
         resultCount={filtered.length}
         periodHint={periodHint}
         hasActiveFilters={hasFilters}
+        hideDateRangeFields
         stores={stores && stores.length > 1 ? stores : undefined}
         selectedStoreId={selectedStoreId}
         onStoreChange={stores && stores.length > 1 ? handleStoreChange : undefined}
@@ -222,6 +239,14 @@ export function InvoicesHistory({
           <OrderDatePeriodFilter
             activePreset={activeDatePreset}
             onPresetChange={applyDatePreset}
+            customRange={{
+              open: customDateOpen,
+              dateFrom,
+              dateTo,
+              onDateFromChange: setDateFrom,
+              onDateToChange: setDateTo,
+              onOpen: openCustomDateRange,
+            }}
           />
         }
         pagination={{

@@ -50,6 +50,7 @@ export function SalesAgendaFilter({
   collapsible = true,
   toggleLabel = "Filtrer les ventes",
   pagination,
+  hideDateRangeFields = false,
 }: {
   dateFrom: string;
   dateTo: string;
@@ -75,6 +76,8 @@ export function SalesAgendaFilter({
     PaginationBarProps,
     "page" | "totalPages" | "rangeStart" | "rangeEnd" | "totalItems" | "onPageChange"
   >;
+  /** Masque les champs date début/fin du bas (période gérée ailleurs, ex. factures). */
+  hideDateRangeFields?: boolean;
 }) {
   const hasFilters =
     hasActiveFilters ?? Boolean(dateFrom || dateTo || paymentFilter);
@@ -121,7 +124,13 @@ export function SalesAgendaFilter({
       <div
         className={cn(
           "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:items-end",
-          showStore ? "lg:grid-cols-4" : "lg:grid-cols-3"
+          hideDateRangeFields
+            ? showStore
+              ? "lg:grid-cols-2"
+              : "lg:grid-cols-1"
+            : showStore
+              ? "lg:grid-cols-4"
+              : "lg:grid-cols-3"
         )}
       >
         {showStore && (
@@ -138,8 +147,12 @@ export function SalesAgendaFilter({
             size="sm"
           />
         )}
-        <DateInputField label="Date début" value={dateFrom} onChange={onDateFromChange} />
-        <DateInputField label="Date fin" value={dateTo} onChange={onDateToChange} />
+        {!hideDateRangeFields && (
+          <>
+            <DateInputField label="Date début" value={dateFrom} onChange={onDateFromChange} />
+            <DateInputField label="Date fin" value={dateTo} onChange={onDateToChange} />
+          </>
+        )}
         <PaymentSelectField value={paymentFilter} onChange={onPaymentChange} />
       </div>
     </div>
