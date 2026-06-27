@@ -21,19 +21,10 @@ import { CashierNotificationsProvider } from "@/components/notifications/cashier
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
 import type { NotificationScope } from "@/lib/notifications/notification-scope";
+import { resolveNotificationScope } from "@/lib/notifications/notification-scope";
 import { getSettingsPath } from "@/lib/layout/settings-path";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
-
-function resolveNotificationScope(
-  role: UserRole,
-  storeId?: string | null,
-  city?: string | null
-): NotificationScope | null {
-  if (storeId) return { mode: "store", storeId };
-  if (role === "manager" && city) return { mode: "city", city };
-  return null;
-}
 
 export function DashboardShell({
   role,
@@ -43,6 +34,7 @@ export function DashboardShell({
   storeName,
   storeId,
   city,
+  hubStoreId,
   isStorePos = false,
   isPersonalCashier = false,
   hasPosOperator = false,
@@ -59,6 +51,7 @@ export function DashboardShell({
   storeName?: string;
   storeId?: string | null;
   city?: string | null;
+  hubStoreId?: string | null;
   isStorePos?: boolean;
   isPersonalCashier?: boolean;
   hasPosOperator?: boolean;
@@ -87,7 +80,12 @@ export function DashboardShell({
 
   const scope = planningOnlyActive
     ? null
-    : resolveNotificationScope(role, storeId, city ?? cityLabel);
+    : resolveNotificationScope({
+        role,
+        storeId,
+        city: city ?? cityLabel,
+        hubStoreId,
+      });
 
   const profileSubtitle = storeName || cityLabel || null;
   const operatorActive = isStorePos && hasPosOperator && Boolean(posOperatorName);
@@ -160,12 +158,10 @@ export function DashboardShell({
           >
             {scope && !isPos && (
               <>
-                <div className="mb-4 hidden shrink-0 justify-end overflow-visible md:flex">
+                <div className="mb-4 flex shrink-0 justify-end overflow-visible">
                   <CashierNotificationBell />
                 </div>
-                <div className="hidden md:block">
-                  <CashierNotificationBar />
-                </div>
+                <CashierNotificationBar />
               </>
             )}
             {isPos && !planningOnlyActive ? (

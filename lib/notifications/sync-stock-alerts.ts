@@ -6,8 +6,8 @@ import {
 } from "@/lib/notifications/stock-alert";
 import type { CashierNotification, NotificationAudience } from "@/lib/notifications/types";
 
-function alertKindForStock(stock: number): StockAlertKind | null {
-  const level = stockAlertLevel(stock);
+function alertKindForStock(stock: number, isHub = false): StockAlertKind | null {
+  const level = stockAlertLevel(stock, isHub);
   if (level === "out") return "stock_out";
   if (level === "low") return "stock_low";
   return null;
@@ -19,6 +19,7 @@ export type InventoryAlertRow = {
   stock: number;
   productName: string;
   storeName?: string | null;
+  isHub?: boolean;
 };
 
 /** Aligne les notifications stock avec l'inventaire actuel (ruptures / stock faible déjà en place). */
@@ -40,7 +41,8 @@ export function mergeActiveStockAlerts(input: {
   const activeStock: CashierNotification[] = [];
 
   for (const row of input.inventory) {
-    const kind = alertKindForStock(row.stock);
+    const isHub = row.isHub ?? false;
+    const kind = alertKindForStock(row.stock, isHub);
     if (!kind) continue;
 
     const id = stockNotificationId(row.storeId, row.productId, kind);
@@ -48,7 +50,13 @@ export function mergeActiveStockAlerts(input: {
 
     activeStock.push(
       prev
-        ? { ...prev, amount: row.stock, title: row.productName, read: false }
+        ? {
+            ...prev,
+            amount: row.stock,
+            title: row.productName,
+            read: false,
+            isHubStore: isHub,
+          }
         : buildStockNotification({
             storeId: row.storeId,
             productId: row.productId,
@@ -57,6 +65,7 @@ export function mergeActiveStockAlerts(input: {
             stock: row.stock,
             kind,
             audience: input.audience,
+            isHub,
           })
     );
   }
@@ -65,7 +74,7 @@ export function mergeActiveStockAlerts(input: {
   merged.sort(
     (a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
   );
-  return merged.slice(0, 50);
+  return merged.slice(0, 80);
 }
 
 export function stockAlertsChanged(

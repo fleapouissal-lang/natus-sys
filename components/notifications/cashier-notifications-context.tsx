@@ -105,7 +105,8 @@ function orderRowToNotification(
 function hubTransferToNotification(
   row: Record<string, unknown>,
   unitCount: number | null,
-  title = "Commande dépôt"
+  title = "Commande dépôt",
+  audience: NotificationAudience = "store"
 ): CashierNotification {
   const entityId = row.id as string;
   const status = row.status as string;
@@ -126,8 +127,37 @@ function hubTransferToNotification(
     amount: unitCount,
     receivedAt: (row.sent_at as string) || new Date().toISOString(),
     read: false,
-    audience: "store",
+    audience,
   };
+}
+
+function scopeAudience(scope: NotificationScope): NotificationAudience {
+  switch (scope.mode) {
+    case "city":
+      return "city";
+    case "director":
+      return "director";
+    case "hub":
+      return "hub";
+    default:
+      return "store";
+  }
+}
+
+async function fetchHubTransferUnitCount(
+  supabase: ReturnType<typeof createClient>,
+  transferId: string
+): Promise<number | null> {
+  try {
+    const { data } = await supabase
+      .from("hub_stock_transfer_items")
+      .select("quantity")
+      .eq("transfer_id", transferId);
+    if (!data?.length) return null;
+    return data.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  } catch {
+    return null;
+  }
 }
 
 export function CashierNotificationsProvider({
@@ -148,6 +178,8 @@ export function CashierNotificationsProvider({
   const productNamesRef = useRef<Map<string, string>>(new Map());
   const storeNamesRef = useRef<Map<string, string>>(new Map());
   const cityStoreIdsRef = useRef<Set<string>>(new Set());
+  const monitoredStoreIdsRef = useRef<Set<string>>(new Set());
+  const storeIsHubRef = useRef<Map<string, boolean>>(new Map());
   const toastTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map()
   );
@@ -266,11 +298,12 @@ export function CashierNotificationsProvider({
       previousStock: number | null | undefined;
       nextStock: number;
       audience?: CashierNotification["audience"];
+      isHub?: boolean;
     }) => {
       const result = evaluateStockChange({
         ...input,
-        audience:
-          input.audience ?? (scope.mode === "city" ? "city" : "store"),
+        audience: input.audience ?? scopeAudience(scope),
+        isHub: input.isHub ?? storeIsHubRef.current.get(input.storeId) ?? false,
       });
 
       lastStockRef.current.set(result.inventoryKey, input.nextStock);
@@ -291,7 +324,14 @@ export function CashierNotificationsProvider({
     (changes: StockChangeInput[]) => {
       for (const change of changes) {
         if (scope.mode === "store" && change.storeId !== scope.storeId) continue;
+        if (scope.mode === "hub" && change.storeId !== scope.hubStoreId) continue;
         if (scope.mode === "city" && !cityStoreIdsRef.current.has(change.storeId)) {
+          continue;
+        }
+        if (
+          scope.mode === "director" &&
+          !monitoredStoreIdsRef.current.has(change.storeId)
+        ) {
           continue;
         }
 
@@ -303,6 +343,7 @@ export function CashierNotificationsProvider({
           previousStock: change.previousStock,
           nextStock: change.nextStock,
           audience: change.audience,
+          isHub: change.isHub,
         });
       }
     },
@@ -319,7 +360,11 @@ export function CashierNotificationsProvider({
       if (!storeId || !productId) return;
 
       if (scope.mode === "store" && storeId !== scope.storeId) return;
+      if (scope.mode === "hub" && storeId !== scope.hubStoreId) return;
       if (scope.mode === "city" && !cityStoreIdsRef.current.has(storeId)) return;
+      if (scope.mode === "director" && !monitoredStoreIdsRef.current.has(storeId)) {
+        return;
+      }
 
       const inventoryKey = stockInventoryKey(storeId, productId);
       const previousStock =
@@ -327,14 +372,11 @@ export function CashierNotificationsProvider({
           ? Number(oldRow.stock)
           : lastStockRef.current.get(inventoryKey);
       const nextStock = Number(row.stock) || 0;
+      const isHub = storeIsHubRef.current.get(storeId) ?? false;
 
       const [productName, storeName] = await Promise.all([
         fetchProductName(productId),
-        Promise.resolve(
-          scope.mode === "city"
-            ? storeNamesRef.current.get(storeId) ?? "Magasin"
-            : null
-        ),
+        Promise.resolve(storeNamesRef.current.get(storeId) ?? null),
       ]);
 
       applyStockEvaluation({
@@ -344,6 +386,7 @@ export function CashierNotificationsProvider({
         storeName,
         previousStock,
         nextStock,
+        isHub,
       });
     },
     [applyStockEvaluation, fetchProductName, scope]
@@ -359,6 +402,12 @@ export function CashierNotificationsProvider({
     setNotifications(stored);
     setBarVisible(hasNotificationAttention(stored));
   }, [storageKey]);
+
+  useEffect(() => {
+    if (notifications.some(isStockAlertNotification)) {
+      setBarVisible(true);
+    }
+  }, [notifications]);
 
   useEffect(() => {
     function unlockOnInteraction() {
@@ -412,6 +461,7 @@ export function CashierNotificationsProvider({
         stock: Number(row.stock) || 0,
         productName: nameById.get(row.product_id) || "Produit",
         storeName: storeNamesRef.current.get(row.store_id) ?? null,
+        isHub: storeIsHubRef.current.get(row.store_id) ?? false,
       }));
 
       setNotifications((prev) => {
@@ -428,19 +478,91 @@ export function CashierNotificationsProvider({
     }
 
     async function bootstrapInventoryBaseline() {
+      if (scope.mode === "director") {
+        const { data: stores } = await supabase
+          .from("stores")
+          .select("id, name, is_hub")
+          .eq("is_active", true);
+
+        if (cancelled) return;
+
+        monitoredStoreIdsRef.current = new Set((stores || []).map((s) => s.id as string));
+        storeNamesRef.current = new Map(
+          (stores || []).map((s) => [s.id as string, s.name as string])
+        );
+        storeIsHubRef.current = new Map(
+          (stores || []).map((s) => [s.id as string, Boolean(s.is_hub)])
+        );
+
+        const storeIds = [...monitoredStoreIdsRef.current];
+        if (storeIds.length === 0) return;
+
+        const { data: rows } = await supabase
+          .from("store_inventory")
+          .select("store_id, product_id, stock")
+          .in("store_id", storeIds);
+
+        for (const row of rows || []) {
+          lastStockRef.current.set(
+            stockInventoryKey(row.store_id as string, row.product_id as string),
+            Number(row.stock) || 0
+          );
+        }
+
+        await syncStockAlertsFromRows(
+          (rows || []).map((row) => ({
+            store_id: row.store_id as string,
+            product_id: row.product_id as string,
+            stock: Number(row.stock) || 0,
+          })),
+          "director"
+        );
+        return;
+      }
+
+      if (scope.mode === "hub") {
+        storeIsHubRef.current.set(scope.hubStoreId, true);
+        monitoredStoreIdsRef.current = new Set([scope.hubStoreId]);
+
+        const { data: rows } = await supabase
+          .from("store_inventory")
+          .select("store_id, product_id, stock")
+          .eq("store_id", scope.hubStoreId);
+
+        for (const row of rows || []) {
+          lastStockRef.current.set(
+            stockInventoryKey(row.store_id as string, row.product_id as string),
+            Number(row.stock) || 0
+          );
+        }
+
+        await syncStockAlertsFromRows(
+          (rows || []).map((row) => ({
+            store_id: row.store_id as string,
+            product_id: row.product_id as string,
+            stock: Number(row.stock) || 0,
+          })),
+          "hub"
+        );
+        return;
+      }
+
       if (scope.mode === "city") {
         const { data: stores } = await supabase
           .from("stores")
-          .select("id, name")
+          .select("id, name, is_hub")
           .eq("city", scope.city)
           .eq("is_active", true)
           .eq("is_hub", false);
 
         if (cancelled) return;
 
-        cityStoreIdsRef.current = new Set((stores || []).map((s) => s.id));
+        cityStoreIdsRef.current = new Set((stores || []).map((s) => s.id as string));
         storeNamesRef.current = new Map(
-          (stores || []).map((s) => [s.id, s.name as string])
+          (stores || []).map((s) => [s.id as string, s.name as string])
+        );
+        storeIsHubRef.current = new Map(
+          (stores || []).map((s) => [s.id as string, Boolean(s.is_hub)])
         );
 
         const storeIds = [...cityStoreIdsRef.current];
@@ -468,6 +590,9 @@ export function CashierNotificationsProvider({
         );
         return;
       }
+
+      storeIsHubRef.current.set(scope.storeId, false);
+      monitoredStoreIdsRef.current = new Set([scope.storeId]);
 
       const { data: rows } = await supabase
         .from("store_inventory")
@@ -559,24 +684,13 @@ export function CashierNotificationsProvider({
             if (seenEventIdsRef.current.has(id)) return;
             seenEventIdsRef.current.add(id);
 
-            let unitCount: number | null = null;
-            try {
-              const { data } = await supabase
-                .from("hub_stock_transfer_items")
-                .select("quantity")
-                .eq("transfer_id", row.id as string);
-              if (data?.length) {
-                unitCount = data.reduce(
-                  (sum, item) => sum + (Number(item.quantity) || 0),
-                  0
-                );
-              }
-            } catch {
-              // ignore
-            }
+            const unitCount = await fetchHubTransferUnitCount(
+              supabase,
+              row.id as string
+            );
 
             pushNotification(
-              hubTransferToNotification(row, unitCount, "Commande dépôt en cours")
+              hubTransferToNotification(row, unitCount, "Commande dépôt reçue")
             );
             router.refresh();
           }
@@ -601,24 +715,92 @@ export function CashierNotificationsProvider({
             if (seenEventIdsRef.current.has(id)) return;
             seenEventIdsRef.current.add(id);
 
-            let unitCount: number | null = null;
-            try {
-              const { data } = await supabase
-                .from("hub_stock_transfer_items")
-                .select("quantity")
-                .eq("transfer_id", row.id as string);
-              if (data?.length) {
-                unitCount = data.reduce(
-                  (sum, item) => sum + (Number(item.quantity) || 0),
-                  0
-                );
-              }
-            } catch {
-              // ignore
-            }
+            const unitCount = await fetchHubTransferUnitCount(
+              supabase,
+              row.id as string
+            );
 
             pushNotification(
-              hubTransferToNotification(row, unitCount, "Livraison à valider par le caissier")
+              hubTransferToNotification(
+                row,
+                unitCount,
+                "Livraison dépôt à valider",
+                "store"
+              )
+            );
+            router.refresh();
+          }
+        );
+    }
+
+    if (scope.mode === "city") {
+      channel
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "hub_stock_transfers",
+          },
+          async (payload) => {
+            const row = payload.new as Record<string, unknown>;
+            const toStoreId = row.to_store_id as string;
+            if (!cityStoreIdsRef.current.has(toStoreId)) return;
+            if (row.status !== "en_cours") return;
+
+            const id = notificationKey(`${row.id as string}-hub_transfer_order`, "hub_transfer");
+            if (seenEventIdsRef.current.has(id)) return;
+            seenEventIdsRef.current.add(id);
+
+            const unitCount = await fetchHubTransferUnitCount(
+              supabase,
+              row.id as string
+            );
+
+            pushNotification(
+              hubTransferToNotification(
+                row,
+                unitCount,
+                "Commande dépôt vers un magasin",
+                "city"
+              )
+            );
+            router.refresh();
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "hub_stock_transfers",
+          },
+          async (payload) => {
+            const row = payload.new as Record<string, unknown>;
+            const oldRow = payload.old as Record<string, unknown>;
+            const toStoreId = row.to_store_id as string;
+            if (!cityStoreIdsRef.current.has(toStoreId)) return;
+
+            const becameDelivered =
+              row.status === "livre" && oldRow.status !== "livre";
+            if (!becameDelivered) return;
+
+            const id = notificationKey(`${row.id as string}-hub_transfer_validate`, "hub_transfer");
+            if (seenEventIdsRef.current.has(id)) return;
+            seenEventIdsRef.current.add(id);
+
+            const unitCount = await fetchHubTransferUnitCount(
+              supabase,
+              row.id as string
+            );
+
+            pushNotification(
+              hubTransferToNotification(
+                row,
+                unitCount,
+                "Livraison dépôt à valider en magasin",
+                "city"
+              )
             );
             router.refresh();
           }
@@ -718,7 +900,14 @@ export function CashierNotificationsProvider({
   );
 
   const dismissBar = useCallback(() => {
-    setBarVisible(false);
+    setNotifications((prev) => {
+      if (prev.some(isStockAlertNotification)) {
+        setBarVisible(true);
+        return prev;
+      }
+      setBarVisible(false);
+      return prev;
+    });
   }, []);
 
   const setNotificationOpenHandler = useCallback(

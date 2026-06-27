@@ -1,6 +1,9 @@
 import type { CashierNotification, NotificationAudience } from "@/lib/notifications/types";
-import type { StockAlertKind } from "@/lib/notifications/stock-alert";
-import { stockNotificationId } from "@/lib/notifications/stock-alert";
+import {
+  lowStockThreshold,
+  stockNotificationId,
+  type StockAlertKind,
+} from "@/lib/notifications/stock-alert";
 
 export function buildStockNotification(params: {
   storeId: string;
@@ -10,8 +13,12 @@ export function buildStockNotification(params: {
   stock: number;
   kind: StockAlertKind;
   audience: NotificationAudience;
+  isHub?: boolean;
 }): CashierNotification {
+  const isHub = params.isHub ?? false;
+  const threshold = lowStockThreshold(isHub);
   const entityId = `${params.storeId}-${params.productId}`;
+  const locationLabel = isHub ? "Entrepôt" : "Magasin";
 
   return {
     id: stockNotificationId(params.storeId, params.productId, params.kind),
@@ -19,11 +26,11 @@ export function buildStockNotification(params: {
     entityId,
     title: params.productName,
     subtitle:
-      params.audience === "city"
-        ? params.storeName
+      params.audience === "city" || params.audience === "director"
+        ? [params.storeName, locationLabel].filter(Boolean).join(" · ")
         : params.kind === "stock_out"
-          ? "Rupture en magasin"
-          : `Seuil : moins de 10 unités`,
+          ? `Rupture — ${locationLabel.toLowerCase()}`
+          : `Seuil : moins de ${threshold} unités`,
     amount: params.stock,
     receivedAt: new Date().toISOString(),
     read: false,
@@ -31,5 +38,6 @@ export function buildStockNotification(params: {
     storeId: params.storeId,
     storeName: params.storeName,
     productId: params.productId,
+    isHubStore: isHub,
   };
 }

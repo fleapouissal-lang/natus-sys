@@ -3,6 +3,10 @@ import type {
   CashierNotificationKind,
   NotificationAudience,
 } from "@/lib/notifications/types";
+import {
+  HUB_LOW_STOCK_THRESHOLD,
+  RETAIL_LOW_STOCK_THRESHOLD,
+} from "@/lib/notifications/stock-alert";
 import { formatCurrency } from "@/lib/utils";
 
 export function notificationHeadline(
@@ -17,7 +21,7 @@ export function notificationHeadline(
     case "hub_transfer":
       return short ? "Commande dépôt" : "Commande ou livraison dépôt";
     case "stock_low":
-      return short ? "Stock faible" : "Produit sous le seuil de stock (< 10)";
+      return short ? "Stock faible" : "Produit sous le seuil de stock";
     case "stock_out":
       return short ? "Rupture de stock" : "Produit en rupture de stock";
   }
@@ -29,12 +33,18 @@ export function notificationHref(
 ): string {
   switch (kind) {
     case "hub_transfer":
+      if (audience === "city") return "/manager/hub-orders";
       return "/cashier/transfers";
     case "stock_low":
     case "stock_out":
-      return audience === "city" ? "/manager/stock" : "/cashier/pos";
+      if (audience === "director") return "/director/stock";
+      if (audience === "hub") return "/hub/hub-stock";
+      if (audience === "city") return "/manager/stock";
+      return "/cashier/pos";
     default:
-      return audience === "city" ? "/manager/orders" : "/cashier/orders";
+      if (audience === "director") return "/director/orders";
+      if (audience === "city") return "/manager/orders";
+      return "/cashier/orders";
   }
 }
 
@@ -60,7 +70,7 @@ export function formatNotificationMeta(notification: CashierNotification): strin
       return `${notification.amount} unité${notification.amount > 1 ? "s" : ""}`;
     case "stock_low":
       if (notification.amount == null) return null;
-      return `${notification.amount} restante${notification.amount !== 1 ? "s" : ""}`;
+      return `${notification.amount} restante${notification.amount !== 1 ? "s" : ""} (< ${notification.isHubStore ? HUB_LOW_STOCK_THRESHOLD : RETAIL_LOW_STOCK_THRESHOLD})`;
     case "stock_out":
       return "0 en stock — rupture";
     default:

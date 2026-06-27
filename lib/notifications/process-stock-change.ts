@@ -15,6 +15,7 @@ export type StockChangeInput = {
   nextStock: number;
   storeName?: string | null;
   audience?: NotificationAudience;
+  isHub?: boolean;
 };
 
 export function evaluateStockChange(input: {
@@ -25,19 +26,25 @@ export function evaluateStockChange(input: {
   audience?: NotificationAudience;
   previousStock: number | null | undefined;
   nextStock: number;
+  isHub?: boolean;
 }): {
   inventoryKey: string;
   notification: CashierNotification | null;
   shouldResolve: boolean;
 } {
+  const isHub = input.isHub ?? false;
   const inventoryKey = stockInventoryKey(input.storeId, input.productId);
-  const alertKind = detectStockAlertTransition(input.previousStock, input.nextStock);
+  const alertKind = detectStockAlertTransition(
+    input.previousStock,
+    input.nextStock,
+    isHub
+  );
 
   if (!alertKind) {
     return {
       inventoryKey,
       notification: null,
-      shouldResolve: stockAlertLevel(input.nextStock) === "ok",
+      shouldResolve: stockAlertLevel(input.nextStock, isHub) === "ok",
     };
   }
 
@@ -52,6 +59,7 @@ export function evaluateStockChange(input: {
       stock: input.nextStock,
       kind: alertKind,
       audience: input.audience ?? "store",
+      isHub,
     }),
   };
 }

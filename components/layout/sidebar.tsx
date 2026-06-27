@@ -249,7 +249,7 @@ export function Sidebar({
       ? "Caisse magasin"
       : roleLabel;
   const profileSubtitle = storeName || cityLabel;
-  const showStoreClosure = role === "cashier" && isStorePos && Boolean(storeId);
+  const showStoreClosure = role === "cashier" && Boolean(storeId);
 
   useEffect(() => {
     const previousPath = prevPathnameRef.current;
@@ -439,7 +439,7 @@ export function Sidebar({
           storeId={storeId}
           storeName={storeName}
           cashierName={profileName}
-          isStorePos
+          isStorePos={isStorePos}
         />
       )}
     </aside>

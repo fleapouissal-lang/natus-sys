@@ -53,7 +53,6 @@ import { CashierNotificationBell } from "@/components/notifications/cashier-noti
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { ProClientQrButton } from "@/components/pro-client/pro-client-qr-modal";
 import {
-  PosDayClosureButton,
   PosDayClosureModal,
 } from "@/components/pos/pos-day-closure-modal";
 import { getStorePosDayState } from "@/lib/sales/store-day-closure-actions";
@@ -1469,12 +1468,6 @@ export function PosTerminal({
                         Commandes
                         <CountBadge count={preparableOrderCount} />
                       </Button>
-                    )}
-                    {canDayClosure && !isStorePos && (
-                      <PosDayClosureButton onClick={() => setShowDayClosure(true)} />
-                    )}
-                    {isStorePos && (
-                      <PosDayClosureButton onClick={() => setShowDayClosure(true)} />
                     )}
                     <ProClientQrButton
                       storeId={defaultStoreId}

@@ -5,7 +5,7 @@ export type CashierNotificationKind =
   | "stock_low"
   | "stock_out";
 
-export type NotificationAudience = "store" | "city";
+export type NotificationAudience = "store" | "city" | "director" | "hub";
 
 /** @deprecated alias */
 export type CashierOrderNotification = CashierNotification;
@@ -24,4 +24,6 @@ export interface CashierNotification {
   storeId?: string;
   storeName?: string | null;
   productId?: string;
+  /** Entrepôt hub (seuil 100) vs magasin retail (seuil 20). */
+  isHubStore?: boolean;
 }
