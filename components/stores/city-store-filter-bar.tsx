@@ -11,10 +11,18 @@ export function CityStoreFilterBar({
   stores,
   selectedCity,
   selectedStoreId,
+  showCity = true,
+  showStore = true,
+  title = "Filtres activité",
+  description = "Par ville ou magasin — gérants et caissiers",
 }: {
   stores: Store[];
   selectedCity: string;
   selectedStoreId: string;
+  showCity?: boolean;
+  showStore?: boolean;
+  title?: string;
+  description?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -24,6 +32,15 @@ export function CityStoreFilterBar({
   const storesInCity = selectedCity
     ? stores.filter((s) => s.city === selectedCity)
     : stores;
+
+  const storeSelectOptions = storeOptions(
+    showCity ? storesInCity : stores,
+    {
+      allLabel: showCity && selectedCity ? `Tous — ${selectedCity}` : "Tous les magasins",
+      includeAll: true,
+      showCity: showCity && !selectedCity,
+    }
+  );
 
   function updateParams(updates: { city?: string; store?: string }) {
     const params = new URLSearchParams(searchParams.toString());
@@ -48,35 +65,33 @@ export function CityStoreFilterBar({
       <div className="flex items-center gap-2 text-sm">
         <MapPin className="h-4 w-4 shrink-0 text-primary" />
         <div>
-          <p className="font-medium">Filtres activité</p>
-          <p className="text-xs text-muted">
-            Par ville ou magasin — gérants et caissiers
-          </p>
+          <p className="font-medium">{title}</p>
+          <p className="text-xs text-muted">{description}</p>
         </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <SelectMenu
-          label="Ville"
-          value={selectedCity}
-          onChange={(city) => updateParams({ city })}
-          options={cityOptions(cities)}
-          className="w-full sm:w-52"
-          size="sm"
-        />
+        {showCity && (
+          <SelectMenu
+            label="Ville"
+            value={selectedCity}
+            onChange={(city) => updateParams({ city })}
+            options={cityOptions(cities)}
+            className="w-full sm:w-52"
+            size="sm"
+          />
+        )}
 
-        <SelectMenu
-          label="Magasin"
-          value={selectedStoreId}
-          onChange={(store) => updateParams({ store })}
-          options={storeOptions(storesInCity, {
-            allLabel: selectedCity ? `Tous — ${selectedCity}` : "Tous les magasins",
-            includeAll: true,
-            showCity: false,
-          })}
-          className="w-full sm:w-64"
-          size="sm"
-        />
+        {showStore && (
+          <SelectMenu
+            label="Magasin"
+            value={selectedStoreId}
+            onChange={(store) => updateParams({ store })}
+            options={storeSelectOptions}
+            className="w-full sm:w-64"
+            size="sm"
+          />
+        )}
       </div>
     </Card>
   );

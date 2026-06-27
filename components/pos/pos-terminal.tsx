@@ -1336,7 +1336,7 @@ export function PosTerminal({
                         <CountBadge count={preparableOrderCount} />
                       </Button>
                     )}
-                    {canDayClosure && (
+                    {canDayClosure && !isStorePos && (
                       <PosDayClosureButton onClick={() => setShowDayClosure(true)} />
                     )}
                     <ProClientQrButton
@@ -1563,7 +1563,7 @@ export function PosTerminal({
         />
       )}
 
-      {canDayClosure && (
+      {canDayClosure && !isStorePos && (
         <PosDayClosureModal
           open={showDayClosure}
           onClose={() => setShowDayClosure(false)}

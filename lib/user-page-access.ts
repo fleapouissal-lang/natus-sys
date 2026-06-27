@@ -71,14 +71,14 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
   ],
   manager: [
     "dashboard", "planning", "sales", "stock", "hub_orders", "stores",
-    "activity", "reclamations", "writeoffs", "actualites",
+    "activity", "reclamations", "writeoffs", "invoices", "actualites",
   ],
   cashier: [
     "pos", "planning", "actualites", "sales", "notes", "transfers",
     "customers", "returns", "invoices",
   ],
   livreur: ["actualites", "transfers", "returns"],
-  hub: ["dashboard", "stock", "hub_stock", "hub_orders", "activity", "actualites"],
+  hub: ["dashboard", "stock", "hub_stock", "hub_orders", "activity", "actualites", "writeoffs"],
 };
 
 const PAGE_HOME_PRIORITY: UserPageKey[] = [

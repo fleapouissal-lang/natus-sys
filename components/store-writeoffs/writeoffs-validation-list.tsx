@@ -6,7 +6,9 @@ import { Check, PackageX, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { ProductImage } from "@/components/pos/product-image";
+import { WRITEOFF_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import {
   rejectStoreProductWriteoff,
   validateStoreProductWriteoff,
@@ -14,20 +16,41 @@ import {
 import {
   WRITEOFF_REASON_LABELS,
   WRITEOFF_STATUS_LABELS,
+  canValidateWriteoff,
+  writeoffCreatorLabel,
+  writeoffReasonSummary,
+  writeoffValidatorLine,
   type StoreProductWriteoff,
 } from "@/lib/store-writeoffs/types";
+import type { Profile } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
 export function WriteoffsValidationList({
   writeoffs,
-  canValidate,
+  profile,
+  canValidate = false,
+  emptyMessage,
+  paginationKey,
 }: {
   writeoffs: StoreProductWriteoff[];
-  canValidate: boolean;
+  profile?: Pick<Profile, "role">;
+  canValidate?: boolean;
+  emptyMessage?: string;
+  paginationKey?: string;
 }) {
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const {
+    paginated,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(writeoffs, WRITEOFF_PAGE_SIZE, paginationKey);
 
   function runAction(id: string, action: () => Promise<{ error?: string } | { success: true }>) {
     setLoadingId(id);
@@ -46,22 +69,30 @@ export function WriteoffsValidationList({
     return (
       <Card className="flex flex-col items-center gap-3 py-12 text-center">
         <PackageX className="h-10 w-10 text-muted" />
-        <p className="text-muted">Aucune demande de retour pour le moment</p>
+        <p className="text-muted">
+          {emptyMessage ?? "Aucune demande de retour pour le moment"}
+        </p>
       </Card>
     );
   }
 
   return (
     <div className="space-y-4">
-      {writeoffs.map((writeoff) => {
+      {paginated.map((writeoff) => {
         const isPending = writeoff.status === "pending";
+        const canValidateItem = profile
+          ? canValidateWriteoff(profile, writeoff)
+          : canValidate;
         return (
           <Card key={writeoff.id} padding={false}>
             <div className="border-b border-border px-4 py-4 md:px-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold">{WRITEOFF_REASON_LABELS[writeoff.reason]}</p>
+                    <p className="font-semibold">{writeoffReasonSummary(writeoff)}</p>
+                    {writeoff.stores?.is_hub && (
+                      <Badge variant="accent">Dépôt</Badge>
+                    )}
                     <Badge
                       variant={
                         writeoff.status === "approved"
@@ -79,13 +110,19 @@ export function WriteoffsValidationList({
                     {formatDate(writeoff.created_at)}
                   </p>
                   <p className="text-sm text-muted">
-                    Caissier : {writeoff.creator?.full_name || writeoff.creator?.email || "—"}
+                    {writeoffCreatorLabel(writeoff)} :{" "}
+                    {writeoff.creator?.full_name || writeoff.creator?.email || "—"}
                   </p>
+                  {writeoff.stores?.is_hub && isPending && !canValidateItem && (
+                    <p className="mt-1 text-xs text-muted">
+                      Validation réservée au directeur
+                    </p>
+                  )}
                   {writeoff.notes && (
                     <p className="mt-1 text-sm text-foreground">{writeoff.notes}</p>
                   )}
                 </div>
-                {canValidate && isPending && (
+                {canValidateItem && isPending && (
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
@@ -129,9 +166,10 @@ export function WriteoffsValidationList({
                     <p className="truncate text-sm font-medium">
                       {item.products?.name || "Produit"}
                     </p>
-                    {item.products?.barcode && (
-                      <p className="font-mono text-xs text-muted">{item.products.barcode}</p>
-                    )}
+                    <p className="text-xs text-muted">
+                      {WRITEOFF_REASON_LABELS[item.reason]}
+                      {item.products?.barcode ? ` · ${item.products.barcode}` : ""}
+                    </p>
                   </div>
                   <span className="shrink-0 text-sm font-bold text-primary">− {item.quantity}</span>
                 </div>
@@ -142,15 +180,28 @@ export function WriteoffsValidationList({
                 Refus : {writeoff.rejection_note}
               </p>
             )}
-            {writeoff.validated_at && writeoff.validator && (
-              <p className="border-t border-border px-4 py-2 text-xs text-muted md:px-6">
-                Traité par {writeoff.validator.full_name || writeoff.validator.email} ·{" "}
-                {formatDate(writeoff.validated_at)}
+            {writeoffValidatorLine(writeoff) && (
+              <p className="border-t border-border px-4 py-2 text-sm text-foreground md:px-6">
+                {writeoffValidatorLine(writeoff)}
+                {writeoff.validated_at ? (
+                  <span className="text-muted"> · {formatDate(writeoff.validated_at)}</span>
+                ) : null}
               </p>
             )}
           </Card>
         );
       })}
+      {totalItems > WRITEOFF_PAGE_SIZE && (
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          totalItems={totalItems}
+          onPageChange={setPage}
+          className="rounded-lg border border-border bg-surface px-4 py-4"
+        />
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { getActiveStores } from "@/lib/inventory";
 import { getHubRetailStoresForTransfer } from "@/lib/hub";
 import { fetchInvoicesByStoreIds, fetchInvoiceById } from "@/lib/sales/fetch-invoices";
 import { getInvoicesBasePath } from "@/lib/sales/invoice-routes";
-import { getCityFilter, isDirector, isHub, isManager } from "@/lib/permissions";
+import { getCityFilter, isDirector, isHub, isManager, filterRetailStoresByProfile } from "@/lib/permissions";
 import { getSelectedStore } from "@/lib/management-store";
 import { isSaleInvoiceValidated } from "@/lib/sales/invoice-validation";
 import type { Profile, Store } from "@/lib/types";
@@ -69,7 +69,10 @@ async function resolveStoreScope(
 
   const city = getCityFilter(profile);
   const stores = await getActiveStores(city);
-  const retailStores = stores.filter((store) => !store.is_hub);
+  const retailStores = filterRetailStoresByProfile(
+    stores.filter((store) => !store.is_hub),
+    profile
+  );
   const selectedStoreId =
     storeParam && retailStores.some((store) => store.id === storeParam) ? storeParam : "";
   const selectedStore = getSelectedStore(retailStores, selectedStoreId);

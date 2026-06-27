@@ -13,15 +13,20 @@ import { productDisplayName } from "@/lib/products/product-utils";
 import {
   WRITEOFF_REASON_LABELS,
   WRITEOFF_STATUS_LABELS,
+  writeoffReasonSummary,
+  writeoffValidatorLine,
   type StoreProductWriteoff,
   type StoreWriteoffReason,
 } from "@/lib/store-writeoffs/types";
 import { formatDate } from "@/lib/utils";
+import { PaginationBar } from "@/components/ui/pagination-bar";
+import { WRITEOFF_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product } from "@/lib/types";
 
 type LineItem = {
   product: Product;
   quantity: number;
+  reason: StoreWriteoffReason;
 };
 
 export function CashierWriteoffPanel({
@@ -32,7 +37,6 @@ export function CashierWriteoffPanel({
   writeoffs: StoreProductWriteoff[];
 }) {
   const router = useRouter();
-  const [reason, setReason] = useState<StoreWriteoffReason>("expired");
   const [notes, setNotes] = useState("");
   const [search, setSearch] = useState("");
   const [lines, setLines] = useState<LineItem[]>([]);
@@ -58,7 +62,17 @@ export function CashierWriteoffPanel({
 
   const selectedIds = useMemo(() => new Set(lines.map((l) => l.product.id)), [lines]);
 
-  function addProduct(product: Product, qty = 1) {
+  const {
+    paginated: paginatedWriteoffs,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems: writeoffTotal,
+  } = usePagination(writeoffs, WRITEOFF_PAGE_SIZE, writeoffs.length);
+
+  function addProduct(product: Product, qty = 1, reason: StoreWriteoffReason = "expired") {
     if (product.product_kind === "parent") {
       setError("Choisissez une variante vendable");
       return;
@@ -72,7 +86,7 @@ export function CashierWriteoffPanel({
           l.product.id === product.id ? { ...l, quantity: nextQty } : l
         );
       }
-      return [...prev, { product, quantity: Math.max(1, qty) }];
+      return [...prev, { product, quantity: Math.max(1, qty), reason }];
     });
   }
 
@@ -111,6 +125,12 @@ export function CashierWriteoffPanel({
     setLines((prev) => prev.filter((l) => l.product.id !== productId));
   }
 
+  function setLineReason(productId: string, reason: StoreWriteoffReason) {
+    setLines((prev) =>
+      prev.map((l) => (l.product.id === productId ? { ...l, reason } : l))
+    );
+  }
+
   function submit() {
     if (lines.length === 0) {
       setError("Ajoutez au moins un produit");
@@ -119,9 +139,12 @@ export function CashierWriteoffPanel({
     setError("");
     startTransition(async () => {
       const result = await createStoreProductWriteoff({
-        reason,
         notes,
-        items: lines.map((l) => ({ productId: l.product.id, quantity: l.quantity })),
+        items: lines.map((l) => ({
+          productId: l.product.id,
+          quantity: l.quantity,
+          reason: l.reason,
+        })),
       });
       if ("error" in result) {
         setError(result.error);
@@ -139,26 +162,10 @@ export function CashierWriteoffPanel({
         <div>
           <h2 className="text-lg font-semibold">Retour produit — périmé ou cassé</h2>
           <p className="mt-1 text-sm text-muted">
-            Scannez ou sélectionnez plusieurs produits, indiquez la quantité. Validation par le
-            gérant ou le directeur avant déduction du stock.
+            Scannez ou sélectionnez plusieurs produits, indiquez la quantité et le motif (périmé ou
+            cassé) pour chaque ligne. Validation par le gérant ou le directeur avant déduction du
+            stock.
           </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {(Object.keys(WRITEOFF_REASON_LABELS) as StoreWriteoffReason[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setReason(key)}
-              className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${
-                reason === key
-                  ? "border-primary bg-champagne/50 text-foreground"
-                  : "border-border bg-surface text-muted hover:border-primary/40"
-              }`}
-            >
-              {WRITEOFF_REASON_LABELS[key]}
-            </button>
-          ))}
         </div>
 
         <div className="relative">
@@ -207,10 +214,10 @@ export function CashierWriteoffPanel({
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">
               Produits sélectionnés ({lines.length})
             </p>
-            {lines.map(({ product, quantity }) => (
+            {lines.map(({ product, quantity, reason }) => (
               <div
                 key={product.id}
-                className="flex items-center gap-3 rounded-lg border border-border bg-page p-3"
+                className="flex flex-col gap-3 rounded-lg border border-border bg-page p-3 sm:flex-row sm:items-center"
               >
                 <ProductImage product={product} size="xs" />
                 <div className="min-w-0 flex-1">
@@ -218,6 +225,22 @@ export function CashierWriteoffPanel({
                     {productDisplayName(product, null)}
                   </p>
                   <p className="text-xs text-muted">Stock dispo : {product.stock}</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(Object.keys(WRITEOFF_REASON_LABELS) as StoreWriteoffReason[]).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setLineReason(product.id, key)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                        reason === key
+                          ? "border-primary bg-champagne/50 text-foreground"
+                          : "border-border bg-surface text-muted hover:border-primary/40"
+                      }`}
+                    >
+                      {key === "expired" ? "Périmé" : "Cassé"}
+                    </button>
+                  ))}
                 </div>
                 <div className="flex items-center gap-1 rounded-full bg-surface px-1">
                   <button
@@ -274,12 +297,14 @@ export function CashierWriteoffPanel({
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
             Mes demandes récentes
           </h3>
-          {writeoffs.map((writeoff) => (
+          {paginatedWriteoffs.map((writeoff) => {
+            const validatorLine = writeoffValidatorLine(writeoff);
+            return (
             <Card key={writeoff.id} padding={false}>
               <div className="border-b border-border px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="font-medium">{WRITEOFF_REASON_LABELS[writeoff.reason]}</p>
+                    <p className="font-medium">{writeoffReasonSummary(writeoff)}</p>
                     <p className="text-xs text-muted">{formatDate(writeoff.created_at)}</p>
                   </div>
                   <Badge
@@ -298,7 +323,12 @@ export function CashierWriteoffPanel({
               <ul className="divide-y divide-border px-4 py-2 text-sm">
                 {(writeoff.items || []).map((item) => (
                   <li key={item.id} className="flex justify-between gap-2 py-2">
-                    <span className="truncate">{item.products?.name || "Produit"}</span>
+                    <span className="truncate">
+                      {item.products?.name || "Produit"}
+                      <span className="ml-1 text-xs text-muted">
+                        · {WRITEOFF_REASON_LABELS[item.reason]}
+                      </span>
+                    </span>
                     <span className="shrink-0 font-medium">× {item.quantity}</span>
                   </li>
                 ))}
@@ -308,8 +338,26 @@ export function CashierWriteoffPanel({
                   Refus : {writeoff.rejection_note}
                 </p>
               )}
+              {validatorLine && (
+                <p className="border-t border-border px-4 py-2 text-xs text-muted">
+                  {validatorLine}
+                  {writeoff.validated_at ? ` · ${formatDate(writeoff.validated_at)}` : ""}
+                </p>
+              )}
             </Card>
-          ))}
+            );
+          })}
+          {writeoffTotal > WRITEOFF_PAGE_SIZE && (
+            <PaginationBar
+              page={page}
+              totalPages={totalPages}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              totalItems={writeoffTotal}
+              onPageChange={setPage}
+              className="rounded-lg border border-border bg-surface px-4 py-4"
+            />
+          )}
         </div>
       )}
     </div>

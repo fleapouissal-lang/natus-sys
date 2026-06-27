@@ -41,11 +41,13 @@ export function SalesAgendaFilter({
   stores,
   selectedStoreId,
   onStoreChange,
+  storeAllowAll = false,
   periodFilter,
   periodHint,
   extraActions,
   hasActiveFilters,
   collapsible = true,
+  toggleLabel = "Filtrer les ventes",
 }: {
   dateFrom: string;
   dateTo: string;
@@ -59,12 +61,14 @@ export function SalesAgendaFilter({
   stores?: Store[];
   selectedStoreId?: string;
   onStoreChange?: (storeId: string) => void;
+  storeAllowAll?: boolean;
   periodFilter?: ReactNode;
   periodHint?: string;
   extraActions?: ReactNode;
   /** Si défini, remplace la détection automatique des filtres actifs. */
   hasActiveFilters?: boolean;
   collapsible?: boolean;
+  toggleLabel?: string;
 }) {
   const hasFilters =
     hasActiveFilters ?? Boolean(dateFrom || dateTo || paymentFilter);
@@ -75,13 +79,13 @@ export function SalesAgendaFilter({
 
   return (
     <FilterTogglePanel
-      toggleLabel="Filtrer les ventes"
+      toggleLabel={toggleLabel}
       summary={summary}
       collapsible={collapsible}
     >
     <div className={cn("natus-filter-bar overflow-visible p-4", className)}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm font-medium text-primary">Filtrer les ventes</p>
+        <p className="text-sm font-medium text-primary">{toggleLabel}</p>
         <div className="flex flex-wrap items-center gap-3">
           {hasFilters && (
             <button
@@ -105,8 +109,8 @@ export function SalesAgendaFilter({
 
       <div
         className={cn(
-          "grid grid-cols-1 gap-4 lg:items-end",
-          showStore ? "sm:grid-cols-2 lg:grid-cols-4" : "lg:grid-cols-3"
+          "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:items-end",
+          showStore ? "lg:grid-cols-4" : "lg:grid-cols-3"
         )}
       >
         {showStore && (
@@ -114,7 +118,10 @@ export function SalesAgendaFilter({
             label="Magasin"
             value={selectedStoreId || ""}
             onChange={onStoreChange}
-            options={storeOptions(stores, { includeAll: false })}
+            options={storeOptions(stores, {
+              includeAll: storeAllowAll,
+              allLabel: "Tous les magasins",
+            })}
             placeholder="Sélectionner un magasin"
             defaultIcon={MapPin}
             size="sm"

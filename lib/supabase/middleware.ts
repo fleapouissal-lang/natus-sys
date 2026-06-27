@@ -110,7 +110,6 @@ export async function updateSession(request: NextRequest) {
 
       if (
         pathname.startsWith("/manager/loyalty") ||
-        pathname.startsWith("/manager/invoices") ||
         pathname.startsWith("/manager/products") ||
         pathname.startsWith("/manager/users")
       ) {

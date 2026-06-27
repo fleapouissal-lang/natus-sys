@@ -27,7 +27,7 @@ export default async function ManagerInvoicesPage({
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Factures</h1>
         <p className="mt-1 text-muted">
-          Factures validées par le directeur pour vos magasins
+          Consultation seule — factures validées par le directeur pour vos magasins
         </p>
       </div>
 

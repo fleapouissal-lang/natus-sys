@@ -1,4 +1,5 @@
-import type { Product } from "@/lib/types";
+import { getRoleLabel, isDirector, isManager } from "@/lib/permissions";
+import type { Product, Profile, UserRole } from "@/lib/types";
 
 export type StoreWriteoffReason = "expired" | "broken";
 export type StoreWriteoffStatus = "pending" | "approved" | "rejected";
@@ -7,6 +8,7 @@ export type StoreWriteoffItem = {
   id: string;
   product_id: string;
   quantity: number;
+  reason: StoreWriteoffReason;
   products?: Pick<Product, "id" | "name" | "barcode" | "image_url" | "price"> | null;
 };
 
@@ -14,7 +16,7 @@ export type StoreProductWriteoff = {
   id: string;
   store_id: string;
   created_by: string;
-  reason: StoreWriteoffReason;
+  reason: StoreWriteoffReason | null;
   status: StoreWriteoffStatus;
   notes: string | null;
   validated_by: string | null;
@@ -22,9 +24,9 @@ export type StoreProductWriteoff = {
   rejection_note: string | null;
   created_at: string;
   updated_at: string;
-  stores?: { name: string; city: string } | null;
+  stores?: { name: string; city: string; is_hub?: boolean } | null;
   creator?: { full_name: string | null; email: string } | null;
-  validator?: { full_name: string | null; email: string } | null;
+  validator?: { full_name: string | null; email: string; role?: UserRole } | null;
   items?: StoreWriteoffItem[];
 };
 
@@ -38,3 +40,51 @@ export const WRITEOFF_STATUS_LABELS: Record<StoreWriteoffStatus, string> = {
   approved: "Validé",
   rejected: "Refusé",
 };
+
+export function writeoffReasonSummary(
+  writeoff: Pick<StoreProductWriteoff, "reason" | "items">
+): string {
+  const itemReasons = (writeoff.items || [])
+    .map((item) => item.reason)
+    .filter((reason): reason is StoreWriteoffReason => Boolean(reason));
+
+  const unique = new Set(itemReasons);
+  if (unique.size > 1) return "Périmé et cassé";
+  if (unique.size === 1) return WRITEOFF_REASON_LABELS[[...unique][0]];
+  if (writeoff.reason) return WRITEOFF_REASON_LABELS[writeoff.reason];
+  return "Retour stock";
+}
+
+export function writeoffValidatorLine(
+  writeoff: Pick<StoreProductWriteoff, "status" | "validator">
+): string | null {
+  if (!writeoff.validator || writeoff.status === "pending") return null;
+
+  const name = writeoff.validator.full_name || writeoff.validator.email || "—";
+  const roleLabel = writeoff.validator.role
+    ? getRoleLabel(writeoff.validator.role)
+    : "Responsable";
+
+  if (writeoff.status === "approved") {
+    return `Validé par ${roleLabel} : ${name}`;
+  }
+  if (writeoff.status === "rejected") {
+    return `Refusé par ${roleLabel} : ${name}`;
+  }
+  return null;
+}
+
+export function canValidateWriteoff(
+  profile: Pick<Profile, "role">,
+  writeoff: Pick<StoreProductWriteoff, "stores">
+): boolean {
+  if (isDirector(profile)) return true;
+  if (isManager(profile)) return !writeoff.stores?.is_hub;
+  return false;
+}
+
+export function writeoffCreatorLabel(
+  writeoff: Pick<StoreProductWriteoff, "stores">
+): string {
+  return writeoff.stores?.is_hub ? "Dépôt" : "Caissier";
+}

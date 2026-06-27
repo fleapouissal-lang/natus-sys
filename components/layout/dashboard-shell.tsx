@@ -95,7 +95,7 @@ export function DashboardShell({
   const displayAvatarUrl = operatorActive ? posOperatorAvatarUrl : avatarUrl;
 
   const mobileSubtitle = planningOnlyActive
-    ? "Planning · lecture seule"
+    ? "Horaires · lecture seule"
     : profileSubtitle;
 
   const showMobileTopBar =
@@ -125,6 +125,7 @@ export function DashboardShell({
             avatarUrl={avatarUrl}
             cityLabel={cityLabel}
             storeName={storeName}
+            storeId={storeId}
             isStorePos={isStorePos}
             isPersonalCashier={isPersonalCashier}
             hasPosOperator={hasPosOperator}

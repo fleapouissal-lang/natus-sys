@@ -34,12 +34,12 @@ export type NavLinkItem = {
 };
 
 export const personalCashierLinks: NavLinkItem[] = [
-  { href: "/cashier/planning", label: "Planning", icon: CalendarClock, mobileOrder: 0 },
+  { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 0 },
 ];
 
 export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 0 },
-  { href: "/cashier/planning", label: "Planning", icon: CalendarClock, mobileOrder: 1 },
+  { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 1 },
   { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 2 },
   { href: "/cashier/sales", label: "Ventes", icon: History, mobileOrder: 3 },
   { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 4 },
@@ -63,8 +63,9 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       { href: "/hub/stock", label: "Stock", icon: Warehouse, mobileOrder: 1 },
       { href: "/hub/hub-stock", label: "Entrepôt", icon: Boxes, mobileOrder: 2 },
       { href: "/hub/orders", label: "Commandes", icon: Package, mobileOrder: 3 },
-      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 4 },
-      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 5 },
+      { href: "/hub/writeoffs", label: "Retours stock", icon: RotateCcw, mobileOrder: 4 },
+      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 5 },
+      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 6 },
     ];
   }
 
@@ -117,6 +118,15 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       label: "Retours stock",
       icon: RotateCcw,
       mobileOrder: 9,
+    });
+  }
+
+  if (basePath === "/manager") {
+    links.push({
+      href: `${basePath}/invoices`,
+      label: "Factures",
+      icon: FileText,
+      mobileOrder: 10,
     });
   }
 

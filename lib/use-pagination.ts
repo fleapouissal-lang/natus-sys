@@ -17,6 +17,9 @@ export const STORE_PAGE_SIZE = 6;
 /** Journal des actualités (articles longs). */
 export const NEWS_PAGE_SIZE = 5;
 
+/** Retours stock magasin (caissier, gérant, directeur). */
+export const WRITEOFF_PAGE_SIZE = 8;
+
 export function usePagination<T>(
   items: T[],
   pageSize: number,

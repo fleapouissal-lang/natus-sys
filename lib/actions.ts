@@ -98,8 +98,10 @@ function revalidateWriteoffPaths() {
   revalidatePath("/cashier/returns");
   revalidatePath("/manager/writeoffs");
   revalidatePath("/director/writeoffs");
+  revalidatePath("/hub/writeoffs");
   revalidatePath("/manager/stock");
   revalidatePath("/director/stock");
+  revalidatePath("/hub/hub-stock");
 }
 
 async function assertStoreAccess(profile: Profile, storeId: string) {
@@ -1096,7 +1098,7 @@ function revalidateInvoicePaths() {
 export async function validateSaleInvoice(
   saleId: string
 ): Promise<{ success: true } | { error: string }> {
-  const profile = await requireRole(["directeur", "admin"]);
+  const profile = await requireRole(["directeur"]);
   if (!profile) return { error: "Seul le directeur peut valider une facture" };
 
   const supabase = await createClient();
@@ -3439,21 +3441,20 @@ export async function deleteProClientCustomer(
 }
 
 export async function createStoreProductWriteoff(input: {
-  reason: "expired" | "broken";
-  items: { productId: string; quantity: number }[];
+  items: { productId: string; quantity: number; reason: "expired" | "broken" }[];
   notes?: string;
 }): Promise<{ success: true; writeoffId: string } | { error: string }> {
-  const profile = await requireRole(["cashier"]);
+  const profile = await requireRole(["cashier", "hub"]);
   if (!profile) return { error: "Non autorisé" };
 
   if (!input.items.length) return { error: "Ajoutez au moins un produit" };
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_store_product_writeoff", {
-    p_reason: input.reason,
     p_items: input.items.map((item) => ({
       product_id: item.productId,
       quantity: item.quantity,
+      reason: item.reason,
     })),
     p_notes: input.notes?.trim() || null,
   });

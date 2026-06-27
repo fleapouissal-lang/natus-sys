@@ -11,15 +11,60 @@ import {
 import {
   LogOut,
   PanelLeftClose,
+  Clock,
+  ScrollText,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
 import { signOutPosOperator } from "@/lib/pos/actions";
+import { PosDayClosureModal } from "@/components/pos/pos-day-closure-modal";
 import { cn } from "@/lib/utils";
 import { getRoleLabel } from "@/lib/permissions";
 import { getSettingsPath } from "@/lib/layout/settings-path";
 import type { UserRole } from "@/lib/types";
 import { UserAvatar } from "@/components/ui/user-avatar";
+
+function formatSidebarClock(date: Date): string {
+  return date.toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function SidebarCashierClock({ collapsed }: { collapsed: boolean }) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const timeLabel = formatSidebarClock(now);
+
+  if (collapsed) {
+    return (
+      <div
+        className="flex justify-center border-b border-black/10 px-2 py-2"
+        title={`Heure actuelle · ${timeLabel}`}
+      >
+        <Clock className="h-4 w-4 text-black/70" aria-hidden />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-4 mb-3 flex items-start gap-2 rounded-lg border border-black/10 bg-black/[0.03] px-3 py-2">
+      <Clock className="mt-0.5 h-4 w-4 shrink-0 text-black/70" aria-hidden />
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-black/55">
+          Heure actuelle
+        </p>
+        <p className="truncate text-sm font-semibold tabular-nums text-black/85">{timeLabel}</p>
+      </div>
+    </div>
+  );
+}
 
 function SidebarBrand({ collapsed }: { collapsed?: boolean }) {
   return (
@@ -152,6 +197,7 @@ export function Sidebar({
   avatarUrl,
   cityLabel,
   storeName,
+  storeId,
   isStorePos = false,
   isPersonalCashier = false,
   hasPosOperator = false,
@@ -165,6 +211,7 @@ export function Sidebar({
   avatarUrl?: string | null;
   cityLabel?: string;
   storeName?: string;
+  storeId?: string | null;
   isStorePos?: boolean;
   isPersonalCashier?: boolean;
   hasPosOperator?: boolean;
@@ -177,6 +224,7 @@ export function Sidebar({
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(() => sidebarCollapsedForRoute(pathname));
   const [switchingCashier, setSwitchingCashier] = useState(false);
+  const [showDayClosure, setShowDayClosure] = useState(false);
 
   const links = resolveNavLinks({
     role,
@@ -197,6 +245,7 @@ export function Sidebar({
       ? "Caisse magasin"
       : roleLabel;
   const profileSubtitle = storeName || cityLabel;
+  const showStoreClosure = role === "cashier" && isStorePos && Boolean(storeId);
 
   useEffect(() => {
     setCollapsed(sidebarCollapsedForRoute(pathname));
@@ -264,6 +313,8 @@ export function Sidebar({
         switchingCashier={switchingCashier}
       />
 
+      {role === "cashier" && <SidebarCashierClock collapsed={collapsed} />}
+
       <nav
         className={cn(
           "min-h-0 flex-1",
@@ -326,9 +377,26 @@ export function Sidebar({
       <div
         className={cn(
           "shrink-0 border-t border-black/10",
-          collapsed ? "flex flex-col items-center p-2" : "p-3"
+          collapsed ? "flex flex-col items-center gap-2 p-2" : "space-y-2 p-3"
         )}
       >
+        {showStoreClosure && (
+          <button
+            type="button"
+            onClick={() => setShowDayClosure(true)}
+            onDoubleClick={(e) => e.stopPropagation()}
+            title={collapsed ? "Clôture du jour" : undefined}
+            className={cn(
+              "flex items-center bg-champagne text-black transition-opacity hover:opacity-90 cursor-pointer",
+              collapsed
+                ? "mx-auto h-10 w-10 justify-center rounded-[10px]"
+                : "w-full gap-3 px-3 py-2.5 text-sm font-medium"
+            )}
+          >
+            <ScrollText className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Clôture</span>}
+          </button>
+        )}
         <button
           onClick={handleLogout}
           onDoubleClick={(e) => e.stopPropagation()}
@@ -344,6 +412,17 @@ export function Sidebar({
           {!collapsed && <span>Déconnexion</span>}
         </button>
       </div>
+
+      {showStoreClosure && storeId && (
+        <PosDayClosureModal
+          open={showDayClosure}
+          onClose={() => setShowDayClosure(false)}
+          storeId={storeId}
+          storeName={storeName}
+          cashierName={profileName}
+          isStorePos
+        />
+      )}
     </aside>
   );
 }

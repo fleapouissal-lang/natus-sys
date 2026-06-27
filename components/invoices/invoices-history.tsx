@@ -1,12 +1,11 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardHeader } from "@/components/ui/card";
 import { SalesAgendaFilter } from "@/components/sales/sales-agenda-filter";
 import { InvoicesTable } from "@/components/invoices/invoices-table";
 import { OrderDatePeriodFilter } from "@/components/orders/order-date-period-filter";
-import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import {
   detectOrderDatePreset,
   orderDatePresetLabel,
@@ -43,6 +42,8 @@ export function InvoicesHistory({
   defaultDatePreset?: OrderDatePreset;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [validatingId, setValidatingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
@@ -112,6 +113,17 @@ export function InvoicesHistory({
     setSearch("");
   }
 
+  function handleStoreChange(storeId: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (storeId) {
+      params.set("store", storeId);
+    } else {
+      params.delete("store");
+    }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
   function handleValidate(saleId: string) {
     setActionError("");
     setValidatingId(saleId);
@@ -135,14 +147,6 @@ export function InvoicesHistory({
 
   return (
     <div className="space-y-6">
-      {stores && stores.length > 1 && (
-        <StoreFilterBar
-          stores={stores}
-          selectedStoreId={selectedStoreId || ""}
-          allowAll
-        />
-      )}
-
       {canValidateInvoices && pendingCount > 0 && (
         <p className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
           {pendingCount} facture{pendingCount !== 1 ? "s" : ""} en attente de validation — invisible
@@ -165,6 +169,11 @@ export function InvoicesHistory({
         resultCount={filtered.length}
         periodHint={periodHint}
         hasActiveFilters={hasFilters}
+        stores={stores && stores.length > 1 ? stores : undefined}
+        selectedStoreId={selectedStoreId}
+        onStoreChange={stores && stores.length > 1 ? handleStoreChange : undefined}
+        storeAllowAll
+        toggleLabel="Filtrer les factures"
         periodFilter={
           <OrderDatePeriodFilter
             activePreset={activeDatePreset}

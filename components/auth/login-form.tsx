@@ -54,10 +54,6 @@ export function LoginForm() {
           className="object-cover object-[center_35%]"
           sizes="100vw"
         />
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#FFFDF9]/10 via-transparent to-[#FFFDF9]"
-          aria-hidden
-        />
       </div>
 
       <div className="relative z-10 flex w-full flex-1 flex-col lg:flex-row">
@@ -148,10 +144,6 @@ export function LoginForm() {
             priority
             className="object-cover object-[center_35%] rounded-tl-[2.5rem] rounded-bl-[2.5rem]"
             sizes="50vw"
-          />
-          <div
-            className="pointer-events-none absolute inset-0 rounded-tl-[2.5rem] rounded-bl-[2.5rem] bg-gradient-to-r from-[#FFFDF9]/35 via-transparent to-transparent"
-            aria-hidden
           />
         </div>
       </div>
