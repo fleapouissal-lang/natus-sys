@@ -114,7 +114,7 @@ export function DashboardShell({
     <>
       <SessionGuard disableIdleLogout={isPos && isStorePos} isStorePos={isStorePos} />
       <MobileStorePosGateRedirect enabled={mobileStorePosGate} />
-      <MobilePlanningRedirect enabled={planningOnlyActive} />
+      <MobilePlanningRedirect enabled={planningOnlyActive} isStorePos={isStorePos} />
       <MobileManagementPosRedirect enabled={managementPosDesktopOnly} role={role} />
 
       <div className="flex h-[100dvh] overflow-hidden bg-page">

@@ -7,7 +7,7 @@ import {
   CASHIER_POS_PATH,
   getMobilePosRedirectPath,
 } from "@/lib/layout/mobile-planning";
-import { isCashierPlanningRoute } from "@/lib/cashier/access";
+import { isCashierPlanningRoute, isCashierStorePosMobileRoute } from "@/lib/cashier/access";
 import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
 import type { UserRole } from "@/lib/types";
 
@@ -15,17 +15,25 @@ function isMobileViewport() {
   return window.matchMedia("(max-width: 767px)").matches;
 }
 
-export function MobilePlanningRedirect({ enabled }: { enabled: boolean }) {
+export function MobilePlanningRedirect({
+  enabled,
+  isStorePos = false,
+}: {
+  enabled: boolean;
+  isStorePos?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     if (!enabled) return;
     if (!isMobileViewport()) return;
-    if (isCashierPlanningRoute(pathname)) return;
+    if (isStorePos ? isCashierStorePosMobileRoute(pathname) : isCashierPlanningRoute(pathname)) {
+      return;
+    }
 
     router.replace(CASHIER_PLANNING_PATH);
-  }, [enabled, pathname, router]);
+  }, [enabled, isStorePos, pathname, router]);
 
   return null;
 }

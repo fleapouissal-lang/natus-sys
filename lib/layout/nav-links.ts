@@ -42,8 +42,7 @@ export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 0 },
   { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 1 },
   { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 2 },
-  { href: "/cashier/sales", label: "Ventes", icon: History, mobileOrder: 3 },
-  { href: "/cashier/pos-closures", label: "Historique clôtures", icon: ScrollText, mobileOrder: 3.5 },
+  { href: "/cashier/sales", label: "Historique de vente", icon: History, mobileOrder: 3 },
   { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 4 },
   { href: "/cashier/transfers", label: "Commande hub", icon: Boxes, mobileOrder: 5 },
   { href: "/cashier/customers", label: "Clients fidélité", icon: Gift, mobileOrder: 6 },
@@ -224,11 +223,21 @@ export function resolveNavLinks(input: {
   }
 
   if (input.role === "cashier") {
-    const links = input.planningOnlyNav ? personalCashierLinks : cashierLinks;
-    return filterNavLinksByPages(
+    let links = input.planningOnlyNav
+      ? [...personalCashierLinks]
+      : [...cashierLinks];
+    if (input.planningOnlyNav && input.isStorePos) {
+      const notesLink = cashierLinks.find((link) => link.href === "/cashier/notes");
+      if (notesLink) links.push(notesLink);
+    }
+    if (!input.isStorePos) {
+      links = links.filter((link) => link.href !== "/cashier/notes");
+    }
+    const filtered = filterNavLinksByPages(
       [...links, getSettingsNavItem(input.role)],
       pageProfile
     );
+    return sortNavLinksByPriority(filtered, input.role);
   }
 
   let links = basePath ? buildManagementLinks(basePath) : cashierLinks;

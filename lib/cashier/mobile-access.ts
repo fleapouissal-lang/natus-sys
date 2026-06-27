@@ -3,6 +3,7 @@ import { isMobileUserAgent } from "@/lib/layout/mobile-request";
 import {
   CASHIER_PLANNING_PATH,
   isCashierPlanningRoute,
+  isCashierStorePosMobileRoute,
   isPersonalCashierPlanningMode,
   type CashierProfile,
 } from "@/lib/cashier/access";
@@ -21,7 +22,7 @@ export async function getCashierMobileRedirectPath(
   if (profile.role !== "cashier") return null;
 
   if (profile.is_store_pos) {
-    return isCashierPlanningRoute(pathname) ? null : CASHIER_PLANNING_PATH;
+    return isCashierStorePosMobileRoute(pathname) ? null : CASHIER_PLANNING_PATH;
   }
 
   if (await isPersonalCashierPlanningMode(supabase, profile)) {

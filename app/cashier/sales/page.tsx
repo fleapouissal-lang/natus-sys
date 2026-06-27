@@ -30,7 +30,7 @@ export default async function CashierSalesPage() {
     <div className="animate-fade-in">
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">
-          {isStorePos ? "Ventes du magasin" : "Mes ventes"}
+          {isStorePos ? "Historique de vente" : "Mes ventes"}
         </h1>
         <p className="mt-1 text-muted">
           {isStorePos

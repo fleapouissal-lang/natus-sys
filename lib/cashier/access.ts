@@ -4,6 +4,7 @@ import { getHomePath } from "@/lib/permissions";
 import { getCustomHomePath } from "@/lib/user-page-access";
 
 export const CASHIER_PLANNING_PATH = "/cashier/planning";
+export const CASHIER_STORE_NOTES_PATH = "/cashier/notes";
 
 export type CashierProfile = Pick<Profile, "role" | "is_store_pos" | "store_id">;
 
@@ -11,6 +12,15 @@ export function isCashierPlanningRoute(pathname: string): boolean {
   return (
     pathname === CASHIER_PLANNING_PATH ||
     pathname.startsWith(`${CASHIER_PLANNING_PATH}/`)
+  );
+}
+
+/** Mobile compte magasin : planning + notes internes magasin */
+export function isCashierStorePosMobileRoute(pathname: string): boolean {
+  return (
+    isCashierPlanningRoute(pathname) ||
+    pathname === CASHIER_STORE_NOTES_PATH ||
+    pathname.startsWith(`${CASHIER_STORE_NOTES_PATH}/`)
   );
 }
 
