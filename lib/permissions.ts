@@ -139,6 +139,15 @@ export function canManageStore(
   return false;
 }
 
+/** Accès lecture / caisse sur un magasin (inclut le caissier assigné à ce magasin). */
+export function canAccessStore(
+  profile: Profile,
+  store: Pick<Store, "city" | "id">
+): boolean {
+  if (canManageStore(profile, store)) return true;
+  return profile.role === "cashier" && profile.store_id === store.id;
+}
+
 /** Peut modifier le stock (directeur : partout, dépôt : dépôts uniquement, gérant : non). */
 export function canModifyStock(
   profile: Pick<Profile, "role">,

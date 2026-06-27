@@ -33,20 +33,23 @@ function formatSidebarClock(date: Date): string {
 }
 
 function SidebarCashierClock({ collapsed }: { collapsed: boolean }) {
-  const [now, setNow] = useState(() => new Date());
+  const [timeLabel, setTimeLabel] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    const update = () => setTimeLabel(formatSidebarClock(new Date()));
+    update();
+    const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
   }, []);
 
-  const timeLabel = formatSidebarClock(now);
+  const displayTime = timeLabel ?? "--:--:--";
+  const clockTitle = timeLabel ? `Heure actuelle · ${timeLabel}` : "Heure actuelle";
 
   if (collapsed) {
     return (
       <div
         className="flex justify-center border-b border-black/10 px-2 py-2"
-        title={`Heure actuelle · ${timeLabel}`}
+        title={clockTitle}
       >
         <Clock className="h-4 w-4 text-black/70" aria-hidden />
       </div>
@@ -60,7 +63,7 @@ function SidebarCashierClock({ collapsed }: { collapsed: boolean }) {
         <p className="text-[10px] font-semibold uppercase tracking-wide text-black/55">
           Heure actuelle
         </p>
-        <p className="truncate text-sm font-semibold tabular-nums text-black/85">{timeLabel}</p>
+        <p className="truncate text-sm font-semibold tabular-nums text-black/85">{displayTime}</p>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { canCreateRole, canCreateStore, canCreateStoreInCity, canManageStore, isDirector, isHub, isManager } from "@/lib/permissions";
+import { canCreateRole, canCreateStore, canCreateStoreInCity, canAccessStore, canManageStore, isDirector, isHub, isManager } from "@/lib/permissions";
 import {
   parseAllowedPagesInput,
   validateAllowedPagesForRole,
@@ -3309,8 +3309,11 @@ export async function getStoreProClientLink(
 
   if (!storeId) return { error: "Magasin requis" };
 
-  const access = await assertStoreAccess(profile, storeId);
-  if (access.error) return { error: access.error };
+  const store = await getStoreById(storeId);
+  if (!store) return { error: "Magasin introuvable" };
+  if (!canAccessStore(profile, store)) {
+    return { error: "Vous n'avez pas accès à ce magasin" };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_store_pro_client_link", {

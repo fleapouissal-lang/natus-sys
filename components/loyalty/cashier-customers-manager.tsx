@@ -19,7 +19,7 @@ import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
-import { customerRegisteredAtStore } from "@/lib/loyalty/store-customer-scope";
+import { customerRegisteredAtStore } from "@/lib/loyalty/customer-store-scope";
 import type { LoyaltyCustomer } from "@/lib/types";
 
 export function CashierCustomersManager({

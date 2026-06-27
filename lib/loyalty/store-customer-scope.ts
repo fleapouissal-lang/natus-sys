@@ -158,10 +158,3 @@ export async function customerHasPurchasedAtStore(
   if (error) return false;
   return (count ?? 0) > 0;
 }
-
-export function customerRegisteredAtStore(
-  customer: Pick<LoyaltyCustomer, "store_id">,
-  storeId: string
-): boolean {
-  return customer.store_id === storeId;
-}
