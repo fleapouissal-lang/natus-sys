@@ -2,7 +2,10 @@ import { getCurrentProfile } from "@/lib/auth";
 import { getCityFilter, filterRetailStoresByProfile } from "@/lib/permissions";
 import { getActiveStores } from "@/lib/inventory";
 import { getProfileLockedStoreId, resolveSelectedStoreId } from "@/lib/management-store";
+import { resolveStockPermissions } from "@/lib/stock-modify-access/permissions";
+import { listStockModifyAccessRequests } from "@/lib/stock-modify-access/queries";
 import { StockManager } from "@/components/stock/stock-manager";
+import { StockModifyAccessRequestButton } from "@/components/stock-modify-access/stock-modify-access-request-button";
 
 export default async function StockPage({
   searchParams,
@@ -11,11 +14,13 @@ export default async function StockPage({
 }) {
   const { store: storeParam } = await searchParams;
   const profile = await getCurrentProfile();
-  const city = profile ? getCityFilter(profile) : null;
+  if (!profile) {
+    return null;
+  }
+
+  const city = getCityFilter(profile);
   const storesAll = await getActiveStores(city);
-  const stores = profile
-    ? filterRetailStoresByProfile(storesAll, profile)
-    : storesAll.filter((store) => !store.is_hub);
+  const stores = filterRetailStoresByProfile(storesAll, profile);
   const defaultStoreId = resolveSelectedStoreId(
     stores,
     storeParam,
@@ -27,14 +32,25 @@ export default async function StockPage({
     ? await getProductsWithStoreStock(defaultStoreId)
     : [];
 
+  const selectedStore = stores.find((s) => s.id === defaultStoreId);
+  const permissions = await resolveStockPermissions(profile, selectedStore ?? null);
+  const myRequests = await listStockModifyAccessRequests({ requesterId: profile.id });
+
   return (
-    <StockManager
-      stores={stores}
-      products={products}
-      defaultStoreId={defaultStoreId}
-      cityLabel={city || undefined}
-      canModifyStock={false}
-      canEditTotal={false}
-    />
+    <div className="space-y-4">
+      <StockModifyAccessRequestButton
+        role="manager"
+        stores={stores.map((s) => ({ id: s.id, name: s.name, city: s.city }))}
+        myRequests={myRequests}
+      />
+      <StockManager
+        stores={stores}
+        products={products}
+        defaultStoreId={defaultStoreId}
+        cityLabel={city || undefined}
+        canModifyStock={permissions.canModifyStock}
+        canEditTotal={permissions.canEditTotal}
+      />
+    </div>
   );
 }

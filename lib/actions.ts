@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { canCreateRole, canCreateStore, canCreateStoreInCity, canAccessStore, canManageStore, isDirector, isHub, isManager } from "@/lib/permissions";
+import { getActiveStockModifyGrant } from "@/lib/stock-modify-access/queries";
 import {
   parseAllowedPagesInput,
   validateAllowedPagesForRole,
@@ -22,7 +23,7 @@ import {
 
 const MANAGEMENT = ["directeur", "admin", "manager"] as const;
 const STOCK_READ = ["directeur", "admin", "manager", "hub"] as const;
-const STOCK_MODIFY = ["directeur", "admin", "hub"] as const;
+const STOCK_MODIFY = ["directeur", "admin", "hub", "manager"] as const;
 
 type StoreStockRow = { store_id: string; quantity: number };
 
@@ -117,13 +118,30 @@ async function assertStockModifyAccess(profile: Profile, storeId: string) {
   const access = await assertStoreAccess(profile, storeId);
   if (access.error) return access;
 
+  if (isDirector(profile)) return access;
+
+  const grant = await getActiveStockModifyGrant(profile, storeId);
+  if (grant) {
+    return { ...access, grant };
+  }
+
   if (isManager(profile)) {
-    return { error: "Les gérants peuvent consulter le stock sans le modifier" };
+    return {
+      error:
+        "Modification stock non autorisée. Demandez un accès temporaire au directeur.",
+    };
   }
   if (isHub(profile) && !access.store?.is_hub) {
     return { error: "Le compte dépôt ne peut modifier que le stock des dépôts" };
   }
   return access;
+}
+
+function movementAccessRequestId(
+  access: Awaited<ReturnType<typeof assertStockModifyAccess>>
+): string | null {
+  if ("grant" in access && access.grant) return access.grant.requestId;
+  return null;
 }
 
 function parseCategories(formData: FormData): string[] | null {
@@ -551,6 +569,7 @@ export async function addStock(
     notes: notes || null,
     created_by: profile.id,
     store_id: storeId,
+    access_request_id: movementAccessRequestId(access),
   });
 
   revalidateManagement();
@@ -602,6 +621,7 @@ export async function registerStoreProductStock(
       notes: notes || null,
       created_by: profile.id,
       store_id: storeId,
+      access_request_id: movementAccessRequestId(access),
     });
   }
 
@@ -623,8 +643,11 @@ export async function setProductStock(
   const access = await assertStockModifyAccess(profile, storeId);
   if (access.error) return { error: access.error };
 
-  if (isHub(profile)) {
-    return { error: "Le compte dépôt ne peut qu'ajouter du stock, pas modifier le total" };
+  if (isHub(profile) && !("grant" in access && access.grant)) {
+    return { error: "Demandez un accès temporaire au directeur pour modifier le stock total" };
+  }
+  if (isManager(profile) && !("grant" in access && access.grant)) {
+    return { error: "Demandez un accès temporaire au directeur pour modifier le stock" };
   }
 
   const supabase = await createClient();
@@ -654,6 +677,7 @@ export async function setProductStock(
       notes: "Ajustement manuel",
       created_by: profile.id,
       store_id: storeId,
+      access_request_id: movementAccessRequestId(access),
     });
   }
 

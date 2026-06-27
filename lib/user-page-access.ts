@@ -24,6 +24,7 @@ export type UserPageKey =
   | "hub_orders"
   | "returns"
   | "writeoffs"
+  | "stock_access"
   | "customers";
 
 export type UserPageGroup = "operations" | "clients" | "admin";
@@ -57,6 +58,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "hub_orders", label: "Commandes dépôt", description: "Commandes entrepôt vers magasins", group: "operations" },
   { key: "returns", label: "Retours", description: "Retours produits et SAV", group: "clients" },
   { key: "writeoffs", label: "Retours stock", description: "Validation retours périmés ou cassés", group: "operations" },
+  { key: "stock_access", label: "Accès stock", description: "Demandes d'accès modification stock", group: "operations" },
   { key: "customers", label: "Clients fidélité", description: "Clients fidélité en magasin", group: "clients" },
 ];
 
@@ -64,12 +66,12 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
   directeur: [
     "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products", "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
-    "hub_stock", "hubs", "writeoffs",
+    "hub_stock", "hubs", "writeoffs", "stock_access",
   ],
   admin: [
     "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products", "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
-    "hub_stock", "hubs", "writeoffs",
+    "hub_stock", "hubs", "writeoffs", "stock_access",
   ],
   manager: [
     "dashboard", "planning", "pos_closures", "sales", "stock", "hub_orders", "stores",
@@ -106,6 +108,7 @@ const PAGE_HOME_PRIORITY: UserPageKey[] = [
   "customers",
   "returns",
   "writeoffs",
+  "stock_access",
 ];
 
 const PAGE_GROUP_LABELS: Record<UserPageGroup, string> = {
@@ -202,6 +205,8 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       return role === "livreur" ? "/livreur/returns" : "/cashier/returns";
     case "writeoffs":
       return base ? `${base}/writeoffs` : null;
+    case "stock_access":
+      return base === "/director" ? "/director/stock-access" : null;
     case "customers":
       return "/cashier/customers";
     default:

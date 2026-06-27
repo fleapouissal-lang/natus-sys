@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import {
   canEditStockTotal,
@@ -8,8 +9,10 @@ import {
 } from "@/lib/permissions";
 import { getActiveStores } from "@/lib/inventory";
 import { resolveSelectedStoreId } from "@/lib/management-store";
+import { resolveStockPermissions } from "@/lib/stock-modify-access/permissions";
+import { listStockModifyAccessRequests } from "@/lib/stock-modify-access/queries";
 import { StockManager } from "@/components/stock/stock-manager";
-import { redirect } from "next/navigation";
+import { StockModifyAccessRequestButton } from "@/components/stock-modify-access/stock-modify-access-request-button";
 
 export default async function HubStockPage({
   searchParams,
@@ -31,15 +34,30 @@ export default async function HubStockPage({
     : [];
 
   const selectedStore = stores.find((store) => store.id === defaultStoreId);
+  const permissions = await resolveStockPermissions(profile, selectedStore ?? null);
+  const myRequests = await listStockModifyAccessRequests({ requesterId: profile.id });
 
   return (
-    <StockManager
-      stores={stores}
-      products={products}
-      defaultStoreId={defaultStoreId}
-      cityLabel={city || undefined}
-      canModifyStock={selectedStore ? canModifyStock(profile, selectedStore) : false}
-      canEditTotal={selectedStore ? canEditStockTotal(profile, selectedStore) : false}
-    />
+    <div className="space-y-4">
+      <StockModifyAccessRequestButton
+        role="hub"
+        hubStoreLabel={
+          selectedStore ? `${selectedStore.name} — ${selectedStore.city}` : undefined
+        }
+        myRequests={myRequests}
+      />
+      <StockManager
+        stores={stores}
+        products={products}
+        defaultStoreId={defaultStoreId}
+        cityLabel={city || undefined}
+        canModifyStock={
+          selectedStore ? permissions.canModifyStock : canModifyStock(profile, selectedStore)
+        }
+        canEditTotal={
+          selectedStore ? permissions.canEditTotal : canEditStockTotal(profile, selectedStore)
+        }
+      />
+    </div>
   );
 }

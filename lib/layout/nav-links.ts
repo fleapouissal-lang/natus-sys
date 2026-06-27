@@ -19,6 +19,7 @@ import {
   Newspaper,
   ScrollText,
   Settings,
+  KeyRound,
 } from "lucide-react";
 import { getManagementBasePath } from "@/lib/permissions";
 import { getSettingsPath } from "@/lib/layout/settings-path";
@@ -131,6 +132,15 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       label: "Retours stock",
       icon: RotateCcw,
       mobileOrder: 9,
+    });
+  }
+
+  if (basePath === "/director") {
+    links.push({
+      href: "/director/stock-access",
+      label: "Accès stock",
+      icon: KeyRound,
+      mobileOrder: 9.2,
     });
   }
 
