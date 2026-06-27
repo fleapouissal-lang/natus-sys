@@ -39,7 +39,7 @@ export function InvoiceDetailClient({
     setError("");
     startTransition(async () => {
       const result = await validateSaleInvoice(sale.id);
-      if (result.error) {
+      if ("error" in result && result.error) {
         setError(result.error);
         return;
       }

@@ -30,7 +30,7 @@ function CreateHubForm({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [city, setCity] = useState(NATUS_CITIES[0] || "");
+  const [city, setCity] = useState<string>(NATUS_CITIES[0] || "");
   const [password, setPassword] = useState("");
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
 
@@ -132,7 +132,7 @@ function EditHubDepotModal({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [fullName, setFullName] = useState(hub.full_name);
+  const [fullName, setFullName] = useState(hub.full_name ?? "");
   const [email, setEmail] = useState(hub.email);
   const [password, setPassword] = useState("");
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>(assignedIds);

@@ -130,7 +130,7 @@ export function InvoicesHistory({
     startTransition(async () => {
       const result = await validateSaleInvoice(saleId);
       setValidatingId(null);
-      if (result.error) {
+      if ("error" in result && result.error) {
         setActionError(result.error);
         return;
       }

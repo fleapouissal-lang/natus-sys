@@ -154,10 +154,10 @@ export function HubTransfersList({
                         {showProductImages && (
                           <ProductImage
                             product={{
-                              id: item.product_id,
                               name: item.product_name,
-                              barcode: item.product_barcode,
-                              image_url: item.product_image_url,
+                              image_url: item.product_image_url ?? null,
+                              category: "",
+                              categories: undefined,
                             }}
                             size="xs"
                             className="h-9 w-9 shrink-0 overflow-hidden rounded-md border border-border bg-page"

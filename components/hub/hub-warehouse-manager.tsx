@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRight, ArrowRightLeft, Package, Search, Store, Warehouse } from "lucide-react";
+import { AlertTriangle, ArrowRight, ArrowRightLeft, Package, Search, Store as StoreIcon, Warehouse } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { Badge } from "@/components/ui/badge";
@@ -485,7 +485,7 @@ export function HubWarehouseManager({
                   Vers
                 </p>
                 <div className="mt-1 flex items-center gap-2">
-                  <Store className="h-4 w-4 shrink-0 text-primary" />
+                  <StoreIcon className="h-4 w-4 shrink-0 text-primary" />
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-foreground">{destinationName}</p>
                     <p className="text-xs text-muted">

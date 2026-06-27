@@ -120,7 +120,7 @@ async function assertStockModifyAccess(profile: Profile, storeId: string) {
   if (isManager(profile)) {
     return { error: "Les gérants peuvent consulter le stock sans le modifier" };
   }
-  if (isHub(profile) && !access.store.is_hub) {
+  if (isHub(profile) && !access.store?.is_hub) {
     return { error: "Le compte dépôt ne peut modifier que le stock des dépôts" };
   }
   return access;
@@ -1629,7 +1629,7 @@ export async function createUser(formData: FormData) {
 
     if (role === "hub" && city) {
       const assignResult = await saveHubStoreAssignments(admin, data.user.id, hubStoreIds);
-      if (assignResult.error) return { error: assignResult.error };
+      if ("error" in assignResult && assignResult.error) return { error: assignResult.error };
     }
   }
 
@@ -1828,7 +1828,7 @@ export async function updateHubStoreAssignments(
   }
 
   const assignResult = await saveHubStoreAssignments(admin, hubUserId, uniqueIds);
-  if (assignResult.error) return { error: assignResult.error };
+  if ("error" in assignResult && assignResult.error) return { error: assignResult.error };
 
   revalidatePath("/director/hubs");
   revalidatePath("/hub");

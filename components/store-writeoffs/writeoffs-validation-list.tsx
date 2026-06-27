@@ -161,7 +161,12 @@ export function WriteoffsValidationList({
                   key={item.id}
                   className="flex items-center gap-3 px-4 py-3 md:px-6"
                 >
-                  {item.products && <ProductImage product={item.products} size="xs" />}
+                  {item.products && (
+                    <ProductImage
+                      product={{ ...item.products, category: "", categories: undefined }}
+                      size="xs"
+                    />
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
                       {item.products?.name || "Produit"}

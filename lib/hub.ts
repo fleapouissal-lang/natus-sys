@@ -46,7 +46,11 @@ export async function getHubAssignedStores(hubUserId: string): Promise<Store[]> 
     .eq("hub_user_id", hubUserId);
 
   return (data || [])
-    .map((row) => row.stores as Store | null)
+    .map((row) => {
+      const raw = row.stores;
+      const store = (Array.isArray(raw) ? raw[0] : raw) as Store | null;
+      return store;
+    })
     .filter((store): store is Store => Boolean(store?.is_active && !store.is_hub));
 }
 

@@ -4,6 +4,7 @@ import { getSelectedStore } from "@/lib/management-store";
 import {
   filterRetailStoresByProfile,
   isDirector,
+  isManager,
 } from "@/lib/permissions";
 import { getStoreProductWriteoffs } from "@/lib/store-writeoffs/list";
 import type { StoreProductWriteoff } from "@/lib/store-writeoffs/types";
