@@ -12,6 +12,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { deleteProClientCustomer, toggleProClientActive } from "@/lib/actions";
 import { formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
+import { sortProClientsByFidelity } from "@/lib/loyalty/sort-customers";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { LoyaltyCustomer } from "@/lib/types";
 
@@ -31,15 +32,17 @@ export function ProClientsManager({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return customers;
-    return customers.filter(
-      (c) =>
-        c.full_name.toLowerCase().includes(q) ||
-        c.phone.includes(q) ||
-        c.card_number.toLowerCase().includes(q) ||
-        (c.email?.toLowerCase().includes(q) ?? false) ||
-        (c.company_name?.toLowerCase().includes(q) ?? false)
-    );
+    const list = !q
+      ? customers
+      : customers.filter(
+          (c) =>
+            c.full_name.toLowerCase().includes(q) ||
+            c.phone.includes(q) ||
+            c.card_number.toLowerCase().includes(q) ||
+            (c.email?.toLowerCase().includes(q) ?? false) ||
+            (c.company_name?.toLowerCase().includes(q) ?? false)
+        );
+    return sortProClientsByFidelity(list);
   }, [customers, search]);
 
   const {

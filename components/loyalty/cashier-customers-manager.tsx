@@ -7,15 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { Button } from "@/components/ui/button";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Modal } from "@/components/ui/modal";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
 import { LoyaltyCardQrForCashier } from "@/components/loyalty/loyalty-card-client-view";
 import { CreateLoyaltyCustomerModal } from "@/components/loyalty/create-customer-modal";
 import { loyaltyTierFromPoints } from "@/lib/loyalty/tiers";
 import { LoyaltyTierBadge } from "@/components/loyalty/loyalty-tier-badge";
+import { sortLoyaltyCustomersByFidelity } from "@/lib/loyalty/sort-customers";
 import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
+import { customerRegisteredAtStore } from "@/lib/loyalty/store-customer-scope";
 import type { LoyaltyCustomer } from "@/lib/types";
 
 export function CashierCustomersManager({
@@ -33,15 +37,27 @@ export function CashierCustomersManager({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return customers;
-    return customers.filter(
-      (c) =>
-        c.full_name.toLowerCase().includes(q) ||
-        c.phone.includes(q) ||
-        c.card_number.toLowerCase().includes(q) ||
-        (c.email?.toLowerCase().includes(q) ?? false)
-    );
+    const list = !q
+      ? customers
+      : customers.filter(
+          (c) =>
+            c.full_name.toLowerCase().includes(q) ||
+            c.phone.includes(q) ||
+            c.card_number.toLowerCase().includes(q) ||
+            (c.email?.toLowerCase().includes(q) ?? false)
+        );
+    return sortLoyaltyCustomersByFidelity(list);
   }, [customers, search]);
+
+  const {
+    paginated,
+    page,
+    setPage,
+    totalPages,
+    rangeStart,
+    rangeEnd,
+    totalItems,
+  } = usePagination(filtered, DEFAULT_PAGE_SIZE, search);
 
   const totalPoints = customers.reduce((sum, c) => sum + c.loyalty_points, 0);
   const inactiveCount = customers.filter((c) => c.is_active === false).length;
@@ -104,7 +120,7 @@ export function CashierCustomersManager({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((customer) => {
+              {paginated.map((customer) => {
                 const tier = loyaltyTierFromPoints(customer.loyalty_points);
                 return (
                   <tr key={customer.id} className="border-b border-border">
@@ -113,6 +129,18 @@ export function CashierCustomersManager({
                       <p className="text-xs text-muted">{formatPhoneDisplay(customer.phone)}</p>
                       {customer.email && (
                         <p className="text-xs text-muted">{customer.email}</p>
+                      )}
+                      {storeId && (
+                        <Badge
+                          variant={
+                            customerRegisteredAtStore(customer, storeId) ? "default" : "accent"
+                          }
+                          className="mt-1"
+                        >
+                          {customerRegisteredAtStore(customer, storeId)
+                            ? "Inscrit ici"
+                            : "A acheté ici"}
+                        </Badge>
                       )}
                     </td>
                     <td className="px-6 py-4 font-mono text-sm">{customer.card_number}</td>
@@ -155,7 +183,7 @@ export function CashierCustomersManager({
                   </tr>
                 );
               })}
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-muted">
                     {customers.length === 0
@@ -167,6 +195,16 @@ export function CashierCustomersManager({
             </tbody>
           </table>
         </div>
+        {filtered.length > 0 && (
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            totalItems={totalItems}
+            onPageChange={setPage}
+          />
+        )}
       </Card>
 
       {showCreate && (
@@ -174,7 +212,7 @@ export function CashierCustomersManager({
           storeId={storeId || undefined}
           onClose={() => setShowCreate(false)}
           onCreated={(customer) => {
-            setCustomers((prev) => [customer, ...prev]);
+            setCustomers((prev) => sortLoyaltyCustomersByFidelity([customer, ...prev]));
             setShowCreate(false);
             setQrCustomer(customer);
           }}

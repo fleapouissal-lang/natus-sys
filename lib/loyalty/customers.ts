@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { LoyaltyCustomer, LoyaltyTransaction, Profile } from "@/lib/types";
 import { normalizeLoyaltyCardNumber } from "@/lib/loyalty/qr";
 import { getCityFilter, isDirector, isManager } from "@/lib/permissions";
+import { customerHasPurchasedAtStore } from "@/lib/loyalty/store-customer-scope";
 import {
   isValidLoyaltyQrToken,
   toPublicLoyaltyCustomer,
@@ -9,6 +10,20 @@ import {
   type PublicLoyaltyCustomer,
   type PublicLoyaltyTransaction,
 } from "@/lib/loyalty/public";
+
+async function lookupCustomerForPos(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  field: "phone" | "card_number" | "qr_token",
+  value: string
+): Promise<LoyaltyCustomer | null> {
+  const { data, error } = await supabase.rpc("lookup_customer_for_pos", {
+    p_field: field,
+    p_value: value,
+  });
+
+  if (error || !data?.length) return null;
+  return data[0] as LoyaltyCustomer;
+}
 
 export async function getCustomerByPhone(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -18,14 +33,7 @@ export async function getCustomerByPhone(
   const normalized = normalizePhone(phone);
   if (!normalized) return null;
 
-  const { data, error } = await supabase
-    .from("customers")
-    .select("*")
-    .eq("phone", normalized)
-    .maybeSingle();
-
-  if (error) return null;
-  return data as LoyaltyCustomer | null;
+  return lookupCustomerForPos(supabase, "phone", normalized);
 }
 
 export async function getCustomerByCardOrToken(
@@ -33,19 +41,12 @@ export async function getCustomerByCardOrToken(
   identifier: string
 ): Promise<LoyaltyCustomer | null> {
   const isCard = /^FID-?\d+$/i.test(identifier);
-  const column = isCard ? "card_number" : "qr_token";
+  const field = isCard ? "card_number" : "qr_token";
   const value = isCard
     ? normalizeLoyaltyCardNumber(identifier.replace(/^FID-?/i, "FID-"))
     : identifier;
 
-  const { data, error } = await supabase
-    .from("customers")
-    .select("*")
-    .eq(column, value)
-    .maybeSingle();
-
-  if (error) return null;
-  return data as LoyaltyCustomer | null;
+  return lookupCustomerForPos(supabase, field, value);
 }
 
 export async function getCustomerTransactions(
@@ -67,7 +68,7 @@ export async function getCustomerTransactions(
 export async function canStaffAccessLoyaltyCustomer(
   supabase: Awaited<ReturnType<typeof createClient>>,
   profile: Profile,
-  customer: Pick<LoyaltyCustomer, "store_id">
+  customer: Pick<LoyaltyCustomer, "id" | "store_id">
 ): Promise<boolean> {
   if (isDirector(profile)) return true;
 
@@ -83,6 +84,12 @@ export async function canStaffAccessLoyaltyCustomer(
       .maybeSingle();
 
     return store?.city === city;
+  }
+
+  if (profile.role === "cashier") {
+    if (!profile.store_id) return false;
+    if (customer.store_id === profile.store_id) return true;
+    return customerHasPurchasedAtStore(supabase, customer.id, profile.store_id);
   }
 
   return false;

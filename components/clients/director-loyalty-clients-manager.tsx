@@ -17,6 +17,7 @@ import {
 } from "@/lib/actions";
 import { formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
+import { sortLoyaltyCustomersByFidelity } from "@/lib/loyalty/sort-customers";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { LoyaltyCustomer } from "@/lib/types";
 
@@ -36,14 +37,16 @@ export function DirectorLoyaltyClientsManager({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter(
-      (c) =>
-        c.full_name.toLowerCase().includes(q) ||
-        c.phone.includes(q) ||
-        c.card_number.toLowerCase().includes(q) ||
-        (c.email?.toLowerCase().includes(q) ?? false)
-    );
+    const list = !q
+      ? clients
+      : clients.filter(
+          (c) =>
+            c.full_name.toLowerCase().includes(q) ||
+            c.phone.includes(q) ||
+            c.card_number.toLowerCase().includes(q) ||
+            (c.email?.toLowerCase().includes(q) ?? false)
+        );
+    return sortLoyaltyCustomersByFidelity(list);
   }, [clients, search]);
 
   const {

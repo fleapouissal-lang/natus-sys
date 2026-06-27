@@ -9,9 +9,7 @@ export default async function CashierProClientsPage() {
   if (!profile) redirect("/login");
 
   const store = profile.store_id ? await getStoreById(profile.store_id) : null;
-  const customers = await getProClientsForStaff(profile, {
-    storeOnly: Boolean(profile.store_id),
-  });
+  const customers = await getProClientsForStaff(profile);
 
   return (
     <div className="animate-fade-in space-y-6">

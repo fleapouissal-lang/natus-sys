@@ -13,7 +13,9 @@ import { Modal } from "@/components/ui/modal";
 import { PRO_CLIENT_DISCOUNT_PERCENT } from "@/lib/pro-client/discount";
 import { formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
+import { sortProClientsByFidelity } from "@/lib/loyalty/sort-customers";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
+import { customerRegisteredAtStore } from "@/lib/loyalty/store-customer-scope";
 import type { LoyaltyCustomer } from "@/lib/types";
 
 export function CashierProClientsManager({
@@ -33,15 +35,17 @@ export function CashierProClientsManager({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return customers;
-    return customers.filter(
-      (c) =>
-        c.full_name.toLowerCase().includes(q) ||
-        c.phone.includes(q) ||
-        c.card_number.toLowerCase().includes(q) ||
-        (c.email?.toLowerCase().includes(q) ?? false) ||
-        (c.company_name?.toLowerCase().includes(q) ?? false)
-    );
+    const list = !q
+      ? customers
+      : customers.filter(
+          (c) =>
+            c.full_name.toLowerCase().includes(q) ||
+            c.phone.includes(q) ||
+            c.card_number.toLowerCase().includes(q) ||
+            (c.email?.toLowerCase().includes(q) ?? false) ||
+            (c.company_name?.toLowerCase().includes(q) ?? false)
+        );
+    return sortProClientsByFidelity(list);
   }, [customers, search]);
 
   const {
@@ -116,6 +120,21 @@ export function CashierProClientsManager({
                     <td className="px-6 py-4">
                       <p className="font-medium">{customer.full_name}</p>
                       <p className="text-xs text-muted">{formatPhoneDisplay(customer.phone)}</p>
+                      {customer.stores?.name && (
+                        <p className="text-xs text-muted">{customer.stores.name}</p>
+                      )}
+                      {storeId && (
+                        <Badge
+                          variant={
+                            customerRegisteredAtStore(customer, storeId) ? "default" : "accent"
+                          }
+                          className="mt-1"
+                        >
+                          {customerRegisteredAtStore(customer, storeId)
+                            ? "Inscrit ici"
+                            : "A acheté ici"}
+                        </Badge>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant={isEntreprise ? "default" : "accent"}>

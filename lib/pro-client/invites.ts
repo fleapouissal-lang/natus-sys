@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { LoyaltyCustomer } from "@/lib/types";
+import { sortProClientsByFidelity } from "@/lib/loyalty/sort-customers";
 import type { ProClientRegistrationStoreResult } from "@/lib/pro-client/types";
 
 function mapStoreResult(raw: Record<string, unknown>): ProClientRegistrationStoreResult {
@@ -35,14 +36,14 @@ export async function getAllProClients(): Promise<LoyaltyCustomer[]> {
     .from("customers")
     .select("*")
     .eq("is_pro_client", true)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: true });
 
   if (error) {
     console.error("[pro-client] list:", error.message);
     return [];
   }
 
-  return (data || []) as LoyaltyCustomer[];
+  return sortProClientsByFidelity((data || []) as LoyaltyCustomer[]);
 }
 
 export async function getPendingProClients(): Promise<LoyaltyCustomer[]> {
@@ -59,5 +60,5 @@ export async function getPendingProClients(): Promise<LoyaltyCustomer[]> {
     return [];
   }
 
-  return (data || []) as LoyaltyCustomer[];
+  return sortProClientsByFidelity((data || []) as LoyaltyCustomer[]);
 }
