@@ -39,6 +39,13 @@ import {
   parseCashReceived,
 } from "@/components/pos/cash-change-calculator";
 import {
+  ChequePaymentForm,
+  EMPTY_CHEQUE_PAYMENT,
+  isChequePaymentReady,
+  parseChequeAmount,
+  type ChequePaymentFormValue,
+} from "@/components/pos/cheque-payment-form";
+import {
   PosPaymentModeSelector,
   type PosPaymentOption,
 } from "@/components/pos/pos-payment-mode-selector";
@@ -137,6 +144,7 @@ export function PosTerminal({
   const [managerMode, setManagerMode] = useState<ManagerMode>("sale");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [cashReceivedInput, setCashReceivedInput] = useState("");
+  const [chequeForm, setChequeForm] = useState<ChequePaymentFormValue>(EMPTY_CHEQUE_PAYMENT);
   const [receipt, setReceipt] = useState<SaleDocumentData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -158,6 +166,7 @@ export function PosTerminal({
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cashCalculatorRef = useRef<HTMLDivElement>(null);
+  const chequeCalculatorRef = useRef<HTMLDivElement>(null);
   const orderNotifications = useCashierNotifications();
   const preparableOrderCount = useMemo(
     () => shopifyOrders.filter(canPrepareOrderForPos).length,
@@ -519,6 +528,14 @@ export function PosTerminal({
       setError("Montant remis insuffisant");
       return;
     }
+    if (
+      !activeShopifyOrder &&
+      paymentMethod === "cheque" &&
+      !isChequePaymentReady(totalTtc, chequeForm)
+    ) {
+      setError("Complétez les informations du chèque (banque, numéro, montant)");
+      return;
+    }
     if (activeShopifyOrder) {
       const fullyValidated = cart.every(
         (item) => (validatedQty[item.product.id] ?? 0) >= item.quantity
@@ -555,7 +572,17 @@ export function PosTerminal({
           loyaltyCustomer
             ? { customerId: loyaltyCustomer.id, pointsToRedeem }
             : undefined,
-          appliedPromo?.code
+          appliedPromo?.code,
+          effectivePaymentMethod === "cheque"
+            ? {
+                bankName: chequeForm.bankName,
+                chequeNumber: chequeForm.chequeNumber,
+                chequeAmount: parseChequeAmount(chequeForm.chequeAmount),
+                drawerName: chequeForm.drawerName || undefined,
+                issueDate: chequeForm.issueDate || undefined,
+                notes: chequeForm.notes || undefined,
+              }
+            : undefined
         );
 
     if (result.error) {
@@ -668,6 +695,7 @@ export function PosTerminal({
     setAppliedPromo(null);
     setValidatedQty({});
     setMissingShopifyProducts([]);
+    setChequeForm(EMPTY_CHEQUE_PAYMENT);
     setLoading(false);
     setLastAddedProduct(null);
 
@@ -708,7 +736,10 @@ export function PosTerminal({
   const cashReceived = parseCashReceived(cashReceivedInput);
   const showCashCalculator =
     !isShopifyOrderCheckout && paymentMethod === "cash" && cart.length > 0;
+  const showChequeCalculator =
+    !isShopifyOrderCheckout && paymentMethod === "cheque" && cart.length > 0;
   const cashPaymentReady = cashReceived >= totalTtc;
+  const chequePaymentReady = isChequePaymentReady(totalTtc, chequeForm);
 
   useEffect(() => {
     if (!checkoutSteps.includes(checkoutStep)) {
@@ -723,12 +754,29 @@ export function PosTerminal({
   useEffect(() => {
     if (paymentMethod !== "cash") {
       setCashReceivedInput("");
-      return;
     }
+    if (paymentMethod !== "cheque") {
+      setChequeForm(EMPTY_CHEQUE_PAYMENT);
+    }
+  }, [paymentMethod]);
+
+  useEffect(() => {
+    if (paymentMethod !== "cash") return;
     if (cart.length === 0) return;
 
     const timer = window.setTimeout(() => {
       cashCalculatorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 100);
+
+    return () => window.clearTimeout(timer);
+  }, [paymentMethod, cart.length]);
+
+  useEffect(() => {
+    if (paymentMethod !== "cheque") return;
+    if (cart.length === 0) return;
+
+    const timer = window.setTimeout(() => {
+      chequeCalculatorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }, 100);
 
     return () => window.clearTimeout(timer);
@@ -991,6 +1039,7 @@ export function PosTerminal({
     return (
       <div className="space-y-3">
         {renderPaymentModeSelector(true)}
+        {showChequeCalculator && renderChequeCalculatorPanel({ checkout: true })}
         {isOrderMode && !orderFullyValidated && (
           <p className="text-xs text-warning">
             Validez tous les produits ({orderValidationDone}/{orderValidationTotal}) — scan ou +
@@ -1035,6 +1084,22 @@ export function PosTerminal({
           {renderCartFixedTotal()}
           <div className="px-4 pb-3 pt-2">{renderCheckoutNavButtons()}</div>
         </div>
+      </div>
+    );
+  }
+
+  function renderChequeCalculatorPanel(options?: { checkout?: boolean }) {
+    if (!showChequeCalculator) return null;
+
+    return (
+      <div ref={chequeCalculatorRef} className="natus-pos-cheque-calculator-panel">
+        <ChequePaymentForm
+          total={totalTtc}
+          value={chequeForm}
+          onChange={setChequeForm}
+          checkout={options?.checkout}
+          className="mt-0"
+        />
       </div>
     );
   }
@@ -1087,6 +1152,7 @@ export function PosTerminal({
                 dense: options?.denseCalculator,
                 checkout: options?.checkoutCalculator,
               })}
+            {includeCalculator && renderChequeCalculatorPanel({ checkout: options?.checkoutCalculator })}
             {isOrderMode && !orderFullyValidated && (
               <p className="mt-2 text-xs text-warning">
                 Validez tous les produits ({orderValidationDone}/{orderValidationTotal}) — scan ou +
@@ -1191,7 +1257,8 @@ export function PosTerminal({
           cart.length === 0 ||
           loading ||
           (isOrderMode && !orderFullyValidated) ||
-          (showCashCalculator && !cashPaymentReady)
+          (showCashCalculator && !cashPaymentReady) ||
+          (showChequeCalculator && !chequePaymentReady)
         }
         loading={loading}
       >

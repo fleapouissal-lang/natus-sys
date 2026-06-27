@@ -25,6 +25,7 @@ export type UserPageKey =
   | "returns"
   | "writeoffs"
   | "stock_access"
+  | "cheques"
   | "customers";
 
 export type UserPageGroup = "operations" | "clients" | "admin";
@@ -59,6 +60,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "returns", label: "Retours", description: "Retours produits et SAV", group: "clients" },
   { key: "writeoffs", label: "Retours stock", description: "Validation retours périmés ou cassés", group: "operations" },
   { key: "stock_access", label: "Accès stock", description: "Demandes d'accès modification stock", group: "operations" },
+  { key: "cheques", label: "Chèques", description: "Paiements par chèque en caisse", group: "operations" },
   { key: "customers", label: "Clients fidélité", description: "Clients fidélité en magasin", group: "clients" },
 ];
 
@@ -66,20 +68,20 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
   directeur: [
     "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products", "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
-    "hub_stock", "hubs", "writeoffs", "stock_access",
+    "hub_stock", "hubs", "writeoffs", "stock_access", "cheques",
   ],
   admin: [
     "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products", "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
-    "hub_stock", "hubs", "writeoffs", "stock_access",
+    "hub_stock", "hubs", "writeoffs", "stock_access", "cheques",
   ],
   manager: [
     "dashboard", "planning", "pos_closures", "sales", "stock", "hub_orders", "stores",
-    "activity", "reclamations", "writeoffs", "invoices", "actualites",
+    "activity", "reclamations", "writeoffs", "invoices", "actualites", "cheques",
   ],
   cashier: [
     "pos", "planning", "pos_closures", "actualites", "sales", "notes", "transfers",
-    "customers", "returns", "invoices",
+    "customers", "returns", "invoices", "cheques",
   ],
   livreur: ["actualites", "transfers", "returns"],
   hub: ["dashboard", "stock", "hub_stock", "hub_orders", "activity", "actualites", "writeoffs"],
@@ -109,6 +111,7 @@ const PAGE_HOME_PRIORITY: UserPageKey[] = [
   "returns",
   "writeoffs",
   "stock_access",
+  "cheques",
 ];
 
 const PAGE_GROUP_LABELS: Record<UserPageGroup, string> = {
@@ -207,6 +210,11 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       return base ? `${base}/writeoffs` : null;
     case "stock_access":
       return base === "/director" ? "/director/stock-access" : null;
+    case "cheques":
+      if (role === "cashier") return "/cashier/cheques";
+      if (role === "manager") return "/manager/cheques";
+      if (role === "directeur" || role === "admin") return "/director/cheques";
+      return null;
     case "customers":
       return "/cashier/customers";
     default:

@@ -20,6 +20,7 @@ import {
   ScrollText,
   Settings,
   KeyRound,
+  Landmark,
 } from "lucide-react";
 import { getManagementBasePath } from "@/lib/permissions";
 import { getSettingsPath } from "@/lib/layout/settings-path";
@@ -50,6 +51,7 @@ export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness, mobileOrder: 7 },
   { href: "/cashier/returns", label: "Retours", icon: RotateCcw, mobileOrder: 8 },
   { href: "/cashier/invoices", label: "Factures", icon: FileText, mobileOrder: 9 },
+  { href: "/cashier/cheques", label: "Chèques", icon: Landmark, mobileOrder: 9.5 },
 ];
 
 export const livreurLinks: NavLinkItem[] = [
@@ -93,6 +95,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
 
   links.push(
     { href: `${basePath}/sales`, label: "Ventes", icon: Receipt, mobileOrder: 3 },
+    { href: `${basePath}/cheques`, label: "Chèques", icon: Landmark, mobileOrder: 3.5 },
     { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 4 }
   );
 

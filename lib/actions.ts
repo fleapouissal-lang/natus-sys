@@ -1025,7 +1025,8 @@ export async function completeSale(
   paymentMethod: PaymentMethod = "cash",
   storeId?: string,
   loyalty?: { customerId: string; pointsToRedeem?: number },
-  promoCode?: string | null
+  promoCode?: string | null,
+  chequeDetails?: import("@/lib/sales/cheques/types").SaleChequeDetails
 ) {
   const profile = await requireRole([...MANAGEMENT, "cashier"]);
   if (!profile) return { error: "Non autorisé" };
@@ -1055,6 +1056,44 @@ export async function completeSale(
   if (error) return { error: error.message };
 
   const saleId = data as string;
+
+  if (paymentMethod === "cheque") {
+    if (!chequeDetails?.bankName?.trim() || !chequeDetails.chequeNumber?.trim()) {
+      return { error: "Informations chèque incomplètes" };
+    }
+
+    const { data: saleRow, error: saleFetchError } = await supabase
+      .from("sales")
+      .select("store_id, total")
+      .eq("id", saleId)
+      .single();
+
+    if (saleFetchError || !saleRow?.store_id) {
+      return { error: "Vente enregistrée mais magasin introuvable pour le chèque" };
+    }
+
+    if (chequeDetails.chequeAmount < Number(saleRow.total)) {
+      return { error: "Le montant du chèque est inférieur au total de la vente" };
+    }
+
+    const { error: chequeError } = await supabase.from("sale_cheques").insert({
+      sale_id: saleId,
+      store_id: saleRow.store_id,
+      bank_name: chequeDetails.bankName.trim(),
+      cheque_number: chequeDetails.chequeNumber.trim(),
+      cheque_amount: chequeDetails.chequeAmount,
+      drawer_name: chequeDetails.drawerName?.trim() || null,
+      issue_date: chequeDetails.issueDate || null,
+      notes: chequeDetails.notes?.trim() || null,
+      created_by: profile.id,
+    });
+
+    if (chequeError) {
+      console.error("completeSale cheque:", chequeError.message);
+      return { error: `Vente OK mais chèque non enregistré : ${chequeError.message}` };
+    }
+  }
+
   try {
     const { sendSaleWhatsAppNotification } = await import(
       "@/lib/kapso/sale-notification"
@@ -1088,6 +1127,9 @@ export async function completeSale(
   revalidatePath("/director/sales");
   revalidatePath("/director");
   revalidatePath("/director/loyalty");
+  revalidatePath("/cashier/cheques");
+  revalidatePath("/manager/cheques");
+  revalidatePath("/director/cheques");
   return { success: true, saleId: data as string };
 }
 
