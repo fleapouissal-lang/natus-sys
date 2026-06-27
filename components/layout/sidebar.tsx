@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { sidebarCollapsedForRoute } from "@/lib/layout/sidebar-state";
+import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
 import {
   isNavLinkActive,
   resolveNavLinks,
@@ -100,7 +100,7 @@ function SidebarToggle({
         "natus-sidebar-toggle flex h-9 w-9 items-center justify-center bg-sidebar text-black/80 transition-opacity hover:opacity-85 cursor-pointer",
         className
       )}
-      aria-label="Basculer la sidebar"
+      aria-label="Masquer ou afficher la sidebar"
       title="Masquer / afficher la sidebar"
     >
       <PanelLeftClose className="h-5 w-5" />
@@ -225,7 +225,8 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(() => sidebarCollapsedForRoute(pathname));
+  const prevPathnameRef = useRef(pathname);
+  const [collapsed, setCollapsed] = useState(() => isCashierPosRoute(pathname));
   const [switchingCashier, setSwitchingCashier] = useState(false);
   const [showDayClosure, setShowDayClosure] = useState(false);
 
@@ -251,14 +252,21 @@ export function Sidebar({
   const showStoreClosure = role === "cashier" && isStorePos && Boolean(storeId);
 
   useEffect(() => {
-    setCollapsed(sidebarCollapsedForRoute(pathname));
+    const previousPath = prevPathnameRef.current;
+    const enteringPos = isCashierPosRoute(pathname);
+    const leavingPos = isCashierPosRoute(previousPath) && !enteringPos;
+
+    if (enteringPos) {
+      setCollapsed(true);
+    } else if (leavingPos) {
+      setCollapsed(false);
+    }
+
+    prevPathnameRef.current = pathname;
   }, [pathname]);
 
-  useEffect(() => {
-    localStorage.removeItem("natus-sidebar-collapsed");
-  }, []);
-
   function toggleCollapsed() {
+    if (isCashierPosRoute(pathname)) return;
     setCollapsed((prev) => !prev);
   }
 
@@ -289,8 +297,16 @@ export function Sidebar({
         "natus-sidebar relative flex h-full shrink-0 flex-col bg-sidebar transition-[width] duration-300 ease-in-out",
         collapsed ? "natus-sidebar--collapsed w-[4.5rem] overflow-visible" : "w-64"
       )}
-      onDoubleClick={toggleCollapsed}
-      title={collapsed ? "Double-clic pour agrandir" : "Double-clic pour réduire"}
+      onDoubleClick={() => {
+        if (!isCashierPosRoute(pathname)) toggleCollapsed();
+      }}
+      title={
+        isCashierPosRoute(pathname)
+          ? "Sidebar masquée en caisse"
+          : collapsed
+            ? "Double-clic pour agrandir"
+            : "Double-clic pour réduire"
+      }
     >
       {collapsed ? (
         <div className="flex shrink-0 items-center justify-between gap-1 border-b border-black/10 px-2 py-3">
