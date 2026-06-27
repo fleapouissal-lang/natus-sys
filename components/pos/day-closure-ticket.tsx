@@ -5,9 +5,9 @@ import { NATUS_INVOICE_COMPANY } from "@/lib/constants/company";
 import {
   dayClosureReference,
   formatDayClosureDate,
-  saleLineItems,
   type DayClosureStats,
 } from "@/lib/sales/day-closure";
+import { SaleLineItemsSummary } from "@/components/sales/sale-line-items-summary";
 import { formatCurrency } from "@/lib/utils";
 import type { Sale } from "@/lib/types";
 import { NatusDocumentBrand } from "@/components/pos/natus-document-brand";
@@ -148,7 +148,6 @@ export function DayClosureTicket({
           </thead>
           <tbody>
             {activeSales.map((sale) => {
-              const items = saleLineItems(sale);
               return (
                 <Fragment key={sale.id}>
                   <tr className="border-b border-black/25 align-top">
@@ -162,16 +161,15 @@ export function DayClosureTicket({
                       {formatCurrency(Number(sale.total))}
                     </td>
                   </tr>
-                  {items.length > 0 && (
+                  {(sale.sale_items?.length ?? 0) > 0 && (
                     <tr className="border-b border-black/15 align-top">
-                      <td colSpan={3} className="pb-1.5 pl-1 text-[8px] leading-snug text-black/85">
-                        {items.map((item, index) => (
-                          <span key={`${sale.id}-${index}`}>
-                            {index > 0 ? " · " : null}
-                            <span className="font-semibold">{item.name}</span>
-                            <span className="font-black"> ×{item.quantity}</span>
-                          </span>
-                        ))}
+                      <td colSpan={3} className="pb-1.5 pl-2 pr-1">
+                        <SaleLineItemsSummary
+                          sale={sale}
+                          variant="compact"
+                          maxItems={12}
+                          className="text-[8px] text-black/90"
+                        />
                       </td>
                     </tr>
                   )}
@@ -192,13 +190,24 @@ export function DayClosureTicket({
           <>
             <TicketRule />
             <p className="mb-1 text-[9px] font-black uppercase tracking-wide">Annulations</p>
-            <div className="space-y-0.5">
+            <div className="space-y-2">
               {cancelledSales.map((sale) => (
-                <TicketRow
-                  key={sale.id}
-                  label={formatSaleTime(sale.created_at)}
-                  value={formatCurrency(Number(sale.total))}
-                />
+                <div key={sale.id}>
+                  <TicketRow
+                    label={formatSaleTime(sale.created_at)}
+                    value={formatCurrency(Number(sale.total))}
+                  />
+                  {(sale.sale_items?.length ?? 0) > 0 && (
+                    <div className="pl-1 pt-0.5">
+                      <SaleLineItemsSummary
+                        sale={sale}
+                        variant="compact"
+                        maxItems={8}
+                        className="text-[8px] text-black/75"
+                      />
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </>

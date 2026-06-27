@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
+  LayoutGrid,
   Package,
   Warehouse,
   Store,
@@ -163,6 +164,12 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       label: "Accès stock",
       icon: KeyRound,
       mobileOrder: 9.2,
+    });
+    links.push({
+      href: "/director/categories",
+      label: "Catégories caisse",
+      icon: LayoutGrid,
+      mobileOrder: 9.25,
     });
   }
 

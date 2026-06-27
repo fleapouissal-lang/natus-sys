@@ -23,6 +23,7 @@ export function ProductForm({
   existingProducts,
   initialBarcode = "",
   canEditBarcode = false,
+  assignableCategories,
   onClose,
   onExistingProduct,
   onCreatedParent,
@@ -32,6 +33,7 @@ export function ProductForm({
   existingProducts: Product[];
   initialBarcode?: string;
   canEditBarcode?: boolean;
+  assignableCategories?: readonly string[];
   onClose: () => void;
   onExistingProduct?: (product: Product) => void;
   onCreatedParent?: (product: Product) => void;
@@ -261,6 +263,7 @@ export function ProductForm({
           value={categories}
           onChange={setCategories}
           required
+          categories={assignableCategories}
         />
 
         <p className="text-sm text-muted">

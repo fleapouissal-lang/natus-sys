@@ -40,6 +40,7 @@ export function InvoicesTable({
   onToggleSale,
   onTogglePage,
   showPagination = true,
+  selectedStoreId,
 }: {
   sales: InvoiceSale[];
   detailBasePath: string;
@@ -53,6 +54,7 @@ export function InvoicesTable({
   onToggleSale: (saleId: string) => void;
   onTogglePage: (saleIds: string[], selected: boolean) => void;
   showPagination?: boolean;
+  selectedStoreId?: string;
 }) {
   const [editingSale, setEditingSale] = useState<InvoiceSale | null>(null);
   const colSpan =
@@ -153,7 +155,11 @@ export function InvoicesTable({
           </thead>
           <tbody>
             {rows.map((sale) => {
-              const href = `${detailBasePath}/${sale.id}`;
+              const storeQuery =
+                selectedStoreId && selectedStoreId.trim()
+                  ? `?store=${encodeURIComponent(selectedStoreId.trim())}`
+                  : "";
+              const href = `${detailBasePath}/${sale.id}${storeQuery}`;
               const cancelled = Boolean(sale.cancelled_at);
               const validated = isSaleInvoiceValidated(sale);
               const exportable = isInvoiceExportable(sale);

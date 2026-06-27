@@ -5,11 +5,14 @@ export const dynamic = "force-dynamic";
 
 export default async function CashierInvoiceDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ store?: string }>;
 }) {
   const { id } = await params;
-  const { sale, listPath, scopeLabel } = await loadInvoiceDetailPage("cashier", id);
+  const { store } = await searchParams;
+  const { sale, listPath, scopeLabel } = await loadInvoiceDetailPage("cashier", id, { store });
 
   return (
     <div className="animate-fade-in">

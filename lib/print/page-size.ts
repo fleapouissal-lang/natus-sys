@@ -15,8 +15,18 @@ const PAGE_RULES: Record<PrintPageLayout, string> = {
       }
     }
   }`,
-  "a4-report":
-    "@media print { @page { size: A4 portrait; margin: 12mm 10mm 16mm 10mm; @bottom-center { content: 'Page ' counter(page) ' / ' counter(pages); font-size: 8pt; color: #444; font-family: system-ui, sans-serif; } } }",
+  "a4-report": `@media print {
+    @page {
+      size: A4 portrait;
+      margin: 12mm 10mm 18mm 10mm;
+      @bottom-center {
+        content: "Page " counter(page) " / " counter(pages);
+        font-size: 8pt;
+        color: #000;
+        font-family: system-ui, sans-serif;
+      }
+    }
+  }`,
   ticket: `@media print {
     @page {
       size: 80mm auto;

@@ -60,8 +60,10 @@ const CLOSURE_DOC_STYLES = `
   .total-bar { display: flex; justify-content: space-between; align-items: center; border: 2px solid #111; padding: 8px; margin-top: 8px; }
   .footer { text-align: center; font-size: 8px; line-height: 1.4; margin-top: 8px; }
   .signature { margin-top: 12px; padding-top: 8px; font-size: 9px; }
-  .sale-items { font-size: 8px; font-weight: 600; line-height: 1.35; color: #333; padding: 2px 0 4px 2px; }
-  .sale-items span.qty { font-weight: 900; }
+  .sale-items { font-size: 8px; line-height: 1.35; color: #333; padding: 2px 0 4px 4px; }
+  .sale-item-line { display: flex; justify-content: space-between; gap: 8px; margin: 1px 0; }
+  .sale-item-name { font-weight: 600; min-width: 0; }
+  .sale-item-qty { font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .signature-line { border-bottom: 1px solid #111; margin-top: 20px; }
 `;
 
@@ -83,9 +85,9 @@ export function buildDayClosureHtml(data: DayClosureDownloadData): string {
           ? `<tr><td colspan="3" class="sale-items">${items
               .map(
                 (item) =>
-                  `${escapeHtml(item.name)} <span class="qty">×${item.quantity}</span>`
+                  `<div class="sale-item-line"><span class="sale-item-name">${escapeHtml(item.name)}</span><span class="sale-item-qty">×${item.quantity}</span></div>`
               )
-              .join(" · ")}</td></tr>`
+              .join("")}</td></tr>`
           : "";
       return `<tr>
         <td style="font-weight:700">${formatSaleTime(sale.created_at)}</td>

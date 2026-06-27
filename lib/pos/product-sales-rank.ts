@@ -1,4 +1,8 @@
-import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
+import { CATEGORY_CARD_IMAGES, type ProductCategory } from "@/lib/constants/products";
+import {
+  POS_MIN_CATEGORY_PRODUCTS,
+  type PosCategoryCardConfig,
+} from "@/lib/pos/pos-category-cards/types";
 import {
   getProductCategories,
   productDisplayName,
@@ -40,6 +44,7 @@ export type PosCategoryCard = {
   totalSold: number;
   productCount: number;
   coverProduct: Product | null;
+  coverImageUrl: string | null;
 };
 
 function productHasImage(product: Product): boolean {
@@ -50,7 +55,8 @@ function productHasImage(product: Product): boolean {
 
 export function buildPosCategoryCards(
   products: Product[],
-  salesQty: ProductSalesQtyMap
+  salesQty: ProductSalesQtyMap,
+  categoryConfigs: PosCategoryCardConfig[] = []
 ): PosCategoryCard[] {
   const byCategory = new Map<string, Product[]>();
 
@@ -62,11 +68,28 @@ export function buildPosCategoryCards(
     }
   }
 
+  const configByName = new Map(categoryConfigs.map((config) => [config.name, config]));
+  const orderedConfigs =
+    categoryConfigs.length > 0
+      ? [...categoryConfigs].sort(
+          (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "fr")
+        )
+      : [];
+
+  const categoryNames =
+    orderedConfigs.length > 0
+      ? orderedConfigs.map((config) => config.name)
+      : [...byCategory.keys()].sort((a, b) => a.localeCompare(b, "fr"));
+
   const cards: PosCategoryCard[] = [];
 
-  for (const name of PRODUCT_CATEGORIES) {
+  for (const name of categoryNames) {
     const categoryProducts = byCategory.get(name);
     if (!categoryProducts?.length) continue;
+
+    const config = configByName.get(name);
+    const minCount = config?.minProductCount ?? POS_MIN_CATEGORY_PRODUCTS;
+    if (categoryProducts.length < minCount) continue;
 
     const sorted = sortProductsByBestSellers(categoryProducts, salesQty);
     const totalSold = sorted.reduce(
@@ -81,6 +104,8 @@ export function buildPosCategoryCards(
       totalSold,
       productCount: sorted.length,
       coverProduct,
+      coverImageUrl:
+        config?.imageUrl ?? CATEGORY_CARD_IMAGES[name as ProductCategory] ?? null,
     });
   }
 

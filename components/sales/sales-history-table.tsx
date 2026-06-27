@@ -7,6 +7,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { formatCurrency, formatDate, formatPaymentMethod } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
+import { SaleLineItemsSummary } from "@/components/sales/sale-line-items-summary";
 import type { PaymentMethod, Sale } from "@/lib/types";
 
 const ACTION_COLOR = "#B38C4A";
@@ -51,7 +52,7 @@ export function SalesHistoryTable({
   paginationKey?: string;
   showPagination?: boolean;
 }) {
-  const colSpan = 5 + (showStore ? 1 : 0) + (showCashier ? 1 : 0);
+  const colSpan = 6 + (showStore ? 1 : 0) + (showCashier ? 1 : 0);
   const pagination = usePagination(
     sales,
     DEFAULT_PAGE_SIZE,
@@ -73,7 +74,7 @@ export function SalesHistoryTable({
               type="button"
               onClick={() => onViewSale(sale)}
               className={cn(
-                "natus-card flex h-full min-h-[7.5rem] flex-col !p-3 text-left transition-opacity",
+                "natus-card flex h-full min-h-[9.5rem] flex-col !p-3 text-left transition-opacity",
                 sale.cancelled_at ? "opacity-60" : undefined
               )}
             >
@@ -95,6 +96,14 @@ export function SalesHistoryTable({
                     Annulée
                   </Badge>
                 )}
+              </div>
+              <div className="mt-2 min-h-0 flex-1">
+                <SaleLineItemsSummary
+                  sale={sale}
+                  variant="compact"
+                  maxItems={4}
+                  className="text-[10px] text-foreground/85"
+                />
               </div>
               {showStore && sale.stores?.name && (
                 <p className="mt-auto pt-2 text-[10px] text-muted line-clamp-1">
@@ -127,6 +136,7 @@ export function SalesHistoryTable({
               )}
               <th className="px-6 py-3 text-left font-medium text-muted">Paiement</th>
               <th className="px-6 py-3 text-right font-medium text-muted">Montant</th>
+              <th className="px-6 py-3 text-left font-medium text-muted">Articles</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Réf.</th>
               <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
             </tr>
@@ -169,6 +179,9 @@ export function SalesHistoryTable({
                   ) : (
                     formatCurrency(Number(sale.total))
                   )}
+                </td>
+                <td className="px-6 py-4 align-top">
+                  <SaleLineItemsSummary sale={sale} variant="compact" maxItems={6} />
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-wrap items-center gap-1">

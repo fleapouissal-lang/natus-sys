@@ -217,6 +217,7 @@ export function ProductsManager({
   canModifyStock,
   canEditStockTotal,
   canEditBarcode = false,
+  assignableCategories,
 }: {
   products: Product[];
   stores: Store[];
@@ -226,6 +227,7 @@ export function ProductsManager({
   canModifyStock: boolean;
   canEditStockTotal: boolean;
   canEditBarcode?: boolean;
+  assignableCategories?: readonly string[];
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -784,6 +786,7 @@ export function ProductsManager({
           existingProducts={products}
           initialBarcode={formBarcode}
           canEditBarcode={canEditBarcode}
+          assignableCategories={assignableCategories}
           onClose={() => setShowForm(false)}
           onExistingProduct={handleExistingProductFound}
           onCreatedParent={(parent) => {
@@ -798,6 +801,7 @@ export function ProductsManager({
           stores={allStores}
           existingProducts={products}
           canEditBarcode={canEditBarcode}
+          assignableCategories={assignableCategories}
           onClose={() => setEditingProduct(null)}
         />
       )}

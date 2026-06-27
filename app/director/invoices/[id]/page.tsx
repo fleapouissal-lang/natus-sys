@@ -5,13 +5,17 @@ export const dynamic = "force-dynamic";
 
 export default async function DirectorInvoiceDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ store?: string }>;
 }) {
   const { id } = await params;
+  const { store } = await searchParams;
   const { sale, listPath, scopeLabel, canValidateInvoices } = await loadInvoiceDetailPage(
     "director",
-    id
+    id,
+    { store }
   );
 
   return (

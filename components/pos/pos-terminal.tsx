@@ -111,6 +111,7 @@ export function PosTerminal({
   isStorePos = false,
   cashierUserId,
   productSalesQty = {},
+  posCategoryCards = [],
   openDayClosure = false,
 }: {
   products: Product[];
@@ -127,6 +128,7 @@ export function PosTerminal({
   isStorePos?: boolean;
   cashierUserId?: string;
   productSalesQty?: ProductSalesQtyMap;
+  posCategoryCards?: import("@/lib/pos/pos-category-cards/types").PosCategoryCardConfig[];
   openDayClosure?: boolean;
 }) {
   const router = useRouter();
@@ -1594,6 +1596,7 @@ export function PosTerminal({
                   compact
                   luxuryMobile
                   productSalesQty={productSalesQty}
+                  posCategoryCards={posCategoryCards}
                 />
               </div>
             </div>

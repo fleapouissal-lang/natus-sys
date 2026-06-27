@@ -9,12 +9,14 @@ export function CategoryMultiSelect({
   onChange,
   required = false,
   label = "Catégories",
+  categories = PRODUCT_CATEGORIES,
 }: {
   name?: string;
   value: string[];
   onChange: (next: string[]) => void;
   required?: boolean;
   label?: string;
+  categories?: readonly string[];
 }) {
   const selected = new Set(value);
 
@@ -35,7 +37,7 @@ export function CategoryMultiSelect({
         {required && <span className="text-danger"> *</span>}
       </p>
       <div className="flex flex-wrap gap-2">
-        {PRODUCT_CATEGORIES.map((category) => {
+        {categories.map((category) => {
           const active = selected.has(category);
           return (
             <button

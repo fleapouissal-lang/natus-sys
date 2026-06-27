@@ -7,6 +7,7 @@ import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store
 import { PosTerminal } from "@/components/pos/pos-terminal";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { getStoreProductSalesQuantities } from "@/lib/pos/product-sales-rank.server";
+import { listPosCategoryCards } from "@/lib/pos/pos-category-cards/queries";
 import { getLoyaltySettings } from "@/lib/loyalty/settings.server";
 import { getStorePosAccount } from "@/lib/pos/operator-session";
 import { Card } from "@/components/ui/card";
@@ -69,6 +70,7 @@ export default async function PosPage({
     ? await getStoreProductSalesQuantities(storeId)
     : {};
   const loyaltySettings = await getLoyaltySettings();
+  const posCategoryCards = await listPosCategoryCards();
 
   const cashierName =
     profile?.full_name || profile?.email || "Caissier";
@@ -109,6 +111,7 @@ export default async function PosPage({
           isStorePos={profile?.is_store_pos === true}
           cashierUserId={profile?.id}
           productSalesQty={productSalesQty}
+          posCategoryCards={posCategoryCards}
           openDayClosure={closureParam === "1"}
         />
       </div>

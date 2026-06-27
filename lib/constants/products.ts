@@ -58,8 +58,8 @@ export const CATEGORY_BUCKET_SLUGS = PRODUCT_CATEGORIES.map(getCategoryBucketSlu
 /** Image par défaut dans le bucket de chaque catégorie */
 export const CATEGORY_DEFAULT_IMAGES: Record<ProductCategory, string> = {
   Accueil: "mille-vertus.png",
-  Visage: "mille-vertus.png",
-  Corps: "huile-precieuse.png",
+  Visage: "visage.png",
+  Corps: "corps.png",
   Cheveux: "huile-precieuse.png",
   Hammam: "mille-vertus.png",
   Maison: "huile-precieuse.png",
@@ -68,6 +68,19 @@ export const CATEGORY_DEFAULT_IMAGES: Record<ProductCategory, string> = {
   Homme: "huile-precieuse.png",
   Soleil: "huile-precieuse.png",
   Voyage: "mille-vertus.png",
+};
+
+/** Images fixes des cartes catégories POS (prioritaires sur la couverture produit). */
+export const CATEGORY_CARD_IMAGES: Partial<Record<ProductCategory, string>> = {
+  Visage: "/images/categories/visage.png",
+  Corps: "/images/categories/corps.png",
+  Cheveux: "/images/categories/cheveux.png",
+  Hammam: "/images/categories/hammam.png",
+  Homme: "/images/categories/homme.png",
+  Enfants: "/images/categories/enfants.png",
+  Voyage: "/images/categories/voyage.png",
+  Soleil: "/images/categories/soleil.png",
+  Coffrets: "/images/categories/coffrets.png",
 };
 
 export function getProductImagePublicUrl(

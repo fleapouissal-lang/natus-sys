@@ -393,8 +393,8 @@ export function ZReportModal({
 
             <p className="mt-2 text-xs text-muted">
               {mode === "multi"
-                ? "Z-rapport avancé : 4 feuilles Excel (synthèse, produits, ventes détaillées, analyse + graphiques)."
-                : "Z-rapport avancé : Excel avec produits par vente, stats et graphiques."}
+                ? "Z-rapport avancé : 5 feuilles Excel (synthèse, produits, ventes synthèse, ventes détaillées, analyse + graphiques)."
+                : "Z-rapport avancé : Excel avec articles par vente, stats et graphiques."}
             </p>
           </div>
         </div>

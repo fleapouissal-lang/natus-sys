@@ -39,7 +39,7 @@ function formatFrDate(isoKey: string): string {
 }
 
 export function printCashierSalesReport() {
-  setPrintPageLayout("a4");
+  setPrintPageLayout("a4-report");
   document.body.dataset.printDoc = "sales-report";
 
   const cleanup = () => {

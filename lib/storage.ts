@@ -128,6 +128,36 @@ export async function uploadComplaintPhoto(
 }
 
 const NEWS_IMAGES_BUCKET = "news-images";
+const POS_CATEGORY_CARDS_BUCKET = "pos-category-cards";
+
+export async function uploadPosCategoryCardImage(
+  supabase: SupabaseClient,
+  slug: string,
+  file: File
+): Promise<{ url?: string; error?: string }> {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { error: "Format d'image non supporté (JPG, PNG, WebP, GIF)" };
+  }
+
+  if (file.size > MAX_SIZE) {
+    return { error: "Image trop volumineuse (max 5 Mo)" };
+  }
+
+  const safeSlug = sanitizeFileName(slug || "category");
+  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+  const path = `${safeSlug}/cover.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error } = await supabase.storage.from(POS_CATEGORY_CARDS_BUCKET).upload(path, buffer, {
+    contentType: file.type,
+    upsert: true,
+  });
+
+  if (error) return { error: error.message };
+
+  const { data } = supabase.storage.from(POS_CATEGORY_CARDS_BUCKET).getPublicUrl(path);
+  return { url: data.publicUrl };
+}
 
 export async function uploadNewsImage(
   supabase: SupabaseClient,

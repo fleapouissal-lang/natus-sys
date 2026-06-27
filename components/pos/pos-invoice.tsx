@@ -42,7 +42,7 @@ function InvoiceMonogram() {
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p
-      className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em]"
+      className="natus-invoice-section-label mb-2 text-[11px] font-semibold uppercase tracking-[0.2em]"
       style={{ fontFamily: NATUS_BRAND_SERIF, color: NATUS_BRAND.gold }}
     >
       {children}
@@ -66,18 +66,19 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
   return (
     <div
       id="invoice-print"
-      className="natus-invoice sale-doc invoice mx-auto w-full max-w-[210mm] p-0 shadow-sm print:max-w-none print:p-0 print:shadow-none"
+      className="natus-invoice sale-doc invoice mx-auto w-full max-w-[210mm] bg-white p-0 shadow-sm print:max-w-none print:bg-white print:p-0 print:text-black print:shadow-none"
       style={{
         background: NATUS_BRAND_GRADIENTS.creamBg,
         color: NATUS_BRAND.ink,
       }}
     >
       <div
-        className="natus-invoice-sheet relative overflow-hidden px-8 py-8 print:px-0 print:pb-8 print:pt-4"
+        className="natus-invoice-sheet relative overflow-hidden px-8 py-8 print:overflow-visible print:px-[10mm] print:py-[8mm]"
         style={{ background: NATUS_BRAND_GRADIENTS.creamBg }}
       >
         <InvoiceMonogram />
 
+        <div className="natus-invoice-print-header">
         {/* En-tête */}
         <div
           className="natus-invoice-header relative z-[1] mb-6 mt-2 flex items-start justify-between gap-6 border-b pb-5 pt-4 print:mb-4 print:mt-0 print:pb-4 print:pt-0"
@@ -105,12 +106,12 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
 
         {/* Émetteur | Client */}
         <div
-          className="natus-invoice-parties relative z-[1] mb-8 grid gap-8 border-b pb-8 sm:grid-cols-2 print:mb-4 print:pb-4"
+          className="natus-invoice-parties relative z-[1] mb-8 grid grid-cols-1 gap-8 border-b pb-8 md:grid-cols-2 md:gap-x-10 print:mb-5 print:grid-cols-2 print:gap-x-10 print:pb-5"
           style={{ borderColor: NATUS_BRAND.border }}
         >
-          <div className="relative pl-4">
+          <div className="natus-invoice-party-issuer relative pl-4">
             <div
-              className="absolute bottom-2 left-0 top-2 w-px"
+              className="absolute bottom-2 left-0 top-2 w-px print:opacity-100"
               style={{
                 background: `linear-gradient(180deg, transparent, ${NATUS_BRAND.gold} 12%, ${NATUS_BRAND.gold} 88%, transparent)`,
                 opacity: 0.55,
@@ -132,9 +133,9 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
             </div>
           </div>
 
-          <div className="relative pl-4">
+          <div className="natus-invoice-party-client relative pl-4 md:pl-0 md:pr-4 md:text-right print:pl-0 print:pr-4 print:text-right">
             <div
-              className="absolute bottom-2 left-0 top-2 w-px"
+              className="absolute bottom-2 left-0 top-2 w-px md:left-auto md:right-0 print:left-auto print:right-0"
               style={{
                 background: `linear-gradient(180deg, transparent, ${NATUS_BRAND.gold} 12%, ${NATUS_BRAND.gold} 88%, transparent)`,
                 opacity: 0.55,
@@ -175,9 +176,11 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
             )}
           </div>
         </div>
+        </div>
 
-        {/* Tableau */}
-        <div className="natus-invoice-table-wrap relative z-[1] w-full overflow-visible">
+        {/* Lignes + totaux */}
+        <div className="natus-invoice-body relative z-[1] w-full">
+        <div className="natus-invoice-table-wrap w-full overflow-visible">
           <table className="natus-invoice-table w-full table-fixed border-collapse text-sm print:text-xs">
             <colgroup>
               <col className="w-[44%]" />
@@ -291,6 +294,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
               <span className="text-xl font-bold tabular-nums">{formatCurrency(ttc)}</span>
             </div>
           </div>
+        </div>
         </div>
 
         {/* Pied de page */}

@@ -51,6 +51,7 @@ export function InvoicesHistory({
   const [isPending, startTransition] = useTransition();
   const [validatingId, setValidatingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
+  const pendingAccessNotice = searchParams.get("pending") === "1";
 
   const initialRange = useMemo(
     () => orderDatePresetToKeys(defaultDatePreset),
@@ -207,6 +208,12 @@ export function InvoicesHistory({
 
   return (
     <div className="space-y-6">
+      {pendingAccessNotice && !canValidateInvoices && (
+        <p className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
+          Cette facture n&apos;est pas encore validée par le directeur et n&apos;est pas accessible.
+        </p>
+      )}
+
       {canValidateInvoices && pendingCount > 0 && (
         <p className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
           {pendingCount} facture{pendingCount !== 1 ? "s" : ""} en attente de validation — invisible
@@ -317,6 +324,7 @@ export function InvoicesHistory({
             onToggleSale={toggleSale}
             onTogglePage={togglePage}
             showPagination={false}
+            selectedStoreId={selectedStoreId}
           />
         </div>
       </Card>

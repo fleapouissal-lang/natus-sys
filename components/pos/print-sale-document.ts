@@ -7,7 +7,7 @@ import {
 export type SalePrintTarget = "ticket" | "invoice";
 
 const TARGET_LAYOUT: Record<SalePrintTarget, PrintPageLayout> = {
-  invoice: "a4",
+  invoice: "a4-report",
   ticket: "ticket",
 };
 

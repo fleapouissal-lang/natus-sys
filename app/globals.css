@@ -1542,132 +1542,221 @@ textarea:focus {
     display: none !important;
   }
 
+  body[data-print-doc="invoice"] {
+    background: #fff !important;
+  }
+
   body[data-print-doc="invoice"] #invoice-print {
-    position: static;
-    width: 100%;
-    max-width: none;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: none !important;
     padding: 0 !important;
-    margin: 0;
+    margin: 0 !important;
     overflow: visible !important;
     background: #fff !important;
     color: #000 !important;
-    -webkit-print-color-adjust: economy;
-    print-color-adjust: economy;
+    -webkit-print-color-adjust: economy !important;
+    print-color-adjust: economy !important;
   }
 
   body[data-print-doc="invoice"] #invoice-print,
   body[data-print-doc="invoice"] #invoice-print * {
     box-shadow: none !important;
     text-shadow: none !important;
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: economy !important;
+    print-color-adjust: economy !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice,
   body[data-print-doc="invoice"] .natus-invoice-sheet {
     background: #fff !important;
     color: #000 !important;
-    -webkit-print-color-adjust: economy;
-    print-color-adjust: economy;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-sheet {
     border: none !important;
-    padding: 0 !important;
+    padding: 8mm 10mm !important;
     overflow: visible !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-print-header {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-header {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    page-break-after: avoid !important;
+    break-after: avoid-page !important;
+    border-bottom: 1px solid #000 !important;
+    border-color: #000 !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-header h1,
+  body[data-print-doc="invoice"] .natus-invoice-header p,
+  body[data-print-doc="invoice"] .natus-invoice-header span,
+  body[data-print-doc="invoice"] .natus-invoice-header [style] {
+    color: #000 !important;
+    background: #fff !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-parties {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    column-gap: 10mm !important;
+    row-gap: 4mm !important;
+    page-break-after: avoid !important;
+    break-after: avoid-page !important;
+    border-bottom: 1px solid #000 !important;
+    border-color: #000 !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-party-issuer {
+    text-align: left !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-party-client {
+    text-align: right !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-monogram {
     display: none !important;
   }
 
-  body[data-print-doc="invoice"] .natus-invoice-header {
-    page-break-after: avoid;
-    break-after: avoid-page;
-    border-color: #000 !important;
+  body[data-print-doc="invoice"] .natus-invoice-section-label,
+  body[data-print-doc="invoice"] .natus-invoice-party-issuer p,
+  body[data-print-doc="invoice"] .natus-invoice-party-client p,
+  body[data-print-doc="invoice"] .natus-invoice-party-issuer span,
+  body[data-print-doc="invoice"] .natus-invoice-party-client span,
+  body[data-print-doc="invoice"] .natus-invoice-footer p,
+  body[data-print-doc="invoice"] .natus-invoice-footer span {
+    color: #000 !important;
+    background: #fff !important;
   }
 
-  body[data-print-doc="invoice"] .natus-invoice-parties {
-    page-break-after: avoid;
-    break-after: avoid-page;
-    border-color: #000 !important;
+  body[data-print-doc="invoice"] .natus-invoice-section-label {
+    font-weight: 700 !important;
+    letter-spacing: 0.16em !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-party-issuer .absolute,
+  body[data-print-doc="invoice"] .natus-invoice-party-client .absolute {
+    background: #000 !important;
+    opacity: 0.2 !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-body {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-table-wrap {
     overflow: visible !important;
-    max-width: 100%;
+    max-width: 100% !important;
     border: 1px solid #000 !important;
+    border-bottom: none !important;
     border-radius: 0 !important;
     background: #fff !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-table-wrap table {
     width: 100% !important;
-    max-width: 100%;
-    table-layout: fixed;
+    max-width: 100% !important;
+    table-layout: fixed !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-table thead {
-    display: table-header-group;
+    display: table-header-group !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-table thead tr,
   body[data-print-doc="invoice"] .natus-invoice-table thead th {
-    background: #000 !important;
-    color: #fff !important;
+    background: #fff !important;
+    color: #000 !important;
+    border: 1px solid #000 !important;
     border-radius: 0 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    font-weight: 700 !important;
   }
 
-  body[data-print-doc="invoice"] .natus-invoice-table tbody tr {
-    page-break-inside: avoid;
-    break-inside: avoid;
+  body[data-print-doc="invoice"] .natus-invoice-table tbody tr,
+  body[data-print-doc="invoice"] .natus-invoice-table tbody tr[style] {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
     background: #fff !important;
     color: #000 !important;
     border-color: #ccc !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-table tbody td {
+    border: 1px solid #ccc !important;
     border-color: #ccc !important;
+    color: #000 !important;
+    background: #fff !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-totals {
-    page-break-inside: avoid;
-    break-inside: avoid;
-    border-color: #000 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border: 1px solid #000 !important;
+    border-top: none !important;
+    background: #fff !important;
   }
 
-  body[data-print-doc="invoice"] .natus-invoice-totals > div > div {
+  body[data-print-doc="invoice"] .natus-invoice-totals > div {
+    margin-left: auto !important;
+    max-width: 18rem !important;
+    width: 100% !important;
+  }
+
+  body[data-print-doc="invoice"] .natus-invoice-totals > div > div,
+  body[data-print-doc="invoice"] .natus-invoice-totals > div > div[style] {
     background: #fff !important;
     color: #000 !important;
     border-color: #ccc !important;
   }
 
-  body[data-print-doc="invoice"] .natus-invoice-total-bar {
-    background: #000 !important;
-    color: #fff !important;
+  body[data-print-doc="invoice"] .natus-invoice-total-bar,
+  body[data-print-doc="invoice"] .natus-invoice-total-bar[style] {
+    background: #fff !important;
+    color: #000 !important;
+    border-top: 2px solid #000 !important;
     border-radius: 0 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    font-weight: 700 !important;
   }
 
-  body[data-print-doc="invoice"] .natus-invoice-footer,
-  body[data-print-doc="invoice"] .natus-invoice-brand-bar {
-    page-break-inside: avoid;
-    break-inside: avoid;
+  body[data-print-doc="invoice"] .natus-invoice-footer {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border-top: 1px solid #000 !important;
     border-color: #000 !important;
     background: #fff !important;
     color: #000 !important;
   }
 
-  body[data-print-doc="invoice"] .natus-invoice-brand-bar {
-    background: #000 !important;
-    color: #fff !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  body[data-print-doc="invoice"] .natus-invoice-brand-bar,
+  body[data-print-doc="invoice"] .natus-invoice-brand-bar[style] {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    background: #fff !important;
+    color: #000 !important;
+    border-top: 1px solid #000 !important;
+    font-weight: 600 !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-sheet [style*="gradient"],
-  body[data-print-doc="invoice"] .natus-invoice-sheet [style*="linear-gradient"] {
+  body[data-print-doc="invoice"] .natus-invoice-sheet [style*="linear-gradient"],
+  body[data-print-doc="invoice"] .natus-invoice-sheet [style*="rgba"] {
     background: #fff !important;
   }
 
@@ -1689,8 +1778,12 @@ textarea:focus {
     color: #000 !important;
     box-shadow: none !important;
     overflow: visible !important;
-    page-break-after: avoid;
-    page-break-inside: avoid;
+    page-break-after: auto;
+    page-break-inside: auto;
+  }
+
+  body[data-print-doc="ticket"] #ticket-print thead {
+    display: table-header-group;
   }
 
   body[data-print-doc="ticket"] #ticket-print,
@@ -1762,14 +1855,97 @@ textarea:focus {
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    font-size: 10pt !important;
+    line-height: 1.4 !important;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
   }
 
   body[data-print-doc="sales-report"] #cashier-sales-report-print,
   body[data-print-doc="sales-report"] #cashier-sales-report-print * {
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report-report-header {
+    border-bottom-color: #000 !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report-report-header p,
+  body[data-print-doc="sales-report"] .natus-sales-report-report-header h1 {
+    color: #000 !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report-stats > div {
+    background: #fff !important;
+    border: 1px solid #000 !important;
+    border-radius: 0 !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report-stats p {
+    color: #000 !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report .overflow-hidden.rounded-md {
+    border: 1px solid #000 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report thead tr,
+  body[data-print-doc="sales-report"] .natus-sales-report thead tr[style] {
+    background: #000 !important;
+    color: #fff !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report thead th {
+    color: #fff !important;
+    border: 1px solid #000 !important;
+    font-weight: 700 !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report tbody tr {
+    background: #fff !important;
+    border-color: #ccc !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report tbody td {
+    border: 1px solid #ccc !important;
+    color: #000 !important;
+    vertical-align: top !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-sales-report tbody tr[style] {
+    background: #fff !important;
+    border-color: #000 !important;
+    color: #000 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-closure-report-total-bar {
+    background: #fff !important;
+    border-top: 2px solid #000 !important;
+    color: #000 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  body[data-print-doc="sales-report"] footer,
+  body[data-print-doc="sales-report"] .natus-closure-report-footer {
+    color: #000 !important;
+    border-color: #000 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  body[data-print-doc="sales-report"] .natus-closure-report-cancelled p {
+    color: #000 !important;
   }
 
   body[data-print-doc="sales-report"] .natus-sales-report,
@@ -1842,10 +2018,14 @@ textarea:focus {
     overflow: visible !important;
     font-size: inherit !important;
     line-height: inherit !important;
-    page-break-after: avoid;
-    page-break-inside: avoid;
+    page-break-after: auto;
+    page-break-inside: auto;
     -webkit-print-color-adjust: economy;
     print-color-adjust: economy;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print thead {
+    display: table-header-group;
   }
 
   body[data-print-doc="day-closure"] #day-closure-ticket-print,
@@ -2072,9 +2252,9 @@ textarea:focus {
   }
 
   body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-row:nth-child(even) {
-    background: #f5f5f5 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    background: #fff !important;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
   }
 
   body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-total-bar {
@@ -2084,7 +2264,7 @@ textarea:focus {
     justify-content: space-between !important;
     gap: 4mm !important;
     white-space: nowrap !important;
-    background: #e8e8e8 !important;
+    background: #fff !important;
     border-top: 2px solid #000000 !important;
     padding: 3mm 4mm !important;
     font-size: 11pt !important;
@@ -2092,8 +2272,8 @@ textarea:focus {
     color: #000000 !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
   }
 
   body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-total-bar span:last-child {
@@ -2151,6 +2331,165 @@ textarea:focus {
   background: #fffdf9;
 }
 
+/* Mobile — image plein écran + carte glass flottante sur l'image */
+.natus-login-mobile-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background-color: #1a1612;
+}
+
+.natus-login-mobile-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(0, 0, 0, 0.35) 0%, transparent 55%),
+    linear-gradient(
+      180deg,
+      rgba(18, 14, 10, 0.28) 0%,
+      rgba(18, 14, 10, 0.06) 42%,
+      rgba(18, 14, 10, 0.18) 68%,
+      rgba(18, 14, 10, 0.62) 100%
+    );
+  pointer-events: none;
+}
+
+.natus-login-mobile-bg .natus-login-hero__img,
+.natus-login-mobile-bg img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 28%;
+}
+
+.natus-login-mobile-brand-line {
+  background: linear-gradient(90deg, rgba(212, 168, 90, 0.95) 0%, rgba(212, 168, 90, 0.15) 100%);
+}
+
+@media (max-width: 1023px) {
+  .natus-login {
+    background: transparent;
+  }
+
+  .natus-login-panel {
+    background: transparent !important;
+    min-height: 100dvh;
+    justify-content: flex-start;
+  }
+
+  .natus-login-mobile-spacer {
+    min-height: clamp(2.5rem, 8vh, 5rem);
+    flex: 1 1 auto;
+  }
+
+  .natus-login-mobile-safe {
+    flex-shrink: 0;
+    height: max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  .natus-login-mobile-card {
+    flex-shrink: 0;
+    margin-inline: 1.25rem;
+    margin-bottom: 0;
+    padding: 1.65rem 1.4rem 1.5rem;
+    border-radius: 1.35rem;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background:
+      linear-gradient(
+        165deg,
+        rgba(255, 253, 249, 0.22) 0%,
+        rgba(30, 24, 18, 0.52) 48%,
+        rgba(22, 18, 14, 0.68) 100%
+      );
+    -webkit-backdrop-filter: blur(28px) saturate(1.25);
+    backdrop-filter: blur(28px) saturate(1.25);
+    box-shadow:
+      0 20px 56px rgba(0, 0, 0, 0.38),
+      0 1px 0 rgba(255, 255, 255, 0.14) inset,
+      0 0 0 1px rgba(179, 140, 74, 0.12) inset;
+  }
+
+  .natus-login-mobile-card-accent {
+    display: block;
+    width: 2.5rem;
+    height: 1px;
+    margin: 0 auto 1.25rem;
+    background: linear-gradient(90deg, transparent, rgba(212, 168, 90, 0.85), transparent);
+  }
+
+  .natus-login-form-shell {
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .natus-login-mobile-card .natus-login-form-shell label {
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .natus-login-mobile-card .natus-login-field,
+  .natus-login-mobile-card .natus-login-field:-webkit-autofill,
+  .natus-login-mobile-card .natus-login-field:-webkit-autofill:hover,
+  .natus-login-mobile-card .natus-login-field:-webkit-autofill:focus {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.28) !important;
+    -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.08) inset !important;
+    box-shadow:
+      0 0 0 1000px rgba(255, 255, 255, 0.08) inset,
+      0 1px 0 rgba(255, 255, 255, 0.06) !important;
+    -webkit-text-fill-color: #ffffff !important;
+    caret-color: #ffffff;
+    color: #ffffff !important;
+  }
+
+  .natus-login-mobile-card .natus-login-field:focus {
+    border-color: rgba(212, 168, 90, 0.65) !important;
+    box-shadow:
+      0 0 0 1000px rgba(255, 255, 255, 0.12) inset,
+      0 0 0 1px rgba(212, 168, 90, 0.35),
+      0 8px 24px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .natus-login-mobile-card .natus-login-field::placeholder,
+  .natus-login-mobile-card .natus-login-field::-webkit-input-placeholder {
+    color: rgba(255, 255, 255, 0.42) !important;
+    -webkit-text-fill-color: rgba(255, 255, 255, 0.42) !important;
+  }
+
+  .natus-login-mobile-card .natus-login-field::-moz-placeholder {
+    color: rgba(255, 255, 255, 0.42) !important;
+  }
+
+  .natus-login-mobile-card .natus-login-submit {
+    background: linear-gradient(135deg, #faeaa1 0%, #e8c96a 52%, #d4a85a 100%) !important;
+    color: #1a1612 !important;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28) !important;
+  }
+
+  .natus-login-mobile-card .natus-login-submit:hover:not(:disabled) {
+    background: linear-gradient(135deg, #fff0b8 0%, #f0d078 52%, #ddb868 100%) !important;
+  }
+
+  .natus-login-mobile-card [role="alert"] {
+    border-color: rgba(255, 120, 120, 0.35);
+    background: rgba(120, 20, 20, 0.35);
+    color: #ffcaca;
+  }
+
+  .natus-login-mobile-card button[type="button"] {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .natus-login-mobile-card button[type="button"]:hover {
+    color: rgba(255, 255, 255, 0.88);
+  }
+}
+
 .natus-login-hero::before,
 .natus-login-hero::after {
   content: none;
@@ -2164,17 +2503,18 @@ textarea:focus {
   mix-blend-mode: normal !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-}
-
-.natus-login-panel {
-  background:
-    radial-gradient(ellipse 80% 60% at 15% 20%, rgba(179, 140, 74, 0.07), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 85% 85%, rgba(235, 212, 186, 0.35), transparent 60%),
-    linear-gradient(165deg, #fffdf9 0%, #fff8f0 48%, #fff6ec 100%);
+  image-rendering: auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 @media (min-width: 1024px) {
   .natus-login-panel {
+    background:
+      radial-gradient(ellipse 80% 60% at 15% 20%, rgba(179, 140, 74, 0.07), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 85% 85%, rgba(235, 212, 186, 0.35), transparent 60%),
+      linear-gradient(165deg, #fffdf9 0%, #fff8f0 48%, #fff6ec 100%);
     border-right: 1px solid rgba(179, 140, 74, 0.1);
   }
 }

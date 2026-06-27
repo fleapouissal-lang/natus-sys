@@ -32,6 +32,7 @@ import {
   type PosCategoryCard,
   type ProductSalesQtyMap,
 } from "@/lib/pos/product-sales-rank";
+import type { PosCategoryCardConfig } from "@/lib/pos/pos-category-cards/types";
 import type { Product } from "@/lib/types";
 
 function CategoryCardsGrid({
@@ -63,7 +64,16 @@ function CategoryCardsGrid({
               className="group flex flex-col overflow-hidden rounded-2xl border border-primary/20 bg-surface text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-md cursor-pointer"
             >
               <div className="relative aspect-[4/5] w-full overflow-hidden">
-                {card.coverProduct ? (
+                {card.coverImageUrl ? (
+                  <img
+                    src={card.coverImageUrl}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    draggable={false}
+                    className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : card.coverProduct ? (
                   <ProductImage
                     product={card.coverProduct}
                     parent={parentImage}
@@ -636,6 +646,7 @@ export function ProductCatalog({
   compact = false,
   luxuryMobile = false,
   productSalesQty = {},
+  posCategoryCards = [],
 }: {
   products: Product[];
   onAddToCart: (product: Product, qty: number) => void;
@@ -649,18 +660,21 @@ export function ProductCatalog({
   compact?: boolean;
   luxuryMobile?: boolean;
   productSalesQty?: ProductSalesQtyMap;
+  posCategoryCards?: PosCategoryCardConfig[];
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
 
   const categories = useMemo(() => {
-    return buildPosCategoryCards(products, productSalesQty).map((card) => card.name);
-  }, [products, productSalesQty]);
+    return buildPosCategoryCards(products, productSalesQty, posCategoryCards).map(
+      (card) => card.name
+    );
+  }, [products, productSalesQty, posCategoryCards]);
 
   const categoryCards = useMemo(
-    () => buildPosCategoryCards(products, productSalesQty),
-    [products, productSalesQty]
+    () => buildPosCategoryCards(products, productSalesQty, posCategoryCards),
+    [products, productSalesQty, posCategoryCards]
   );
 
   const hasSearch = searchQuery.trim().length > 0;

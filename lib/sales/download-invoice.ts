@@ -1,10 +1,5 @@
 import type { SaleDocumentData } from "@/components/pos/sale-document-types";
 import { saleDocumentNumber } from "@/components/pos/sale-document-types";
-import {
-  NATUS_BRAND,
-  NATUS_BRAND_GRADIENTS,
-  NATUS_BRAND_SERIF,
-} from "@/lib/constants/natus-brand";
 import { NATUS_INVOICE_COMPANY } from "@/lib/constants/company";
 import { computeTvaBreakdown, TVA_RATE } from "@/lib/constants/sales";
 import { formatCurrency } from "@/lib/utils";
@@ -17,52 +12,105 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
+function lineUnitHt(unitPriceTtc: number): number {
+  return unitPriceTtc / (1 + TVA_RATE);
+}
+
 function buildInvoiceBody(data: SaleDocumentData): string {
   const invoiceNo = saleDocumentNumber(data.saleId);
   const { ht, tva, ttc } = computeTvaBreakdown(data.total);
   const tvaPercent = Math.round(TVA_RATE * 100);
   const clientName = escapeHtml(data.customerName?.trim() || "Divers");
+  const companyAddress = data.storeName
+    ? `${NATUS_INVOICE_COMPANY.address} (${escapeHtml(data.storeName)})`
+    : NATUS_INVOICE_COMPANY.address;
   const rows = data.items
-    .map(
-      (item) => `
+    .map((item) => {
+      const unitHt = lineUnitHt(item.unitPrice);
+      const lineHt = unitHt * item.quantity;
+      return `
         <tr>
           <td>${escapeHtml(item.name)}</td>
           <td style="text-align:center">${item.quantity}</td>
-          <td style="text-align:right">${formatCurrency(item.unitPrice)}</td>
-          <td style="text-align:right">${formatCurrency(item.quantity * item.unitPrice)}</td>
-        </tr>`
-    )
+          <td style="text-align:right">${formatCurrency(unitHt)}</td>
+          <td style="text-align:right">${formatCurrency(lineHt)}</td>
+        </tr>`;
+    })
+    .join("");
+
+  const discountRows = [
+    data.subtotal != null &&
+    (data.loyaltyDiscount || data.proClientDiscount || data.promoDiscount)
+      ? `<div><span>Sous-total articles</span><span>${formatCurrency(data.subtotal)}</span></div>`
+      : "",
+    data.loyaltyDiscount
+      ? `<div><span>Réduction fidélité</span><span>-${formatCurrency(data.loyaltyDiscount)}</span></div>`
+      : "",
+    data.proClientDiscount
+      ? `<div><span>Remise Client Pro (-34 %)</span><span>-${formatCurrency(data.proClientDiscount)}</span></div>`
+      : "",
+    data.promoDiscount
+      ? `<div><span>Promo ${escapeHtml(data.promoCode ?? "")}</span><span>-${formatCurrency(data.promoDiscount)}</span></div>`
+      : "",
+  ]
+    .filter(Boolean)
     .join("");
 
   return `
-  <p style="font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#000">Facture</p>
-  <h1>${escapeHtml(NATUS_INVOICE_COMPANY.legalName)}</h1>
-  <div class="meta">
-    <div><strong>N° facture :</strong> ${invoiceNo}</div>
-    <div><strong>Date :</strong> ${escapeHtml(new Date(data.createdAt).toLocaleString("fr-FR"))}</div>
-    <div><strong>Client :</strong> ${clientName}</div>
-    ${data.customerPhone ? `<div><strong>Tél. :</strong> ${escapeHtml(data.customerPhone)}</div>` : ""}
-    ${data.customerEmail ? `<div><strong>Email :</strong> ${escapeHtml(data.customerEmail)}</div>` : ""}
-    ${data.customerIce ? `<div><strong>ICE :</strong> ${escapeHtml(data.customerIce)}</div>` : ""}
-    ${data.storeName ? `<div><strong>Magasin :</strong> ${escapeHtml(data.storeName)}</div>` : ""}
-    ${data.shopifyOrderNumber ? `<div><strong>Commande :</strong> ${escapeHtml(data.shopifyOrderNumber)}</div>` : ""}
+  <header class="invoice-header">
+    <div>
+      <p class="eyebrow">Facture</p>
+      <h2 class="invoice-title">FACTURE</h2>
+      <p class="invoice-no"><strong>Facture N°</strong> ${invoiceNo}</p>
+    </div>
+    <div class="invoice-brand">Natus</div>
+  </header>
+
+  <section class="parties">
+    <div class="party party-issuer">
+      <p class="party-label">Émetteur</p>
+      <p class="party-name">${escapeHtml(NATUS_INVOICE_COMPANY.legalName)}</p>
+      <p>${escapeHtml(companyAddress)}</p>
+      <p>${escapeHtml(NATUS_INVOICE_COMPANY.city)}</p>
+      <p>Tél. : ${escapeHtml(NATUS_INVOICE_COMPANY.phone)}</p>
+      <p>Email : ${escapeHtml(NATUS_INVOICE_COMPANY.email)}</p>
+      <p class="party-meta">${escapeHtml(NATUS_INVOICE_COMPANY.taxId)}</p>
+    </div>
+    <div class="party party-client">
+      ${
+        data.shopifyOrderNumber
+          ? `<p class="party-ref"><strong>Réf. commande :</strong> ${escapeHtml(data.shopifyOrderNumber)}</p>`
+          : ""
+      }
+      <p class="party-label">Client</p>
+      <p class="party-name">${clientName}</p>
+      ${data.customerPhone ? `<p>Tél. : ${escapeHtml(data.customerPhone)}</p>` : ""}
+      ${data.customerEmail ? `<p>Email : ${escapeHtml(data.customerEmail)}</p>` : ""}
+      ${data.customerIce ? `<p>ICE : ${escapeHtml(data.customerIce)}</p>` : ""}
+      ${data.loyaltyCardNumber ? `<p>Carte fidélité : ${escapeHtml(data.loyaltyCardNumber)}</p>` : ""}
+    </div>
+  </section>
+
+  <div class="invoice-lines">
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Qté</th>
+          <th>Prix HT</th>
+          <th>Total HT</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="totals">
+      ${discountRows}
+      <div><span>Total HT</span><span>${formatCurrency(ht)}</span></div>
+      <div><span>TVA ${tvaPercent} %</span><span>${formatCurrency(tva)}</span></div>
+      <div class="total-ttc"><span>Total TTC</span><strong>${formatCurrency(ttc)}</strong></div>
+    </div>
   </div>
-  <table>
-    <thead>
-      <tr>
-        <th>Article</th>
-        <th>Qté</th>
-        <th>P.U. TTC</th>
-        <th>Total TTC</th>
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <div class="totals">
-    <div><span>Total HT</span><span>${formatCurrency(ht)}</span></div>
-    <div><span>TVA ${tvaPercent} %</span><span>${formatCurrency(tva)}</span></div>
-    <div class="total-ttc"><strong>Total TTC</strong><strong>${formatCurrency(ttc)}</strong></div>
-  </div>
+
   <p class="footer">${escapeHtml(NATUS_INVOICE_COMPANY.legalMention)}</p>`;
 }
 
@@ -78,49 +126,145 @@ const INVOICE_DOC_STYLES = `
       }
     }
     body {
-      font-family: Georgia, serif;
+      font-family: Georgia, "Times New Roman", serif;
       margin: 0;
       color: #000;
       background: #fff;
+      font-size: 13px;
+      line-height: 1.45;
     }
-    h1 { color: #000; font-weight: 400; margin: 0 0 8px; }
-    .meta { font-size: 14px; margin-bottom: 24px; }
+    .invoice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #000;
+    }
+    .eyebrow {
+      margin: 0 0 6px;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #000;
+    }
+    .invoice-title {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: #000;
+    }
+    .invoice-no {
+      margin: 10px 0 0;
+      color: #000;
+    }
+    .invoice-brand {
+      font-size: 2.2rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #000;
+      text-align: right;
+    }
+    .parties {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 32px;
+      row-gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid #000;
+    }
+    .party-label {
+      margin: 0 0 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #000;
+    }
+    .party-name {
+      margin: 0 0 6px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #000;
+    }
+    .party p {
+      margin: 0 0 4px;
+      color: #000;
+    }
+    .party-meta {
+      font-size: 11px;
+    }
+    .party-ref {
+      margin-bottom: 10px !important;
+    }
+    .party-issuer {
+      text-align: left;
+      padding-left: 12px;
+      border-left: 1px solid #ccc;
+    }
+    .party-client {
+      text-align: right;
+      padding-right: 12px;
+      border-right: 1px solid #ccc;
+    }
+    .invoice-lines {
+      border: 1px solid #000;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 12px;
       background: #fff;
     }
     thead { display: table-header-group; }
-    tbody tr { page-break-inside: avoid; break-inside: avoid; }
-    th, td { border: 1px solid #ccc; padding: 8px 10px; }
+    tbody tr { page-break-inside: auto; break-inside: auto; }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 10px;
+      vertical-align: top;
+      color: #000;
+    }
     th {
-      background: #000;
-      color: #fff;
+      background: #fff;
+      color: #000;
       text-align: left;
-      border-radius: 0;
-      font-size: 11px;
+      border: 1px solid #000;
+      font-size: 10px;
+      font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
     }
+    th:nth-child(2) { text-align: center; }
+    th:nth-child(3), th:nth-child(4) { text-align: right; }
     .totals {
-      margin-top: 16px;
-      width: 280px;
+      width: 100%;
+      max-width: 18rem;
       margin-left: auto;
-      font-size: 14px;
+      font-size: 13px;
       page-break-inside: avoid;
       break-inside: avoid;
+      border-top: 1px solid #000;
     }
-    .totals div { display: flex; justify-content: space-between; padding: 4px 0; }
+    .totals div {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 8px 14px;
+      border-bottom: 1px solid #ccc;
+      color: #000;
+    }
     .totals .total-ttc {
-      background: #000;
-      color: #fff;
-      padding: 10px 12px;
-      margin-top: 4px;
+      background: #fff;
+      color: #000;
+      border-top: 2px solid #000;
+      border-bottom: none;
       font-weight: 700;
     }
     .footer {
-      margin-top: 32px;
+      margin-top: 28px;
       font-size: 11px;
       color: #333;
       text-align: center;
@@ -136,9 +280,11 @@ const INVOICE_DOC_STYLES = `
       background: #fff;
     }
     @media print {
-      body { background: #fff; }
-      -webkit-print-color-adjust: economy;
-      print-color-adjust: economy;
+      body {
+        background: #fff;
+        -webkit-print-color-adjust: economy;
+        print-color-adjust: economy;
+      }
     }`;
 
 export function buildInvoiceHtml(data: SaleDocumentData): string {
@@ -162,7 +308,7 @@ export function buildInvoicesCombinedHtml(
   const totalTtc = invoices.reduce((sum, invoice) => sum + invoice.total, 0);
   const summary = `
     <section class="export-summary">
-      <p style="font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${NATUS_BRAND.gold}">Export factures</p>
+      <p style="font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#000">Export factures</p>
       <h1>${escapeHtml(NATUS_INVOICE_COMPANY.legalName)}</h1>
       <div class="meta">
         <div><strong>Périmètre :</strong> ${escapeHtml(meta.scopeLabel)}</div>

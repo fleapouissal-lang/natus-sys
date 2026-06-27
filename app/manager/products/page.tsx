@@ -10,6 +10,7 @@ import { getActiveStores, getProductsWithStoreStock } from "@/lib/inventory";
 import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store";
 import { ProductsManager } from "@/components/products/products-manager";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
+import { listAssignableProductCategories } from "@/lib/pos/pos-category-cards/queries";
 
 export default async function ProductsPage({
   searchParams,
@@ -30,6 +31,7 @@ export default async function ProductsPage({
   const canModify = profile && selectedStore ? canModifyStock(profile, selectedStore) : false;
   const canEditTotal =
     profile && selectedStore ? canEditStockTotal(profile, selectedStore) : false;
+  const assignableCategories = await listAssignableProductCategories();
 
   return (
     <div className="animate-fade-in space-y-4">
@@ -47,6 +49,7 @@ export default async function ProductsPage({
           canModifyStock={canModify}
           canEditStockTotal={canEditTotal}
           canEditBarcode={profile ? isDirector(profile) : false}
+          assignableCategories={assignableCategories}
         />
       ) : (
         <p className="text-center text-muted py-12">

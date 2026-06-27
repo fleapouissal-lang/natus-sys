@@ -5,12 +5,34 @@ import { getActiveStores } from "@/lib/inventory";
 import { getHubRetailStoresForTransfer } from "@/lib/hub";
 import { fetchInvoicesByStoreIds, fetchInvoiceById } from "@/lib/sales/fetch-invoices";
 import { getInvoicesBasePath } from "@/lib/sales/invoice-routes";
-import { getCityFilter, isDirector, isHub, isManager, filterRetailStoresByProfile } from "@/lib/permissions";
+import {
+  getCityFilter,
+  isDirector,
+  isHub,
+  isManager,
+  filterRetailStoresByProfile,
+} from "@/lib/permissions";
 import { getSelectedStore } from "@/lib/management-store";
 import { isSaleInvoiceValidated } from "@/lib/sales/invoice-validation";
-import type { Profile, Store } from "@/lib/types";
+import type { Profile, Store, UserRole } from "@/lib/types";
 
 export type InvoicePageScope = "cashier" | "manager" | "director" | "hub";
+
+function invoiceScopeForRole(role: UserRole): InvoicePageScope | null {
+  if (role === "cashier") return "cashier";
+  if (role === "manager") return "manager";
+  if (role === "hub") return "hub";
+  if (role === "directeur" || role === "admin") return "director";
+  return null;
+}
+
+function invoiceDetailPath(basePath: string, saleId: string, storeParam?: string | null): string {
+  const query =
+    storeParam && storeParam.trim()
+      ? `?store=${encodeURIComponent(storeParam.trim())}`
+      : "";
+  return `${basePath}/${saleId}${query}`;
+}
 
 async function resolveStoreScope(
   profile: Profile,
@@ -110,16 +132,8 @@ export async function loadInvoicesListPage(
   const basePath = getInvoicesBasePath(profile.role);
   if (!basePath) notFound();
 
-  if (scope === "cashier" && profile.role !== "cashier") {
-    redirect(basePath);
-  }
-  if (scope === "manager" && !isManager(profile) && !isDirector(profile)) {
-    redirect(basePath);
-  }
-  if (scope === "director" && !isDirector(profile)) {
-    redirect(basePath);
-  }
-  if (scope === "hub" && !isHub(profile)) {
+  const roleScope = invoiceScopeForRole(profile.role);
+  if (!roleScope || roleScope !== scope) {
     redirect(basePath);
   }
 
@@ -148,12 +162,23 @@ export async function loadInvoicesListPage(
   };
 }
 
-export async function loadInvoiceDetailPage(scope: InvoicePageScope, saleId: string) {
+export async function loadInvoiceDetailPage(
+  scope: InvoicePageScope,
+  saleId: string,
+  options?: { store?: string | null }
+) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
   const basePath = getInvoicesBasePath(profile.role);
   if (!basePath) notFound();
+
+  const roleScope = invoiceScopeForRole(profile.role);
+  if (!roleScope) notFound();
+
+  if (roleScope !== scope) {
+    redirect(invoiceDetailPath(basePath, saleId, options?.store));
+  }
 
   const supabase = await createClient();
   const { sale, error } = await fetchInvoiceById(supabase, saleId);
@@ -162,25 +187,46 @@ export async function loadInvoiceDetailPage(scope: InvoicePageScope, saleId: str
     notFound();
   }
 
-  const { storeIds, scopeLabel } = await resolveStoreScope(profile, scope);
-  if (sale.store_id && storeIds.length > 0 && !storeIds.includes(sale.store_id)) {
-    notFound();
+  if (sale.id !== saleId.trim()) {
+    redirect(invoiceDetailPath(basePath, sale.id, options?.store));
   }
 
-  if (scope === "cashier" && profile.role === "cashier" && sale.store_id !== profile.store_id) {
-    notFound();
+  const directorView = isDirector(profile);
+
+  if (!directorView && !isSaleInvoiceValidated(sale)) {
+    redirect(`${basePath}?pending=1`);
   }
 
-  if (!isDirector(profile) && !isSaleInvoiceValidated(sale)) {
-    notFound();
+  const { storeIds, scopeLabel } = await resolveStoreScope(
+    profile,
+    roleScope,
+    options?.store
+  );
+
+  if (!directorView) {
+    if (sale.store_id && storeIds.length > 0 && !storeIds.includes(sale.store_id)) {
+      notFound();
+    }
+
+    if (
+      roleScope === "cashier" &&
+      profile.role === "cashier" &&
+      sale.store_id &&
+      profile.store_id &&
+      sale.store_id !== profile.store_id
+    ) {
+      notFound();
+    }
   }
 
   return {
     sale,
-    listPath: basePath,
+    listPath: options?.store
+      ? `${basePath}?store=${encodeURIComponent(options.store.trim())}`
+      : basePath,
     scopeLabel: sale.stores?.name
       ? `${sale.stores.name}${sale.stores.city ? ` — ${sale.stores.city}` : ""}`
       : scopeLabel,
-    canValidateInvoices: isDirector(profile) && !isSaleInvoiceValidated(sale),
+    canValidateInvoices: directorView && !isSaleInvoiceValidated(sale),
   };
 }

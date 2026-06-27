@@ -192,7 +192,44 @@ export async function downloadZReportExcel(data: ZReportPayload): Promise<void> 
   });
   autoFitColumns(products, { min: 8, max: 52, wrapCols: [2] });
 
-  const salesSheet = wb.addWorksheet("Ventes & articles");
+  const salesSummary = wb.addWorksheet("Ventes synthèse");
+  const salesSummaryHeader = salesSummary.addRow([
+    "Site",
+    "Jour métier",
+    "Heure",
+    "Caissier",
+    "Paiement",
+    "Total (DH)",
+    "Statut",
+    "Articles (nom × qté)",
+  ]);
+  styleHeaderRow(salesSummaryHeader);
+
+  for (const block of data.closures) {
+    for (const sale of block.sales) {
+      salesSummary.addRow([
+        block.closure.store_name,
+        formatDayClosureDateShort(block.closure.business_date),
+        new Date(sale.created_at).toLocaleTimeString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        sale.profiles?.full_name || sale.profiles?.email || "—",
+        paymentLabel(sale.payment_method),
+        roundMoney(Number(sale.total)),
+        sale.cancelled_at ? "Annulée" : "Validée",
+        formatSaleLineItemsMultiline(sale),
+      ]);
+    }
+  }
+
+  autoFitColumns(salesSummary, {
+    min: 8,
+    max: 52,
+    wrapCols: [1, 4, 8],
+  });
+
+  const salesSheet = wb.addWorksheet("Ventes détaillées");
   const salesHeader = salesSheet.addRow([
     "Site",
     "Jour métier",

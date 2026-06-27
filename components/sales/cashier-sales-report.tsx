@@ -7,6 +7,7 @@ import {
   NATUS_BRAND_SERIF,
 } from "@/lib/constants/natus-brand";
 import { formatSalesReportPeriodLabel } from "@/lib/sales/cashier-report";
+import { SaleLineItemsSummary } from "@/components/sales/sale-line-items-summary";
 import {
   formatCurrency,
   formatDate,
@@ -173,6 +174,7 @@ export function CashierSalesReport({
                   <th>Magasin</th>
                   <th>Paiement</th>
                   <th className="text-right">Montant</th>
+                  <th>Articles</th>
                   <th>Réf.</th>
                 </tr>
               ) : (
@@ -181,6 +183,7 @@ export function CashierSalesReport({
                   <th className="px-3 py-2.5 text-left font-semibold">Magasin</th>
                   <th className="px-3 py-2.5 text-left font-semibold">Paiement</th>
                   <th className="px-3 py-2.5 text-right font-semibold">Montant</th>
+                  <th className="px-3 py-2.5 text-left font-semibold">Articles</th>
                   <th className="px-3 py-2.5 text-left font-semibold">Réf.</th>
                 </tr>
               )}
@@ -202,7 +205,15 @@ export function CashierSalesReport({
                   >
                     {formatCurrency(Number(sale.total))}
                   </td>
-                  <td className={isClosureReport ? "font-mono text-[10px]" : "px-3 py-2 font-mono text-[10px]"}>
+                  <td className={isClosureReport ? "align-top" : "px-3 py-2 align-top"}>
+                    <SaleLineItemsSummary
+                      sale={sale}
+                      variant="compact"
+                      maxItems={10}
+                      className={isClosureReport ? "min-w-[9rem]" : "max-w-[14rem]"}
+                    />
+                  </td>
+                  <td className={isClosureReport ? "font-mono text-[10px] align-top" : "px-3 py-2 font-mono text-[10px] align-top"}>
                     {sale.id.slice(0, 8)}
                   </td>
                 </tr>
@@ -210,7 +221,7 @@ export function CashierSalesReport({
               {activeSales.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className={isClosureReport ? "py-10 text-center" : "px-3 py-10 text-center"}
                     style={{ color: isClosureReport ? "#666" : NATUS_BRAND.inkSoft }}
                   >
@@ -226,7 +237,7 @@ export function CashierSalesReport({
                     background: "rgba(255,246,236,0.9)",
                   }}
                 >
-                  <td className="px-3 py-2.5" colSpan={3}>
+                  <td className="px-3 py-2.5" colSpan={4}>
                     Total ({stats.count} vente{stats.count > 1 ? "s" : ""})
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
