@@ -64,6 +64,7 @@ export async function updateSession(request: NextRequest) {
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
     return applySecurityHeaders(NextResponse.redirect(url));
   }
 
@@ -82,6 +83,7 @@ export async function updateSession(request: NextRequest) {
       url.pathname = await resolveStaffHomePath(supabase, profile, {
         isMobile: isMobileUserAgent(request.headers.get("user-agent")),
       });
+      url.search = "";
       return applySecurityHeaders(NextResponse.redirect(url));
     }
 

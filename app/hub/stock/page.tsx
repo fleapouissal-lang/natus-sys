@@ -45,6 +45,7 @@ export default async function HubStockPage({
           selectedStore ? `${selectedStore.name} — ${selectedStore.city}` : undefined
         }
         myRequests={myRequests}
+        selectedStoreId={defaultStoreId || undefined}
       />
       <StockManager
         stores={stores}

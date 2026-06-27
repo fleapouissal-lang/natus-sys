@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { SalesAgendaFilter } from "@/components/sales/sales-agenda-filter";
 import { InvoicesTable } from "@/components/invoices/invoices-table";
+import { InvoicesBulkActions } from "@/components/invoices/invoices-bulk-actions";
 import { OrderDatePeriodFilter } from "@/components/orders/order-date-period-filter";
 import {
   detectOrderDatePreset,
@@ -16,8 +18,10 @@ import { saleDocumentNumber } from "@/components/pos/sale-document-types";
 import { isSaleInvoiceValidated } from "@/lib/sales/invoice-validation";
 import { saleInvoiceCustomerName } from "@/lib/sales/invoice-customer";
 import { validateSaleInvoice } from "@/lib/actions";
+import { getExportableInvoices } from "@/lib/sales/export-invoices";
 import type { InvoiceSale } from "@/lib/sales/sale-to-document";
 import { toLocalDateKey } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { PaymentMethod, Store } from "@/lib/types";
 
 export function InvoicesHistory({
@@ -57,6 +61,7 @@ export function InvoicesHistory({
   const [dateTo, setDateTo] = useState(initialRange.to);
   const [paymentFilter, setPaymentFilter] = useState<"" | PaymentMethod>("");
   const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const activeDatePreset = useMemo(
     () => detectOrderDatePreset(dateFrom, dateTo),
@@ -145,6 +150,45 @@ export function InvoicesHistory({
 
   const paginationKey = [dateFrom, dateTo, paymentFilter, search, selectedStoreId].join("|");
 
+  const listPagination = usePagination(filtered, DEFAULT_PAGE_SIZE, paginationKey);
+
+  const exportableFiltered = useMemo(
+    () => getExportableInvoices(filtered),
+    [filtered]
+  );
+
+  const selectedSales = useMemo(
+    () => exportableFiltered.filter((sale) => selectedIds.includes(sale.id)),
+    [exportableFiltered, selectedIds]
+  );
+
+  const toggleSale = useCallback((saleId: string) => {
+    setSelectedIds((current) =>
+      current.includes(saleId)
+        ? current.filter((id) => id !== saleId)
+        : [...current, saleId]
+    );
+  }, []);
+
+  const togglePage = useCallback((saleIds: string[], selected: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      for (const id of saleIds) {
+        if (selected) next.add(id);
+        else next.delete(id);
+      }
+      return [...next];
+    });
+  }, []);
+
+  const selectAllFiltered = useCallback(() => {
+    setSelectedIds(exportableFiltered.map((sale) => sale.id));
+  }, [exportableFiltered]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds([]);
+  }, []);
+
   return (
     <div className="space-y-6">
       {canValidateInvoices && pendingCount > 0 && (
@@ -180,6 +224,14 @@ export function InvoicesHistory({
             onPresetChange={applyDatePreset}
           />
         }
+        pagination={{
+          page: listPagination.page,
+          totalPages: listPagination.totalPages,
+          rangeStart: listPagination.rangeStart,
+          rangeEnd: listPagination.rangeEnd,
+          totalItems: listPagination.totalItems,
+          onPageChange: listPagination.setPage,
+        }}
       />
 
       <label className="flex flex-col gap-1.5 text-sm">
@@ -194,20 +246,52 @@ export function InvoicesHistory({
       </label>
 
       <Card padding={false}>
-        <div className="p-6">
+        <div className="p-6 space-y-4">
           <CardHeader
             title="Factures"
-            description={`${filtered.length} facture${filtered.length > 1 ? "s" : ""} — ${scopeLabel}`}
+            description={`${filtered.length} facture${filtered.length > 1 ? "s" : ""} — ${scopeLabel}${exportableFiltered.length !== filtered.length ? ` · ${exportableFiltered.length} exportable${exportableFiltered.length > 1 ? "s" : ""}` : ""}`}
           />
+
+          {exportableFiltered.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-muted">
+                Sélection multiple — cochez les factures validées puis téléchargez-les une par une.
+              </span>
+              {exportableFiltered.length > DEFAULT_PAGE_SIZE && (
+                <Button type="button" size="sm" variant="ghost" onClick={selectAllFiltered}>
+                  Tout sélectionner ({exportableFiltered.length})
+                </Button>
+              )}
+            </div>
+          )}
+
+          {exportableFiltered.length === 0 && filtered.length > 0 && (
+            <p className="rounded-lg border border-border bg-primary-light/20 px-4 py-3 text-sm text-muted">
+              Aucune facture exportable dans cette liste
+              {canValidateInvoices
+                ? " — validez les factures en attente pour pouvoir les sélectionner."
+                : " — seules les factures validées et non annulées sont exportables."}
+            </p>
+          )}
+
+          <InvoicesBulkActions
+            selectedSales={selectedSales}
+            scopeLabel={scopeLabel}
+            onClearSelection={clearSelection}
+          />
+
           <InvoicesTable
-            sales={filtered}
+            sales={listPagination.paginated}
             detailBasePath={detailBasePath}
             showStore={showStore}
             showCashier={showCashier}
             canValidateInvoices={canValidateInvoices}
             validatingId={isPending ? validatingId : null}
             onValidate={canValidateInvoices ? handleValidate : undefined}
-            paginationKey={paginationKey}
+            selectedIds={selectedIds}
+            onToggleSale={toggleSale}
+            onTogglePage={togglePage}
+            showPagination={false}
           />
         </div>
       </Card>

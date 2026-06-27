@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { MapPin } from "lucide-react";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
+import { PaginationBar, type PaginationBarProps } from "@/components/ui/pagination-bar";
 import { DateInputField } from "@/components/ui/date-input-field";
 import { paymentFilterOptions, storeOptions } from "@/lib/select-options";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,7 @@ export function SalesAgendaFilter({
   hasActiveFilters,
   collapsible = true,
   toggleLabel = "Filtrer les ventes",
+  pagination,
 }: {
   dateFrom: string;
   dateTo: string;
@@ -69,6 +71,10 @@ export function SalesAgendaFilter({
   hasActiveFilters?: boolean;
   collapsible?: boolean;
   toggleLabel?: string;
+  pagination?: Pick<
+    PaginationBarProps,
+    "page" | "totalPages" | "rangeStart" | "rangeEnd" | "totalItems" | "onPageChange"
+  >;
 }) {
   const hasFilters =
     hasActiveFilters ?? Boolean(dateFrom || dateTo || paymentFilter);
@@ -82,6 +88,11 @@ export function SalesAgendaFilter({
       toggleLabel={toggleLabel}
       summary={summary}
       collapsible={collapsible}
+      footer={
+        pagination ? (
+          <PaginationBar {...pagination} variant="inline" />
+        ) : undefined
+      }
     >
     <div className={cn("natus-filter-bar overflow-visible p-4", className)}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">

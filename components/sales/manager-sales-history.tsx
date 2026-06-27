@@ -8,6 +8,7 @@ import { SalesAgendaFilter } from "@/components/sales/sales-agenda-filter";
 import { SaleDetailModal } from "@/components/sales/sale-detail-modal";
 import { SalesHistoryTable } from "@/components/sales/sales-history-table";
 import { formatCurrency, toLocalDateKey } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { PaymentMethod, Sale, Store } from "@/lib/types";
 
 export function ManagerSalesHistory({
@@ -69,6 +70,9 @@ export function ManagerSalesHistory({
     router.push(query ? `${pathname}?${query}` : pathname);
   }
 
+  const paginationKey = `${dateFrom}|${dateTo}|${paymentFilter}|${selectedStoreId}`;
+  const listPagination = usePagination(filtered, DEFAULT_PAGE_SIZE, paginationKey);
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
@@ -108,6 +112,14 @@ export function ManagerSalesHistory({
         stores={stores}
         selectedStoreId={selectedStoreId}
         onStoreChange={handleStoreChange}
+        pagination={{
+          page: listPagination.page,
+          totalPages: listPagination.totalPages,
+          rangeStart: listPagination.rangeStart,
+          rangeEnd: listPagination.rangeEnd,
+          totalItems: listPagination.totalItems,
+          onPageChange: listPagination.setPage,
+        }}
       />
 
       <Card padding={false}>
@@ -119,11 +131,11 @@ export function ManagerSalesHistory({
         </div>
 
         <SalesHistoryTable
-          sales={filtered}
+          sales={listPagination.paginated}
           showStore={false}
           showCashier
           onViewSale={setDetailSale}
-          paginationKey={`${dateFrom}|${dateTo}|${paymentFilter}|${selectedStoreId}`}
+          showPagination={false}
         />
       </Card>
 

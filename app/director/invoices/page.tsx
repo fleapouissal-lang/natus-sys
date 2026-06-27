@@ -28,7 +28,8 @@ export default async function DirectorInvoicesPage({
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Factures</h1>
         <p className="mt-1 text-muted">
-          Toutes les ventes — validation obligatoire avant visibilité magasin et portail client
+          Toutes les ventes — modifiez le client sur les factures en attente, puis validez pour les
+          rendre visibles en magasin
         </p>
       </div>
 

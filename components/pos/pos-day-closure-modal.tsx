@@ -12,14 +12,15 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { CashierSalesReport } from "@/components/sales/cashier-sales-report";
+import { DayClosureTicket } from "@/components/pos/day-closure-ticket";
 import { createClient } from "@/lib/supabase/client";
 import { fetchCashierSales, fetchStoreSales } from "@/lib/sales/fetch-cashier-sales";
 import {
   computeDayClosureStats,
   filterSalesForDateKey,
   formatDayClosureDate,
-  printDayClosureReport,
+  printDayClosureTicket,
+  uniqueCashierLabels,
 } from "@/lib/sales/day-closure";
 import {
   confirmStoreDayClosureCode,
@@ -60,6 +61,7 @@ export function PosDayClosureModal({
   const [printUnlocked, setPrintUnlocked] = useState(false);
   const [canRequestClosure, setCanRequestClosure] = useState(true);
   const [closureBlockedReason, setClosureBlockedReason] = useState<string | null>(null);
+  const [requireManagerCode, setRequireManagerCode] = useState(true);
   const [codeInput, setCodeInput] = useState("");
   const [codeExpiresAt, setCodeExpiresAt] = useState<string | null>(null);
   const [closureMessage, setClosureMessage] = useState<string | null>(null);
@@ -84,8 +86,12 @@ export function PosDayClosureModal({
     setAutoValidatedClosure(Boolean(stateResult.state.validated_closure?.auto_validated));
     setCanRequestClosure(stateResult.state.can_request_closure);
     setClosureBlockedReason(stateResult.state.closure_blocked_reason ?? null);
+    setRequireManagerCode(stateResult.state.require_manager_code);
     setPendingClosure(Boolean(pending));
-    setPrintUnlocked(Boolean(pending?.cashier_code_confirmed) || stateResult.state.day_closure_validated);
+    setPrintUnlocked(
+      stateResult.state.day_closure_validated ||
+        (stateResult.state.require_manager_code && Boolean(pending?.cashier_code_confirmed))
+    );
     setCodeExpiresAt(pending?.code_expires_at ?? null);
   }
 
@@ -143,9 +149,13 @@ export function PosDayClosureModal({
           setAutoValidatedClosure(Boolean(stateResult.state.validated_closure?.auto_validated));
           setCanRequestClosure(stateResult.state.can_request_closure);
           setClosureBlockedReason(stateResult.state.closure_blocked_reason ?? null);
+          setRequireManagerCode(stateResult.state.require_manager_code);
           setPendingClosure(Boolean(pending));
           setPrintUnlocked(
-            Boolean(pending?.cashier_code_confirmed) || stateResult.state.day_closure_validated
+            stateResult.state.day_closure_validated ||
+              (!stateResult.state.require_manager_code && Boolean(pending)) ||
+              (stateResult.state.require_manager_code &&
+                Boolean(pending?.cashier_code_confirmed))
           );
           setCodeExpiresAt(pending?.code_expires_at ?? null);
         }
@@ -213,6 +223,13 @@ export function PosDayClosureModal({
     [sales, dateKey]
   );
   const stats = useMemo(() => computeDayClosureStats(daySales), [daySales]);
+  const closureCashierLabel = useMemo(() => {
+    if (!storeMode && cashierName) return cashierName;
+    const labels = uniqueCashierLabels(daySales);
+    if (labels.length === 0) return undefined;
+    if (labels.length === 1) return labels[0];
+    return labels.join(", ");
+  }, [storeMode, cashierName, daySales]);
 
   function handleRequestClosure() {
     if (!resolvedStoreId) {
@@ -227,6 +244,20 @@ export function PosDayClosureModal({
         setClosureMessage(result.error);
         return;
       }
+
+      if (result.immediate) {
+        setPendingClosure(false);
+        setDayClosureValidated(true);
+        setPrintUnlocked(true);
+        setClosedBusinessDate(result.closedBusinessDate ?? result.businessDate);
+        setBusinessDate(result.nextBusinessDate ?? result.businessDate);
+        setClosureMessage(
+          `Jour métier clôturé (${formatDayClosureDate(result.closedBusinessDate ?? result.businessDate)}). Vous pouvez imprimer le rapport.`
+        );
+        await refreshClosureState();
+        return;
+      }
+
       setPendingClosure(true);
       setPrintUnlocked(false);
       setBusinessDate(result.businessDate);
@@ -327,14 +358,14 @@ export function PosDayClosureModal({
                 </div>
               )}
 
-              {pendingClosure && (
+              {pendingClosure && requireManagerCode && (
                 <div className="mb-4 border border-accent/35 bg-accent/10 px-4 py-3 text-sm text-foreground">
                   La caisse reste ouverte — vous pouvez continuer à encaisser des ventes pendant
                   l&apos;attente de validation du gérant.
                 </div>
               )}
 
-              {pendingClosure && !dayClosureValidated && !printUnlocked && (
+              {pendingClosure && requireManagerCode && !dayClosureValidated && !printUnlocked && (
                 <div className="mb-4 border border-primary/25 bg-gradient-to-r from-champagne/50 to-page px-4 py-4">
                   <div className="flex flex-wrap items-end gap-3">
                     <div className="min-w-0 flex-1">
@@ -376,24 +407,33 @@ export function PosDayClosureModal({
               {printUnlocked && (
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-success/35 bg-success/10 px-4 py-3">
                   <p className="text-sm font-medium text-success">
-                    Code confirmé — rapport prêt à imprimer.
+                    {requireManagerCode
+                      ? "Code confirmé — rapport prêt à imprimer."
+                      : "Clôture validée — rapport prêt à imprimer."}
                   </p>
                   <Button
                     type="button"
-                    onClick={printDayClosureReport}
+                    onClick={printDayClosureTicket}
                     disabled={loading || !!error}
                     className="bg-champagne text-black hover:opacity-90"
                   >
                     <Printer className="h-4 w-4" />
-                    Imprimer le rapport
+                    Imprimer le ticket
                   </Button>
                 </div>
               )}
 
-              {printUnlocked && (
+              {printUnlocked && requireManagerCode && !dayClosureValidated && (
                 <p className="mb-4 text-xs text-muted">
                   Le gérant doit encore valider la clôture. Les ventes restent comptées sur le jour
                   en cours jusqu&apos;à validation.
+                </p>
+              )}
+
+              {printUnlocked && !requireManagerCode && dayClosureValidated && (
+                <p className="mb-4 text-xs text-muted">
+                  Clôture directe — le jour métier est fermé. Les nouvelles ventes passent au jour
+                  suivant.
                 </p>
               )}
 
@@ -437,15 +477,13 @@ export function PosDayClosureModal({
                 </p>
               )}
 
-              <div className="mt-4 max-h-[min(52vh,520px)] overflow-y-auto border border-primary/15 bg-white scrollbar-natus">
-                <CashierSalesReport
+              <div className="mt-4 flex justify-center overflow-y-auto border border-primary/15 bg-[#ebe6dc] p-4 scrollbar-natus print:hidden">
+                <DayClosureTicket
                   sales={daySales}
                   stats={stats}
-                  dateFrom={dateKey}
-                  dateTo={dateKey}
-                  periodLabel="Jour métier"
-                  cashierName={storeMode ? undefined : cashierName}
-                  variant="day-closure"
+                  dateKey={dateKey}
+                  storeName={storeName}
+                  cashierLabel={closureCashierLabel}
                   printId={null}
                 />
               </div>
@@ -458,12 +496,12 @@ export function PosDayClosureModal({
             {printUnlocked && (
               <Button
                 type="button"
-                onClick={printDayClosureReport}
+                onClick={printDayClosureTicket}
                 disabled={loading || !!error}
                 className="bg-champagne text-black hover:opacity-90"
               >
                 <Printer className="h-4 w-4" />
-                Imprimer le rapport
+                Imprimer le ticket
               </Button>
             )}
           </div>
@@ -498,16 +536,14 @@ export function PosDayClosureModal({
         dateKey &&
         printUnlocked &&
         createPortal(
-          <div className="natus-sales-report-print-only" aria-hidden>
-            <CashierSalesReport
-              key={`report|${dateKey}|${daySales.length}`}
+          <div className="natus-day-closure-print-only" aria-hidden>
+            <DayClosureTicket
+              key={`print|${dateKey}|${daySales.length}`}
               sales={daySales}
               stats={stats}
-              dateFrom={dateKey}
-              dateTo={dateKey}
-              periodLabel="Jour métier"
-              cashierName={storeMode ? undefined : cashierName}
-              variant="day-closure"
+              dateKey={dateKey}
+              storeName={storeName}
+              cashierLabel={closureCashierLabel}
             />
           </div>,
           document.body

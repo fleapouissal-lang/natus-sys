@@ -42,33 +42,32 @@ export function SalesHistoryTable({
   showCashier = false,
   onViewSale,
   paginationKey,
+  showPagination = true,
 }: {
   sales: Sale[];
   showStore?: boolean;
   showCashier?: boolean;
   onViewSale: (sale: Sale) => void;
   paginationKey?: string;
+  showPagination?: boolean;
 }) {
   const colSpan = 5 + (showStore ? 1 : 0) + (showCashier ? 1 : 0);
-  const {
-    paginated,
-    page,
-    setPage,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    totalItems,
-  } = usePagination(sales, DEFAULT_PAGE_SIZE, paginationKey);
+  const pagination = usePagination(
+    sales,
+    DEFAULT_PAGE_SIZE,
+    showPagination ? paginationKey : undefined
+  );
+  const rows = showPagination ? pagination.paginated : sales;
 
   return (
     <>
       <div className="grid grid-cols-2 gap-3 px-3 pb-4 md:hidden">
-        {paginated.length === 0 ? (
+        {rows.length === 0 ? (
           <p className="col-span-2 py-12 text-center text-sm text-muted">
             Aucune vente pour ces filtres
           </p>
         ) : (
-          paginated.map((sale) => (
+          rows.map((sale) => (
             <button
               key={sale.id}
               type="button"
@@ -133,7 +132,7 @@ export function SalesHistoryTable({
             </tr>
           </thead>
           <tbody>
-            {paginated.map((sale) => (
+            {rows.map((sale) => (
               <tr
                 key={sale.id}
                 className={cn(
@@ -184,7 +183,7 @@ export function SalesHistoryTable({
                 </td>
               </tr>
             ))}
-            {paginated.length === 0 && (
+            {rows.length === 0 && (
               <tr>
                 <td colSpan={colSpan} className="px-6 py-12 text-center text-muted">
                   Aucune vente pour ces filtres
@@ -194,14 +193,14 @@ export function SalesHistoryTable({
           </tbody>
         </table>
       </div>
-      {sales.length > 0 && (
+      {showPagination && sales.length > 0 && (
         <PaginationBar
-          page={page}
-          totalPages={totalPages}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          totalItems={totalItems}
-          onPageChange={setPage}
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          rangeStart={pagination.rangeStart}
+          rangeEnd={pagination.rangeEnd}
+          totalItems={pagination.totalItems}
+          onPageChange={pagination.setPage}
         />
       )}
     </>

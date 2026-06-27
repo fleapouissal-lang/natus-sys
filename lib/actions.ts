@@ -1423,6 +1423,35 @@ export async function validateSaleInvoice(
   return { success: true };
 }
 
+export async function updateSaleInvoiceCustomer(
+  saleId: string,
+  input: {
+    customerName: string;
+    customerPhone?: string | null;
+    customerEmail?: string | null;
+    customerIce?: string | null;
+  }
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur"]);
+  if (!profile) return { error: "Seul le directeur peut modifier le client de la facture" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_sale_invoice_customer", {
+    p_sale_id: saleId,
+    p_customer_name: input.customerName.trim() || "Divers",
+    p_customer_phone: input.customerPhone?.trim() || null,
+    p_customer_email: input.customerEmail?.trim() || null,
+    p_customer_ice: input.customerIce?.trim() || null,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidateInvoicePaths();
+  revalidatePath(`/director/invoices/${saleId}`);
+
+  return { success: true };
+}
+
 export async function createLoyaltyCustomer(input: {
   fullName: string;
   phone: string;

@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const MIN_VISIBLE_MS = 750;
 const MAX_VISIBLE_MS = 5000;
 
 export function NatusPreloader() {
+  const pathname = usePathname();
   const [phase, setPhase] = useState<"loading" | "exit" | "hidden">("hidden");
 
   useEffect(() => {
+    if (pathname === "/login") return;
+
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
@@ -46,9 +50,9 @@ export function NatusPreloader() {
       window.clearTimeout(safetyTimer);
       document.documentElement.classList.remove("natus-is-loading");
     };
-  }, []);
+  }, [pathname]);
 
-  if (phase === "hidden") return null;
+  if (pathname === "/login" || phase === "hidden") return null;
 
   return (
     <div

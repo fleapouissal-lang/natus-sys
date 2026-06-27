@@ -2,6 +2,8 @@ import type { SaleDocumentData } from "@/components/pos/sale-document-types";
 import {
   saleInvoiceCustomerName,
   saleInvoiceCustomerPhone,
+  saleInvoiceCustomerEmail,
+  saleInvoiceCustomerIce,
 } from "@/lib/sales/invoice-customer";
 import type { Sale } from "@/lib/types";
 
@@ -40,6 +42,8 @@ export function saleToDocumentData(sale: InvoiceSale): SaleDocumentData {
     shopifyOrderNumber: sale.shopify_orders?.order_number,
     customerName: saleInvoiceCustomerName(sale),
     customerPhone: saleInvoiceCustomerPhone(sale) || undefined,
+    customerEmail: saleInvoiceCustomerEmail(sale) || undefined,
+    customerIce: saleInvoiceCustomerIce(sale) || undefined,
     storeName: sale.stores?.name || undefined,
   };
 }

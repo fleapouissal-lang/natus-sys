@@ -17,6 +17,7 @@ import {
   type OrderDatePreset,
 } from "@/lib/store-tracking-period";
 import { formatCurrency, toLocalDateKey } from "@/lib/utils";
+import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { PaymentMethod, Sale } from "@/lib/types";
 
 const DEFAULT_DATE_PRESET: OrderDatePreset = "today";
@@ -136,6 +137,9 @@ export function CashierSalesHistory({
   const filteredHiddenByDate =
     activeSalesCount > 0 && stats.count === 0 && activeDatePreset !== "all";
 
+  const paginationKey = `${mode}|${dateFrom}|${dateTo}|${paymentFilter}`;
+  const listPagination = usePagination(filtered, DEFAULT_PAGE_SIZE, paginationKey);
+
   return (
     <div className="space-y-6">
       {refreshError && (
@@ -193,6 +197,14 @@ export function CashierSalesHistory({
             onPresetChange={applyDatePreset}
           />
         }
+        pagination={{
+          page: listPagination.page,
+          totalPages: listPagination.totalPages,
+          rangeStart: listPagination.rangeStart,
+          rangeEnd: listPagination.rangeEnd,
+          totalItems: listPagination.totalItems,
+          onPageChange: listPagination.setPage,
+        }}
       />
 
       <Card padding={false}>
@@ -208,11 +220,11 @@ export function CashierSalesHistory({
         </div>
 
         <SalesHistoryTable
-          sales={filtered}
+          sales={listPagination.paginated}
           showStore={mode !== "store"}
           showCashier={mode === "store"}
           onViewSale={setDetailSale}
-          paginationKey={`${mode}|${dateFrom}|${dateTo}|${paymentFilter}`}
+          showPagination={false}
         />
       </Card>
 

@@ -12,6 +12,7 @@ type FilterTogglePanelProps = {
   collapsible?: boolean;
   children: ReactNode;
   className?: string;
+  footer?: ReactNode;
 };
 
 export function FilterTogglePanel({
@@ -21,11 +22,17 @@ export function FilterTogglePanel({
   collapsible = true,
   children,
   className,
+  footer,
 }: FilterTogglePanelProps) {
   const [open, setOpen] = useState(defaultOpen);
 
   if (!collapsible) {
-    return <>{children}</>;
+    return (
+      <div className={cn("space-y-0", className)}>
+        {children}
+        {footer}
+      </div>
+    );
   }
 
   return (
@@ -59,6 +66,9 @@ export function FilterTogglePanel({
         ) : null}
       </div>
       <div className={cn(!open && "hidden md:block")}>{children}</div>
+      {footer ? (
+        <div className="natus-filter-bar border-t border-border/60 px-4 py-3">{footer}</div>
+      ) : null}
     </div>
   );
 }

@@ -65,7 +65,10 @@ export async function requestStoreDayClosure(
       businessDate: string;
       storeName: string;
       stats: DayClosureStats;
-      pending: true;
+      pending: boolean;
+      immediate: boolean;
+      closedBusinessDate?: string;
+      nextBusinessDate?: string;
     }
   | { error: string }
 > {
@@ -87,11 +90,19 @@ export async function requestStoreDayClosure(
     const row = data as Record<string, unknown>;
     revalidatePosClosurePaths();
 
+    const status = String(row.status ?? "");
+    const immediate = status === "validated" || Boolean(row.immediate);
+
     return {
-      businessDate: String(row.business_date),
+      businessDate: String(row.business_date ?? row.closed_business_date ?? ""),
       storeName: String(row.store_name ?? "Magasin"),
       stats: parseDayClosureStats(row.stats),
-      pending: true,
+      pending: !immediate,
+      immediate,
+      closedBusinessDate: row.closed_business_date
+        ? String(row.closed_business_date)
+        : undefined,
+      nextBusinessDate: row.next_business_date ? String(row.next_business_date) : undefined,
     };
   } catch (err) {
     console.error("[store-day-closure] requestStoreDayClosure:", err);
@@ -251,6 +262,38 @@ export async function validateStoreDayClosure(
     };
   } catch (err) {
     console.error("[store-day-closure] validateStoreDayClosure:", err);
+    return actionError(err instanceof Error ? err.message : "Erreur serveur");
+  }
+}
+
+export async function updatePosClosureSettings(
+  requireManagerCode: boolean
+): Promise<{ settings: { requireManagerCode: boolean } } | { error: string }> {
+  try {
+    const profile = await requireRole(["directeur", "admin"]);
+    if (!profile) return actionError("Seul le directeur peut modifier ce paramètre");
+
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("update_pos_closure_settings", {
+      p_require_manager_code: requireManagerCode,
+    });
+
+    if (error) {
+      console.error("[store-day-closure] update_pos_closure_settings:", error.message);
+      return actionError(error.message);
+    }
+
+    revalidatePosClosurePaths();
+    revalidatePath("/director/pos-closures");
+
+    const row = (data ?? {}) as Record<string, unknown>;
+    return {
+      settings: {
+        requireManagerCode: row.require_manager_code !== false,
+      },
+    };
+  } catch (err) {
+    console.error("[store-day-closure] updatePosClosureSettings:", err);
     return actionError(err instanceof Error ? err.message : "Erreur serveur");
   }
 }

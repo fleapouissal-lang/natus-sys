@@ -158,6 +158,16 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
                 Tél. : {data.customerPhone}
               </p>
             )}
+            {data.customerEmail && (
+              <p className="mt-1 text-sm" style={{ color: NATUS_BRAND.inkSoft }}>
+                Email : {data.customerEmail}
+              </p>
+            )}
+            {data.customerIce && (
+              <p className="mt-1 text-sm" style={{ color: NATUS_BRAND.inkSoft }}>
+                ICE : {data.customerIce}
+              </p>
+            )}
             {data.loyaltyCardNumber && (
               <p className="mt-1 text-sm" style={{ color: NATUS_BRAND.inkSoft }}>
                 Carte fidélité : {data.loyaltyCardNumber}

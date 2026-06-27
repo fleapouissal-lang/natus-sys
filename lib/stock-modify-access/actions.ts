@@ -152,6 +152,48 @@ export async function reviewStockModifyAccessRequest(input: {
   return { success: true };
 }
 
+export async function revokeStockModifyAccessRequest(input: {
+  requestId: string;
+  reviewNote?: string;
+}): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return actionError("Seul le directeur peut révoquer un accès");
+
+  const supabase = await createClient();
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("stock_modify_access_requests")
+    .select("id, status, valid_from, valid_to")
+    .eq("id", input.requestId)
+    .maybeSingle();
+
+  if (fetchError) return actionError(fetchError.message);
+  if (!existing) return actionError("Demande introuvable");
+  if (existing.status !== "approved") {
+    return actionError("Seul un accès approuvé peut être révoqué");
+  }
+
+  const today = toLocalDateKey(new Date());
+  if (today > existing.valid_to) {
+    return actionError("Cet accès est déjà expiré");
+  }
+
+  const { error } = await supabase
+    .from("stock_modify_access_requests")
+    .update({
+      status: "rejected",
+      reviewed_by: profile.id,
+      reviewed_at: new Date().toISOString(),
+      review_note: input.reviewNote?.trim() || "Accès révoqué par le directeur",
+    })
+    .eq("id", input.requestId);
+
+  if (error) return actionError(error.message);
+
+  revalidateStockAccessPaths();
+  return { success: true };
+}
+
 export async function getManagerStoresForAccessRequest(
   profile: Profile
 ): Promise<{ id: string; name: string; city: string }[]> {

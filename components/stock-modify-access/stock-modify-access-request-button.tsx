@@ -9,19 +9,26 @@ import { Modal } from "@/components/ui/modal";
 import { CardHeader } from "@/components/ui/card";
 import { createStockModifyAccessRequest } from "@/lib/stock-modify-access/actions";
 import { toLocalDateKey } from "@/lib/utils";
+import {
+  hasRejectedAccessForStore,
+  isDateInAccessPeriod,
+  requestAppliesToStore,
+  resolveEffectiveStockModifyGrant,
+} from "@/lib/stock-modify-access/utils";
 import type { StockModifyAccessRequest } from "@/lib/stock-modify-access/types";
-import { isAccessRequestActive } from "@/lib/stock-modify-access/utils";
 
 export function StockModifyAccessRequestButton({
   role,
   stores = [],
   hubStoreLabel,
   myRequests = [],
+  selectedStoreId,
 }: {
   role: "manager" | "hub";
   stores?: { id: string; name: string; city: string }[];
   hubStoreLabel?: string;
   myRequests?: StockModifyAccessRequest[];
+  selectedStoreId?: string;
 }) {
   const router = useRouter();
   const today = toLocalDateKey(new Date());
@@ -35,8 +42,23 @@ export function StockModifyAccessRequestButton({
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
 
-  const activeGrant = myRequests.find(isAccessRequestActive);
-  const pendingRequest = myRequests.find((r) => r.status === "pending");
+  const storeId =
+    selectedStoreId ||
+    (role === "hub" ? myRequests.find((r) => r.hub_store_id)?.hub_store_id : undefined) ||
+    (stores.length === 1 ? stores[0].id : undefined);
+
+  const activeGrant =
+    storeId != null ? resolveEffectiveStockModifyGrant(myRequests, storeId, today) : null;
+  const pendingRequest = storeId
+    ? myRequests.find(
+        (request) =>
+          request.status === "pending" &&
+          isDateInAccessPeriod(request, today) &&
+          requestAppliesToStore(request, storeId)
+      )
+    : myRequests.find((request) => request.status === "pending");
+  const accessDenied =
+    storeId != null ? hasRejectedAccessForStore(myRequests, storeId, today) : false;
 
   function toggleStore(storeId: string) {
     setSelectedStoreIds((current) =>
@@ -70,12 +92,17 @@ export function StockModifyAccessRequestButton({
       <div className="flex flex-wrap items-center gap-2">
         {activeGrant && (
           <span className="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-xs font-medium text-success">
-            Accès actif jusqu&apos;au {activeGrant.valid_to}
+            Accès actif jusqu&apos;au {activeGrant.validTo}
           </span>
         )}
         {pendingRequest && !activeGrant && (
           <span className="rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-xs font-medium text-warning">
             Demande en attente
+          </span>
+        )}
+        {accessDenied && !activeGrant && !pendingRequest && (
+          <span className="rounded-full border border-danger/30 bg-danger/10 px-3 py-1 text-xs font-medium text-danger">
+            Accès refusé ou révoqué par le directeur
           </span>
         )}
         <Button type="button" size="sm" variant="secondary" className="gap-2" onClick={() => setOpen(true)}>

@@ -113,8 +113,9 @@ export function printDayClosureTicket() {
   runPrintJob("ticket", "day-closure");
 }
 
+/** Impression ticket 80 mm (même imprimante que les tickets caisse). */
 export function printDayClosureReport() {
-  runPrintJob("a4-report", "day-closure-report");
+  printDayClosureTicket();
 }
 
 export function formatClosureCodeExpiresAt(iso: string): string {

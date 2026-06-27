@@ -50,5 +50,5 @@ export type ActiveStockModifyGrant = {
 export const STOCK_MODIFY_ACCESS_STATUS_LABELS: Record<StockModifyAccessStatus, string> = {
   pending: "En attente",
   approved: "Approuvée",
-  rejected: "Refusée",
+  rejected: "Refusée / révoquée",
 };

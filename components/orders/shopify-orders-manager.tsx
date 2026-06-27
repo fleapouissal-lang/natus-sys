@@ -417,6 +417,17 @@ export function ShopifyOrdersManager({
         summary={`${filteredOrders.length} commande${filteredOrders.length !== 1 ? "s" : ""}${
           activeDatePreset !== "all" ? ` — ${orderDatePresetLabel(activeDatePreset)}` : ""
         }`}
+        footer={
+          <PaginationBar
+            page={ordersPage}
+            totalPages={ordersTotalPages}
+            rangeStart={ordersRangeStart}
+            rangeEnd={ordersRangeEnd}
+            totalItems={ordersTotalItems}
+            onPageChange={setOrdersPage}
+            variant="inline"
+          />
+        }
       >
       <div className="natus-filter-bar overflow-visible p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -853,17 +864,6 @@ export function ShopifyOrdersManager({
             </tbody>
           </table>
         </div>
-        {filteredOrders.length > 0 && (
-          <PaginationBar
-            page={ordersPage}
-            totalPages={ordersTotalPages}
-            rangeStart={ordersRangeStart}
-            rangeEnd={ordersRangeEnd}
-            totalItems={ordersTotalItems}
-            onPageChange={setOrdersPage}
-            className="border-t border-border px-4 py-5 max-md:pb-6 md:px-6 md:py-4"
-          />
-        )}
       </Card>
 
       {detailOrder && (

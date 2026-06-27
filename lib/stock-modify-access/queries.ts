@@ -1,14 +1,23 @@
 import { createClient } from "@/lib/supabase/server";
 import { toLocalDateKey } from "@/lib/utils";
 import type { Profile } from "@/lib/types";
-import { isDirector, isHub, isManager } from "@/lib/permissions";
+import { isDirector } from "@/lib/permissions";
 import type {
   ActiveStockModifyGrant,
   StockModifyAccessMovement,
   StockModifyAccessRequest,
 } from "@/lib/stock-modify-access/types";
+import { resolveEffectiveStockModifyGrant } from "@/lib/stock-modify-access/utils";
 
-export { isAccessRequestActive, formatAccessPeriod } from "@/lib/stock-modify-access/utils";
+export {
+  isAccessRequestActive,
+  formatAccessPeriod,
+  resolveEffectiveStockModifyGrant,
+  hasRejectedAccessForStore,
+  isRequestEffectiveGrant,
+  requestAppliesToStore,
+  isDateInAccessPeriod,
+} from "@/lib/stock-modify-access/utils";
 
 const REQUEST_SELECT =
   "*, requester:requester_id(full_name, email, city), reviewer:reviewed_by(full_name, email), stores:stock_modify_access_request_stores(store_id, stores:store_id(id, name, city)), hub_store:hub_store_id(id, name, city)";
@@ -53,42 +62,44 @@ export async function getActiveStockModifyGrant(
 
   const { data, error } = await supabase
     .from("stock_modify_access_requests")
-    .select("id, valid_from, valid_to, hub_store_id, stores:stock_modify_access_request_stores(store_id)")
+    .select(
+      "id, status, valid_from, valid_to, hub_store_id, reviewed_at, requester_role, stores:stock_modify_access_request_stores(store_id)"
+    )
     .eq("requester_id", profile.id)
-    .eq("status", "approved")
     .lte("valid_from", today)
     .gte("valid_to", today);
 
   if (error || !data?.length) return null;
 
-  for (const row of data) {
+  const requests: StockModifyAccessRequest[] = data.map((row) => {
     const storeLinks = row.stores as { store_id: string }[] | null;
+    return {
+      id: row.id as string,
+      requester_id: profile.id,
+      requester_role: row.requester_role as StockModifyAccessRequest["requester_role"],
+      status: row.status as StockModifyAccessRequest["status"],
+      valid_from: row.valid_from as string,
+      valid_to: row.valid_to as string,
+      hub_store_id: (row.hub_store_id as string | null) ?? null,
+      request_note: null,
+      review_note: null,
+      reviewed_by: null,
+      reviewed_at: (row.reviewed_at as string | null) ?? null,
+      created_at: "",
+      store_ids: (storeLinks || []).map((link) => link.store_id),
+    };
+  });
 
-    if (isManager(profile)) {
-      const allowed = (storeLinks || []).some((link) => link.store_id === storeId);
-      if (allowed) {
-        return {
-          requestId: row.id,
-          storeId,
-          validFrom: row.valid_from,
-          validTo: row.valid_to,
-          canEditTotal: true,
-        };
-      }
-    }
+  const effective = resolveEffectiveStockModifyGrant(requests, storeId, today);
+  if (!effective) return null;
 
-    if (isHub(profile) && row.hub_store_id === storeId) {
-      return {
-        requestId: row.id,
-        storeId,
-        validFrom: row.valid_from,
-        validTo: row.valid_to,
-        canEditTotal: true,
-      };
-    }
-  }
-
-  return null;
+  return {
+    requestId: effective.requestId,
+    storeId,
+    validFrom: effective.validFrom,
+    validTo: effective.validTo,
+    canEditTotal: true,
+  };
 }
 
 export async function listStockModifyAccessRequests(input?: {
@@ -123,7 +134,7 @@ export async function listStockModifyAccessMovements(input?: {
   const { data, error } = await supabase
     .from("stock_movements")
     .select(
-      "id, product_id, quantity, type, notes, created_at, store_id, access_request_id, products(name, barcode), stores(name, city), profiles:created_by(full_name, email, role), access_request:access_request_id(valid_from, valid_to, requester_role)"
+      "id, product_id, quantity, type, notes, created_at, store_id, access_request_id, products(name, barcode), stores!stock_movements_store_id_fkey(name, city), profiles:created_by(full_name, email, role), access_request:access_request_id(valid_from, valid_to, requester_role)"
     )
     .not("access_request_id", "is", null)
     .order("created_at", { ascending: false })

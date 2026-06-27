@@ -7,7 +7,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { reviewStockModifyAccessRequest } from "@/lib/stock-modify-access/actions";
+import { reviewStockModifyAccessRequest, revokeStockModifyAccessRequest } from "@/lib/stock-modify-access/actions";
 import {
   STOCK_MODIFY_ACCESS_STATUS_LABELS,
   type StockModifyAccessMovement,
@@ -30,10 +30,12 @@ function movementTypeLabel(type: string): string {
 
 export function StockModifyAccessDirectorPanel({
   pendingRequests,
+  activeApprovedRequests,
   recentRequests,
   movements,
 }: {
   pendingRequests: StockModifyAccessRequest[];
+  activeApprovedRequests: StockModifyAccessRequest[];
   recentRequests: StockModifyAccessRequest[];
   movements: StockModifyAccessMovement[];
 }) {
@@ -48,6 +50,21 @@ export function StockModifyAccessDirectorPanel({
       const result = await reviewStockModifyAccessRequest({
         requestId,
         approve,
+        reviewNote: reviewNotes[requestId] || "",
+      });
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function handleRevoke(requestId: string) {
+    setError("");
+    startTransition(async () => {
+      const result = await revokeStockModifyAccessRequest({
+        requestId,
         reviewNote: reviewNotes[requestId] || "",
       });
       if ("error" in result) {
@@ -153,6 +170,68 @@ export function StockModifyAccessDirectorPanel({
           )}
         </div>
       </Card>
+
+      {activeApprovedRequests.length > 0 && (
+        <Card padding={false}>
+          <div className="border-b border-border px-6 py-4">
+            <CardHeader
+              title="Accès actifs"
+              description="Révoquez un accès avant la fin de la période pour bloquer immédiatement les modifications"
+            />
+          </div>
+          <div className="space-y-4 p-6">
+            {activeApprovedRequests.map((request) => (
+              <div key={request.id} className="rounded-xl border border-success/30 bg-success/5 p-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="h-4 w-4 text-success" />
+                    <p className="font-semibold">
+                      {request.requester?.full_name || request.requester?.email || "Demandeur"}
+                    </p>
+                    <Badge variant="success">
+                      {request.requester_role === "hub" ? "Dépôt" : "Gérant"}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-muted">
+                    Période : {formatAccessPeriod(request.valid_from, request.valid_to)}
+                  </p>
+                  {request.hub_store && (
+                    <p className="mt-2 text-sm">Entrepôt : {request.hub_store.name}</p>
+                  )}
+                  {request.stores && request.stores.length > 0 && (
+                    <p className="mt-2 text-sm">
+                      Magasins : {request.stores.map((s) => s.name).join(", ")}
+                    </p>
+                  )}
+                </div>
+
+                <Input
+                  label="Motif de révocation (optionnel)"
+                  value={reviewNotes[request.id] || ""}
+                  onChange={(e) =>
+                    setReviewNotes((current) => ({ ...current, [request.id]: e.target.value }))
+                  }
+                  className="mt-4"
+                />
+
+                <div className="mt-4">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="gap-2 text-danger"
+                    disabled={pending}
+                    onClick={() => handleRevoke(request.id)}
+                  >
+                    <X className="h-4 w-4" />
+                    Révoquer l&apos;accès
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card padding={false}>
         <div className="border-b border-border px-6 py-4">

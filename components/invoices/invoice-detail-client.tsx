@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Download, Printer, ShieldCheck } from "lucide-react";
@@ -13,7 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { invoiceTypeLabel } from "@/lib/sales/fetch-invoices";
 import { isSaleInvoiceValidated } from "@/lib/sales/invoice-validation";
 import { saleToDocumentData, type InvoiceSale } from "@/lib/sales/sale-to-document";
+import { INVOICE_CLIENT_DIVERS } from "@/lib/constants/invoice";
 import { downloadInvoiceHtml } from "@/lib/sales/download-invoice";
+import {
+  draftFromSale,
+  InvoiceCustomerEditForm,
+  type InvoiceCustomerDraft,
+} from "@/components/invoices/invoice-customer-edit-form";
 import { validateSaleInvoice } from "@/lib/actions";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -31,9 +37,33 @@ export function InvoiceDetailClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
-  const documentData = saleToDocumentData(sale);
-  const invoiceNo = saleDocumentNumber(sale.id);
+  const [customerDraft, setCustomerDraft] = useState<InvoiceCustomerDraft>(() =>
+    draftFromSale(sale)
+  );
   const validated = isSaleInvoiceValidated(sale);
+  const invoiceNo = saleDocumentNumber(sale.id);
+
+  useEffect(() => {
+    setCustomerDraft(draftFromSale(sale));
+  }, [
+    sale.id,
+    sale.customer_name,
+    sale.customer_phone,
+    sale.customer_email,
+    sale.customer_ice,
+    sale.customers,
+  ]);
+
+  const documentData = useMemo(() => {
+    const base = saleToDocumentData(sale);
+    return {
+      ...base,
+      customerName: customerDraft.customerName.trim() || INVOICE_CLIENT_DIVERS,
+      customerPhone: customerDraft.customerPhone.trim() || undefined,
+      customerEmail: customerDraft.customerEmail.trim() || undefined,
+      customerIce: customerDraft.customerIce.trim() || undefined,
+    };
+  }, [sale, customerDraft]);
 
   function handleValidate() {
     setError("");
@@ -110,11 +140,18 @@ export function InvoiceDetailClient({
         <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>
       )}
 
-      {!validated && canValidateInvoices && (
-        <p className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
-          Cette facture n&apos;est pas encore visible pour le caissier ni le gérant du magasin.
-          Validez-la pour la rendre accessible et imprimable en magasin.
-        </p>
+      {!validated && canValidateInvoices && !sale.cancelled_at && (
+        <>
+          <InvoiceCustomerEditForm
+            sale={sale}
+            draft={customerDraft}
+            onDraftChange={setCustomerDraft}
+          />
+          <p className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
+            Cette facture n&apos;est pas encore visible pour le caissier ni le gérant du magasin.
+            Validez-la pour la rendre accessible et imprimable en magasin.
+          </p>
+        </>
       )}
 
       <Card className="overflow-hidden p-0 print:border-0 print:shadow-none">

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { CashierSalesReport } from "@/components/sales/cashier-sales-report";
+import { DayClosureTicket } from "@/components/pos/day-closure-ticket";
 import {
   getStoreDayClosureReportSales,
   listStoreDayClosures,
@@ -16,8 +16,10 @@ import {
 import {
   formatDayClosureDate,
   formatDayClosureDateShort,
-  printDayClosureReport,
+  printDayClosureTicket,
+  uniqueCashierLabels,
 } from "@/lib/sales/day-closure";
+import type { DayClosureStats } from "@/lib/sales/day-closure";
 import type { StoreDayClosureReportRow } from "@/lib/sales/store-day-closure";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
@@ -71,15 +73,15 @@ function ClosureIconButton({
   );
 }
 
-function closureStatsFromRow(closure: StoreDayClosureReportRow) {
-  const s = closure.stats;
-  return {
-    count: s.count,
-    total: s.total,
-    cash: s.cash,
-    card: s.card,
-    cheque: s.cheque,
-  };
+function closureStatsFromRow(closure: StoreDayClosureReportRow): DayClosureStats {
+  return closure.stats;
+}
+
+function closureCashierLabel(sales: Sale[], fallback?: string): string | undefined {
+  const labels = uniqueCashierLabels(sales);
+  if (labels.length === 0) return fallback;
+  if (labels.length === 1) return labels[0];
+  return labels.join(", ");
 }
 
 export function StoreDayClosureReportsList({
@@ -182,7 +184,7 @@ export function StoreDayClosureReportsList({
     }
     setPrintPayload({ sales, closure });
     window.setTimeout(() => {
-      printDayClosureReport();
+      printDayClosureTicket();
       window.setTimeout(() => {
         setPrintPayload(null);
         setPrintingId(null);
@@ -194,7 +196,7 @@ export function StoreDayClosureReportsList({
     if (!viewPayload) return;
     setPrintPayload(viewPayload);
     window.setTimeout(() => {
-      printDayClosureReport();
+      printDayClosureTicket();
       window.setTimeout(() => setPrintPayload(null), 500);
     }, 150);
   }
@@ -408,14 +410,16 @@ export function StoreDayClosureReportsList({
               </div>
             </div>
           </div>
-          <div className="natus-closure-screen max-h-[min(72vh,680px)] overflow-y-auto p-4 scrollbar-natus">
-            <CashierSalesReport
+          <div className="natus-closure-screen flex max-h-[min(72vh,680px)] justify-center overflow-y-auto bg-[#ebe6dc] p-4 scrollbar-natus">
+            <DayClosureTicket
               sales={viewPayload.sales}
               stats={viewStats}
-              dateFrom={viewPayload.closure.business_date}
-              dateTo={viewPayload.closure.business_date}
-              periodLabel="Jour métier"
-              variant="day-closure"
+              dateKey={viewPayload.closure.business_date}
+              storeName={viewPayload.closure.store_name}
+              cashierLabel={closureCashierLabel(
+                viewPayload.sales,
+                viewPayload.closure.requested_by_name
+              )}
               printId={null}
             />
           </div>
@@ -426,15 +430,17 @@ export function StoreDayClosureReportsList({
         printPayload &&
         printStats &&
         createPortal(
-          <div className="natus-sales-report-print-only" aria-hidden>
-            <CashierSalesReport
+          <div className="natus-day-closure-print-only" aria-hidden>
+            <DayClosureTicket
               key={`print|${printPayload.closure.id}`}
               sales={printPayload.sales}
               stats={printStats}
-              dateFrom={printPayload.closure.business_date}
-              dateTo={printPayload.closure.business_date}
-              periodLabel="Jour métier"
-              variant="day-closure"
+              dateKey={printPayload.closure.business_date}
+              storeName={printPayload.closure.store_name}
+              cashierLabel={closureCashierLabel(
+                printPayload.sales,
+                printPayload.closure.requested_by_name
+              )}
             />
           </div>,
           document.body

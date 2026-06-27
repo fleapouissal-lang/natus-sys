@@ -102,6 +102,7 @@ export interface Sale {
   customer_name: string;
   customer_phone: string | null;
   customer_email: string | null;
+  customer_ice: string | null;
   shopify_order_id: string | null;
   loyalty_discount: number;
   loyalty_points_redeemed: number;
@@ -118,7 +119,7 @@ export interface Sale {
   profiles?: Pick<Profile, "full_name" | "email">;
   stores?: Pick<Store, "name" | "city"> | null;
   sale_items?: SaleItem[];
-  customers?: Pick<LoyaltyCustomer, "full_name" | "card_number" | "phone"> | null;
+  customers?: Pick<LoyaltyCustomer, "full_name" | "card_number" | "phone" | "is_pro_client"> | null;
 }
 
 export type LoyaltyTier = "bronze" | "silver" | "gold";

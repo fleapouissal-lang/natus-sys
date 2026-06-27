@@ -1525,7 +1525,9 @@ textarea:focus {
     table-layout: fixed;
   }
 
-  body[data-print-doc="ticket"] #invoice-print {
+  body[data-print-doc="ticket"] #day-closure-ticket-print,
+  body[data-print-doc="day-closure"] #ticket-print,
+  body[data-print-doc="day-closure"] #invoice-print {
     display: none !important;
   }
 
@@ -1682,25 +1684,42 @@ textarea:focus {
 
   body[data-print-doc="day-closure"] #day-closure-ticket-print {
     position: static !important;
-    width: 100% !important;
+    width: 80mm !important;
     max-width: 80mm !important;
+    height: auto !important;
+    min-height: 0 !important;
     margin: 0 auto !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    padding: 0 !important;
-    font-size: 11pt !important;
-    line-height: 1.45 !important;
+    padding: 2mm !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
     -webkit-print-color-adjust: economy;
     print-color-adjust: economy;
   }
 
   body[data-print-doc="day-closure"] #day-closure-ticket-print,
   body[data-print-doc="day-closure"] #day-closure-ticket-print * {
-    color: #000000 !important;
+    color: #000 !important;
+    background: transparent !important;
     box-shadow: none !important;
     text-shadow: none !important;
     -webkit-print-color-adjust: economy;
     print-color-adjust: economy;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print > div {
+    border-color: #000 !important;
+    background: #fff !important;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print thead tr,
+  body[data-print-doc="day-closure"] #day-closure-ticket-print tbody tr {
+    page-break-inside: avoid;
   }
 
   body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-print-hide {
@@ -2103,9 +2122,20 @@ textarea:focus {
   box-shadow: none !important;
 }
 
+/* Cases à cocher — sélection factures */
+.natus-invoice-select {
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.natus-invoice-select:disabled {
+  opacity: 0.45;
+}
+
 /* ── Barre alertes caisse ── */
 .natus-notification-bar {
   border-bottom: 1px solid rgba(179, 140, 74, 0.18);
+  margin-bottom: 1.25rem;
   background:
     linear-gradient(
       90deg,

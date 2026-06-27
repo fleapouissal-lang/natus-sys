@@ -111,6 +111,17 @@ export function ActivityLog({
       <FilterTogglePanel
         toggleLabel="Filtrer l'activité"
         summary={`${filtered.length} action${filtered.length !== 1 ? "s" : ""}`}
+        footer={
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            totalItems={totalItems}
+            onPageChange={setPage}
+            variant="inline"
+          />
+        }
       >
       <div className="natus-filter-bar overflow-visible p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -235,16 +246,6 @@ export function ActivityLog({
             </tbody>
           </table>
         </div>
-        {filtered.length > 0 && (
-          <PaginationBar
-            page={page}
-            totalPages={totalPages}
-            rangeStart={rangeStart}
-            rangeEnd={rangeEnd}
-            totalItems={totalItems}
-            onPageChange={setPage}
-          />
-        )}
       </Card>
     </div>
   );

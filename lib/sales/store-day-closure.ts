@@ -25,6 +25,7 @@ export type StorePosDayState = {
   store_name: string;
   business_date: string;
   calendar_date: string;
+  require_manager_code: boolean;
   can_request_closure: boolean;
   closure_blocked_reason?: string | null;
   day_closure_validated: boolean;
@@ -123,6 +124,7 @@ export function parseStorePosDayState(raw: unknown): StorePosDayState | null {
     store_name: String(row.store_name ?? "Magasin"),
     business_date: String(row.business_date),
     calendar_date: String(row.calendar_date ?? row.business_date ?? ""),
+    require_manager_code: row.require_manager_code !== false,
     can_request_closure: row.can_request_closure !== false,
     closure_blocked_reason: row.closure_blocked_reason
       ? String(row.closure_blocked_reason)

@@ -5,16 +5,19 @@ import {
   listPendingStoreDayClosures,
   listStoreDayClosures,
 } from "@/lib/sales/store-day-closure-actions";
+import { getPosClosureSettings } from "@/lib/sales/pos-closure-settings.server";
 import { StoreDayClosureValidationPanel } from "@/components/sales/store-day-closure-validation-panel";
 import { StoreDayClosureReportsList } from "@/components/sales/store-day-closure-reports-list";
+import { PosClosureSettingsForm } from "@/components/sales/pos-closure-settings-form";
 
 export default async function DirectorPosClosuresPage() {
   const profile = await getCurrentProfile();
   if (!profile || !isDirector(profile)) redirect("/login");
 
-  const [pendingResult, reportsResult] = await Promise.all([
+  const [pendingResult, reportsResult, closureSettings] = await Promise.all([
     listPendingStoreDayClosures(),
     listStoreDayClosures(),
+    getPosClosureSettings(),
   ]);
 
   const pending = "closures" in pendingResult ? pendingResult.closures : [];
@@ -29,7 +32,16 @@ export default async function DirectorPosClosuresPage() {
         </p>
       </div>
 
-      <StoreDayClosureValidationPanel initialClosures={pending} roleLabel="directeur" />
+      <PosClosureSettingsForm initialSettings={closureSettings} />
+
+      {closureSettings.requireManagerCode ? (
+        <StoreDayClosureValidationPanel initialClosures={pending} roleLabel="directeur" />
+      ) : (
+        <p className="rounded-lg border border-primary/20 bg-primary-light/30 px-4 py-3 text-sm text-foreground">
+          Clôture directe activée : les caissiers clôturent le jour métier sans code gérant. Cette
+          section de validation par code est masquée.
+        </p>
+      )}
 
       <div>
         <h2 className="mb-3 font-heading text-lg font-semibold text-primary-dark">

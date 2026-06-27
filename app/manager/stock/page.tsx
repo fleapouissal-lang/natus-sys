@@ -42,6 +42,7 @@ export default async function StockPage({
         role="manager"
         stores={stores.map((s) => ({ id: s.id, name: s.name, city: s.city }))}
         myRequests={myRequests}
+        selectedStoreId={defaultStoreId || undefined}
       />
       <StockManager
         stores={stores}

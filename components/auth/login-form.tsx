@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input, PasswordInput } from "@/components/ui/input";
-import { touchSessionActivity } from "@/components/auth/session-guard";
 import { signInStaff } from "@/lib/auth/sign-in";
 
 const LOGIN_HERO = {
@@ -17,11 +15,17 @@ const LOGIN_HERO = {
 const LOGIN_HERO_NATIVE_WIDTH = 576;
 
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("email") || params.has("password")) {
+      window.history.replaceState(null, "", "/login");
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,12 +47,7 @@ export function LoginForm() {
     if (!result.ok) {
       setError(result.error);
       setLoading(false);
-      return;
     }
-
-    touchSessionActivity();
-    router.push(result.redirectTo);
-    router.refresh();
   }
 
   return (
@@ -92,7 +91,14 @@ export function LoginForm() {
                 Identifiez-vous pour accéder à votre tableau de bord.
               </p>
 
-              <form onSubmit={handleSubmit} className="space-y-5" autoComplete="on">
+              <form
+                method="post"
+                action="/login"
+                onSubmit={handleSubmit}
+                className="space-y-5"
+                autoComplete="on"
+                noValidate
+              >
                 <Input
                   label="Email"
                   name="email"

@@ -22,6 +22,8 @@ export interface SaleDocumentData {
   shopifyOrderNumber?: string;
   customerName?: string;
   customerPhone?: string;
+  customerEmail?: string;
+  customerIce?: string;
   paymentLabel?: string;
   storeName?: string;
 }

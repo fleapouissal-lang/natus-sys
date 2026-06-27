@@ -1,12 +1,11 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveStaffHomePath } from "@/lib/cashier/access";
 import type { UserRole } from "@/lib/types";
 
-export type SignInResult =
-  | { ok: true; redirectTo: string }
-  | { ok: false; error: string };
+export type SignInResult = { ok: false; error: string };
 
 function getLoginErrorMessage(code?: string, message?: string): string {
   switch (code) {
@@ -72,5 +71,5 @@ export async function signInStaff(
     { isMobile: options?.isMobile }
   );
 
-  return { ok: true, redirectTo };
+  redirect(redirectTo);
 }
