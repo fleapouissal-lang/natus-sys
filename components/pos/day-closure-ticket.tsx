@@ -1,9 +1,11 @@
 "use client";
 
+import { Fragment } from "react";
 import { NATUS_INVOICE_COMPANY } from "@/lib/constants/company";
 import {
   dayClosureReference,
   formatDayClosureDate,
+  saleLineItems,
   type DayClosureStats,
 } from "@/lib/sales/day-closure";
 import { formatCurrency } from "@/lib/utils";
@@ -145,17 +147,37 @@ export function DayClosureTicket({
             </tr>
           </thead>
           <tbody>
-            {activeSales.map((sale) => (
-              <tr key={sale.id} className="border-b border-black/25 align-top">
-                <td className="py-1 pr-1 font-bold tabular-nums">{formatSaleTime(sale.created_at)}</td>
-                <td className="py-1 text-center text-[8px] font-black">
-                  {paymentShort(sale.payment_method)}
-                </td>
-                <td className="py-1 text-right font-black tabular-nums">
-                  {formatCurrency(Number(sale.total))}
-                </td>
-              </tr>
-            ))}
+            {activeSales.map((sale) => {
+              const items = saleLineItems(sale);
+              return (
+                <Fragment key={sale.id}>
+                  <tr className="border-b border-black/25 align-top">
+                    <td className="py-1 pr-1 font-bold tabular-nums">
+                      {formatSaleTime(sale.created_at)}
+                    </td>
+                    <td className="py-1 text-center text-[8px] font-black">
+                      {paymentShort(sale.payment_method)}
+                    </td>
+                    <td className="py-1 text-right font-black tabular-nums">
+                      {formatCurrency(Number(sale.total))}
+                    </td>
+                  </tr>
+                  {items.length > 0 && (
+                    <tr className="border-b border-black/15 align-top">
+                      <td colSpan={3} className="pb-1.5 pl-1 text-[8px] leading-snug text-black/85">
+                        {items.map((item, index) => (
+                          <span key={`${sale.id}-${index}`}>
+                            {index > 0 ? " · " : null}
+                            <span className="font-semibold">{item.name}</span>
+                            <span className="font-black"> ×{item.quantity}</span>
+                          </span>
+                        ))}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
             {activeSales.length === 0 && (
               <tr>
                 <td colSpan={3} className="py-3 text-center text-[9px] font-semibold">

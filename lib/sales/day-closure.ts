@@ -89,6 +89,34 @@ export function uniqueCashierLabels(sales: Sale[]): string[] {
   return [...labels].sort((a, b) => a.localeCompare(b, "fr"));
 }
 
+export type SaleLineItemRow = {
+  name: string;
+  quantity: number;
+  barcode: string | null;
+  unitPrice: number;
+};
+
+export function saleLineItems(sale: Pick<Sale, "sale_items">): SaleLineItemRow[] {
+  return (sale.sale_items || []).map((item) => ({
+    name: item.products?.name?.trim() || "Produit",
+    quantity: Number(item.quantity),
+    barcode: item.products?.barcode ?? null,
+    unitPrice: Number(item.unit_price),
+  }));
+}
+
+export function formatSaleLineItemsText(sale: Pick<Sale, "sale_items">): string {
+  const items = saleLineItems(sale);
+  if (items.length === 0) return "—";
+  return items.map((item) => `${item.name} ×${item.quantity}`).join(", ");
+}
+
+export function formatSaleLineItemsMultiline(sale: Pick<Sale, "sale_items">): string {
+  const items = saleLineItems(sale);
+  if (items.length === 0) return "—";
+  return items.map((item) => `${item.name} ×${item.quantity}`).join("\n");
+}
+
 function runPrintJob(
   layout: "ticket" | "a4" | "a4-report",
   doc: "day-closure" | "day-closure-report"

@@ -8,6 +8,7 @@ import {
 import { getPosClosureSettings } from "@/lib/sales/pos-closure-settings.server";
 import { StoreDayClosureValidationPanel } from "@/components/sales/store-day-closure-validation-panel";
 import { StoreDayClosureReportsList } from "@/components/sales/store-day-closure-reports-list";
+import { ZReportLauncher } from "@/components/sales/z-report-modal";
 import { PosClosureSettingsForm } from "@/components/sales/pos-closure-settings-form";
 
 export default async function DirectorPosClosuresPage() {
@@ -44,9 +45,12 @@ export default async function DirectorPosClosuresPage() {
       )}
 
       <div>
-        <h2 className="mb-3 font-heading text-lg font-semibold text-primary-dark">
-          Historique des rapports
-        </h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-heading text-lg font-semibold text-primary-dark">
+            Historique des rapports
+          </h2>
+          <ZReportLauncher />
+        </div>
         <StoreDayClosureReportsList initialClosures={reports} showStoreColumn />
       </div>
     </div>
