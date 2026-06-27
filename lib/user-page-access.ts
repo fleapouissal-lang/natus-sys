@@ -6,6 +6,7 @@ export type UserPageKey =
   | "dashboard"
   | "planning"
   | "pos"
+  | "pos_closures"
   | "sales"
   | "stock"
   | "products"
@@ -38,6 +39,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "dashboard", label: "Accueil", description: "Tableau de bord et statistiques", group: "operations" },
   { key: "planning", label: "Planning", description: "Horaires et équipes magasin", group: "operations" },
   { key: "pos", label: "Caisse", description: "Point de vente et encaissement", group: "operations" },
+  { key: "pos_closures", label: "Clôtures caisse", description: "Rapports et clôtures journalières", group: "operations" },
   { key: "sales", label: "Ventes", description: "Historique des ventes POS", group: "operations" },
   { key: "stock", label: "Stock", description: "Vue globale et stock par magasin ou dépôt", group: "operations" },
   { key: "products", label: "Produits", description: "Catalogue et fiches produit", group: "admin" },
@@ -60,21 +62,21 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
 
 const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
   directeur: [
-    "dashboard", "planning", "pos", "sales", "stock", "products", "stores",
+    "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products", "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
     "hub_stock", "hubs", "writeoffs",
   ],
   admin: [
-    "dashboard", "planning", "pos", "sales", "stock", "products", "stores",
+    "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products", "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
     "hub_stock", "hubs", "writeoffs",
   ],
   manager: [
-    "dashboard", "planning", "sales", "stock", "hub_orders", "stores",
+    "dashboard", "planning", "pos_closures", "sales", "stock", "hub_orders", "stores",
     "activity", "reclamations", "writeoffs", "invoices", "actualites",
   ],
   cashier: [
-    "pos", "planning", "actualites", "sales", "notes", "transfers",
+    "pos", "planning", "pos_closures", "actualites", "sales", "notes", "transfers",
     "customers", "returns", "invoices",
   ],
   livreur: ["actualites", "transfers", "returns"],
@@ -84,6 +86,7 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
 const PAGE_HOME_PRIORITY: UserPageKey[] = [
   "dashboard",
   "pos",
+  "pos_closures",
   "planning",
   "sales",
   "stock",
@@ -151,6 +154,11 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
     case "pos":
       if (role === "hub") return null;
       return "/cashier/pos";
+    case "pos_closures":
+      if (role === "cashier") return "/cashier/pos-closures";
+      if (role === "manager") return "/manager/pos-closures";
+      if (role === "directeur" || role === "admin") return "/director/pos-closures";
+      return null;
     case "sales":
       return role === "cashier" ? "/cashier/sales" : base ? `${base}/sales` : null;
     case "stock":
@@ -300,6 +308,15 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
   }
   if (href === "/director/hub" && (role === "directeur" || role === "admin")) {
     return "hub_stock";
+  }
+  if (href === "/cashier/pos-closures" && role === "cashier") {
+    return "pos_closures";
+  }
+  if (href === "/manager/pos-closures" && role === "manager") {
+    return "pos_closures";
+  }
+  if (href === "/director/pos-closures" && (role === "directeur" || role === "admin")) {
+    return "pos_closures";
   }
   return null;
 }

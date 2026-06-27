@@ -1,15 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Banknote, CreditCard, Printer } from "lucide-react";
+import { Banknote, CreditCard } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { SalesAgendaFilter } from "@/components/sales/sales-agenda-filter";
 import { SaleDetailModal } from "@/components/sales/sale-detail-modal";
 import { SalesHistoryTable } from "@/components/sales/sales-history-table";
-import { CashierSalesReport } from "@/components/sales/cashier-sales-report";
 import { OrderDatePeriodFilter } from "@/components/orders/order-date-period-filter";
 import { createClient } from "@/lib/supabase/client";
 import { fetchCashierSales, fetchStoreSales } from "@/lib/sales/fetch-cashier-sales";
@@ -19,10 +16,6 @@ import {
   orderDatePresetToKeys,
   type OrderDatePreset,
 } from "@/lib/store-tracking-period";
-import {
-  printCashierSalesReport,
-  salesReportPrintLabel,
-} from "@/lib/sales/cashier-report";
 import { formatCurrency, toLocalDateKey } from "@/lib/utils";
 import type { PaymentMethod, Sale } from "@/lib/types";
 
@@ -49,11 +42,6 @@ export function CashierSalesHistory({
   const [dateTo, setDateTo] = useState(initialToday.to);
   const [paymentFilter, setPaymentFilter] = useState<"" | PaymentMethod>("");
   const [detailSale, setDetailSale] = useState<Sale | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     setSales(initialSales);
@@ -205,36 +193,7 @@ export function CashierSalesHistory({
             onPresetChange={applyDatePreset}
           />
         }
-        extraActions={
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={printCashierSalesReport}
-            disabled={filtered.length === 0}
-          >
-            <Printer className="h-4 w-4" />
-            {salesReportPrintLabel(activeDatePreset)}
-          </Button>
-        }
       />
-
-      {mounted &&
-        createPortal(
-          <div className="natus-sales-report-print-only" aria-hidden>
-            <CashierSalesReport
-              key={`${dateFrom}|${dateTo}|${paymentFilter}|${filtered.length}`}
-              sales={filtered}
-              stats={stats}
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              periodLabel={orderDatePresetLabel(activeDatePreset)}
-              cashierName={cashierName}
-              paymentFilter={paymentFilter}
-            />
-          </div>,
-          document.body
-        )}
 
       <Card padding={false}>
         <div className="p-4 md:p-6">

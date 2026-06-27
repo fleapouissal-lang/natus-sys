@@ -1,9 +1,11 @@
 const PAGE_STYLE_ID = "natus-print-page-size";
 
-export type PrintPageLayout = "a4" | "ticket";
+export type PrintPageLayout = "a4" | "a4-report" | "ticket";
 
 const PAGE_RULES: Record<PrintPageLayout, string> = {
   a4: "@media print { @page { size: A4 portrait; margin: 10mm; } }",
+  "a4-report":
+    "@media print { @page { size: A4 portrait; margin: 12mm 10mm 16mm 10mm; @bottom-center { content: 'Page ' counter(page) ' / ' counter(pages); font-size: 8pt; color: #444; font-family: system-ui, sans-serif; } } }",
   ticket: "@media print { @page { size: 80mm auto; margin: 4mm; } }",
 };
 

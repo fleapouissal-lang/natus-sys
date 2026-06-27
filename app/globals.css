@@ -1324,6 +1324,130 @@ textarea:focus {
   overflow: visible;
 }
 
+/* Clôture caisse — écran coloré, tableaux sans radius */
+.natus-closure-screen .natus-closure-kpi {
+  border-radius: 0;
+  border: 1px solid rgba(179, 140, 74, 0.22);
+  border-left-width: 4px;
+  background: linear-gradient(135deg, rgba(250, 234, 161, 0.35) 0%, #fffdf9 100%);
+}
+
+.natus-closure-screen .natus-closure-kpi--total {
+  border-left-color: #2c2418;
+  background: linear-gradient(135deg, rgba(44, 36, 24, 0.08) 0%, #fffdf9 100%);
+}
+
+.natus-closure-screen .natus-closure-kpi--cash {
+  border-left-color: #3d7a4a;
+}
+
+.natus-closure-screen .natus-closure-kpi--card {
+  border-left-color: #2f5f8f;
+}
+
+.natus-closure-screen .natus-closure-kpi--cheque {
+  border-left-color: #8f6b38;
+}
+
+.natus-closure-table-wrap {
+  border: 1px solid rgba(179, 140, 74, 0.25);
+  border-radius: 0 !important;
+  overflow: hidden;
+  background: #fffdf9;
+}
+
+.natus-closure-table-wrap__title {
+  border-bottom: 1px solid rgba(179, 140, 74, 0.2);
+  background: linear-gradient(90deg, rgba(250, 234, 161, 0.55) 0%, rgba(255, 253, 249, 0.9) 100%);
+  padding: 0.625rem 1rem;
+}
+
+.natus-closure-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  border-radius: 0 !important;
+}
+
+.natus-closure-table thead,
+.natus-closure-table thead tr,
+.natus-closure-table thead th,
+.natus-closure-table thead th::before,
+.natus-closure-table thead th::after {
+  border-radius: 0 !important;
+}
+
+.natus-closure-table thead tr {
+  background: #2c2418;
+  color: #faeaa1;
+}
+
+.natus-closure-table thead th {
+  padding: 0.5rem 1rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.natus-closure-table tbody tr {
+  border-top: 1px solid rgba(44, 36, 24, 0.1);
+}
+
+.natus-closure-table tbody td {
+  padding: 0.5rem 1rem;
+}
+
+.natus-closure-table tbody tr.natus-closure-table__total {
+  border-top: 2px solid #2c2418;
+  background: rgba(250, 234, 161, 0.35);
+  font-weight: 600;
+}
+
+.natus-closure-doc {
+  color: #2c2418;
+}
+
+.natus-closure-doc .natus-closure-table thead tr {
+  background: #2c2418;
+  color: #faeaa1;
+}
+
+.natus-closure-report.natus-closure-doc .natus-closure-table-wrap,
+.natus-closure-report.natus-closure-doc .natus-closure-report-stat {
+  border-radius: 0;
+}
+
+.natus-closure-report-stat {
+  border: 1px solid rgba(179, 140, 74, 0.22);
+  border-radius: 0;
+  background: rgba(250, 234, 161, 0.2);
+  padding: 0.75rem;
+}
+
+.natus-closure-report-table thead {
+  display: table-header-group;
+}
+
+.natus-closure-report-table tfoot {
+  display: table-footer-group;
+}
+
+.natus-closure-report-total-bar {
+  border-top: 2px solid #2c2418;
+  background: rgba(250, 234, 161, 0.35);
+  color: #2c2418;
+}
+
+.natus-closure-report-card {
+  border-radius: 0 !important;
+}
+
+.natus-closure-reports-card table thead tr,
+.natus-closure-reports-card table thead th {
+  border-radius: 0 !important;
+}
+
 @media print {
   @page {
     size: A4 portrait;
@@ -1532,16 +1656,75 @@ textarea:focus {
     width: 100% !important;
     max-width: 80mm !important;
     margin: 0 auto !important;
-    background: white !important;
+    background: #ffffff !important;
+    color: #000000 !important;
     padding: 0 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    font-size: 11pt !important;
+    line-height: 1.45 !important;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
   }
 
   body[data-print-doc="day-closure"] #day-closure-ticket-print,
   body[data-print-doc="day-closure"] #day-closure-ticket-print * {
+    color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-print-hide {
+    display: none !important;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-print-panel,
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-print-recap {
+    background: #ffffff !important;
+    border: 1px solid #000000 !important;
+    border-radius: 0 !important;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-table thead,
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-table thead tr,
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-table thead th,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-table thead,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-table thead tr,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-table thead th {
+    border-radius: 0 !important;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-table thead tr,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-table thead tr {
+    background: #000000 !important;
+    color: #ffffff !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-table thead th,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-table thead th {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    border: 1px solid #000000 !important;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-table tbody td,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-table tbody td {
+    border: 1px solid #333333 !important;
+    color: #000000 !important;
+    font-size: 10pt !important;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-print-total {
+    background: #000000 !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body[data-print-doc="day-closure"] #day-closure-ticket-print .natus-closure-print-total span {
+    color: #ffffff !important;
   }
 
   body[data-print-doc="day-closure-report"] > *:not(.natus-sales-report-print-only) {
@@ -1562,23 +1745,194 @@ textarea:focus {
     position: static !important;
     left: auto !important;
     top: auto !important;
+    inset: auto !important;
     width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
     background: white !important;
+    z-index: auto !important;
     pointer-events: auto !important;
   }
 
   body[data-print-doc="day-closure-report"] #cashier-sales-report-print {
     position: static !important;
+    left: auto !important;
+    top: auto !important;
     width: 100% !important;
     max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
     background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10pt !important;
+    line-height: 1.4 !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print > div,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .overflow-hidden {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print * {
+    color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-header {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    border-bottom: 2px solid #000000 !important;
+    padding-bottom: 4mm !important;
+    margin-bottom: 4mm !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-header h1 {
+    font-size: 16pt !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-header p {
+    font-size: 9pt !important;
+    color: #222222 !important;
+    margin-top: 1mm !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-stats-grid {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: 2mm !important;
+    margin-bottom: 5mm !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    grid-template-columns: none !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-stat {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    background: #ffffff !important;
+    border: 1px solid #000000 !important;
+    border-radius: 0 !important;
+    padding: 2.5mm 2mm !important;
+    text-align: center !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-stat p:first-child {
+    font-size: 7pt !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
+    color: #333333 !important;
+    margin: 0 !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-stat p:last-child {
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+    margin-top: 1.5mm !important;
+    color: #000000 !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-table-wrap {
+    background: #ffffff !important;
+    border: 1px solid #000000 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    font-size: 9pt !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-table thead {
+    display: table-header-group !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-table tfoot {
+    display: table-footer-group !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-row {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-row:nth-child(even) {
+    background: #f5f5f5 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-total-bar {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 4mm !important;
+    white-space: nowrap !important;
+    background: #e8e8e8 !important;
+    border-top: 2px solid #000000 !important;
+    padding: 3mm 4mm !important;
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-total-bar span:last-child {
+    font-size: 12pt !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-footer {
+    margin-top: 6mm !important;
+    padding-top: 3mm !important;
+    border-top: 1px solid #666666 !important;
+    font-size: 8pt !important;
+    color: #333333 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-cancelled {
+    margin-top: 4mm !important;
+    font-size: 9pt !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-header,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-stat,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-table-wrap {
+    background: #ffffff !important;
+    border-color: #000000 !important;
+    border-radius: 0 !important;
+  }
+
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print .natus-closure-report-stat p,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print h1,
+  body[data-print-doc="day-closure-report"] #cashier-sales-report-print header p {
+    color: #000000 !important;
   }
 
   body[data-print-doc="day-closure"] #cashier-sales-report-print,

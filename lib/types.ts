@@ -23,6 +23,7 @@ export interface Store {
   lng?: number | null;
   is_active: boolean;
   is_hub?: boolean;
+  current_business_date?: string;
   created_at: string;
 }
 
@@ -109,6 +110,7 @@ export interface Sale {
   cancelled_by: string | null;
   invoice_validated_at: string | null;
   invoice_validated_by: string | null;
+  business_date?: string;
   created_at: string;
   profiles?: Pick<Profile, "full_name" | "email">;
   stores?: Pick<Store, "name" | "city"> | null;

@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PackageCheck, Truck } from "lucide-react";
+import { Eye, PackageCheck, Truck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Modal } from "@/components/ui/modal";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { ProductImage } from "@/components/pos/product-image";
 import { confirmHubStockTransfer } from "@/lib/actions";
@@ -18,6 +19,118 @@ import {
 import { formatDate } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { HubStockTransfer, Product } from "@/lib/types";
+
+const ACTION_COLOR = "#B38C4A";
+
+function TransferIconButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className="order-action-icon flex h-8 w-8 shrink-0 items-center justify-center !p-0 border bg-transparent hover:bg-[#B38C4A]/10"
+      style={{ borderColor: ACTION_COLOR, color: ACTION_COLOR }}
+    >
+      {children}
+    </Button>
+  );
+}
+
+function TransferProductsTable({
+  transfer,
+  productsById,
+  storeStockByProductId,
+}: {
+  transfer: HubStockTransfer;
+  productsById: Record<string, Pick<Product, "id" | "name" | "barcode" | "image_url" | "category">>;
+  storeStockByProductId: Record<string, number>;
+}) {
+  const canValidate = hubTransferCashierCanValidate(transfer.status);
+  const transferTotals = transfer.items.reduce(
+    (acc, item) => {
+      const inStore = storeStockByProductId[item.product_id] ?? 0;
+      acc.inStore += inStore;
+      acc.received += item.quantity;
+      acc.total += inStore + (canValidate ? item.quantity : 0);
+      return acc;
+    },
+    { inStore: 0, received: 0, total: 0 }
+  );
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border bg-primary-light/30">
+            <th className="px-4 py-3 text-left font-medium text-muted">Produit</th>
+            <th className="px-4 py-3 text-right font-medium text-muted">En magasin</th>
+            <th className="px-4 py-3 text-right font-medium text-muted">
+              {canValidate ? "À recevoir" : "Commandé"}
+            </th>
+            {canValidate && (
+              <th className="px-4 py-3 text-right font-medium text-muted">Total magasin</th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {transfer.items.map((item) => {
+            const product = productsById[item.product_id];
+            const inStore = storeStockByProductId[item.product_id] ?? 0;
+            const ordered = item.quantity;
+            const totalInStore = inStore + ordered;
+
+            return (
+              <tr key={item.id} className="border-b border-border last:border-b-0">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    {product ? <ProductImage product={product} size="sm" /> : null}
+                    <div>
+                      <p className="font-medium">{item.product_name}</p>
+                      <p className="font-mono text-xs text-muted">{item.product_barcode}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-muted">{inStore}</td>
+                <td className="px-4 py-3 text-right tabular-nums font-semibold text-primary">
+                  {canValidate ? "+" : ""}
+                  {ordered}
+                </td>
+                {canValidate && (
+                  <td className="px-4 py-3 text-right tabular-nums font-bold">{totalInStore}</td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+        {canValidate && (
+          <tfoot>
+            <tr className="border-t border-border bg-champagne/30 font-semibold">
+              <td className="px-4 py-3 text-left">Total</td>
+              <td className="px-4 py-3 text-right tabular-nums text-muted">
+                {transferTotals.inStore}
+              </td>
+              <td className="px-4 py-3 text-right tabular-nums text-primary">
+                +{transferTotals.received}
+              </td>
+              <td className="px-4 py-3 text-right tabular-nums">{transferTotals.total}</td>
+            </tr>
+          </tfoot>
+        )}
+      </table>
+    </div>
+  );
+}
 
 export function CashierStockTransfers({
   transfers,
@@ -34,6 +147,7 @@ export function CashierStockTransfers({
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [detailTransfer, setDetailTransfer] = useState<HubStockTransfer | null>(null);
 
   const {
     paginated: paginatedTransfers,
@@ -59,180 +173,191 @@ export function CashierStockTransfers({
     }
 
     setSuccess("Réception validée — le stock magasin a été mis à jour");
+    setDetailTransfer(null);
     router.refresh();
   }
+
+  const detailCanValidate = detailTransfer
+    ? hubTransferCashierCanValidate(detailTransfer.status)
+    : false;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Commandes dépôt</h1>
-        <p className="mt-1 text-muted">
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-primary-dark">
+          Commandes dépôt
+        </h1>
+        <p className="mt-1 text-sm text-muted">
           Suivi des commandes depuis l&apos;entrepôt hub vers {storeName}
         </p>
       </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
-      {success && <p className="text-sm text-success">{success}</p>}
-
-      {transfers.length === 0 ? (
-        <Card className="py-12 text-center text-muted">
-          Aucune commande dépôt en cours
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {paginatedTransfers.map((transfer) => {
-            const canValidate = hubTransferCashierCanValidate(transfer.status);
-            const statusHint = hubTransferStoreStatusHint(transfer.status);
-            const transferTotals = transfer.items.reduce(
-              (acc, item) => {
-                const inStore = storeStockByProductId[item.product_id] ?? 0;
-                acc.inStore += inStore;
-                acc.received += item.quantity;
-                acc.total += inStore + (canValidate ? item.quantity : 0);
-                return acc;
-              },
-              { inStore: 0, received: 0, total: 0 }
-            );
-
-            return (
-              <Card key={transfer.id} padding={false}>
-                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Truck className="h-5 w-5 text-primary" />
-                      <h2 className="text-lg font-semibold">
-                        {transfer.from_store_name || "Entrepôt hub"}
-                      </h2>
-                      <Badge variant={hubTransferStatusVariant(transfer.status)}>
-                        {hubTransferStatusLabel(transfer.status)}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-muted">
-                      {formatDate(transfer.sent_at)}
-                      {transfer.creator_name ? ` · ${transfer.creator_name}` : ""}
-                      {" · "}
-                      {transfer.items.length} produit{transfer.items.length !== 1 ? "s" : ""},{" "}
-                      {transfer.total_units} unité{transfer.total_units !== 1 ? "s" : ""}
-                    </p>
-                    {statusHint && (
-                      <p className="mt-2 text-sm text-foreground/90">{statusHint}</p>
-                    )}
-                    {transfer.assigned_livreur_name && (
-                      <p className="mt-1 text-xs text-muted">
-                        Livreur : {transfer.assigned_livreur_name}
-                      </p>
-                    )}
-                    {transfer.notes && (
-                      <p className="mt-1 text-sm text-muted">{transfer.notes}</p>
-                    )}
-                  </div>
-                  {canValidate ? (
-                    <Button
-                      type="button"
-                      loading={loadingId === transfer.id}
-                      onClick={() => void handleConfirm(transfer.id)}
-                    >
-                      <PackageCheck className="h-4 w-4" />
-                      Valider la réception
-                    </Button>
-                  ) : (
-                    <p className="max-w-xs text-right text-xs text-muted">
-                      {transfer.status === "en_cours"
-                        ? "Commande enregistrée au dépôt"
-                        : "En attente — le caissier validera après livraison du livreur"}
-                    </p>
-                  )}
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-primary-light/30">
-                        <th className="px-6 py-3 text-left font-medium text-muted">Produit</th>
-                        <th className="px-6 py-3 text-right font-medium text-muted">
-                          En magasin
-                        </th>
-                        <th className="px-6 py-3 text-right font-medium text-muted">
-                          {canValidate ? "À recevoir" : "Commandé"}
-                        </th>
-                        {canValidate && (
-                          <th className="px-6 py-3 text-right font-medium text-muted">
-                            Total magasin
-                          </th>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transfer.items.map((item) => {
-                        const product = productsById[item.product_id];
-                        const inStore = storeStockByProductId[item.product_id] ?? 0;
-                        const ordered = item.quantity;
-                        const totalInStore = inStore + ordered;
-                        return (
-                          <tr key={item.id} className="border-b border-border last:border-b-0">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                {product ? (
-                                  <ProductImage product={product} size="sm" />
-                                ) : null}
-                                <div>
-                                  <p className="font-medium">{item.product_name}</p>
-                                  <p className="font-mono text-xs text-muted">
-                                    {item.product_barcode}
-                                  </p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-right tabular-nums text-muted">
-                              {inStore}
-                            </td>
-                            <td className="px-6 py-4 text-right tabular-nums font-semibold text-primary">
-                              {canValidate ? "+" : ""}
-                              {ordered}
-                            </td>
-                            {canValidate && (
-                              <td className="px-6 py-4 text-right tabular-nums font-bold">
-                                {totalInStore}
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    {canValidate && (
-                      <tfoot>
-                        <tr className="border-t border-border bg-champagne/30 font-semibold">
-                          <td className="px-6 py-3 text-left">Total</td>
-                          <td className="px-6 py-3 text-right tabular-nums text-muted">
-                            {transferTotals.inStore}
-                          </td>
-                          <td className="px-6 py-3 text-right tabular-nums text-primary">
-                            +{transferTotals.received}
-                          </td>
-                          <td className="px-6 py-3 text-right tabular-nums">
-                            {transferTotals.total}
-                          </td>
-                        </tr>
-                      </tfoot>
-                    )}
-                  </table>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+      {error && (
+        <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>
+      )}
+      {success && (
+        <p className="rounded-lg bg-success/10 px-4 py-3 text-sm text-success">{success}</p>
       )}
 
-      {transfers.length > 0 && (
-        <PaginationBar
-          page={page}
-          totalPages={totalPages}
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          totalItems={totalItems}
-          onPageChange={setPage}
-          className="rounded-lg border border-border bg-surface px-6 py-4"
-        />
+      <Card padding={false}>
+        <div className="p-4 md:p-6">
+          <CardHeader
+            title="Liste des commandes"
+            description={`${totalItems} commande${totalItems !== 1 ? "s" : ""} dépôt`}
+          />
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-y border-border bg-primary-light/50">
+                <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
+                <th className="px-6 py-3 text-left font-medium text-muted">Origine</th>
+                <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
+                <th className="px-6 py-3 text-right font-medium text-muted">Produits</th>
+                <th className="px-6 py-3 text-right font-medium text-muted">Unités</th>
+                <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedTransfers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted">
+                    Aucune commande dépôt en cours
+                  </td>
+                </tr>
+              ) : (
+                paginatedTransfers.map((transfer) => {
+                  const canValidate = hubTransferCashierCanValidate(transfer.status);
+                  const statusHint = hubTransferStoreStatusHint(transfer.status);
+
+                  return (
+                    <tr key={transfer.id} className="border-b border-border last:border-b-0">
+                      <td className="px-6 py-4 whitespace-nowrap">{formatDate(transfer.sent_at)}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="font-medium">
+                            {transfer.from_store_name || "Entrepôt hub"}
+                          </span>
+                        </div>
+                        {transfer.assigned_livreur_name && (
+                          <p className="mt-1 text-xs text-muted">
+                            Livreur : {transfer.assigned_livreur_name}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant={hubTransferStatusVariant(transfer.status)}>
+                          {hubTransferStatusLabel(transfer.status)}
+                        </Badge>
+                        {statusHint && <p className="mt-1 text-xs text-muted">{statusHint}</p>}
+                        {transfer.notes && (
+                          <p className="mt-1 text-xs text-muted line-clamp-2">{transfer.notes}</p>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right tabular-nums">{transfer.items.length}</td>
+                      <td className="px-6 py-4 text-right font-medium tabular-nums">
+                        {transfer.total_units}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex justify-end gap-1.5">
+                          <TransferIconButton
+                            label="Voir le détail"
+                            onClick={() => setDetailTransfer(transfer)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </TransferIconButton>
+                          {canValidate && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              loading={loadingId === transfer.id}
+                              onClick={() => void handleConfirm(transfer.id)}
+                            >
+                              <PackageCheck className="h-4 w-4" />
+                              Valider
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {totalItems > 0 && (
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            totalItems={totalItems}
+            onPageChange={setPage}
+          />
+        )}
+      </Card>
+
+      {detailTransfer && (
+        <Modal onClose={() => setDetailTransfer(null)} size="lg" className="!max-w-[min(96vw,880px)] !p-0">
+          <div className="border-b border-border px-5 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="font-heading text-lg font-semibold text-primary-dark">
+                    {detailTransfer.from_store_name || "Entrepôt hub"}
+                  </h2>
+                  <Badge variant={hubTransferStatusVariant(detailTransfer.status)}>
+                    {hubTransferStatusLabel(detailTransfer.status)}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm text-muted">
+                  {formatDate(detailTransfer.sent_at)}
+                  {" · "}
+                  {detailTransfer.items.length} produit
+                  {detailTransfer.items.length !== 1 ? "s" : ""},{" "}
+                  {detailTransfer.total_units} unité
+                  {detailTransfer.total_units !== 1 ? "s" : ""}
+                </p>
+                {detailTransfer.notes && (
+                  <p className="mt-1 text-sm text-muted">{detailTransfer.notes}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailTransfer(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-primary/10 hover:text-primary-dark"
+                aria-label="Fermer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="max-h-[min(60vh,520px)] overflow-y-auto p-4 scrollbar-natus">
+            <TransferProductsTable
+              transfer={detailTransfer}
+              productsById={productsById}
+              storeStockByProductId={storeStockByProductId}
+            />
+          </div>
+
+          {detailCanValidate && (
+            <div className="flex justify-end border-t border-border px-5 py-4">
+              <Button
+                type="button"
+                loading={loadingId === detailTransfer.id}
+                onClick={() => void handleConfirm(detailTransfer.id)}
+              >
+                <PackageCheck className="h-4 w-4" />
+                Valider la réception
+              </Button>
+            </div>
+          )}
+        </Modal>
       )}
     </div>
   );

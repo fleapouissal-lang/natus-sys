@@ -18,7 +18,11 @@ export function todayDateKey(): string {
 }
 
 export function filterSalesForDateKey(sales: Sale[], dateKey: string): Sale[] {
-  return sales.filter((sale) => toLocalDateKey(sale.created_at) === dateKey);
+  return sales.filter((sale) => saleBusinessDateKey(sale) === dateKey);
+}
+
+export function saleBusinessDateKey(sale: Pick<Sale, "business_date" | "created_at">): string {
+  return sale.business_date ?? toLocalDateKey(sale.created_at);
 }
 
 export function computeDayClosureStats(sales: Sale[]): DayClosureStats {
@@ -59,6 +63,16 @@ export function formatDayClosureDate(dateKey: string): string {
   });
 }
 
+export function formatDayClosureDateShort(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  if (!y || !m || !d) return dateKey;
+  return new Date(y, m - 1, d).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export function dayClosureReference(dateKey: string): string {
   return dateKey.replace(/-/g, "");
 }
@@ -75,7 +89,10 @@ export function uniqueCashierLabels(sales: Sale[]): string[] {
   return [...labels].sort((a, b) => a.localeCompare(b, "fr"));
 }
 
-function runPrintJob(layout: "ticket" | "a4", doc: "day-closure" | "day-closure-report") {
+function runPrintJob(
+  layout: "ticket" | "a4" | "a4-report",
+  doc: "day-closure" | "day-closure-report"
+) {
   setPrintPageLayout(layout);
   document.body.dataset.printDoc = doc;
 
@@ -97,5 +114,5 @@ export function printDayClosureTicket() {
 }
 
 export function printDayClosureReport() {
-  runPrintJob("a4", "day-closure-report");
+  runPrintJob("a4-report", "day-closure-report");
 }

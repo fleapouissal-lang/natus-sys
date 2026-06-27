@@ -1,21 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import {
-  Banknote,
-  CreditCard,
+  CheckCircle2,
+  KeyRound,
   Loader2,
   Printer,
-  Receipt,
   ScrollText,
   X,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { CashierSalesReport } from "@/components/sales/cashier-sales-report";
-import { DayClosureTicket } from "@/components/pos/day-closure-ticket";
 import { createClient } from "@/lib/supabase/client";
 import { fetchCashierSales, fetchStoreSales } from "@/lib/sales/fetch-cashier-sales";
 import {
@@ -23,11 +20,13 @@ import {
   filterSalesForDateKey,
   formatDayClosureDate,
   printDayClosureReport,
-  printDayClosureTicket,
-  todayDateKey,
-  uniqueCashierLabels,
 } from "@/lib/sales/day-closure";
-import { formatCurrency, formatPaymentMethod } from "@/lib/utils";
+import {
+  confirmStoreDayClosureCode,
+  getStorePosDayState,
+  requestStoreDayClosure,
+} from "@/lib/sales/store-day-closure-actions";
+import { formatCurrency } from "@/lib/utils";
 import type { Sale } from "@/lib/types";
 
 export function PosDayClosureModal({
@@ -53,9 +52,30 @@ export function PosDayClosureModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [businessDate, setBusinessDate] = useState<string>("");
+  const [pendingClosure, setPendingClosure] = useState(false);
+  const [printUnlocked, setPrintUnlocked] = useState(false);
+  const [codeInput, setCodeInput] = useState("");
+  const [closureMessage, setClosureMessage] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [submitting, startSubmit] = useTransition();
+  const [confirming, startConfirm] = useTransition();
 
-  const dateKey = todayDateKey();
   const storeMode = Boolean(isStorePos || isManagementUser);
+  const resolvedStoreId = storeId || undefined;
+
+  async function refreshClosureState() {
+    if (!resolvedStoreId) return;
+    const stateResult = await getStorePosDayState(resolvedStoreId);
+    if ("error" in stateResult) {
+      setError(stateResult.error);
+      return;
+    }
+    setBusinessDate(stateResult.state.business_date);
+    const pending = stateResult.state.pending;
+    setPendingClosure(Boolean(pending));
+    setPrintUnlocked(Boolean(pending?.cashier_code_confirmed));
+  }
 
   useEffect(() => {
     setMounted(true);
@@ -66,67 +86,117 @@ export function PosDayClosureModal({
 
     let cancelled = false;
 
-    async function loadSales() {
+    async function load() {
       setLoading(true);
       setError(null);
+      setClosureMessage(null);
+      setConfirmError(null);
+      setCodeInput("");
 
       const supabase = createClient();
-      const result =
-        storeMode && storeId
-          ? await fetchStoreSales(supabase, storeId)
+      const salesResult =
+        storeMode && resolvedStoreId
+          ? await fetchStoreSales(supabase, resolvedStoreId)
           : cashierUserId
             ? await fetchCashierSales(supabase, cashierUserId)
             : { sales: [] as Sale[], error: "Compte caissier introuvable" };
 
       if (cancelled) return;
 
-      if (result.error) {
-        setError(result.error);
+      if (salesResult.error) {
+        setError(salesResult.error);
         setSales([]);
-      } else {
-        setSales(result.sales);
+        setLoading(false);
+        return;
       }
+
+      setSales(salesResult.sales);
+
+      if (resolvedStoreId) {
+        const stateResult = await getStorePosDayState(resolvedStoreId);
+        if (cancelled) return;
+
+        if ("error" in stateResult) {
+          setError(stateResult.error);
+          setBusinessDate("");
+          setPendingClosure(false);
+          setPrintUnlocked(false);
+        } else {
+          setBusinessDate(stateResult.state.business_date);
+          const pending = stateResult.state.pending;
+          setPendingClosure(Boolean(pending));
+          setPrintUnlocked(Boolean(pending?.cashier_code_confirmed));
+        }
+      } else {
+        const { todayDateKey } = await import("@/lib/sales/day-closure");
+        setBusinessDate(todayDateKey());
+        setPendingClosure(false);
+        setPrintUnlocked(false);
+      }
+
       setLoading(false);
     }
 
-    void loadSales();
+    void load();
 
     return () => {
       cancelled = true;
     };
-  }, [open, storeMode, storeId, cashierUserId]);
+  }, [open, storeMode, resolvedStoreId, cashierUserId]);
 
-  const todaySales = useMemo(
-    () => filterSalesForDateKey(sales, dateKey),
+  const dateKey = businessDate;
+  const daySales = useMemo(
+    () => (dateKey ? filterSalesForDateKey(sales, dateKey) : []),
     [sales, dateKey]
   );
-  const stats = useMemo(() => computeDayClosureStats(todaySales), [todaySales]);
-  const activeSales = useMemo(
-    () =>
-      [...todaySales]
-        .filter((s) => !s.cancelled_at)
-        .sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ),
-    [todaySales]
-  );
+  const stats = useMemo(() => computeDayClosureStats(daySales), [daySales]);
 
-  const ticketCashierLabel = useMemo(() => {
-    if (storeMode) {
-      const labels = uniqueCashierLabels(todaySales);
-      if (labels.length === 0) return cashierName || "—";
-      if (labels.length === 1) return labels[0];
-      return labels.join(", ");
+  function handleRequestClosure() {
+    if (!resolvedStoreId) {
+      setClosureMessage("Magasin non configuré pour la clôture.");
+      return;
     }
-    return cashierName || "—";
-  }, [storeMode, todaySales, cashierName]);
+
+    startSubmit(async () => {
+      setClosureMessage(null);
+      const result = await requestStoreDayClosure(resolvedStoreId);
+      if ("error" in result) {
+        setClosureMessage(result.error);
+        return;
+      }
+      setPendingClosure(true);
+      setPrintUnlocked(false);
+      setBusinessDate(result.businessDate);
+      setClosureMessage(
+        "Demande envoyée au gérant. Demandez le code au gérant pour débloquer l'impression du rapport."
+      );
+    });
+  }
+
+  function handleConfirmCode() {
+    if (!resolvedStoreId || codeInput.length !== 6) return;
+
+    startConfirm(async () => {
+      setClosureMessage(null);
+      setConfirmError(null);
+      const result = await confirmStoreDayClosureCode(resolvedStoreId, codeInput);
+      if ("error" in result) {
+        setConfirmError(result.error);
+        return;
+      }
+      setPrintUnlocked(true);
+      setPendingClosure(true);
+      setCodeInput("");
+      setClosureMessage("Code accepté. Vous pouvez imprimer le rapport du jour.");
+      await refreshClosureState();
+    });
+  }
 
   if (!open) return null;
 
   return (
     <>
-      <Modal onClose={onClose} size="lg" className="!p-0">
+      <Modal onClose={onClose} size="lg" className="!max-w-[900px] !p-0">
         <div className="border-b border-primary/15 bg-gradient-to-r from-champagne/40 via-page to-surface px-5 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
@@ -135,10 +205,10 @@ export function PosDayClosureModal({
               </span>
               <div>
                 <h2 className="font-heading text-xl font-semibold text-primary-dark">
-                  Clôture du jour
+                  Rapport du jour
                 </h2>
                 <p className="mt-0.5 text-sm capitalize text-muted">
-                  {formatDayClosureDate(dateKey)}
+                  {dateKey ? formatDayClosureDate(dateKey) : "Chargement…"}
                 </p>
                 {storeName && (
                   <p className="mt-0.5 text-sm text-foreground">{storeName}</p>
@@ -156,132 +226,143 @@ export function PosDayClosureModal({
           </div>
         </div>
 
-        <div className="px-5 py-4">
+        <div className="natus-closure-screen px-5 py-4">
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-16 text-muted">
               <Loader2 className="h-5 w-5 animate-spin" />
               Chargement du compte du jour…
             </div>
           ) : error ? (
-            <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>
+            <p className="rounded-none border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+              {error}
+            </p>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3">
-                <Card padding={false} className="min-w-0 border-primary/15 bg-surface p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                    Ventes
-                  </p>
-                  <p className="mt-1 font-heading text-xl font-bold tabular-nums text-primary-dark sm:text-2xl">
-                    {stats.count}
-                  </p>
-                </Card>
-                <Card padding={false} className="min-w-0 border-primary/15 bg-surface p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                    Chiffre d&apos;affaires
-                  </p>
-                  <p className="mt-1 font-heading text-xl font-bold tabular-nums text-primary-dark sm:text-2xl">
-                    {formatCurrency(stats.total)}
-                  </p>
-                </Card>
-                <Card padding={false} className="min-w-0 border-primary/15 bg-surface p-4">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                    <Banknote className="h-3.5 w-3.5 shrink-0" />
-                    Espèces
-                  </p>
-                  <p className="mt-1 font-heading text-xl font-bold tabular-nums sm:text-2xl">
-                    {formatCurrency(stats.cash)}
-                  </p>
-                </Card>
-                <Card padding={false} className="min-w-0 border-primary/15 bg-surface p-4">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                    <CreditCard className="h-3.5 w-3.5 shrink-0" />
-                    TPE
-                  </p>
-                  <p className="mt-1 font-heading text-xl font-bold tabular-nums sm:text-2xl">
-                    {formatCurrency(stats.card)}
-                  </p>
-                </Card>
-                <Card padding={false} className="min-w-0 border-primary/15 bg-surface p-4">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                    <ScrollText className="h-3.5 w-3.5 shrink-0" />
-                    Chèque
-                  </p>
-                  <p className="mt-1 font-heading text-xl font-bold tabular-nums sm:text-2xl">
-                    {formatCurrency(stats.cheque)}
-                  </p>
-                </Card>
-              </div>
-
-              {stats.cancelledCount > 0 && (
-                <p className="mt-3 rounded-lg bg-primary-light/40 px-4 py-2.5 text-sm text-foreground">
-                  {stats.cancelledCount} vente{stats.cancelledCount > 1 ? "s" : ""} annulée
-                  {stats.cancelledCount > 1 ? "s" : ""} ({formatCurrency(stats.cancelledTotal)}) —
-                  hors totaux ci-dessus.
+              {confirmError && (
+                <p className="mb-4 rounded-none border border-danger/40 bg-danger/10 px-4 py-3 text-sm font-medium text-danger">
+                  {confirmError}
                 </p>
               )}
 
-              <div className="mt-4 overflow-hidden rounded-lg border border-primary/15">
-                <div className="border-b border-primary/10 bg-champagne/30 px-4 py-2.5">
-                  <p className="text-sm font-semibold text-primary-dark">
-                    Détail des ventes du jour
+              {pendingClosure && (
+                <div className="mb-4 border border-accent/35 bg-accent/10 px-4 py-3 text-sm text-foreground">
+                  La caisse reste ouverte — vous pouvez continuer à encaisser des ventes pendant
+                  l&apos;attente de validation du gérant.
+                </div>
+              )}
+
+              {pendingClosure && !printUnlocked && (
+                <div className="mb-4 border border-primary/25 bg-gradient-to-r from-champagne/50 to-page px-4 py-4">
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <KeyRound className="h-5 w-5 shrink-0 text-primary-dark" />
+                        <p className="text-sm font-semibold text-primary-dark">
+                          Code gérant requis
+                        </p>
+                      </div>
+                      <p className="mt-2 text-sm text-muted">
+                        Le gérant a reçu un code. Saisissez-le ici pour débloquer l&apos;impression du
+                        rapport.
+                      </p>
+                      <input
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={codeInput}
+                        onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="000000"
+                        className="natus-field mt-3 w-full max-w-xs bg-surface font-mono text-lg tracking-[0.35em]"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleConfirmCode}
+                      disabled={confirming || codeInput.length !== 6}
+                    >
+                      {confirming ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4" />
+                      )}
+                      Confirmer le code
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {printUnlocked && (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-success/35 bg-success/10 px-4 py-3">
+                  <p className="text-sm font-medium text-success">
+                    Code confirmé — rapport prêt à imprimer.
                   </p>
-                  <p className="text-xs text-muted">
-                    {activeSales.length} transaction{activeSales.length > 1 ? "s" : ""}
-                    {storeMode ? " — par caissier" : ""}
+                  <Button
+                    type="button"
+                    onClick={printDayClosureReport}
+                    disabled={loading || !!error}
+                    className="bg-champagne text-black hover:opacity-90"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Imprimer le rapport
+                  </Button>
+                </div>
+              )}
+
+              {printUnlocked && (
+                <p className="mb-4 text-xs text-muted">
+                  Le gérant doit encore valider la clôture. Les ventes restent possibles aujourd&apos;hui
+                  — le jour métier suivant commencera demain matin.
+                </p>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                <div className="natus-closure-kpi px-3 py-2.5">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted">Ventes</p>
+                  <p className="mt-0.5 font-heading text-lg font-bold tabular-nums text-primary-dark">
+                    {stats.count}
                   </p>
                 </div>
-                <div className="max-h-52 overflow-y-auto scrollbar-natus">
-                  {activeSales.length === 0 ? (
-                    <p className="px-4 py-8 text-center text-sm text-muted">
-                      Aucune vente enregistrée aujourd&apos;hui.
-                    </p>
-                  ) : (
-                    <table className="w-full text-sm">
-                      <thead className="sticky top-0 bg-surface text-left text-xs text-muted">
-                        <tr>
-                          <th className="px-4 py-2 font-medium">Heure</th>
-                          {storeMode && <th className="px-4 py-2 font-medium">Caissier</th>}
-                          <th className="px-4 py-2 font-medium">Paiement</th>
-                          <th className="px-4 py-2 text-right font-medium">Montant</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {activeSales.map((sale) => (
-                          <tr key={sale.id} className="border-t border-border/60">
-                            <td className="px-4 py-2 tabular-nums text-muted">
-                              {new Date(sale.created_at).toLocaleTimeString("fr-FR", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </td>
-                            {storeMode && (
-                              <td className="px-4 py-2">
-                                {sale.profiles?.full_name ||
-                                  sale.profiles?.email ||
-                                  "—"}
-                              </td>
-                            )}
-                            <td className="px-4 py-2">
-                              {formatPaymentMethod(sale.payment_method)}
-                            </td>
-                            <td className="px-4 py-2 text-right font-medium tabular-nums">
-                              {formatCurrency(Number(sale.total))}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+                <div className="natus-closure-kpi natus-closure-kpi--total px-3 py-2.5">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted">Total</p>
+                  <p className="mt-0.5 font-heading text-lg font-bold tabular-nums text-primary-dark">
+                    {formatCurrency(stats.total)}
+                  </p>
+                </div>
+                <div className="natus-closure-kpi natus-closure-kpi--cash px-3 py-2.5">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted">Esp.</p>
+                  <p className="mt-0.5 font-heading text-lg font-bold tabular-nums">
+                    {formatCurrency(stats.cash)}
+                  </p>
+                </div>
+                <div className="natus-closure-kpi natus-closure-kpi--card px-3 py-2.5">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted">TPE</p>
+                  <p className="mt-0.5 font-heading text-lg font-bold tabular-nums">
+                    {formatCurrency(stats.card)}
+                  </p>
+                </div>
+                <div className="natus-closure-kpi natus-closure-kpi--cheque px-3 py-2.5">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted">Chq.</p>
+                  <p className="mt-0.5 font-heading text-lg font-bold tabular-nums">
+                    {formatCurrency(stats.cheque)}
+                  </p>
                 </div>
               </div>
 
-              <div className="mt-5 hidden justify-center rounded-lg border border-border bg-[#ebe6dc] p-4 md:flex">
-                <DayClosureTicket
-                  sales={todaySales}
+              {stats.cancelledCount > 0 && (
+                <p className="mt-3 border border-primary/15 bg-primary-light/40 px-3 py-2 text-xs text-foreground">
+                  {stats.cancelledCount} annulée{stats.cancelledCount > 1 ? "s" : ""} ·{" "}
+                  {formatCurrency(stats.cancelledTotal)}
+                </p>
+              )}
+
+              <div className="mt-4 max-h-[min(52vh,520px)] overflow-y-auto border border-primary/15 bg-white scrollbar-natus">
+                <CashierSalesReport
+                  sales={daySales}
                   stats={stats}
-                  dateKey={dateKey}
-                  storeName={storeName}
-                  cashierLabel={ticketCashierLabel}
+                  dateFrom={dateKey}
+                  dateTo={dateKey}
+                  periodLabel="Jour métier"
+                  cashierName={storeMode ? undefined : cashierName}
+                  variant="day-closure"
                   printId={null}
                 />
               </div>
@@ -291,57 +372,61 @@ export function PosDayClosureModal({
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4">
           <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              onClick={printDayClosureTicket}
-              disabled={loading || !!error || stats.count === 0}
-            >
-              <Receipt className="h-4 w-4" />
-              Ticket clôture
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={printDayClosureReport}
-              disabled={loading || !!error || todaySales.length === 0}
-            >
-              <Printer className="h-4 w-4" />
-              Rapport A4
-            </Button>
+            {printUnlocked && (
+              <Button
+                type="button"
+                onClick={printDayClosureReport}
+                disabled={loading || !!error}
+                className="bg-champagne text-black hover:opacity-90"
+              >
+                <Printer className="h-4 w-4" />
+                Imprimer le rapport
+              </Button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
+            {!pendingClosure && (
+              <Button
+                type="button"
+                onClick={handleRequestClosure}
+                disabled={loading || !!error || !resolvedStoreId || submitting}
+                className="bg-champagne text-black hover:opacity-90"
+              >
+                {submitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+                Valider la clôture
+              </Button>
+            )}
             <Button type="button" variant="ghost" onClick={onClose}>
               Fermer
             </Button>
           </div>
         </div>
+
+        {closureMessage && (
+          <p className="border-t border-border px-5 py-3 text-sm text-muted">{closureMessage}</p>
+        )}
       </Modal>
 
       {mounted &&
+        dateKey &&
+        printUnlocked &&
         createPortal(
-          <>
-            <div className="natus-day-closure-print-only" aria-hidden>
-              <DayClosureTicket
-                key={`ticket|${dateKey}|${todaySales.length}|${stats.total}`}
-                sales={todaySales}
-                stats={stats}
-                dateKey={dateKey}
-                storeName={storeName}
-                cashierLabel={ticketCashierLabel}
-              />
-            </div>
-            <div className="natus-sales-report-print-only" aria-hidden>
-              <CashierSalesReport
-                key={`report|${dateKey}|${todaySales.length}`}
-                sales={todaySales}
-                stats={stats}
-                dateFrom={dateKey}
-                dateTo={dateKey}
-                periodLabel="Aujourd'hui"
-                cashierName={storeMode ? undefined : cashierName}
-              />
-            </div>
-          </>,
+          <div className="natus-sales-report-print-only" aria-hidden>
+            <CashierSalesReport
+              key={`report|${dateKey}|${daySales.length}`}
+              sales={daySales}
+              stats={stats}
+              dateFrom={dateKey}
+              dateTo={dateKey}
+              periodLabel="Jour métier"
+              cashierName={storeMode ? undefined : cashierName}
+              variant="day-closure"
+            />
+          </div>,
           document.body
         )}
     </>

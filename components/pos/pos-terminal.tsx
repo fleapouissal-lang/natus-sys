@@ -49,6 +49,8 @@ import {
   PosDayClosureButton,
   PosDayClosureModal,
 } from "@/components/pos/pos-day-closure-modal";
+import { getStorePosDayState } from "@/lib/sales/store-day-closure-actions";
+import { formatDayClosureDate } from "@/lib/sales/day-closure";
 import { QuantityHoldButton } from "@/components/pos/quantity-hold-button";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
 import { notificationHref } from "@/lib/notifications/display";
@@ -145,6 +147,8 @@ export function PosTerminal({
   const [mobilePosView, setMobilePosView] = useState<"catalog" | "cart">("catalog");
   const [checkoutStep, setCheckoutStep] = useState<PosMobileCartStep>("loyalty");
   const [showDayClosure, setShowDayClosure] = useState(false);
+  const [storeDayPending, setStoreDayPending] = useState(false);
+  const [storeBusinessDate, setStoreBusinessDate] = useState<string | null>(null);
   const autoCheckoutRef = useRef(false);
   const scanBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cashCalculatorRef = useRef<HTMLDivElement>(null);
@@ -195,6 +199,27 @@ export function PosTerminal({
     if (!activeShopifyOrder) return;
     setPaymentMethod(activeShopifyOrder.defaultPayment);
   }, [activeShopifyOrder]);
+
+  const refreshStoreDayState = useCallback(async () => {
+    if (!isStorePos || !defaultStoreId) {
+      setStoreDayPending(false);
+      setStoreBusinessDate(null);
+      return;
+    }
+    const result = await getStorePosDayState(defaultStoreId);
+    if ("error" in result) return;
+    setStoreBusinessDate(result.state.business_date);
+    setStoreDayPending(Boolean(result.state.pending));
+  }, [isStorePos, defaultStoreId]);
+
+  useEffect(() => {
+    void refreshStoreDayState();
+    if (!isStorePos || !defaultStoreId) return;
+    const timer = window.setInterval(() => {
+      void refreshStoreDayState();
+    }, 20000);
+    return () => window.clearInterval(timer);
+  }, [isStorePos, defaultStoreId, refreshStoreDayState]);
 
   useEffect(() => {
     if (!orderNotifications) return;
@@ -617,6 +642,7 @@ export function PosTerminal({
     setActiveShopifyOrder(null);
     setLoyaltyCustomer(null);
     setPointsToRedeem(0);
+    void refreshStoreDayState();
     setAppliedPromo(null);
     setValidatedQty({});
     setMissingShopifyProducts([]);
@@ -1163,6 +1189,14 @@ export function PosTerminal({
           </div>
         )}
 
+        {isStorePos && storeDayPending && (
+          <div className="mx-4 mt-3 shrink-0 rounded-lg border border-accent/35 bg-accent/10 px-4 py-2.5 text-sm text-foreground">
+            Clôture en attente
+            {storeBusinessDate ? ` (${formatDayClosureDate(storeBusinessDate)})` : ""} — vous
+            pouvez continuer à encaisser aujourd&apos;hui.
+          </div>
+        )}
+
         {isStockScan && (
           <>
             <div className="mb-6 flex flex-wrap items-start justify-between gap-4 px-4 pt-4">
@@ -1289,7 +1323,7 @@ export function PosTerminal({
             {/* Colonne gauche — catalogue produits */}
             <div
               className={cn(
-                "flex min-h-0 flex-1 w-full min-w-0 flex-col md:flex-[65]",
+                "flex min-h-0 flex-1 w-full min-w-0 flex-col md:flex-[70]",
                 mobilePosView !== "catalog" && "max-md:hidden"
               )}
             >
@@ -1473,7 +1507,7 @@ export function PosTerminal({
               className={cn(
                 "flex min-h-0 flex-1 w-full min-w-0 flex-col bg-page",
                 mobilePosView !== "cart" && "max-md:hidden",
-                "md:flex md:flex-[35] md:border-l md:border-border"
+                "md:flex md:flex-[30] md:border-l md:border-border"
               )}
             >
               <div className="flex h-full min-h-0 flex-col overflow-hidden">
