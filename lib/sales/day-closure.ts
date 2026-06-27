@@ -96,6 +96,42 @@ export type SaleLineItemRow = {
   unitPrice: number;
 };
 
+export type DayProductAggregate = {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
+/** Regroupe les articles vendus sur la journée (ticket caisse). */
+export function aggregateDayProducts(sales: Sale[]): DayProductAggregate[] {
+  const map = new Map<string, DayProductAggregate>();
+
+  for (const sale of sales) {
+    if (sale.cancelled_at) continue;
+    for (const item of saleLineItems(sale)) {
+      const key = (item.barcode?.trim() || item.name.trim().toLowerCase()) || "produit";
+      const lineTotal = item.quantity * item.unitPrice;
+      const existing = map.get(key);
+      if (existing) {
+        existing.quantity += item.quantity;
+        existing.total += lineTotal;
+        existing.unitPrice =
+          existing.quantity > 0 ? existing.total / existing.quantity : item.unitPrice;
+      } else {
+        map.set(key, {
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: lineTotal,
+        });
+      }
+    }
+  }
+
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+}
+
 export function saleLineItems(sale: Pick<Sale, "sale_items">): SaleLineItemRow[] {
   return (sale.sale_items || []).map((item) => ({
     name: item.products?.name?.trim() || "Produit",
@@ -137,13 +173,14 @@ function runPrintJob(
   });
 }
 
+/** Impression ticket 80 mm — synthèse + articles vendus (Qté). */
 export function printDayClosureTicket() {
   runPrintJob("ticket", "day-closure");
 }
 
-/** Impression ticket 80 mm (même imprimante que les tickets caisse). */
+/** Impression rapport A4 — toutes les ventes du jour. */
 export function printDayClosureReport() {
-  printDayClosureTicket();
+  runPrintJob("a4-report", "day-closure-report");
 }
 
 export function formatClosureCodeExpiresAt(iso: string): string {

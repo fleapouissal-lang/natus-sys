@@ -1,8 +1,8 @@
 import { NATUS_INVOICE_COMPANY } from "@/lib/constants/company";
 import {
+  aggregateDayProducts,
   dayClosureReference,
   formatDayClosureDate,
-  saleLineItems,
   type DayClosureStats,
 } from "@/lib/sales/day-closure";
 import { formatCurrency } from "@/lib/utils";
@@ -24,19 +24,6 @@ function escapeHtml(value: string): string {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
-}
-
-function formatSaleTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function paymentShort(method: Sale["payment_method"]): string {
-  if (method === "cash") return "ESP";
-  if (method === "card") return "TPE";
-  return "CHQ";
 }
 
 function ticketRow(label: string, value: string, bold = false): string {
@@ -69,44 +56,20 @@ const CLOSURE_DOC_STYLES = `
 
 export function buildDayClosureHtml(data: DayClosureDownloadData): string {
   const generatedAt = data.generatedAt ?? new Date();
-  const activeSales = [...data.sales]
-    .filter((s) => !s.cancelled_at)
-    .sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
-  const cancelledSales = data.sales.filter((s) => s.cancelled_at);
   const ref = dayClosureReference(data.dateKey);
+  const products = aggregateDayProducts(data.sales);
 
-  const saleRows = activeSales
-    .map((sale) => {
-      const items = saleLineItems(sale);
-      const itemsHtml =
-        items.length > 0
-          ? `<tr><td colspan="3" class="sale-items">${items
-              .map(
-                (item) =>
-                  `<div class="sale-item-line"><span class="sale-item-name">${escapeHtml(item.name)}</span><span class="sale-item-qty">×${item.quantity}</span></div>`
-              )
-              .join("")}</td></tr>`
-          : "";
-      return `<tr>
-        <td style="font-weight:700">${formatSaleTime(sale.created_at)}</td>
-        <td style="text-align:center;font-weight:900">${paymentShort(sale.payment_method)}</td>
-        <td style="text-align:right;font-weight:900">${formatCurrency(Number(sale.total))}</td>
-      </tr>${itemsHtml}`;
-    })
+  const productRows = products
+    .map(
+      (item) =>
+        `<tr>
+          <td style="font-weight:700;line-height:1.25">${escapeHtml(item.name)}</td>
+          <td style="text-align:center;font-weight:900">${item.quantity}</td>
+          <td style="text-align:right;font-weight:600">${formatCurrency(item.unitPrice)}</td>
+          <td style="text-align:right;font-weight:900">${formatCurrency(item.total)}</td>
+        </tr>`
+    )
     .join("");
-
-  const cancelledBlock =
-    cancelledSales.length > 0
-      ? `<div class="rule"></div>
-        <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 4px">Annulations</p>
-        ${cancelledSales
-          .map((sale) =>
-            ticketRow(formatSaleTime(sale.created_at), formatCurrency(Number(sale.total)))
-          )
-          .join("")}`
-      : "";
 
   const body = `
     <div class="ticket">
@@ -142,22 +105,23 @@ export function buildDayClosureHtml(data: DayClosureDownloadData): string {
           : ""
       }
       <div class="rule-heavy"></div>
+      <p class="title" style="margin-bottom:4px">Articles vendus</p>
       <table>
         <thead>
           <tr>
-            <th style="text-align:left">Heure</th>
-            <th style="text-align:center;width:40px">Paie.</th>
-            <th style="text-align:right;width:64px">Montant</th>
+            <th style="text-align:left">Désignation</th>
+            <th style="text-align:center;width:28px">Qté</th>
+            <th style="text-align:right;width:52px">P.U.</th>
+            <th style="text-align:right;width:52px">Total</th>
           </tr>
         </thead>
         <tbody>
           ${
-            saleRows ||
-            `<tr><td colspan="3" style="text-align:center;padding:12px 0;font-size:9px;font-weight:600">Aucune vente</td></tr>`
+            productRows ||
+            `<tr><td colspan="4" style="text-align:center;padding:12px 0;font-size:9px;font-weight:600">Aucun article vendu</td></tr>`
           }
         </tbody>
       </table>
-      ${cancelledBlock}
       <div class="rule-heavy"></div>
       <div class="total-bar">
         <span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.04em">Total CA TTC</span>

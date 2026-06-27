@@ -13,12 +13,15 @@ import {
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { DayClosureTicket } from "@/components/pos/day-closure-ticket";
+import { CashierSalesReport } from "@/components/sales/cashier-sales-report";
 import { createClient } from "@/lib/supabase/client";
+import { formatSalesReportPeriodLabel } from "@/lib/sales/cashier-report";
 import { fetchCashierSales, fetchStoreSales } from "@/lib/sales/fetch-cashier-sales";
 import {
   computeDayClosureStats,
   filterSalesForDateKey,
   formatDayClosureDate,
+  printDayClosureReport,
   printDayClosureTicket,
   uniqueCashierLabels,
 } from "@/lib/sales/day-closure";
@@ -408,18 +411,29 @@ export function PosDayClosureModal({
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-success/35 bg-success/10 px-4 py-3">
                   <p className="text-sm font-medium text-success">
                     {requireManagerCode
-                      ? "Code confirmé — rapport prêt à imprimer."
-                      : "Clôture validée — rapport prêt à imprimer."}
+                      ? "Code confirmé — ticket et rapport prêts à imprimer."
+                      : "Clôture validée — ticket et rapport prêts à imprimer."}
                   </p>
-                  <Button
-                    type="button"
-                    onClick={printDayClosureTicket}
-                    disabled={loading || !!error}
-                    className="bg-champagne text-black hover:opacity-90"
-                  >
-                    <Printer className="h-4 w-4" />
-                    Imprimer le ticket
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      onClick={printDayClosureTicket}
+                      disabled={loading || !!error}
+                      className="bg-champagne text-black hover:opacity-90"
+                    >
+                      <Printer className="h-4 w-4" />
+                      Imprimer le ticket
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={printDayClosureReport}
+                      disabled={loading || !!error}
+                    >
+                      <Printer className="h-4 w-4" />
+                      Imprimer le rapport
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -477,15 +491,36 @@ export function PosDayClosureModal({
                 </p>
               )}
 
-              <div className="mt-4 flex justify-center overflow-y-auto border border-primary/15 bg-[#ebe6dc] p-4 scrollbar-natus print:hidden">
-                <DayClosureTicket
-                  sales={daySales}
-                  stats={stats}
-                  dateKey={dateKey}
-                  storeName={storeName}
-                  cashierLabel={closureCashierLabel}
-                  printId={null}
-                />
+              <div className="mt-4 space-y-4">
+                <div className="flex justify-center overflow-y-auto border border-primary/15 bg-[#ebe6dc] p-4 scrollbar-natus print:hidden">
+                  <DayClosureTicket
+                    sales={daySales}
+                    stats={stats}
+                    dateKey={dateKey}
+                    storeName={storeName}
+                    cashierLabel={closureCashierLabel}
+                    printId={null}
+                  />
+                </div>
+                <div className="overflow-x-auto border border-primary/15 bg-white p-2 print:hidden">
+                  <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                    Aperçu rapport — toutes les ventes du jour
+                  </p>
+                  <CashierSalesReport
+                    sales={daySales}
+                    stats={stats}
+                    dateFrom={dateKey}
+                    dateTo={dateKey}
+                    periodLabel={formatSalesReportPeriodLabel(
+                      dateKey,
+                      dateKey,
+                      formatDayClosureDate(dateKey)
+                    )}
+                    cashierName={closureCashierLabel}
+                    variant="day-closure"
+                    printId={null}
+                  />
+                </div>
               </div>
             </>
           )}
@@ -494,15 +529,26 @@ export function PosDayClosureModal({
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4">
           <div className="flex flex-wrap gap-2">
             {printUnlocked && (
-              <Button
-                type="button"
-                onClick={printDayClosureTicket}
-                disabled={loading || !!error}
-                className="bg-champagne text-black hover:opacity-90"
-              >
-                <Printer className="h-4 w-4" />
-                Imprimer le ticket
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  onClick={printDayClosureTicket}
+                  disabled={loading || !!error}
+                  className="bg-champagne text-black hover:opacity-90"
+                >
+                  <Printer className="h-4 w-4" />
+                  Imprimer le ticket
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={printDayClosureReport}
+                  disabled={loading || !!error}
+                >
+                  <Printer className="h-4 w-4" />
+                  Imprimer le rapport
+                </Button>
+              </>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -536,16 +582,35 @@ export function PosDayClosureModal({
         dateKey &&
         printUnlocked &&
         createPortal(
-          <div className="natus-day-closure-print-only" aria-hidden>
-            <DayClosureTicket
-              key={`print|${dateKey}|${daySales.length}`}
-              sales={daySales}
-              stats={stats}
-              dateKey={dateKey}
-              storeName={storeName}
-              cashierLabel={closureCashierLabel}
-            />
-          </div>,
+          <>
+            <div className="natus-day-closure-print-only" aria-hidden>
+              <DayClosureTicket
+                key={`ticket|${dateKey}|${daySales.length}`}
+                sales={daySales}
+                stats={stats}
+                dateKey={dateKey}
+                storeName={storeName}
+                cashierLabel={closureCashierLabel}
+              />
+            </div>
+            <div className="natus-sales-report-print-only" aria-hidden>
+              <CashierSalesReport
+                key={`report|${dateKey}|${daySales.length}`}
+                sales={daySales}
+                stats={stats}
+                dateFrom={dateKey}
+                dateTo={dateKey}
+                periodLabel={formatSalesReportPeriodLabel(
+                  dateKey,
+                  dateKey,
+                  formatDayClosureDate(dateKey)
+                )}
+                cashierName={closureCashierLabel}
+                variant="day-closure"
+                printId="cashier-sales-report-print"
+              />
+            </div>
+          </>,
           document.body
         )}
     </>

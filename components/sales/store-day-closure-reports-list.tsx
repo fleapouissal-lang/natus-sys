@@ -10,14 +10,17 @@ import { Modal } from "@/components/ui/modal";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { ClosureReportsBulkActions } from "@/components/sales/closure-reports-bulk-actions";
 import { DayClosureTicket } from "@/components/pos/day-closure-ticket";
+import { CashierSalesReport } from "@/components/sales/cashier-sales-report";
+import { formatSalesReportPeriodLabel } from "@/lib/sales/cashier-report";
 import {
   getStoreDayClosureReportSales,
   listStoreDayClosures,
 } from "@/lib/sales/store-day-closure-actions";
 import {
+  computeDayClosureStats,
   formatDayClosureDate,
   formatDayClosureDateShort,
-  printDayClosureTicket,
+  printDayClosureReport,
   uniqueCashierLabels,
 } from "@/lib/sales/day-closure";
 import {
@@ -25,7 +28,6 @@ import {
   downloadDayClosuresHtml,
   type DayClosureDownloadData,
 } from "@/lib/sales/download-day-closure";
-import type { DayClosureStats } from "@/lib/sales/day-closure";
 import type { StoreDayClosureReportRow } from "@/lib/sales/store-day-closure";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
@@ -81,10 +83,6 @@ function ClosureIconButton({
       {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : children}
     </Button>
   );
-}
-
-function closureStatsFromRow(closure: StoreDayClosureReportRow): DayClosureStats {
-  return closure.stats;
 }
 
 function closureCashierLabel(sales: Sale[], fallback?: string): string | undefined {
@@ -257,7 +255,7 @@ export function StoreDayClosureReportsList({
     }
     setPrintPayload({ sales, closure });
     window.setTimeout(() => {
-      printDayClosureTicket();
+      printDayClosureReport();
       window.setTimeout(() => {
         setPrintPayload(null);
         setPrintingId(null);
@@ -288,19 +286,19 @@ export function StoreDayClosureReportsList({
     if (!viewPayload) return;
     setPrintPayload(viewPayload);
     window.setTimeout(() => {
-      printDayClosureTicket();
+      printDayClosureReport();
       window.setTimeout(() => setPrintPayload(null), 500);
     }, 150);
   }
 
   const printStats = useMemo(() => {
     if (!printPayload) return null;
-    return closureStatsFromRow(printPayload.closure);
+    return computeDayClosureStats(printPayload.sales);
   }, [printPayload]);
 
   const viewStats = useMemo(() => {
     if (!viewPayload) return null;
-    return closureStatsFromRow(viewPayload.closure);
+    return computeDayClosureStats(viewPayload.sales);
   }, [viewPayload]);
 
   return (
@@ -630,7 +628,7 @@ export function StoreDayClosureReportsList({
               </div>
             </div>
           </div>
-          <div className="natus-closure-screen flex max-h-[min(72vh,680px)] justify-center overflow-y-auto bg-[#ebe6dc] p-4 scrollbar-natus">
+          <div className="natus-closure-screen flex max-h-[min(72vh,680px)] flex-col gap-4 overflow-y-auto bg-[#ebe6dc] p-4 scrollbar-natus">
             <DayClosureTicket
               sales={viewPayload.sales}
               stats={viewStats}
@@ -642,6 +640,28 @@ export function StoreDayClosureReportsList({
               )}
               printId={null}
             />
+            <div className="overflow-x-auto bg-white p-2">
+              <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                Rapport — toutes les ventes du jour
+              </p>
+              <CashierSalesReport
+                sales={viewPayload.sales}
+                stats={viewStats}
+                dateFrom={viewPayload.closure.business_date}
+                dateTo={viewPayload.closure.business_date}
+                periodLabel={formatSalesReportPeriodLabel(
+                  viewPayload.closure.business_date,
+                  viewPayload.closure.business_date,
+                  formatDayClosureDate(viewPayload.closure.business_date)
+                )}
+                cashierName={closureCashierLabel(
+                  viewPayload.sales,
+                  viewPayload.closure.requested_by_name
+                )}
+                variant="day-closure"
+                printId={null}
+              />
+            </div>
           </div>
         </Modal>
       )}
@@ -650,19 +670,41 @@ export function StoreDayClosureReportsList({
         printPayload &&
         printStats &&
         createPortal(
-          <div className="natus-day-closure-print-only" aria-hidden>
-            <DayClosureTicket
-              key={`print|${printPayload.closure.id}`}
-              sales={printPayload.sales}
-              stats={printStats}
-              dateKey={printPayload.closure.business_date}
-              storeName={printPayload.closure.store_name}
-              cashierLabel={closureCashierLabel(
-                printPayload.sales,
-                printPayload.closure.requested_by_name
-              )}
-            />
-          </div>,
+          <>
+            <div className="natus-day-closure-print-only" aria-hidden>
+              <DayClosureTicket
+                key={`ticket|${printPayload.closure.id}`}
+                sales={printPayload.sales}
+                stats={printStats}
+                dateKey={printPayload.closure.business_date}
+                storeName={printPayload.closure.store_name}
+                cashierLabel={closureCashierLabel(
+                  printPayload.sales,
+                  printPayload.closure.requested_by_name
+                )}
+              />
+            </div>
+            <div className="natus-sales-report-print-only" aria-hidden>
+              <CashierSalesReport
+                key={`report|${printPayload.closure.id}`}
+                sales={printPayload.sales}
+                stats={printStats}
+                dateFrom={printPayload.closure.business_date}
+                dateTo={printPayload.closure.business_date}
+                periodLabel={formatSalesReportPeriodLabel(
+                  printPayload.closure.business_date,
+                  printPayload.closure.business_date,
+                  formatDayClosureDate(printPayload.closure.business_date)
+                )}
+                cashierName={closureCashierLabel(
+                  printPayload.sales,
+                  printPayload.closure.requested_by_name
+                )}
+                variant="day-closure"
+                printId="cashier-sales-report-print"
+              />
+            </div>
+          </>,
           document.body
         )}
     </>

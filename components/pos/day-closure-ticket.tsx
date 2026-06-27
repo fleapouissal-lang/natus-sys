@@ -1,13 +1,12 @@
 "use client";
 
-import { Fragment } from "react";
 import { NATUS_INVOICE_COMPANY } from "@/lib/constants/company";
 import {
+  aggregateDayProducts,
   dayClosureReference,
   formatDayClosureDate,
   type DayClosureStats,
 } from "@/lib/sales/day-closure";
-import { SaleLineItemsSummary } from "@/components/sales/sale-line-items-summary";
 import { formatCurrency } from "@/lib/utils";
 import type { Sale } from "@/lib/types";
 import { NatusDocumentBrand } from "@/components/pos/natus-document-brand";
@@ -38,19 +37,6 @@ function TicketRow({
   );
 }
 
-function formatSaleTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function paymentShort(method: Sale["payment_method"]): string {
-  if (method === "cash") return "ESP";
-  if (method === "card") return "TPE";
-  return "CHQ";
-}
-
 export function DayClosureTicket({
   sales,
   stats,
@@ -68,13 +54,7 @@ export function DayClosureTicket({
   generatedAt?: Date;
   printId?: string | null;
 }) {
-  const activeSales = [...sales]
-    .filter((s) => !s.cancelled_at)
-    .sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
-  const cancelledSales = sales.filter((s) => s.cancelled_at);
+  const products = aggregateDayProducts(sales);
 
   return (
     <div
@@ -99,7 +79,7 @@ export function DayClosureTicket({
         <TicketRule heavy />
 
         <p className="text-center text-[11px] font-black uppercase tracking-[0.2em]">
-          Clôture journalière
+          Ticket clôture
         </p>
 
         <TicketRule />
@@ -138,80 +118,41 @@ export function DayClosureTicket({
 
         <TicketRule heavy />
 
+        <p className="mb-1 text-center text-[9px] font-black uppercase tracking-[0.14em]">
+          Articles vendus
+        </p>
+
         <table className="w-full border-collapse text-[9px] text-black">
           <thead>
             <tr className="border-b border-black text-left font-black uppercase">
-              <th className="pb-1 pr-1">Heure</th>
-              <th className="w-10 pb-1 text-center">Paie.</th>
-              <th className="w-16 pb-1 text-right">Montant</th>
+              <th className="pb-1 pr-1">Désignation</th>
+              <th className="w-7 pb-1 text-center">Qté</th>
+              <th className="w-14 pb-1 text-right">P.U.</th>
+              <th className="w-14 pb-1 pl-1 text-right">Total</th>
             </tr>
           </thead>
           <tbody>
-            {activeSales.map((sale) => {
-              return (
-                <Fragment key={sale.id}>
-                  <tr className="border-b border-black/25 align-top">
-                    <td className="py-1 pr-1 font-bold tabular-nums">
-                      {formatSaleTime(sale.created_at)}
-                    </td>
-                    <td className="py-1 text-center text-[8px] font-black">
-                      {paymentShort(sale.payment_method)}
-                    </td>
-                    <td className="py-1 text-right font-black tabular-nums">
-                      {formatCurrency(Number(sale.total))}
-                    </td>
-                  </tr>
-                  {(sale.sale_items?.length ?? 0) > 0 && (
-                    <tr className="border-b border-black/15 align-top">
-                      <td colSpan={3} className="pb-1.5 pl-2 pr-1">
-                        <SaleLineItemsSummary
-                          sale={sale}
-                          variant="compact"
-                          maxItems={12}
-                          className="text-[8px] text-black/90"
-                        />
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-            {activeSales.length === 0 && (
+            {products.map((item, index) => (
+              <tr key={`${item.name}-${index}`} className="border-b border-black/25 align-top">
+                <td className="py-1 pr-1 font-bold leading-tight">{item.name}</td>
+                <td className="py-1 text-center font-black tabular-nums">{item.quantity}</td>
+                <td className="py-1 text-right font-semibold tabular-nums">
+                  {formatCurrency(item.unitPrice)}
+                </td>
+                <td className="py-1 pl-1 text-right font-black tabular-nums">
+                  {formatCurrency(item.total)}
+                </td>
+              </tr>
+            ))}
+            {products.length === 0 && (
               <tr>
-                <td colSpan={3} className="py-3 text-center text-[9px] font-semibold">
-                  Aucune vente
+                <td colSpan={4} className="py-3 text-center text-[9px] font-semibold">
+                  Aucun article vendu
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-
-        {cancelledSales.length > 0 && (
-          <>
-            <TicketRule />
-            <p className="mb-1 text-[9px] font-black uppercase tracking-wide">Annulations</p>
-            <div className="space-y-2">
-              {cancelledSales.map((sale) => (
-                <div key={sale.id}>
-                  <TicketRow
-                    label={formatSaleTime(sale.created_at)}
-                    value={formatCurrency(Number(sale.total))}
-                  />
-                  {(sale.sale_items?.length ?? 0) > 0 && (
-                    <div className="pl-1 pt-0.5">
-                      <SaleLineItemsSummary
-                        sale={sale}
-                        variant="compact"
-                        maxItems={8}
-                        className="text-[8px] text-black/75"
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
 
         <TicketRule heavy />
 
@@ -224,10 +165,7 @@ export function DayClosureTicket({
 
         <TicketRule />
 
-        <TicketRow
-          label="Panier moyen"
-          value={formatCurrency(stats.averageTicket)}
-        />
+        <TicketRow label="Panier moyen" value={formatCurrency(stats.averageTicket)} />
 
         <TicketRule heavy />
 
