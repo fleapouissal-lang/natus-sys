@@ -107,7 +107,9 @@ export async function listStockModifyAccessRequests(input?: {
 
   const { data, error } = await query;
   if (error) {
-    console.error("[stock-modify-access] list:", error.message);
+    if (!error.message.includes("schema cache") && !error.message.includes("does not exist")) {
+      console.error("[stock-modify-access] list:", error.message);
+    }
     return [];
   }
 
@@ -128,7 +130,9 @@ export async function listStockModifyAccessMovements(input?: {
     .limit(input?.limit ?? 100);
 
   if (error) {
-    console.error("[stock-modify-access] movements:", error.message);
+    if (!error.message.includes("schema cache") && !error.message.includes("does not exist")) {
+      console.error("[stock-modify-access] movements:", error.message);
+    }
     return [];
   }
 
