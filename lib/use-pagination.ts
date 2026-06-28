@@ -6,10 +6,10 @@ import { useEffect, useMemo, useState } from "react";
 export const DEFAULT_PAGE_SIZE = 10;
 
 /** Catalogue produits (directeur / gérant). */
-export const PRODUCT_PAGE_SIZE = 50;
+export const PRODUCT_PAGE_SIZE = 20;
 
 /** Table inventaire stock (magasin / global). */
-export const INVENTORY_PAGE_SIZE = 50;
+export const INVENTORY_PAGE_SIZE = 20;
 
 /** Cartes magasins et stock déplié par magasin. */
 export const STORE_PAGE_SIZE = 6;

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   DashboardStats,
   Store,
+  StoreOutOfStockProduct,
   StoreOverviewRow,
   StoreRecentSale,
   StoreRecentStock,
@@ -227,13 +228,74 @@ export async function getDashboardStats(storeId: string): Promise<DashboardStats
     todaySales?.reduce((sum, s) => sum + Number(s.total), 0) || 0;
   const lowStockCount =
     inventory?.filter((row) => row.stock > 0 && row.stock < 10).length || 0;
+  const outOfStockCount =
+    inventory?.filter((row) => row.stock <= 0).length || 0;
 
   return {
     totalSales: sales?.length || 0,
     totalRevenue,
     totalProducts: totalProducts || 0,
     lowStockCount,
+    outOfStockCount,
     todaySales: todaySales?.length || 0,
     todayRevenue,
   };
+}
+
+function unwrapInventoryProduct(
+  value:
+    | {
+        id: string;
+        name: string;
+        category: string | null;
+        barcode: string | null;
+        product_kind: string;
+      }
+    | {
+        id: string;
+        name: string;
+        category: string | null;
+        barcode: string | null;
+        product_kind: string;
+      }[]
+    | null
+    | undefined
+) {
+  if (!value) return null;
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export async function getStoreOutOfStockProducts(
+  storeId: string
+): Promise<StoreOutOfStockProduct[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("store_inventory")
+    .select(
+      "stock, products(id, name, category, barcode, product_kind)"
+    )
+    .eq("store_id", storeId)
+    .lte("stock", 0)
+    .order("stock", { ascending: true });
+
+  if (error) {
+    console.error("getStoreOutOfStockProducts:", error.message);
+    return [];
+  }
+
+  return (data || [])
+    .map((row) => {
+      const product = unwrapInventoryProduct(
+        row.products as Parameters<typeof unwrapInventoryProduct>[0]
+      );
+      if (!product || product.product_kind === "parent") return null;
+      return {
+        id: product.id,
+        name: product.name,
+        category: product.category,
+        barcode: product.barcode,
+      } satisfies StoreOutOfStockProduct;
+    })
+    .filter((product): product is StoreOutOfStockProduct => Boolean(product))
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 }

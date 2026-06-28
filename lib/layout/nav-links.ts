@@ -160,7 +160,9 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   }
 
   links.push(
-    { href: `${basePath}/stores`, label: "Magasins", icon: Store, mobileOrder: 6 },
+    ...(basePath === "/director"
+      ? [{ href: `${basePath}/stores`, label: "Magasins", icon: Store, mobileOrder: 6 }]
+      : []),
     { href: `${basePath}/activity`, label: "Historique", icon: ClipboardList, mobileOrder: 7 },
     { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 8 }
   );

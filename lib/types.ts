@@ -252,8 +252,16 @@ export interface DashboardStats {
   totalRevenue: number;
   totalProducts: number;
   lowStockCount: number;
+  outOfStockCount: number;
   todaySales: number;
   todayRevenue: number;
+}
+
+export interface StoreOutOfStockProduct {
+  id: string;
+  name: string;
+  category: string | null;
+  barcode: string | null;
 }
 
 export interface StoreOverviewRow {

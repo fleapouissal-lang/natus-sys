@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { AlertTriangle, Package, Store, Warehouse } from "lucide-react";
+import { AlertTriangle, Package, PackageX, Store, Warehouse } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { StoreOverviewRow, StoreSnapshot } from "@/lib/types";
@@ -35,6 +35,8 @@ export function DashboardStockPanel({
   stockSnapshots = [],
   periodLabel,
   title = "Statistiques stock",
+  outOfStockCount,
+  singleStoreMode = false,
 }: {
   scopeLabel: string;
   storeRows: DashboardStockStoreRow[];
@@ -42,6 +44,8 @@ export function DashboardStockPanel({
   stockSnapshots?: StoreSnapshot[];
   periodLabel?: string;
   title?: string;
+  outOfStockCount?: number;
+  singleStoreMode?: boolean;
 }) {
   const retailAgg = useMemo(() => aggregateRows(storeRows), [storeRows]);
   const hubAgg = hubRow ? aggregateRows([hubRow]) : null;
@@ -66,6 +70,8 @@ export function DashboardStockPanel({
       }),
     [storeRows]
   );
+
+  const ruptureCount = outOfStockCount ?? 0;
 
   if (storeRows.length === 0 && !hubRow) {
     return (
@@ -102,7 +108,11 @@ export function DashboardStockPanel({
           </p>
           <p className="mt-2 text-2xl font-bold tabular-nums">{networkAgg.totalUnits}</p>
           <p className="mt-1 text-xs text-muted">
-            {hubRow ? "Dépôt + magasins assignés" : "Magasins du périmètre"}
+            {singleStoreMode
+              ? "Magasin sélectionné"
+              : hubRow
+                ? "Dépôt + magasins assignés"
+                : "Magasins du périmètre"}
           </p>
         </Card>
         <Card>
@@ -117,16 +127,36 @@ export function DashboardStockPanel({
           </p>
           <p className="mt-1 text-xs text-muted">Produits entre 1 et 9 unités</p>
         </Card>
-        <Card>
+        <Card className={ruptureCount > 0 ? "border-danger/30 bg-danger/5" : undefined}>
           <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            Magasins suivis
+            Ruptures de stock
           </p>
-          <p className="mt-2 text-2xl font-bold tabular-nums">{storeRows.length}</p>
-          <p className="mt-1 text-xs text-muted">
-            {retailAgg.totalUnits} unité{retailAgg.totalUnits !== 1 ? "s" : ""} retail
+          <p className="mt-2 flex items-center gap-2 text-2xl font-bold tabular-nums">
+            {ruptureCount}
+            {ruptureCount > 0 && <PackageX className="h-5 w-5 text-danger" />}
           </p>
+          <p className="mt-1 text-xs text-muted">Produits à 0 unité</p>
         </Card>
-        {hubRow ? (
+        {!singleStoreMode && (
+          <Card>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Magasins suivis
+            </p>
+            <p className="mt-2 text-2xl font-bold tabular-nums">{storeRows.length}</p>
+            <p className="mt-1 text-xs text-muted">
+              {retailAgg.totalUnits} unité{retailAgg.totalUnits !== 1 ? "s" : ""} retail
+            </p>
+          </Card>
+        )}
+        {singleStoreMode ? (
+          <Card>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Références en stock
+            </p>
+            <p className="mt-2 text-2xl font-bold tabular-nums">{retailAgg.inStockRefs}</p>
+            <p className="mt-1 text-xs text-muted">Produits avec stock &gt; 0</p>
+          </Card>
+        ) : hubRow ? (
           <Card className="border-primary/25 bg-champagne/10">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">
               Stock dépôt
@@ -172,7 +202,7 @@ export function DashboardStockPanel({
         </Card>
       )}
 
-      {sortedStores.length > 0 && (
+      {sortedStores.length > 0 && !singleStoreMode && (
         <Card padding={false}>
           <div className="border-b border-border px-4 py-3 sm:px-5">
             <h3 className="flex items-center gap-2 text-sm font-semibold">

@@ -10,12 +10,14 @@ import { Card } from "@/components/ui/card";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { StoreTrackingView } from "@/components/dashboard/store-tracking-view";
 import { DashboardStoreStatsPanel } from "@/components/dashboard/dashboard-store-stats-panel";
+import { ManagerUnifiedDashboard } from "@/components/dashboard/manager-unified-dashboard";
 import { RecentActivityPanel } from "@/components/activity/recent-activity-panel";
 import { cn } from "@/lib/utils";
 import type {
   ActivityEntry,
   DashboardStats,
   Store,
+  StoreOutOfStockProduct,
   StoreOverviewRow,
   StoreSnapshot,
 } from "@/lib/types";
@@ -39,6 +41,8 @@ function ManagerDashboardTabsInner({
   storeSnapshots,
   overviewByStore,
   storeActivities,
+  outOfStockProducts,
+  storesWithStats = [],
 }: {
   stores: Store[];
   selectedStoreId: string;
@@ -47,15 +51,31 @@ function ManagerDashboardTabsInner({
   storeSnapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
   storeActivities: ActivityEntry[];
+  outOfStockProducts: StoreOutOfStockProduct[];
+  storesWithStats?: Array<{ id: string; productCount?: number }>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isDirector = pathname.startsWith("/director");
-  const activityBase = isDirector ? "/director" : "/manager";
-  const stockOnly = !isDirector;
-  const stockBasePath = isDirector ? "/director" : "/manager";
-  const stockHref = (storeId: string) => `${stockBasePath}/stock?store=${storeId}`;
+
+  if (!isDirector) {
+    return (
+      <ManagerUnifiedDashboard
+        stores={stores}
+        selectedStoreId={selectedStoreId}
+        selectedStoreLabel={selectedStoreLabel}
+        storeSnapshots={storeSnapshots}
+        overviewByStore={overviewByStore}
+        storeActivities={storeActivities}
+        outOfStockProducts={outOfStockProducts}
+        storesWithStats={storesWithStats}
+      />
+    );
+  }
+
+  const activityBase = "/director";
+  const stockHref = (storeId: string) => `/director/stock?store=${storeId}`;
   const tabParam = searchParams.get("tab");
   const activeTab: DashboardTab =
     tabParam === "stats" || tabParam === "suivi" ? tabParam : "suivi";
@@ -69,25 +89,13 @@ function ManagerDashboardTabsInner({
   const storeFilterProps = {
     stores,
     selectedStoreId,
-    hideSelectedOnMobile: isDirector,
+    hideSelectedOnMobile: true,
   };
-
-  const storeFilterMobile = isDirector ? (
-    <StoreFilterBar {...storeFilterProps} layout="compact" className="p-3" />
-  ) : (
-    <StoreFilterBar {...storeFilterProps} />
-  );
-
-  const storeFilterDesktop = isDirector ? (
-    <StoreFilterBar {...storeFilterProps} />
-  ) : null;
 
   const allStoresScopeLabel =
     stores.length === 1
       ? `${stores[0].name} — ${stores[0].city}`
-      : isDirector
-        ? `Tous les magasins (${stores.length})`
-        : `Magasins ${stores[0]?.city ?? ""} (${stores.length})`;
+      : `Tous les magasins (${stores.length})`;
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -114,14 +122,12 @@ function ManagerDashboardTabsInner({
       {activeTab === "suivi" && (
         <div className="space-y-6">
           <Suspense fallback={null}>
-            {isDirector ? (
-              <>
-                <div className="md:hidden">{storeFilterMobile}</div>
-                <div className="hidden md:block">{storeFilterDesktop}</div>
-              </>
-            ) : (
-              storeFilterMobile
-            )}
+            <div className="md:hidden">
+              <StoreFilterBar {...storeFilterProps} layout="compact" className="p-3" />
+            </div>
+            <div className="hidden md:block">
+              <StoreFilterBar {...storeFilterProps} />
+            </div>
           </Suspense>
 
           {selectedStoreId ? (
@@ -130,10 +136,10 @@ function ManagerDashboardTabsInner({
               overviewByStore={overviewByStore}
               selectedStoreId={selectedStoreId}
               selectedStoreLabel={selectedStoreLabel}
-              hideStoreHeader={isDirector}
+              hideStoreHeader
               allStores={stores}
               allStoresScopeLabel={allStoresScopeLabel}
-              stockOnly={stockOnly}
+              stockOnly={false}
               stockHref={stockHref}
             />
           ) : (
@@ -147,14 +153,12 @@ function ManagerDashboardTabsInner({
       {activeTab === "stats" && (
         <div className="space-y-6">
           <Suspense fallback={null}>
-            {isDirector ? (
-              <>
-                <div className="md:hidden">{storeFilterMobile}</div>
-                <div className="hidden md:block">{storeFilterDesktop}</div>
-              </>
-            ) : (
-              storeFilterMobile
-            )}
+            <div className="md:hidden">
+              <StoreFilterBar {...storeFilterProps} layout="compact" className="p-3" />
+            </div>
+            <div className="hidden md:block">
+              <StoreFilterBar {...storeFilterProps} />
+            </div>
           </Suspense>
 
           <DashboardStoreStatsPanel
@@ -163,8 +167,8 @@ function ManagerDashboardTabsInner({
             selectedStoreLabel={selectedStoreLabel}
             stats={stats}
             allStoresScopeLabel={allStoresScopeLabel}
-            hideDescription={isDirector}
-            stockOnly={stockOnly}
+            hideDescription
+            stockOnly={false}
             overviewByStore={overviewByStore}
             stockHref={stockHref}
           />
@@ -174,7 +178,7 @@ function ManagerDashboardTabsInner({
               activities={storeActivities}
               title="Activité du magasin"
               description={selectedStoreLabel}
-              descriptionClassName={isDirector ? "hidden md:block" : undefined}
+              descriptionClassName="hidden md:block"
               viewAllHref={`${activityBase}/activity?store=${selectedStoreId}`}
               limit={8}
             />
@@ -193,6 +197,8 @@ export function ManagerDashboardTabs(props: {
   storeSnapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
   storeActivities: ActivityEntry[];
+  outOfStockProducts: StoreOutOfStockProduct[];
+  storesWithStats?: Array<{ id: string; productCount?: number }>;
 }) {
   return (
     <Suspense fallback={null}>

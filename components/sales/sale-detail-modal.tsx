@@ -26,11 +26,13 @@ export function SaleDetailModal({
   onClose,
   onCancelled,
   canCancel = false,
+  cancelBlockedHint,
 }: {
   sale: Sale;
   onClose: () => void;
   onCancelled?: () => void;
   canCancel?: boolean;
+  cancelBlockedHint?: string;
 }) {
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -229,6 +231,10 @@ export function SaleDetailModal({
       )}
 
       {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+
+      {!canCancel && cancelBlockedHint && !isCancelled && (
+        <p className="mt-3 text-sm text-muted">{cancelBlockedHint}</p>
+      )}
 
       {canCancel && !isCancelled && (
         <div className="mt-4 flex justify-end">

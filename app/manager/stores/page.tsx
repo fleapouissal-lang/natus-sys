@@ -1,5 +1,6 @@
+import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter, canCreateStore } from "@/lib/permissions";
+import { getCityFilter, canCreateStore, isManager } from "@/lib/permissions";
 import { NATUS_CITIES } from "@/lib/constants/cities";
 import {
   getProductsWithStoreStock,
@@ -9,6 +10,9 @@ import { StoresManager } from "@/components/stores/stores-manager";
 
 export default async function StoresPage() {
   const profile = await getCurrentProfile();
+  if (profile && isManager(profile)) {
+    redirect("/manager");
+  }
   const city = profile ? getCityFilter(profile) : null;
   const stores = await getStoresWithStats(city);
   const inventoryByStore: Record<string, Awaited<ReturnType<typeof getProductsWithStoreStock>>> = {};

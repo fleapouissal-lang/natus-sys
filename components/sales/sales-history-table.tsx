@@ -41,6 +41,7 @@ export function SalesHistoryTable({
   sales,
   showStore = true,
   showCashier = false,
+  showLineItems = true,
   onViewSale,
   paginationKey,
   showPagination = true,
@@ -48,11 +49,16 @@ export function SalesHistoryTable({
   sales: Sale[];
   showStore?: boolean;
   showCashier?: boolean;
+  showLineItems?: boolean;
   onViewSale: (sale: Sale) => void;
   paginationKey?: string;
   showPagination?: boolean;
 }) {
-  const colSpan = 6 + (showStore ? 1 : 0) + (showCashier ? 1 : 0);
+  const colSpan =
+    5 +
+    (showStore ? 1 : 0) +
+    (showCashier ? 1 : 0) +
+    (showLineItems ? 1 : 0);
   const pagination = usePagination(
     sales,
     DEFAULT_PAGE_SIZE,
@@ -97,14 +103,16 @@ export function SalesHistoryTable({
                   </Badge>
                 )}
               </div>
-              <div className="mt-2 min-h-0 flex-1">
-                <SaleLineItemsSummary
-                  sale={sale}
-                  variant="compact"
-                  maxItems={4}
-                  className="text-[10px] text-foreground/85"
-                />
-              </div>
+              {showLineItems && (
+                <div className="mt-2 min-h-0 flex-1">
+                  <SaleLineItemsSummary
+                    sale={sale}
+                    variant="compact"
+                    maxItems={4}
+                    className="text-[10px] text-foreground/85"
+                  />
+                </div>
+              )}
               {showStore && sale.stores?.name && (
                 <p className="mt-auto pt-2 text-[10px] text-muted line-clamp-1">
                   {sale.stores.name}
@@ -136,7 +144,9 @@ export function SalesHistoryTable({
               )}
               <th className="px-6 py-3 text-left font-medium text-muted">Paiement</th>
               <th className="px-6 py-3 text-right font-medium text-muted">Montant</th>
-              <th className="px-6 py-3 text-left font-medium text-muted">Articles</th>
+              {showLineItems && (
+                <th className="px-6 py-3 text-left font-medium text-muted">Articles</th>
+              )}
               <th className="px-6 py-3 text-left font-medium text-muted">Réf.</th>
               <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
             </tr>
@@ -180,9 +190,11 @@ export function SalesHistoryTable({
                     formatCurrency(Number(sale.total))
                   )}
                 </td>
-                <td className="px-6 py-4 align-top">
-                  <SaleLineItemsSummary sale={sale} variant="compact" maxItems={6} />
-                </td>
+                {showLineItems && (
+                  <td className="px-6 py-4 align-top">
+                    <SaleLineItemsSummary sale={sale} variant="compact" maxItems={6} />
+                  </td>
+                )}
                 <td className="px-6 py-4">
                   <div className="flex flex-wrap items-center gap-1">
                     <Badge>{sale.id.slice(0, 8)}</Badge>

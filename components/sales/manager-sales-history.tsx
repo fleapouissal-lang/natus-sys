@@ -8,6 +8,10 @@ import { SalesAgendaFilter } from "@/components/sales/sales-agenda-filter";
 import { SaleDetailModal } from "@/components/sales/sale-detail-modal";
 import { SalesHistoryTable } from "@/components/sales/sales-history-table";
 import { formatCurrency, toLocalDateKey } from "@/lib/utils";
+import {
+  canCancelSaleAsDirector,
+  canCancelSaleAsManager,
+} from "@/lib/sales/sale-cancel";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { PaymentMethod, Sale, Store } from "@/lib/types";
 
@@ -29,6 +33,8 @@ export function ManagerSalesHistory({
   const [dateTo, setDateTo] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<"" | PaymentMethod>("");
   const [detailSale, setDetailSale] = useState<Sale | null>(null);
+
+  const isDirector = pathname.startsWith("/director");
 
   const filtered = useMemo(() => {
     return sales.filter((sale) => {
@@ -68,6 +74,10 @@ export function ManagerSalesHistory({
     }
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname);
+  }
+
+  function canCancelSale(sale: Sale) {
+    return isDirector ? canCancelSaleAsDirector(sale) : canCancelSaleAsManager(sale);
   }
 
   const paginationKey = `${dateFrom}|${dateTo}|${paymentFilter}|${selectedStoreId}`;
@@ -134,6 +144,7 @@ export function ManagerSalesHistory({
           sales={listPagination.paginated}
           showStore={false}
           showCashier
+          showLineItems={isDirector}
           onViewSale={setDetailSale}
           showPagination={false}
         />
@@ -143,7 +154,12 @@ export function ManagerSalesHistory({
         <SaleDetailModal
           sale={detailSale}
           onClose={() => setDetailSale(null)}
-          canCancel={!detailSale.cancelled_at}
+          canCancel={canCancelSale(detailSale)}
+          cancelBlockedHint={
+            !isDirector && !canCancelSaleAsManager(detailSale) && !detailSale.cancelled_at
+              ? "Annulation impossible après 1 h — contactez le directeur"
+              : undefined
+          }
           onCancelled={() => router.refresh()}
         />
       )}

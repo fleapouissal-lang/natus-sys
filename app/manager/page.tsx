@@ -1,7 +1,7 @@
 import { getCurrentProfile } from "@/lib/auth";
 import { getCityFilter, filterRetailStoresByProfile, filterStoresByProfile, isDirector } from "@/lib/permissions";
 import { getActiveStores, getStoresWithStats } from "@/lib/inventory";
-import { getDashboardStats, getStoreOverviewStats, getStoresSnapshots } from "@/lib/dashboard";
+import { getDashboardStats, getStoreOutOfStockProducts, getStoreOverviewStats, getStoresSnapshots } from "@/lib/dashboard";
 import {
   resolveSelectedStoreId,
   getSelectedStore,
@@ -37,12 +37,14 @@ export default async function ManagerDashboard({
     getProfileLockedStoreId(profile)
   );
   const selectedStore = getSelectedStore(stores, storeId);
-  const [stats, storeSnapshots, storeActivities, storeOverview] = await Promise.all([
-    storeId ? getDashboardStats(storeId) : Promise.resolve(null),
-    getStoresSnapshots(stores),
-    storeId ? getActivityLog([storeId], 12) : Promise.resolve([]),
-    getStoreOverviewStats(storesWithStatsFiltered),
-  ]);
+  const [stats, storeSnapshots, storeActivities, storeOverview, outOfStockProducts] =
+    await Promise.all([
+      storeId ? getDashboardStats(storeId) : Promise.resolve(null),
+      getStoresSnapshots(stores),
+      storeId ? getActivityLog([storeId], 12) : Promise.resolve([]),
+      getStoreOverviewStats(storesWithStatsFiltered),
+      storeId ? getStoreOutOfStockProducts(storeId) : Promise.resolve([]),
+    ]);
 
   const overviewByStore = Object.fromEntries(
     storeOverview.map((row) => [row.storeId, row])
@@ -59,7 +61,7 @@ export default async function ManagerDashboard({
       <div className={showPageHeader ? undefined : "hidden md:block"}>
         <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
         <p className="mt-1 text-muted">
-          Suivi du stock des magasins et statistiques par point de vente
+          Suivi, stock et ruptures par magasin — filtrez par point de vente et période
         </p>
       </div>
 
@@ -71,6 +73,8 @@ export default async function ManagerDashboard({
         storeSnapshots={storeSnapshots}
         overviewByStore={overviewByStore}
         storeActivities={storeActivities}
+        outOfStockProducts={outOfStockProducts}
+        storesWithStats={storesWithStatsFiltered}
       />
     </div>
   );

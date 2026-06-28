@@ -1,18 +1,15 @@
-import { Suspense } from "react";
 import { getCurrentProfile } from "@/lib/auth";
 import { getActiveStores } from "@/lib/inventory";
 import { filterRetailStoresByProfile, getCityFilter } from "@/lib/permissions";
 import { getManagerHubStockTransfers } from "@/lib/hub-transfers";
 import { getManagerStoreStockTransfers } from "@/lib/store-transfers";
 import { resolveSelectedStoreId } from "@/lib/management-store";
-import { HubOrdersView } from "@/components/hub/hub-orders-view";
-import { StoreTransfersList } from "@/components/stock/store-transfers-list";
-import { StoreFilterBar } from "@/components/stores/store-filter-bar";
+import { ManagerReceivedOrdersTabs } from "@/components/stock/manager-received-orders-tabs";
 
 export default async function ManagerStockTransfersReceivedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ store?: string }>;
+  searchParams: Promise<{ store?: string; tab?: string }>;
 }) {
   const { store: storeParam } = await searchParams;
   const profile = await getCurrentProfile();
@@ -37,7 +34,7 @@ export default async function ManagerStockTransfersReceivedPage({
       : "Vos magasins";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="font-heading text-2xl font-bold tracking-tight text-primary-dark">
           Commandes reçues
@@ -47,25 +44,13 @@ export default async function ManagerStockTransfersReceivedPage({
         </p>
       </div>
 
-      <Suspense fallback={null}>
-        <StoreFilterBar stores={stores} selectedStoreId={storeId} allowAll={stores.length > 1} />
-      </Suspense>
-
-      <HubOrdersView
-        transfers={hubTransfers}
-        title="Commandes dépôt (hub)"
-        description={`Envois entrepôt vers ${scopeLabel}`}
-        readOnly
-        showOrigin
-        showProductImages
-      />
-
-      <StoreTransfersList
-        title="Commandes magasin (transfert inter-magasins)"
-        perspective="incoming"
-        managedStoreIds={storeIds}
-        transfers={storeTransfers}
-        emptyMessage="Aucune commande reçue d'un autre magasin"
+      <ManagerReceivedOrdersTabs
+        stores={stores}
+        selectedStoreId={storeId}
+        scopeLabel={scopeLabel}
+        hubTransfers={hubTransfers}
+        storeTransfers={storeTransfers}
+        storeIds={storeIds}
       />
     </div>
   );
