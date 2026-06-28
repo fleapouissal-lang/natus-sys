@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   Clock,
   ScrollText,
+  ChevronDown,
 } from "lucide-react";
 import { performClientLogout } from "@/lib/auth/client-logout";
 import { signOutPosOperator } from "@/lib/pos/actions";
@@ -233,6 +234,9 @@ export function Sidebar({
   const [collapsed, setCollapsed] = useState(() => isPos);
   const [switchingCashier, setSwitchingCashier] = useState(false);
   const [showDayClosure, setShowDayClosure] = useState(false);
+  const [closedSections, setClosedSections] = useState<Record<string, boolean>>({});
+
+  const sectionStorageKey = `natus-sidebar-sections:${role}`;
 
   const links = resolveNavLinks({
     role,
@@ -249,6 +253,7 @@ export function Sidebar({
     allowedPages,
     accessPreset,
     requireManagerCode,
+    isStorePos,
   });
   const roleLabel = getRoleLabel(role);
   const operatorActive = isStorePos && hasPosOperator && Boolean(posOperatorName);
@@ -275,6 +280,27 @@ export function Sidebar({
 
     prevPathnameRef.current = pathname;
   }, [pathname]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(sectionStorageKey);
+      if (raw) setClosedSections(JSON.parse(raw) as Record<string, boolean>);
+    } catch {
+      // localStorage indisponible — on garde tous les groupes ouverts.
+    }
+  }, [sectionStorageKey]);
+
+  function toggleSection(id: string) {
+    setClosedSections((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        window.localStorage.setItem(sectionStorageKey, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }
 
   function toggleCollapsed() {
     setCollapsed((prev) => !prev);
@@ -398,17 +424,37 @@ export function Sidebar({
               {navSections.flatMap((section) => section.links).map(renderCollapsedLink)}
             </ul>
           ) : (
-            <div className="flex flex-col gap-4">
-              {navSections.map((section) => (
-                <div key={section.id}>
-                  <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-black/45">
-                    {section.label}
-                  </p>
-                  <ul className="m-0 list-none p-0">
-                    {section.links.map(renderExpandedLink)}
-                  </ul>
-                </div>
-              ))}
+            <div className="flex flex-col gap-1">
+              {navSections.map((section) => {
+                const hasActive = section.links.some((link) =>
+                  isNavLinkActive(pathname, link.href)
+                );
+                const open = hasActive || !closedSections[section.id];
+                return (
+                  <div key={section.id}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(section.id)}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      className="flex w-full items-center justify-between gap-2 px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-black/45 transition-colors hover:text-black/70 cursor-pointer"
+                      aria-expanded={open}
+                    >
+                      <span>{section.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                          open ? "" : "-rotate-90"
+                        )}
+                      />
+                    </button>
+                    {open && (
+                      <ul className="m-0 list-none p-0">
+                        {section.links.map(renderExpandedLink)}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )
         ) : (

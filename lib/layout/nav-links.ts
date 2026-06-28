@@ -328,29 +328,162 @@ function buildManagerNavSections(role: UserRole): NavSection[] {
   ];
 }
 
+/** Menu Caissier regroupé en sections logiques (sidebar desktop). */
+function buildCashierNavSections(role: UserRole): NavSection[] {
+  return [
+    {
+      id: "caisse",
+      label: "Caisse",
+      links: [{ href: "/cashier/pos", label: "Caisse", icon: ShoppingCart }],
+    },
+    {
+      id: "stock",
+      label: "Stock",
+      links: [
+        { href: "/cashier/stock", label: "Stock", icon: Warehouse },
+        { href: "/cashier/transfers/received", label: "Stocks reçus", icon: Boxes },
+        { href: "/cashier/transfers/sent", label: "Stocks envoyés", icon: ArrowRightLeft },
+        { href: "/cashier/returns", label: "Annulations de stock", icon: RotateCcw },
+      ],
+    },
+    {
+      id: "clients",
+      label: "Clients",
+      links: [
+        { href: "/cashier/customers", label: "Clients fidélité", icon: Gift },
+        { href: "/cashier/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness },
+      ],
+    },
+    {
+      id: "comptabilite",
+      label: "Comptabilité",
+      links: [
+        { href: "/cashier/invoices", label: "Factures", icon: FileText },
+        { href: "/cashier/cheques", label: "Chèques", icon: Landmark },
+      ],
+    },
+    {
+      id: "suivi",
+      label: "Suivi",
+      links: [
+        { href: "/cashier/planning", label: "Horaires", icon: CalendarClock },
+        { href: "/cashier/notes", label: "Notes", icon: MessageSquare },
+        { href: "/cashier/actualites", label: "Actualités", icon: Newspaper },
+        { href: "/cashier/history", label: "Historique", icon: ClipboardList },
+      ],
+    },
+    {
+      id: "configuration",
+      label: "Configuration",
+      links: [getSettingsNavItem(role)],
+    },
+  ];
+}
+
+/** Menu Hub (dépôt) regroupé en sections logiques (sidebar desktop). */
+function buildHubNavSections(role: UserRole): NavSection[] {
+  return [
+    {
+      id: "tableau-de-bord",
+      label: "Tableau de bord",
+      links: [{ href: "/hub", label: "Accueil", icon: LayoutDashboard }],
+    },
+    {
+      id: "stock",
+      label: "Stock",
+      links: [
+        { href: "/hub/stock", label: "Stock des produits", icon: Warehouse },
+        { href: "/hub/fabrication-products", label: "Stock des fabrications", icon: Factory },
+        { href: "/hub/stock-transfers", label: "Stocks envoyés", icon: ArrowRightLeft },
+        { href: "/hub/stock-transfers/received", label: "Stocks reçus", icon: Boxes },
+        { href: "/hub/writeoffs", label: "Annulations de stock", icon: RotateCcw },
+      ],
+    },
+    {
+      id: "suivi",
+      label: "Suivi",
+      links: [
+        { href: "/hub/activity", label: "Historique", icon: ClipboardList },
+        { href: "/hub/actualites", label: "Actus", icon: Newspaper },
+      ],
+    },
+    {
+      id: "configuration",
+      label: "Configuration",
+      links: [getSettingsNavItem(role)],
+    },
+  ];
+}
+
+/** Menu Livreur regroupé en sections logiques (sidebar desktop). */
+function buildLivreurNavSections(role: UserRole): NavSection[] {
+  return [
+    {
+      id: "livraisons",
+      label: "Livraisons",
+      links: [
+        { href: "/livreur/orders", label: "Livraisons", icon: Package },
+        { href: "/livreur/transfers", label: "Transferts", icon: Boxes },
+        { href: "/livreur/returns", label: "Retours", icon: RotateCcw },
+      ],
+    },
+    {
+      id: "suivi",
+      label: "Suivi",
+      links: [{ href: "/livreur/actualites", label: "Actualités", icon: Newspaper }],
+    },
+    {
+      id: "configuration",
+      label: "Configuration",
+      links: [getSettingsNavItem(role)],
+    },
+  ];
+}
+
+function dropSectionHref(sections: NavSection[], href: string): NavSection[] {
+  return sections.map((section) => ({
+    ...section,
+    links: section.links.filter((link) => link.href !== href),
+  }));
+}
+
 /**
- * Sections de la sidebar desktop (Directeur / Gérant), filtrées selon les
- * pages autorisées. Retourne null pour les rôles non concernés.
+ * Sections de la sidebar desktop pour tous les rôles, filtrées selon les
+ * pages autorisées. Retourne null pour les rôles non gérés.
  */
 export function resolveNavSections(input: {
   role: UserRole;
   allowedPages?: string[] | null;
   accessPreset?: string | null;
   requireManagerCode?: boolean;
+  isStorePos?: boolean;
 }): NavSection[] | null {
   let sections: NavSection[];
-  if (input.role === "directeur" || input.role === "admin") {
-    sections = buildDirectorNavSections(input.role);
-  } else if (input.role === "manager") {
-    sections = buildManagerNavSections(input.role);
-    if (input.requireManagerCode === false) {
-      sections = sections.map((section) => ({
-        ...section,
-        links: section.links.filter((link) => link.href !== "/manager/pos-closures"),
-      }));
-    }
-  } else {
-    return null;
+  switch (input.role) {
+    case "directeur":
+    case "admin":
+      sections = buildDirectorNavSections(input.role);
+      break;
+    case "manager":
+      sections = buildManagerNavSections(input.role);
+      if (input.requireManagerCode === false) {
+        sections = dropSectionHref(sections, "/manager/pos-closures");
+      }
+      break;
+    case "cashier":
+      sections = buildCashierNavSections(input.role);
+      if (!input.isStorePos) {
+        sections = dropSectionHref(sections, "/cashier/notes");
+      }
+      break;
+    case "hub":
+      sections = buildHubNavSections(input.role);
+      break;
+    case "livreur":
+      sections = buildLivreurNavSections(input.role);
+      break;
+    default:
+      return null;
   }
 
   const pageProfile = {
