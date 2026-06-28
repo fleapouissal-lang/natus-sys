@@ -67,6 +67,7 @@ const REFRESH_PATH_PREFIXES = [
   "/manager/stock-transfers",
   "/director/stock-transfers",
   "/cashier/transfers",
+  "/hub/stock-transfers",
   "/hub/orders",
   "/manager/hub-orders",
   "/livreur/transfers",

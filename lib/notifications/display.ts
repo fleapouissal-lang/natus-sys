@@ -40,7 +40,7 @@ export function notificationHref(
     case "stock_out":
       if (audience === "director") return "/director/stock";
       if (audience === "livreur") return "/livreur/transfers";
-      if (audience === "hub") return "/hub/hub-stock";
+      if (audience === "hub") return "/hub/stock-transfers/received";
       if (audience === "city") return "/manager/stock";
       return "/cashier/pos";
     default:

@@ -226,6 +226,61 @@ export async function getManagerOutgoingHubTransfers(
   return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
 }
 
+/** Tous les transferts hub visibles par le directeur. */
+export async function getDirectorHubStockTransfers(): Promise<HubStockTransfer[]> {
+  return getHubStockTransfers({ limit: 200 });
+}
+
+export function filterHubToHubTransfers(transfers: HubStockTransfer[]): HubStockTransfer[] {
+  return transfers.filter(
+    (transfer) => transfer.from_store_is_hub && transfer.to_store_is_hub
+  );
+}
+
+export function filterHubStoreMixedTransfers(transfers: HubStockTransfer[]): HubStockTransfer[] {
+  return transfers.filter(
+    (transfer) =>
+      (transfer.from_store_is_hub && !transfer.to_store_is_hub) ||
+      (!transfer.from_store_is_hub && transfer.to_store_is_hub)
+  );
+}
+
+/** Transferts dépôt → magasins / dépôts (envois depuis le hub). */
+export async function getHubOutgoingTransfers(
+  hubStoreIds: string[]
+): Promise<HubStockTransfer[]> {
+  if (hubStoreIds.length === 0) return [];
+
+  const transfers = await getHubStockTransfers({ fromStoreIds: hubStoreIds, limit: 100 });
+  return transfers.filter((transfer) => transfer.from_store_is_hub);
+}
+
+/** Envois dépôt → magasin retail. */
+export async function getHubOutgoingTransfersToStores(
+  hubStoreIds: string[]
+): Promise<HubStockTransfer[]> {
+  const transfers = await getHubOutgoingTransfers(hubStoreIds);
+  return transfers.filter((transfer) => !transfer.to_store_is_hub);
+}
+
+/** Envois dépôt → autre dépôt hub. */
+export async function getHubOutgoingTransfersToHubs(
+  hubStoreIds: string[]
+): Promise<HubStockTransfer[]> {
+  const transfers = await getHubOutgoingTransfers(hubStoreIds);
+  return transfers.filter((transfer) => transfer.to_store_is_hub);
+}
+
+/** Transferts magasin → dépôt (réceptions au hub). */
+export async function getHubIncomingTransfers(
+  hubStoreIds: string[]
+): Promise<HubStockTransfer[]> {
+  if (hubStoreIds.length === 0) return [];
+
+  const transfers = await getHubStockTransfers({ toStoreIds: hubStoreIds, limit: 100 });
+  return transfers.filter((transfer) => transfer.to_store_is_hub);
+}
+
 /** Commandes visibles par le gérant dépôt (hub). */
 export async function getHubDepotTransfersForOperator(input: {
   hubStoreIds: string[];

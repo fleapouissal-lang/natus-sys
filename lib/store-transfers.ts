@@ -145,6 +145,23 @@ export async function getOutgoingStoreStockTransfers(
   return getStoreStockTransfers({ fromStoreIds, limit: 100 });
 }
 
+export async function getDirectorStoreStockTransfers(): Promise<StoreStockTransfer[]> {
+  return getStoreStockTransfers({ limit: 200 });
+}
+
+export function filterInterStoreOutgoingTransfers(
+  transfers: StoreStockTransfer[],
+  retailStoreIds: string[]
+): StoreStockTransfer[] {
+  const ids = new Set(retailStoreIds);
+  return transfers.filter(
+    (transfer) =>
+      ids.has(transfer.from_store_id) &&
+      ids.has(transfer.to_store_id) &&
+      transfer.from_store_id !== transfer.to_store_id
+  );
+}
+
 export async function getManagerStoreStockTransfers(
   storeIds: string[]
 ): Promise<StoreStockTransfer[]> {

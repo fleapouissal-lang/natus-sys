@@ -90,7 +90,7 @@ export function HubDashboardPanel({
       lowStockCount: hubOverview.lowStockCount,
       productCount: storesWithStats.find((s) => s.id === hubStoreId)?.productCount,
       isHub: true,
-      stockHref: "/hub/hub-stock",
+      stockHref: "/hub/stock-transfers?tab=new",
     };
   }, [hubStoreId, hubStoreName, hubOverview, storesWithStats]);
 
@@ -172,7 +172,7 @@ export function HubDashboardPanel({
             <p className="text-sm text-muted">Entrepôt central — {city}</p>
           </div>
           <Link
-            href="/hub/hub-stock"
+            href="/hub/stock-transfers?tab=new"
             className="inline-flex items-center gap-2 rounded-md border border-primary bg-champagne px-4 py-2 text-sm font-medium text-black hover:brightness-95"
           >
             <Warehouse className="h-4 w-4" />

@@ -16,7 +16,6 @@ import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { Input } from "@/components/ui/input";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { StoreSelect } from "@/components/stores/store-select";
 import { ProductImage } from "@/components/pos/product-image";
@@ -75,7 +74,6 @@ export function StoreStockTransferManager({
   }, [enableHubDestination, initialDestination, fromStoreId]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
-  const [notes, setNotes] = useState("");
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -219,7 +217,6 @@ export function StoreStockTransferManager({
 
   function resetTransfer() {
     setQuantities({});
-    setNotes("");
   }
 
   function openConfirm() {
@@ -279,14 +276,13 @@ export function StoreStockTransferManager({
         ? await transferStoreStockToHub(
             fromStoreId,
             transferPayload.payload,
-            notes,
+            undefined,
             toHubStoreId
           )
         : await transferStoreStock(
             fromStoreId,
             toStoreId,
-            transferPayload.payload,
-            notes
+            transferPayload.payload
           );
     setLoading(false);
     setConfirmOpen(false);
@@ -368,7 +364,11 @@ export function StoreStockTransferManager({
             <h2 className="text-lg font-semibold">Nouveau transfert</h2>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+          <div
+            className={`grid grid-cols-1 gap-3 lg:items-end ${
+              enableHubDestination ? "lg:grid-cols-4" : "lg:grid-cols-3"
+            }`}
+          >
             <StoreSelect
               stores={
                 lockFromStore
@@ -412,17 +412,10 @@ export function StoreStockTransferManager({
                 size="sm"
               />
             )}
-            <Input
-              label="Note (optionnel)"
-              inputSize="sm"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Réapprovisionnement…"
-            />
             <Button
               type="button"
               size="sm"
-              className="h-8 w-full shrink-0 whitespace-nowrap lg:w-auto"
+              className="h-8 w-full shrink-0 whitespace-nowrap"
               loading={loading}
               disabled={!canTransfer}
               onClick={openConfirm}

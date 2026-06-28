@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowRight, ArrowRightLeft, Package, Search, Store as StoreIcon, Warehouse } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { Input } from "@/components/ui/input";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { StoreSelect } from "@/components/stores/store-select";
 import { ProductImage } from "@/components/pos/product-image";
@@ -27,20 +26,37 @@ type TransferAlert = {
   requested?: number;
 };
 
+type TransferDestination = "store" | "hub";
+
 export function HubWarehouseManager({
   hubStore,
   products,
   retailStores,
+  destinationHubStores = [],
+  initialDestination = "store",
+  toStoreId: initialToStoreId = "",
+  toHubStoreId: initialToHubStoreId = "",
+  embedded = false,
 }: {
   hubStore: Store;
   products: Product[];
   retailStores: Store[];
+  destinationHubStores?: Store[];
+  initialDestination?: TransferDestination;
+  toStoreId?: string;
+  toHubStoreId?: string;
+  embedded?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [destinationType, setDestinationType] = useState<TransferDestination>(
+    initialDestination === "hub" ? "hub" : "store"
+  );
+  const [toStoreId, setToStoreId] = useState(initialToStoreId);
+  const [toHubStoreId, setToHubStoreId] = useState(initialToHubStoreId);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
-  const [toStoreId, setToStoreId] = useState("");
-  const [notes, setNotes] = useState("");
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -102,7 +118,57 @@ export function HubWarehouseManager({
 
   const transferCount = transferPayload.payload.length;
   const destinationStore = retailStores.find((s) => s.id === toStoreId);
-  const destinationName = destinationStore?.name || "le magasin";
+  const destinationHub = destinationHubStores.find((s) => s.id === toHubStoreId) ?? null;
+  const destinationId = destinationType === "hub" ? toHubStoreId : toStoreId;
+  const destinationName =
+    destinationType === "hub"
+      ? destinationHub?.name || "le dépôt"
+      : destinationStore?.name || "le magasin";
+
+  useEffect(() => {
+    setDestinationType(initialDestination === "hub" ? "hub" : "store");
+  }, [initialDestination, hubStore.id]);
+
+  useEffect(() => {
+    setToStoreId(initialToStoreId);
+    setToHubStoreId(initialToHubStoreId);
+  }, [initialToStoreId, initialToHubStoreId, hubStore.id]);
+
+  function navigateTransfer(
+    nextTo: string,
+    nextDestination: TransferDestination,
+    nextHubId: string
+  ) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "new");
+    params.set("dest", nextDestination);
+    if (nextDestination === "store" && nextTo) params.set("to", nextTo);
+    else params.delete("to");
+    if (nextDestination === "hub" && nextHubId) params.set("hub", nextHubId);
+    else params.delete("hub");
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  function handleToChange(storeId: string) {
+    setToStoreId(storeId);
+    setQuantities({});
+    setSuccess("");
+    navigateTransfer(storeId, "store", toHubStoreId);
+  }
+
+  function handleHubChange(hubId: string) {
+    setToHubStoreId(hubId);
+    setQuantities({});
+    setSuccess("");
+    navigateTransfer(toStoreId, "hub", hubId);
+  }
+
+  function handleDestinationChange(nextDestination: TransferDestination) {
+    setDestinationType(nextDestination);
+    setQuantities({});
+    setSuccess("");
+    navigateTransfer(toStoreId, nextDestination, toHubStoreId);
+  }
 
   const confirmSummary = useMemo(() => {
     const items = transferPayload.payload
@@ -130,7 +196,6 @@ export function HubWarehouseManager({
 
   function resetTransfer() {
     setQuantities({});
-    setNotes("");
     setSuccess("");
   }
 
@@ -138,10 +203,18 @@ export function HubWarehouseManager({
     setSuccess("");
     setAlertOpen(null);
 
-    if (!toStoreId) {
+    if (destinationType === "store" && !toStoreId) {
       showTransferAlert({
         title: "Magasin requis",
         message: "Sélectionnez un magasin destination avant d'envoyer la commande.",
+      });
+      return;
+    }
+
+    if (destinationType === "hub" && !toHubStoreId) {
+      showTransferAlert({
+        title: "Dépôt requis",
+        message: "Sélectionnez un dépôt destination avant d'envoyer la commande.",
       });
       return;
     }
@@ -170,7 +243,12 @@ export function HubWarehouseManager({
 
   async function handleTransferConfirm() {
     setLoading(true);
-    const result = await transferHubStock(toStoreId, transferPayload.payload, notes);
+    const result = await transferHubStock(
+      destinationId,
+      transferPayload.payload,
+      undefined,
+      hubStore.id
+    );
     setLoading(false);
     setConfirmOpen(false);
 
@@ -183,20 +261,49 @@ export function HubWarehouseManager({
     }
 
     resetTransfer();
-    router.push("/hub/orders?created=1");
+    const tab = destinationType === "hub" ? "depot" : "store";
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("created", "1");
+    params.set("tab", tab);
+    params.set("dest", destinationType);
+    if (destinationType === "store" && toStoreId) params.set("to", toStoreId);
+    if (destinationType === "hub" && toHubStoreId) params.set("hub", toHubStoreId);
+    router.push(`${pathname}?${params.toString()}`);
     router.refresh();
   }
 
-  const canTransfer = retailStores.length > 0;
+  const canTransferStore = retailStores.length > 0;
+  const canTransferHub = destinationHubStores.length > 0;
+  const canTransfer = destinationType === "hub" ? canTransferHub : canTransferStore;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Entrepôt dépôt</h1>
-        <p className="mt-1 text-muted">
-          {hubStore.name} — {hubStore.city}
+      {!embedded && (
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Entrepôt dépôt</h1>
+          <p className="mt-1 text-muted">
+            {hubStore.name} — {hubStore.city}
+          </p>
+        </div>
+      )}
+
+      {embedded && (
+        <p className="text-sm text-muted">
+          Source : <strong>{hubStore.name}</strong> — envoi vers tout magasin ou dépôt actif.
         </p>
-      </div>
+      )}
+
+      {destinationType === "store" && !canTransferStore && (
+        <Card className="border-warning/40 bg-warning/5">
+          <p className="text-sm">Aucun magasin retail actif disponible.</p>
+        </Card>
+      )}
+
+      {destinationType === "hub" && !canTransferHub && (
+        <Card className="border-warning/40 bg-warning/5">
+          <p className="text-sm">Aucun autre dépôt hub actif disponible.</p>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
@@ -212,12 +319,9 @@ export function HubWarehouseManager({
         </Card>
       </div>
 
-      {!canTransfer && (
+      {!canTransferStore && !canTransferHub && (
         <Card className="border-warning/40 bg-warning/5">
-          <p className="text-sm">
-            Aucun magasin retail rattaché à ce dépôt. Le directeur doit associer des magasins
-            depuis <strong>Comptes dépôt</strong>.
-          </p>
+          <p className="text-sm">Aucune destination active disponible pour ce transfert.</p>
         </Card>
       )}
 
@@ -225,29 +329,43 @@ export function HubWarehouseManager({
         <div className="border-b border-border p-4">
           <div className="mb-4 flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Commande vers un magasin</h2>
+            <h2 className="text-lg font-semibold">Nouveau transfert depuis l&apos;entrepôt</h2>
           </div>
-          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
-            <StoreSelect
-              stores={retailStores}
-              value={toStoreId}
-              onChange={setToStoreId}
-              label="Magasin destination"
-              required={false}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:items-end">
+            <SelectMenu
+              label="Destination"
+              value={destinationType}
+              onChange={(value) => handleDestinationChange(value as TransferDestination)}
+              options={[
+                { value: "store", label: "Magasin" },
+                { value: "hub", label: "Dépôt hub" },
+              ]}
               size="sm"
+              showIcons={false}
             />
-            <Input
-              label="Note (optionnel)"
-              inputSize="sm"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Réapprovisionnement…"
-              className="h-8 py-0"
-            />
+            {destinationType === "store" ? (
+              <StoreSelect
+                stores={retailStores}
+                value={toStoreId}
+                onChange={handleToChange}
+                label="Magasin destination"
+                required={false}
+                size="sm"
+              />
+            ) : (
+              <StoreSelect
+                stores={destinationHubStores}
+                value={toHubStoreId}
+                onChange={handleHubChange}
+                label="Dépôt destination"
+                required={false}
+                size="sm"
+              />
+            )}
             <Button
               type="button"
               size="sm"
-              className="h-8 w-full shrink-0 whitespace-nowrap sm:w-auto"
+              className="h-8 w-full shrink-0 whitespace-nowrap"
               loading={loading}
               disabled={!canTransfer}
               onClick={openConfirm}
@@ -485,11 +603,16 @@ export function HubWarehouseManager({
                   Vers
                 </p>
                 <div className="mt-1 flex items-center gap-2">
-                  <StoreIcon className="h-4 w-4 shrink-0 text-primary" />
+                  {destinationType === "hub" ? (
+                    <Warehouse className="h-4 w-4 shrink-0 text-primary" />
+                  ) : (
+                    <StoreIcon className="h-4 w-4 shrink-0 text-primary" />
+                  )}
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-foreground">{destinationName}</p>
                     <p className="text-xs text-muted">
-                      {destinationStore?.city || hubStore.city}
+                      {(destinationType === "hub" ? destinationHub?.city : destinationStore?.city) ||
+                        hubStore.city}
                     </p>
                   </div>
                 </div>
@@ -530,15 +653,6 @@ export function HubWarehouseManager({
                 Statut initial : En cours
               </Badge>
             </div>
-
-            {notes.trim() && (
-              <div className="rounded-xl border border-border bg-page/70 px-4 py-3 text-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  Note
-                </p>
-                <p className="mt-1 text-foreground">{notes.trim()}</p>
-              </div>
-            )}
 
             <ul className="max-h-[min(52vh,420px)] space-y-3 overflow-y-auto pr-1 scrollbar-natus">
               {confirmSummary.items.map(({ product, quantity }) => (

@@ -96,6 +96,8 @@ function revalidateManagement() {
   revalidatePath("/hub");
   revalidatePath("/hub/stock");
   revalidatePath("/hub/hub-stock");
+  revalidatePath("/hub/stock-transfers");
+  revalidatePath("/hub/stock-transfers/received");
   revalidatePath("/hub/orders");
   revalidatePath("/hub/activity");
   revalidatePath("/cashier/transfers");
@@ -803,12 +805,13 @@ export type HubStockTransferItem = {
 export async function transferHubStock(
   toStoreId: string,
   items: HubStockTransferItem[],
-  notes?: string
+  notes?: string,
+  fromHubStoreId?: string
 ): Promise<{ success: true; storeName: string } | { error: string }> {
   const profile = await requireRole(["hub"]);
   if (!profile?.city) return { error: "Non autorisé" };
 
-  if (!toStoreId) return { error: "Sélectionnez un magasin destination" };
+  if (!toStoreId) return { error: "Sélectionnez une destination" };
 
   const cleaned = items
     .map((item) => ({
@@ -826,6 +829,7 @@ export async function transferHubStock(
     p_to_store_id: toStoreId,
     p_items: cleaned,
     p_notes: notes?.trim() || null,
+    p_from_hub_store_id: fromHubStoreId || null,
   });
 
   if (error) {
@@ -833,11 +837,59 @@ export async function transferHubStock(
     if (msg.includes("Stock insuffisant")) {
       return { error: "Stock insuffisant à l'entrepôt pour un ou plusieurs produits" };
     }
-    if (msg.includes("Magasin destination non autorisé")) {
-      return { error: "Ce magasin n'est pas rattaché à votre dépôt" };
+    if (msg.includes("destination invalide") || msg.includes("non autorisé")) {
+      return { error: "Destination non autorisée" };
     }
-    if (msg.includes("destination invalide")) {
-      return { error: "Magasin destination non autorisé" };
+    return { error: msg };
+  }
+
+  revalidateManagement();
+  const storeName =
+    typeof data === "object" && data !== null && "store" in data
+      ? String((data as { store?: string }).store || "")
+      : "";
+
+  return { success: true, storeName };
+}
+
+export async function transferHubStockAsDirector(
+  toStoreId: string,
+  items: HubStockTransferItem[],
+  notes?: string,
+  fromHubStoreId?: string
+): Promise<{ success: true; storeName: string } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  if (!toStoreId) return { error: "Sélectionnez une destination" };
+  if (!fromHubStoreId) return { error: "Sélectionnez un dépôt source" };
+
+  const cleaned = items
+    .map((item) => ({
+      product_id: item.productId,
+      quantity: Math.floor(item.quantity),
+    }))
+    .filter((item) => item.product_id && item.quantity > 0);
+
+  if (cleaned.length === 0) {
+    return { error: "Indiquez au moins une quantité à transférer" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("transfer_hub_stock", {
+    p_to_store_id: toStoreId,
+    p_items: cleaned,
+    p_notes: notes?.trim() || null,
+    p_from_hub_store_id: fromHubStoreId,
+  });
+
+  if (error) {
+    const msg = error.message;
+    if (msg.includes("Stock insuffisant")) {
+      return { error: "Stock insuffisant à l'entrepôt pour un ou plusieurs produits" };
+    }
+    if (msg.includes("destination invalide") || msg.includes("introuvable")) {
+      return { error: "Source ou destination invalide" };
     }
     return { error: msg };
   }
@@ -1216,7 +1268,7 @@ export async function deliverHubTransfer(
 export async function markHubTransferReady(
   transferId: string
 ): Promise<{ success: true } | { error: string }> {
-  const profile = await requireRole(["hub"]);
+  const profile = await requireRole(["hub", "directeur", "admin"]);
   if (!profile) return { error: "Non autorisé" };
 
   const supabase = await createClient();
@@ -1234,7 +1286,7 @@ export async function assignHubTransferLivreur(
   transferId: string,
   livreurId: string
 ): Promise<{ success: true } | { error: string }> {
-  const profile = await requireRole(["hub"]);
+  const profile = await requireRole(["hub", "directeur", "admin"]);
   if (!profile) return { error: "Non autorisé" };
 
   if (!livreurId) return { error: "Sélectionnez un livreur" };
@@ -2694,6 +2746,8 @@ export async function confirmShopifyOrderReturn(
   revalidatePath("/director/hub");
   revalidatePath("/livreur/returns");
   revalidatePath("/livreur/transfers");
+  revalidatePath("/hub/stock-transfers");
+  revalidatePath("/hub/stock-transfers/received");
   revalidatePath("/hub/orders");
 
   return { success: true };
