@@ -15,7 +15,7 @@ import { CreateLoyaltyCustomerModal } from "@/components/loyalty/create-customer
 import { loyaltyTierFromPoints } from "@/lib/loyalty/tiers";
 import { LoyaltyTierBadge } from "@/components/loyalty/loyalty-tier-badge";
 import { sortLoyaltyCustomersByFidelity } from "@/lib/loyalty/sort-customers";
-import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
+import { customerCardUrl } from "@/lib/loyalty/qr";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
@@ -238,7 +238,7 @@ export function CashierCustomersManager({
           <LoyaltyWalletCard customer={detailCustomer} compact />
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
-              href={`/carte/${detailCustomer.qr_token}`}
+              href={customerCardUrl(detailCustomer.qr_token, Boolean(detailCustomer.is_pro_client))}
               target="_blank"
               className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium hover:bg-primary-light/30"
             >
@@ -246,7 +246,7 @@ export function CashierCustomersManager({
               Lien client
             </Link>
             <p className="w-full text-xs text-muted break-all">
-              {loyaltyCardPublicUrl(detailCustomer.qr_token)}
+              {customerCardUrl(detailCustomer.qr_token, Boolean(detailCustomer.is_pro_client))}
             </p>
             <p className="text-xs text-muted">
               Valeur des points : ≈ {formatCurrency(detailCustomer.loyalty_points)}

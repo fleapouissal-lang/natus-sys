@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { notFound } from "next/navigation";
+import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
 import { getPublicLoyaltyCustomer } from "@/lib/loyalty/customers";
 import { toPublicLoyaltyCustomer } from "@/lib/loyalty/public";
 import { getPublicLoyaltySettings } from "@/lib/loyalty/settings.server";
@@ -71,6 +72,19 @@ export default async function LoyaltyCardPage({
   const { tab: tabParam } = await searchParams;
   const data = await getPublicLoyaltyCustomer(token);
   if (!data) notFound();
+
+  // Les clients Pro sont servis sur pro.*, les clients fidélité sur loyalty.*.
+  // On corrige le sous-domaine si l'entrée se fait sur le mauvais host.
+  const host = (await headers()).get("host")?.split(":")[0].toLowerCase() ?? "";
+  const isPro = Boolean(data.customer.is_pro_client);
+  const onLoyaltyHost = host.startsWith("loyalty.");
+  const onProHost = host.startsWith("pro.");
+  if ((isPro && onLoyaltyHost) || (!isPro && onProHost)) {
+    const labels = host.split(".");
+    const base = labels.length > 2 ? labels.slice(1).join(".") : host;
+    const query = tabParam ? `?tab=${encodeURIComponent(tabParam)}` : "";
+    redirect(`https://${isPro ? "pro" : "loyalty"}.${base}/carte/${token}${query}`);
+  }
 
   const loyaltySettings = await getPublicLoyaltySettings();
   const initialTab =

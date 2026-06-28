@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
-import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
+import { customerCardUrl } from "@/lib/loyalty/qr";
 import type { LoyaltyCustomer } from "@/lib/types";
 
 export function LoyaltyCardShareForCashier({
@@ -13,7 +13,7 @@ export function LoyaltyCardShareForCashier({
   customer: LoyaltyCustomer;
   onClose?: () => void;
 }) {
-  const cardUrl = loyaltyCardPublicUrl(customer.qr_token);
+  const cardUrl = customerCardUrl(customer.qr_token, Boolean(customer.is_pro_client));
   const [copied, setCopied] = useState(false);
 
   async function copyLink() {

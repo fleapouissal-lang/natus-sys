@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
 import { loyaltyTierFromPoints } from "@/lib/loyalty/tiers";
 import { LoyaltyTierBadge } from "@/components/loyalty/loyalty-tier-badge";
-import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
+import { customerCardUrl } from "@/lib/loyalty/qr";
 import { loyaltyCardVariantLabel } from "@/lib/loyalty/card-variant";
 import { canRedeemLoyaltyPoints, pointsUntilRedemption } from "@/lib/loyalty/points";
 import { pointsValueInMad } from "@/lib/loyalty/settings";
@@ -43,8 +43,8 @@ export function LoyaltyCustomerDetailView({
 }) {
   const tier = loyaltyTierFromPoints(customer.loyalty_points);
   const redeemEligible = canRedeemLoyaltyPoints(customer.loyalty_points, loyaltySettings);
-  const publicUrl = loyaltyCardPublicUrl(customer.qr_token);
   const isPro = isProClientCustomer(customer);
+  const publicUrl = customerCardUrl(customer.qr_token, isPro);
   const isProActive = isActiveProClient(customer);
   const showProOrders = isProParticulierCustomer(customer);
 

@@ -65,8 +65,14 @@ export async function middleware(request: NextRequest) {
   }
 
   // --- Sous-domaine espace client pro (PWA active) ---
+  // Sert l'inscription pro et la carte/espace des clients pro (/carte).
   if (host.startsWith("pro.")) {
-    if (pathname.startsWith("/client-pro/")) {
+    if (
+      pathname.startsWith("/client-pro/") ||
+      pathname.startsWith("/carte/") ||
+      pathname.startsWith("/api/loyalty/") ||
+      pathname.startsWith("/f/")
+    ) {
       return NextResponse.next();
     }
     return NextResponse.redirect(new URL(`${appOrigin(host)}${pathname}${search}`));

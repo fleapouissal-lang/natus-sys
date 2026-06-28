@@ -25,7 +25,7 @@ import { LoyaltyCardInstall } from "@/components/loyalty/loyalty-card-install";
 import { Button } from "@/components/ui/button";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
 import { PosInvoice } from "@/components/pos/pos-invoice";
-import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
+import { customerCardUrl } from "@/lib/loyalty/qr";
 import { publicInvoiceToDocumentData } from "@/lib/loyalty/public-invoices";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -272,8 +272,8 @@ export function LoyaltyCardPortal({
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingInvoiceDetail, setLoadingInvoiceDetail] = useState(false);
 
-  const cardUrl = loyaltyCardPublicUrl(customer.qr_token);
   const isPro = Boolean(customer.is_pro_client);
+  const cardUrl = customerCardUrl(customer.qr_token, isPro);
   const isProActive = Boolean(customer.is_pro_client && customer.pro_client_active);
   const isProParticulier = isProParticulierCustomer(customer);
   const visibleTabs = useMemo(() => {

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CountryCitySelect, countryNameFromCode } from "@/components/ui/country-city-select";
 import { submitProClientRegistration } from "@/lib/pro-client/actions";
-import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
+import { customerCardUrl } from "@/lib/loyalty/qr";
 import type { ProClientType } from "@/lib/pro-client/types";
 import { cn } from "@/lib/utils";
 
@@ -199,7 +199,7 @@ export function ProClientRegistrationForm({
                 ci-dessous.
               </p>
               <Link
-                href={loyaltyCardPublicUrl(lastSuccess.qrToken)}
+                href={customerCardUrl(lastSuccess.qrToken, true)}
                 className="inline-flex text-sm font-medium text-primary hover:underline"
               >
                 Voir mon espace client

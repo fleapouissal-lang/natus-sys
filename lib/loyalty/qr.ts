@@ -53,7 +53,20 @@ export function loyaltyCardScanPayload(cardNumber: string): string {
   return loyaltyCardBarcodeValue(cardNumber);
 }
 
-export function loyaltyCardPublicUrl(qrToken: string, baseUrl?: string): string {
-  const origin = publicSubdomainOrigin("loyalty", baseUrl);
+/**
+ * URL publique de l'espace client (/carte/{token}).
+ * Les clients Pro sont servis sur le sous-domaine `pro.*`, les clients
+ * fidélité sur `loyalty.*`.
+ */
+export function customerCardUrl(
+  qrToken: string,
+  isProClient: boolean,
+  baseUrl?: string
+): string {
+  const origin = publicSubdomainOrigin(isProClient ? "pro" : "loyalty", baseUrl);
   return `${origin.replace(/\/$/, "")}/carte/${qrToken}`;
+}
+
+export function loyaltyCardPublicUrl(qrToken: string, baseUrl?: string): string {
+  return customerCardUrl(qrToken, false, baseUrl);
 }

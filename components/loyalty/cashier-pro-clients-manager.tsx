@@ -16,6 +16,7 @@ import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import { sortProClientsByFidelity } from "@/lib/loyalty/sort-customers";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import { customerRegisteredAtStore } from "@/lib/loyalty/customer-store-scope";
+import { customerCardUrl } from "@/lib/loyalty/qr";
 import type { LoyaltyCustomer } from "@/lib/types";
 
 export function CashierProClientsManager({
@@ -159,7 +160,7 @@ export function CashierProClientsManager({
                           <Eye className="h-3.5 w-3.5" />
                         </button>
                         <Link
-                          href={`/carte/${customer.qr_token}`}
+                          href={customerCardUrl(customer.qr_token, true)}
                           target="_blank"
                           title="Ouvrir la carte client"
                           className="order-action-icon flex h-8 w-8 items-center justify-center border border-primary/30 bg-page text-primary hover:bg-primary-light"
@@ -168,7 +169,7 @@ export function CashierProClientsManager({
                         </Link>
                         {customer.pro_client_type === "particulier" && (
                           <Link
-                            href={`/carte/${customer.qr_token}?tab=commandes`}
+                            href={`${customerCardUrl(customer.qr_token, true)}?tab=commandes`}
                             target="_blank"
                             title="Voir les commandes"
                             className="order-action-icon flex h-8 w-8 items-center justify-center border border-primary/30 bg-page text-primary hover:bg-primary-light"
