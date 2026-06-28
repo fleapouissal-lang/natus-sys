@@ -31,6 +31,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // Sur le domaine principal, la page réclamation est bloquée : elle n'est
+  // accessible que via le sous-domaine dédié (reclamations.*).
+  const { pathname } = request.nextUrl;
+  if (pathname === "/reclamation" || pathname.startsWith("/reclamation/")) {
+    const host = (request.headers.get("host") ?? "").split(":")[0].toLowerCase();
+    const isLocalHost =
+      host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost");
+    if (!isLocalHost) {
+      const labels = host.split(".");
+      const baseDomain = labels.length > 2 ? labels.slice(1).join(".") : host;
+      return NextResponse.redirect(new URL(`https://reclamations.${baseDomain}/`));
+    }
+  }
+
   return await updateSession(request);
 }
 
