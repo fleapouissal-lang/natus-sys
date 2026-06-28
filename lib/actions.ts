@@ -91,10 +91,10 @@ function revalidateManagement() {
   revalidatePath("/director/stock-transfers");
   revalidatePath("/director/stock-transfers/received");
   revalidatePath("/director/activity");
+  revalidatePath("/director/history");
   revalidatePath("/director/stores");
   revalidatePath("/director/users");
   revalidatePath("/director/planning");
-  revalidatePath("/director/hubs");
   revalidatePath("/hub");
   revalidatePath("/hub/stock");
   revalidatePath("/hub/hub-stock");
@@ -1545,6 +1545,7 @@ export async function completeSale(
   revalidatePath("/manager");
   revalidatePath("/manager/loyalty");
   revalidatePath("/director/sales");
+  revalidatePath("/director/history");
   revalidatePath("/director");
   revalidatePath("/director/loyalty");
   revalidatePath("/cashier/cheques");
@@ -1570,6 +1571,7 @@ export async function cancelSale(
   revalidatePath("/manager/sales");
   revalidatePath("/manager/history");
   revalidatePath("/director/sales");
+  revalidatePath("/director/history");
   revalidatePath("/manager/stock");
   revalidatePath("/director/stock");
 
@@ -1601,6 +1603,7 @@ export async function validateSaleInvoice(
   revalidatePath("/manager/sales");
   revalidatePath("/manager/history");
   revalidatePath("/director/sales");
+  revalidatePath("/director/history");
 
   return { success: true };
 }
@@ -2143,7 +2146,7 @@ export async function createUser(formData: FormData) {
   }
 
   revalidateManagement();
-  revalidatePath("/director/hubs");
+  revalidatePath("/director/stores");
   return { success: true };
 }
 
@@ -2302,7 +2305,7 @@ export async function updateUser(formData: FormData) {
   if (profileError) return { error: profileError.message };
 
   revalidateManagement();
-  revalidatePath("/director/hubs");
+  revalidatePath("/director/stores");
   return { success: true };
 }
 
@@ -2340,7 +2343,7 @@ export async function updateHubStoreAssignments(
   const assignResult = await saveHubStoreAssignments(admin, hubUserId, uniqueIds);
   if ("error" in assignResult && assignResult.error) return { error: assignResult.error };
 
-  revalidatePath("/director/hubs");
+  revalidatePath("/director/stores");
   revalidatePath("/hub");
   revalidatePath("/hub/hub-stock");
   return { success: true };
@@ -2969,6 +2972,7 @@ export async function markShopifyCodPaid(
   revalidatePath("/manager/invoices");
   revalidatePath("/director/orders");
   revalidatePath("/director/sales");
+  revalidatePath("/director/history");
   revalidatePath("/director/invoices");
 
   return { success: true };

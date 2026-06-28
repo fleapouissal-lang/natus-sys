@@ -1,1 +1,5 @@
-export { default } from "@/app/manager/sales/management-sales-content";
+import { redirect } from "next/navigation";
+
+export default function DirectorSalesPage() {
+  redirect("/director/history?tab=sales");
+}

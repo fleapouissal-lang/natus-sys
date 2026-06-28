@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { getHubCityStaff, getHubStoreByCity, getHubStoresByCity, getHubAssignedStores } from "@/lib/hub";
 import { getHubDashboardStats } from "@/lib/hub/dashboard-stats";
 import { HubDashboardStats } from "@/components/hub/hub-dashboard-stats";
+import { HubDashboardAnalytics } from "@/components/hub/hub-dashboard-analytics";
 import { HubDashboardSummaryTables } from "@/components/hub/hub-dashboard-summary-tables";
 import { getStoresWithStats } from "@/lib/inventory";
 import { getActivityLog } from "@/lib/activity";
@@ -74,6 +75,8 @@ export default async function HubDashboardPage() {
       </div>
 
       <HubDashboardStats stats={dashboardStats} />
+
+      <HubDashboardAnalytics stats={dashboardStats.analytics} />
 
       <HubDashboardSummaryTables stats={dashboardStats} />
 

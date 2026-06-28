@@ -14,6 +14,7 @@ function revalidateChequePaths() {
   revalidatePath("/manager/sales");
   revalidatePath("/manager/history");
   revalidatePath("/director/sales");
+  revalidatePath("/director/history");
   revalidatePath("/cashier/pos");
 }
 

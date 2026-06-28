@@ -5,7 +5,6 @@ import {
   Package,
   Warehouse,
   Store,
-  Receipt,
   Users,
   ShoppingCart,
   ClipboardList,
@@ -161,7 +160,6 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       mobileOrder: 6,
     },
     { href: `${basePath}/cheques`, label: "Chèques", icon: Landmark, mobileOrder: 7 },
-    { href: `${basePath}/sales`, label: "Ventes", icon: Receipt, mobileOrder: 8 },
     { href: `${basePath}/products`, label: "Produits", icon: Package, mobileOrder: 9 },
     {
       href: "/director/fabrication-products",
@@ -169,7 +167,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       icon: Factory,
       mobileOrder: 10,
     },
-    { href: `${basePath}/stores`, label: "Magasins", icon: Store, mobileOrder: 11 },
+    { href: `${basePath}/stores`, label: "Magasins & Dépôts", icon: Store, mobileOrder: 11 },
     {
       href: "/director/clients",
       label: "Clients fidélité",
@@ -184,7 +182,6 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     },
     { href: `${basePath}/invoices`, label: "Factures", icon: FileText, mobileOrder: 14 },
     { href: `${basePath}/writeoffs`, label: "Annulations de stock", icon: RotateCcw, mobileOrder: 15 },
-    { href: "/director/hubs", label: "Dépôts", icon: Users, mobileOrder: 16 },
     { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 17 },
     { href: "/director/stock-access", label: "Accès stock", icon: KeyRound, mobileOrder: 18 },
     {
@@ -195,7 +192,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     },
     { href: `${basePath}/actualites`, label: "Actus", icon: Newspaper, mobileOrder: 20 },
     { href: `${basePath}/users`, label: "Users", icon: Users, mobileOrder: 21 },
-    { href: `${basePath}/activity`, label: "Historique", icon: ClipboardList, mobileOrder: 22 },
+    { href: `${basePath}/history`, label: "Historique", icon: ClipboardList, mobileOrder: 22 },
   ];
 }
 

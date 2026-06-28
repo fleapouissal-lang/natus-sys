@@ -266,6 +266,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       return base ? `${base}/stores` : null;
     case "activity":
       if (role === "manager") return "/manager/history";
+      if (role === "directeur" || role === "admin") return "/director/history";
       return base === "/hub" ? "/hub/activity" : base ? `${base}/activity` : null;
     case "reclamations":
       return base ? `${base}/reclamations` : null;
@@ -287,7 +288,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
           ? "/hub/stock-transfers"
           : null;
     case "hubs":
-      return role === "directeur" || role === "admin" ? "/director/hubs" : null;
+      return role === "directeur" || role === "admin" ? "/director/stores" : null;
     case "notes":
       return "/cashier/notes";
     case "transfers":
@@ -396,6 +397,13 @@ export function getAllowedHrefsForProfile(
     hrefs.push("/director/hub");
   }
 
+  if (
+    (profile.role === "directeur" || profile.role === "admin") &&
+    (keys.includes("sales") || keys.includes("pos_closures"))
+  ) {
+    hrefs.push("/director/history");
+  }
+
   hrefs.push(getSettingsPath(profile.role));
   return [...new Set(hrefs)];
 }
@@ -432,6 +440,17 @@ export function isRouteAllowedForProfile(
       pathname.startsWith("/manager/sales/")
     ) {
       return pathAllowed("/manager/history", allowed);
+    }
+  }
+
+  if (profile.role === "directeur" || profile.role === "admin") {
+    if (
+      pathname === "/director/activity" ||
+      pathname.startsWith("/director/activity/") ||
+      pathname === "/director/sales" ||
+      pathname.startsWith("/director/sales/")
+    ) {
+      return pathAllowed("/director/history", allowed);
     }
   }
 

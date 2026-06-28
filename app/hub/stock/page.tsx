@@ -3,11 +3,10 @@ import { getCurrentProfile } from "@/lib/auth";
 import {
   canEditStockTotal,
   canModifyStock,
-  filterStoresByProfile,
   getCityFilter,
   isHub,
 } from "@/lib/permissions";
-import { getActiveStores } from "@/lib/inventory";
+import { getHubAssignedStores, getHubStoresByCity } from "@/lib/hub";
 import { resolveSelectedStoreId } from "@/lib/management-store";
 import { resolveStockPermissions } from "@/lib/stock-modify-access/permissions";
 import { listStockModifyAccessRequests } from "@/lib/stock-modify-access/queries";
@@ -21,12 +20,24 @@ export default async function HubStockPage({
 }) {
   const { store: storeParam } = await searchParams;
   const profile = await getCurrentProfile();
-  if (!profile || !isHub(profile)) redirect("/login");
+  if (!profile || !isHub(profile) || !profile.city) redirect("/login");
 
   const city = getCityFilter(profile);
-  const storesAll = await getActiveStores(city);
-  const stores = filterStoresByProfile(storesAll, profile).filter((store) => store.is_hub);
-  const defaultStoreId = resolveSelectedStoreId(stores, storeParam);
+
+  // Périmètre strict du dépôt : le(s) dépôt(s) du hub + les magasins assignés.
+  // Aucun autre magasin non rattaché ne doit apparaître.
+  const [hubStores, assignedStores] = await Promise.all([
+    getHubStoresByCity(profile.city),
+    getHubAssignedStores(profile.id),
+  ]);
+  const stores = [...hubStores, ...assignedStores];
+
+  // Par défaut on affiche le stock du dépôt, mais le hub peut sélectionner
+  // un magasin assigné pour consulter son stock (lecture seule).
+  const defaultStoreId = resolveSelectedStoreId(
+    stores,
+    storeParam ?? hubStores[0]?.id ?? null
+  );
 
   const { getProductsWithStoreStock } = await import("@/lib/inventory");
   const products = defaultStoreId

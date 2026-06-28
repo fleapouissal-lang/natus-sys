@@ -254,6 +254,7 @@ export async function validateStoreDayClosure(
     const row = data as Record<string, unknown>;
     revalidatePosClosurePaths();
     revalidatePath("/director/sales");
+    revalidatePath("/director/history");
     revalidatePath("/manager/sales");
     revalidatePath("/manager/history");
     revalidatePath("/cashier/sales");
