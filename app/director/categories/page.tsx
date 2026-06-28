@@ -19,7 +19,7 @@ export default async function DirectorCategoriesPage() {
   return (
     <div className="animate-fade-in space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Catégories caisse</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Catégories des produits</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
           Gérez les images des cartes catégories affichées à la caisse. Une catégorie apparaît dès
           qu&apos;elle contient au moins {POS_MIN_CATEGORY_PRODUCTS} produit. La suppression efface

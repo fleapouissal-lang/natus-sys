@@ -186,7 +186,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     { href: "/director/stock-access", label: "Accès stock", icon: KeyRound, mobileOrder: 18 },
     {
       href: "/director/categories",
-      label: "Catégories caisse",
+      label: "Catégories des produits",
       icon: LayoutGrid,
       mobileOrder: 19,
     },
