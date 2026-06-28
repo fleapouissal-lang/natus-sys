@@ -29,7 +29,6 @@ export default async function DirectorLoyaltyCustomerPage({
     <LoyaltyCustomerDetailView
       customer={data.customer}
       transactions={data.transactions}
-      notes={data.notes}
       sales={data.sales}
       backHref={backHref}
       loyaltySettings={loyaltySettings}

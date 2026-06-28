@@ -20,23 +20,20 @@ import {
 import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
-import type { LoyaltyCustomer, LoyaltyTransaction, LoyaltySettings, CustomerNote } from "@/lib/types";
+import type { LoyaltyCustomer, LoyaltyTransaction, LoyaltySettings } from "@/lib/types";
 import type { CustomerSaleSummary } from "@/lib/loyalty/customer-sales";
 import { isProParticulierCustomer } from "@/lib/pro-client/account-type";
-import { LoyaltyCustomerNotes } from "@/components/loyalty/loyalty-customer-notes";
 import { LoyaltyCustomerSalesSection } from "@/components/loyalty/loyalty-customer-sales-section";
 
 export function LoyaltyCustomerDetailView({
   customer,
   transactions,
-  notes = [],
   sales = [],
   backHref,
   loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
 }: {
   customer: LoyaltyCustomer;
   transactions: LoyaltyTransaction[];
-  notes?: CustomerNote[];
   sales?: CustomerSaleSummary[];
   backHref: string;
   loyaltySettings?: LoyaltySettings;
@@ -153,22 +150,8 @@ export function LoyaltyCustomerDetailView({
           </Card>
         </div>
 
-        <Card padding={false}>
-          <div className="border-b border-border px-6 py-4">
-            <h2 className="text-lg font-semibold">Notes client</h2>
-            <p className="text-sm text-muted">Commandes en ligne et suivi caisse</p>
-          </div>
-          <div className="px-6 py-4">
-            {notes.length === 0 ? (
-              <p className="text-sm text-muted">Aucune note pour ce client.</p>
-            ) : (
-              <LoyaltyCustomerNotes notes={notes} />
-            )}
-          </div>
-        </Card>
-
         {showProOrders && (
-          <Card padding={false} className="lg:col-span-2">
+          <Card padding={false}>
             <LoyaltyCustomerSalesSection sales={sales} />
           </Card>
         )}
