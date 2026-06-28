@@ -14,7 +14,7 @@ export function LoyaltyCardClientView({
   initialCustomer: LoyaltyCustomer;
   initialTransactions: PublicLoyaltyTransaction[];
   loyaltySettings?: LoyaltySettings;
-  initialTab?: "carte" | "points" | "historique" | "factures" | "commandes";
+  initialTab?: "carte" | "points" | "historique" | "factures";
 }) {
   return (
     <LoyaltyCardPortal

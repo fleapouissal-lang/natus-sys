@@ -139,7 +139,7 @@ export function LoyaltyCustomerPortalOrdersList({
       <div className="space-y-4 animate-fade-in">
         <Button type="button" variant="secondary" size="sm" className="gap-2" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" />
-          Retour aux commandes
+          Retour à l&apos;historique
         </Button>
         <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
           <PosInvoice data={customerOrderToDocumentData(selectedOrder)} />
@@ -152,9 +152,9 @@ export function LoyaltyCustomerPortalOrdersList({
     <div className="space-y-4 animate-fade-in">
       <div className="rounded-2xl border border-border bg-surface shadow-sm">
         <div className="border-b border-border px-5 py-4">
-          <h2 className="text-sm font-semibold text-foreground">Mes commandes</h2>
+          <h2 className="text-sm font-semibold text-foreground">Historique des achats</h2>
           <p className="mt-0.5 text-xs text-muted">
-            Toutes vos ventes en magasin avec ce compte Client Pro
+            Tous vos achats en magasin avec ce compte Client Pro
           </p>
         </div>
         {loading ? (
@@ -186,9 +186,9 @@ export function LoyaltyCustomerPortalOrdersList({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-foreground">
-                        Commande {saleDocumentNumber(order.id)}
+                        Achat {saleDocumentNumber(order.id)}
                         {cancelled && (
-                          <span className="ml-1 text-xs text-danger">· Annulée</span>
+                          <span className="ml-1 text-xs text-danger">· Annulé</span>
                         )}
                       </p>
                       <p className="text-xs text-muted">

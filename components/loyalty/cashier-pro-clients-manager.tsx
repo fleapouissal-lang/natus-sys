@@ -169,9 +169,9 @@ export function CashierProClientsManager({
                         </Link>
                         {customer.pro_client_type === "particulier" && (
                           <Link
-                            href={`${customerCardUrl(customer.qr_token, true)}?tab=commandes`}
+                            href={`${customerCardUrl(customer.qr_token, true)}?tab=historique`}
                             target="_blank"
-                            title="Voir les commandes"
+                            title="Voir l'historique des achats"
                             className="order-action-icon flex h-8 w-8 items-center justify-center border border-primary/30 bg-page text-primary hover:bg-primary-light"
                           >
                             <BriefcaseBusiness className="h-3.5 w-3.5" />

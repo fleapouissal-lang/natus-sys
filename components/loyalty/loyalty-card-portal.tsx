@@ -19,7 +19,6 @@ import {
   TrendingDown,
   Receipt,
   ShieldCheck,
-  ShoppingBag,
 } from "lucide-react";
 import { LoyaltyCardInstall } from "@/components/loyalty/loyalty-card-install";
 import { Button } from "@/components/ui/button";
@@ -53,28 +52,27 @@ import type {
 } from "@/lib/loyalty/public";
 import { cn } from "@/lib/utils";
 
-type PortalTab = "carte" | "points" | "historique" | "factures" | "commandes";
+type PortalTab = "carte" | "points" | "historique" | "factures";
 
 const TABS: { id: PortalTab; label: string; short: string; icon: typeof CreditCard }[] = [
   { id: "carte", label: "Ma carte", short: "Carte", icon: CreditCard },
   { id: "points", label: "Mes points", short: "Points", icon: Coins },
   { id: "historique", label: "Historique", short: "Historique", icon: History },
   { id: "factures", label: "Factures", short: "Factures", icon: FileText },
-  { id: "commandes", label: "Commandes", short: "Commandes", icon: ShoppingBag },
 ];
 
-function tabDescription(tab: PortalTab): string {
+function tabDescription(tab: PortalTab, isPro: boolean): string {
   switch (tab) {
     case "carte":
       return "Votre carte fidélité et accès magasin";
     case "points":
       return "Solde et progression de vos points";
     case "historique":
-      return "Mouvements de points en boutique";
+      return isPro
+        ? "Tous vos achats en magasin avec ce compte Client Pro"
+        : "Mouvements de points en boutique";
     case "factures":
       return "Tickets et factures de vos achats";
-    case "commandes":
-      return "Toutes vos ventes en magasin avec ce compte Client Pro";
   }
 }
 
@@ -278,10 +276,10 @@ export function LoyaltyCardPortal({
   const isProParticulier = isProParticulierCustomer(customer);
   const visibleTabs = useMemo(() => {
     if (isProParticulier) {
-      return TABS.filter((item) => item.id === "carte" || item.id === "commandes");
+      return TABS.filter((item) => item.id === "carte" || item.id === "historique");
     }
     if (isPro) {
-      return TABS.filter((item) => item.id !== "points" && item.id !== "historique");
+      return TABS.filter((item) => item.id !== "points");
     }
     return TABS;
   }, [isPro, isProParticulier]);
@@ -331,18 +329,18 @@ export function LoyaltyCardPortal({
       setTransactions(data.transactions);
       if (data.settings) setSettings(data.settings);
       if (tab === "factures") void loadInvoices();
-      if (tab === "commandes") void loadOrders();
+      if (tab === "historique" && isPro) void loadOrders();
     } finally {
       setRefreshing(false);
     }
-  }, [customer.qr_token, tab, loadInvoices, loadOrders]);
+  }, [customer.qr_token, tab, isPro, loadInvoices, loadOrders]);
 
   useEffect(() => {
-    if (isPro && (tab === "points" || tab === "historique")) {
+    if (isPro && tab === "points") {
       setTab("carte");
     }
     if (isProParticulier && tab === "factures") {
-      setTab("commandes");
+      setTab("historique");
     }
   }, [isPro, isProParticulier, tab]);
 
@@ -350,10 +348,10 @@ export function LoyaltyCardPortal({
     if (tab === "factures") {
       void loadInvoices();
     }
-    if (tab === "commandes") {
+    if (tab === "historique" && isPro) {
       void loadOrders();
     }
-  }, [tab, loadInvoices, loadOrders]);
+  }, [tab, isPro, loadInvoices, loadOrders]);
 
   async function copyLink() {
     try {
@@ -604,7 +602,7 @@ export function LoyaltyCardPortal({
                 {visibleTabs.find((t) => t.id === tab)?.label ??
                   TABS.find((t) => t.id === tab)?.label}
               </h2>
-              <p className="mt-1 text-sm text-muted">{tabDescription(tab)}</p>
+              <p className="mt-1 text-sm text-muted">{tabDescription(tab, isPro)}</p>
             </div>
 
         {tab === "carte" && (
@@ -876,7 +874,7 @@ export function LoyaltyCardPortal({
           </div>
         )}
 
-        {tab === "commandes" && isProParticulier && (
+        {tab === "historique" && isPro && (
           <LoyaltyCustomerPortalOrdersList
             orders={orders}
             loading={loadingOrders}

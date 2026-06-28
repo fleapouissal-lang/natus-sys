@@ -87,13 +87,14 @@ export default async function LoyaltyCardPage({
   }
 
   const loyaltySettings = await getPublicLoyaltySettings();
+  // "commandes" a été fusionné dans "historique" (achats du client).
+  const normalizedTab = tabParam === "commandes" ? "historique" : tabParam;
   const initialTab =
-    tabParam === "commandes" ||
-    tabParam === "factures" ||
-    tabParam === "points" ||
-    tabParam === "historique" ||
-    tabParam === "carte"
-      ? tabParam
+    normalizedTab === "factures" ||
+    normalizedTab === "points" ||
+    normalizedTab === "historique" ||
+    normalizedTab === "carte"
+      ? normalizedTab
       : undefined;
 
   return (
