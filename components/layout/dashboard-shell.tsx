@@ -17,6 +17,7 @@ import {
   MobileManagementPosRedirect,
 } from "@/components/layout/mobile-planning-redirect";
 import { SessionGuard } from "@/components/auth/session-guard";
+import { RealtimeRefresh } from "@/components/realtime/realtime-refresh";
 import { CashierNotificationsProvider } from "@/components/notifications/cashier-notifications-context";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
@@ -116,6 +117,7 @@ export function DashboardShell({
   const shell = (
     <>
       <SessionGuard disableIdleLogout={isPos && isStorePos} isStorePos={isStorePos} />
+      <RealtimeRefresh />
       <MobileStorePosGateRedirect enabled={mobileStorePosGate} />
       <MobilePlanningRedirect enabled={planningOnlyActive} isStorePos={isStorePos} />
       <MobileManagementPosRedirect enabled={managementPosDesktopOnly} role={role} />
