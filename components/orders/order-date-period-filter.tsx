@@ -13,6 +13,7 @@ export function OrderDatePeriodFilter({
   onPresetChange,
   className,
   customRange,
+  presets,
 }: {
   activePreset: OrderDatePreset | "custom";
   onPresetChange: (preset: OrderDatePreset) => void;
@@ -25,12 +26,17 @@ export function OrderDatePeriodFilter({
     onDateToChange: (value: string) => void;
     onOpen: () => void;
   };
+  /** Restreint les boutons de période affichés (par défaut : tous). */
+  presets?: OrderDatePreset[];
 }) {
   const customActive = activePreset === "custom" || Boolean(customRange?.open);
+  const presetList = presets
+    ? ORDER_DATE_PRESETS.filter((p) => presets.includes(p.id))
+    : ORDER_DATE_PRESETS;
 
   return (
     <div className={cn("flex flex-wrap items-end gap-2", className)}>
-      {ORDER_DATE_PRESETS.map(({ id, label }) => (
+      {presetList.map(({ id, label }) => (
         <button
           key={id}
           type="button"

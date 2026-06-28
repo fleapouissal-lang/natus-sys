@@ -320,6 +320,7 @@ export function CashierSalesHistory({
           <OrderDatePeriodFilter
             activePreset={activeDatePreset}
             onPresetChange={applyDatePreset}
+            presets={["today"]}
           />
         }
       />

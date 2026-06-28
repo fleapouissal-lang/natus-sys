@@ -16,7 +16,8 @@ import { CardHeader } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { StoreSelect } from "@/components/stores/store-select";
 import { SelectMenu } from "@/components/ui/select-menu";
-import { cityOptions, roleOptions } from "@/lib/select-options";
+import { CountryCitySelect } from "@/components/ui/country-city-select";
+import { roleOptions } from "@/lib/select-options";
 import { createUser } from "@/lib/actions";
 import {
   getDefaultPageKeysForRole,
@@ -99,6 +100,7 @@ export function CreateUserWizard({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<CreateRole>("cashier");
+  const [countryCode, setCountryCode] = useState("MA");
   const [city, setCity] = useState(
     isDirector(viewer) ? cities[0] || "" : viewer.city || ""
   );
@@ -258,16 +260,21 @@ export function CreateUserWizard({
             )}
 
             {(role === "manager" || role === "cashier" || role === "livreur") && (
-              <SelectMenu
-                label="Ville"
-                value={city}
-                onChange={(value) => {
+              <CountryCitySelect
+                countryCode={countryCode}
+                city={city}
+                onCountryChange={(iso) => {
+                  setCountryCode(iso);
+                  setStoreId("");
+                }}
+                onCityChange={(value) => {
                   setCity(value);
                   setStoreId("");
                 }}
-                options={cityOptions(cities, { includeAll: false })}
                 required
                 disabled={isManager(viewer)}
+                priorityCities={cities}
+                priorityCountryCode="MA"
               />
             )}
 

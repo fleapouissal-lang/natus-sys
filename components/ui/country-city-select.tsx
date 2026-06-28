@@ -27,6 +27,8 @@ export function CountryCitySelect({
   required = false,
   disabled = false,
   className,
+  priorityCities,
+  priorityCountryCode,
 }: {
   countryCode: string;
   city: string;
@@ -37,6 +39,10 @@ export function CountryCitySelect({
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  /** Villes à afficher en priorité (ex. villes des magasins) avec leur orthographe exacte. */
+  priorityCities?: string[];
+  /** N'affiche les villes prioritaires que pour ce pays (ISO). Si absent, toujours affichées. */
+  priorityCountryCode?: string;
 }) {
   const countryOptions = useMemo<SelectMenuOption[]>(
     () =>
@@ -49,16 +55,35 @@ export function CountryCitySelect({
 
   const cityOptions = useMemo<SelectMenuOption[]>(() => {
     if (!countryCode) return [];
-    const cities = City.getCitiesOfCountry(countryCode) ?? [];
+    const showPriority =
+      (priorityCities?.length ?? 0) > 0 &&
+      (!priorityCountryCode || priorityCountryCode === countryCode);
+
     const seen = new Set<string>();
-    const options: SelectMenuOption[] = [];
-    for (const item of cities) {
-      if (seen.has(item.name)) continue;
-      seen.add(item.name);
-      options.push({ value: item.name, label: item.name });
+    const priority: SelectMenuOption[] = [];
+    if (showPriority) {
+      for (const name of priorityCities!) {
+        const trimmed = (name || "").trim();
+        if (!trimmed) continue;
+        const key = trimmed.toLocaleLowerCase("fr");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        priority.push({ value: trimmed, label: trimmed });
+      }
     }
-    return options.sort((a, b) => a.label.localeCompare(b.label, "fr"));
-  }, [countryCode]);
+
+    const cities = City.getCitiesOfCountry(countryCode) ?? [];
+    const rest: SelectMenuOption[] = [];
+    for (const item of cities) {
+      const key = item.name.toLocaleLowerCase("fr");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rest.push({ value: item.name, label: item.name });
+    }
+    rest.sort((a, b) => a.label.localeCompare(b.label, "fr"));
+
+    return [...priority, ...rest];
+  }, [countryCode, priorityCities, priorityCountryCode]);
 
   return (
     <div className={cn("space-y-4", className)}>

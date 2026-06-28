@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { ProductImage } from "@/components/pos/product-image";
+import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
 import {
   fetchRestockSourceProducts,
   submitCashierRestockOrder,
@@ -45,6 +46,7 @@ export function CashierRestockManager({
   initialSourceProducts: Product[];
 }) {
   const router = useRouter();
+  const notifications = useCashierNotifications();
   const scanRef = useRef<HTMLInputElement>(null);
 
   const [sourceId, setSourceId] = useState(defaultSourceId || "");
@@ -229,6 +231,7 @@ export function CashierRestockManager({
   }
 
   async function confirmOrder() {
+    const orderedProductIds = orderItems.map((item) => item.productId);
     setSubmitting(true);
     const result = await submitCashierRestockOrder(sourceId, orderItems, notes);
     setSubmitting(false);
@@ -238,6 +241,9 @@ export function CashierRestockManager({
       setAlert({ title: "Commande impossible", message: result.error });
       return;
     }
+
+    // Produits commandés : ils ne sont plus en rupture (transfert entrant en cours).
+    notifications?.clearStockAlertsForProducts(orderedProductIds);
 
     setQuantities({});
     setAddedIds([]);

@@ -33,6 +33,8 @@ export default async function LivreurHistoryPage() {
         livreurMode
         livreurProfileId={profile.id}
         products={products}
+        dateOnlyFilters
+        defaultDateThisWeek
       />
     </div>
   );

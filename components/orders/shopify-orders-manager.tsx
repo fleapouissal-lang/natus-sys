@@ -162,6 +162,7 @@ export function ShopifyOrdersManager({
   products = [],
   posCheckoutPath = "/cashier/pos",
   defaultDateThisWeek = false,
+  dateOnlyFilters = false,
   livreurMode = false,
   returnsPageMode = false,
   cashierReturnsMode = false,
@@ -182,6 +183,7 @@ export function ShopifyOrdersManager({
   products?: import("@/lib/shopify/order-cart").ProductLineLookup[];
   posCheckoutPath?: string;
   defaultDateThisWeek?: boolean;
+  dateOnlyFilters?: boolean;
   livreurMode?: boolean;
   returnsPageMode?: boolean;
   cashierReturnsMode?: boolean;
@@ -516,43 +518,58 @@ export function ShopifyOrdersManager({
             </p>
           </div>
         </div>
-        <OrderDatePeriodFilter
-          activePreset={activeDatePreset}
-          onPresetChange={applyDatePreset}
-          className="mb-4"
-        />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-end">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">Rechercher</label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="N°, client, téléphone..."
-                className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
-              />
+        {!dateOnlyFilters && (
+          <OrderDatePeriodFilter
+            activePreset={activeDatePreset}
+            onPresetChange={applyDatePreset}
+            className="mb-4"
+          />
+        )}
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:items-end",
+            dateOnlyFilters
+              ? "lg:max-w-xl"
+              : "lg:grid-cols-3 xl:grid-cols-5"
+          )}
+        >
+          {!dateOnlyFilters && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Rechercher</label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="N°, client, téléphone..."
+                  className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
+                />
+              </div>
             </div>
-          </div>
+          )}
           <DateInputField label="Date début" value={dateFrom} onChange={setDateFrom} />
           <DateInputField label="Date fin" value={dateTo} onChange={setDateTo} />
-          <SelectMenu
-            label="Type de paiement"
-            value={paymentFilter}
-            onChange={(v) => setPaymentFilter(v as "" | ShopifyPaymentType)}
-            options={shopifyPaymentTypeFilterOptions()}
-            defaultIcon={Wallet}
-            size="sm"
-          />
-          <SelectMenu
-            label="Statut"
-            value={statusFilter}
-            onChange={(v) => setStatusFilter(v as "" | ShopifyWorkflowStatus)}
-            options={shopifyOrderStatusFilterOptions(WORKFLOW_STATUSES)}
-            showIcons={false}
-            size="sm"
-          />
+          {!dateOnlyFilters && (
+            <>
+              <SelectMenu
+                label="Type de paiement"
+                value={paymentFilter}
+                onChange={(v) => setPaymentFilter(v as "" | ShopifyPaymentType)}
+                options={shopifyPaymentTypeFilterOptions()}
+                defaultIcon={Wallet}
+                size="sm"
+              />
+              <SelectMenu
+                label="Statut"
+                value={statusFilter}
+                onChange={(v) => setStatusFilter(v as "" | ShopifyWorkflowStatus)}
+                options={shopifyOrderStatusFilterOptions(WORKFLOW_STATUSES)}
+                showIcons={false}
+                size="sm"
+              />
+            </>
+          )}
         </div>
       </div>
       </FilterTogglePanel>

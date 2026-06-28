@@ -107,6 +107,8 @@ interface CashierNotificationsContextValue {
   ) => void;
   /** Déclenchement immédiat après vente (ne dépend pas du realtime Supabase). */
   reportStockChanges: (changes: StockChangeInput[]) => void;
+  /** Retire les alertes de rupture des produits qui viennent d'être commandés. */
+  clearStockAlertsForProducts: (productIds: string[]) => void;
 }
 
 const CashierNotificationsContext =
@@ -215,6 +217,8 @@ export function CashierNotificationsProvider({
   const cityStoreIdsRef = useRef<Set<string>>(new Set());
   const monitoredStoreIdsRef = useRef<Set<string>>(new Set());
   const storeIsHubRef = useRef<Map<string, boolean>>(new Map());
+  // Produits déjà commandés / en cours de réception : ne plus signaler comme rupture.
+  const pendingIncomingProductIdsRef = useRef<Set<string>>(new Set());
   const toastTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map()
   );
@@ -298,6 +302,42 @@ export function CashierNotificationsProvider({
     [persist]
   );
 
+  /**
+   * Marque des produits comme « commandés / en cours de réception » et retire
+   * immédiatement leurs alertes de rupture (déclenché après une commande caisse).
+   */
+  const clearStockAlertsForProducts = useCallback(
+    (productIds: string[]) => {
+      const storeId =
+        scope.mode === "store"
+          ? scope.storeId
+          : scope.mode === "hub"
+            ? scope.hubStoreId
+            : null;
+      if (!storeId || productIds.length === 0) return;
+
+      const idSet = new Set(productIds);
+      productIds.forEach((id) => pendingIncomingProductIdsRef.current.add(id));
+
+      setNotifications((prev) => {
+        const next = prev.filter(
+          (n) =>
+            !(
+              isStockAlertNotification(n) &&
+              n.storeId === storeId &&
+              n.productId != null &&
+              idSet.has(n.productId)
+            )
+        );
+        if (next.length === prev.length) return prev;
+        persist(next);
+        setBarVisible(hasNotificationAttention(next));
+        return next;
+      });
+    },
+    [persist, scope]
+  );
+
   const clearTransferNotification = useCallback(
     (transferId: string) => {
       const id = hubTransferPendingNotificationId(transferId);
@@ -373,6 +413,16 @@ export function CashierNotificationsProvider({
           stockInventoryKey(input.storeId, input.productId),
           input.nextStock
         );
+        return;
+      }
+
+      // Produit déjà commandé / en cours de réception : on ne (re)signale pas la rupture.
+      if (pendingIncomingProductIdsRef.current.has(input.productId)) {
+        lastStockRef.current.set(
+          stockInventoryKey(input.storeId, input.productId),
+          input.nextStock
+        );
+        clearStockAlerts(input.storeId, input.productId);
         return;
       }
 
@@ -574,6 +624,55 @@ export function CashierNotificationsProvider({
       }
     }
 
+    /** Produits ayant un transfert entrant non encore reçu vers ce magasin. */
+    async function fetchPendingIncomingProductIds(
+      destinationStoreId: string
+    ): Promise<string[]> {
+      const [storeT, hubT] = await Promise.all([
+        supabase
+          .from("store_stock_transfers")
+          .select("id")
+          .eq("to_store_id", destinationStoreId)
+          .neq("status", "received"),
+        supabase
+          .from("hub_stock_transfers")
+          .select("id")
+          .eq("to_store_id", destinationStoreId)
+          .neq("status", "received"),
+      ]);
+
+      const ids = new Set<string>();
+      const storeIds = (storeT.data || []).map((t) => t.id as string);
+      const hubIds = (hubT.data || []).map((t) => t.id as string);
+
+      if (storeIds.length > 0) {
+        const { data } = await supabase
+          .from("store_stock_transfer_items")
+          .select("product_id")
+          .in("transfer_id", storeIds);
+        (data || []).forEach((r) => ids.add(r.product_id as string));
+      }
+      if (hubIds.length > 0) {
+        const { data } = await supabase
+          .from("hub_stock_transfer_items")
+          .select("product_id")
+          .in("transfer_id", hubIds);
+        (data || []).forEach((r) => ids.add(r.product_id as string));
+      }
+      return [...ids];
+    }
+
+    /** Produits d'un transfert hub donné (pour lever/poser le marqueur « en cours »). */
+    async function fetchHubTransferProductIds(
+      transferId: string
+    ): Promise<string[]> {
+      const { data } = await supabase
+        .from("hub_stock_transfer_items")
+        .select("product_id")
+        .eq("transfer_id", transferId);
+      return (data || []).map((r) => r.product_id as string);
+    }
+
     async function bootstrapLivreurAssignments() {
       if (scope.mode !== "livreur") return;
 
@@ -746,8 +845,15 @@ export function CashierNotificationsProvider({
         const rows = await fetchStoreInventoryRows(supabase, scope.hubStoreId);
         if (cancelled) return;
 
+        const pendingIds = await fetchPendingIncomingProductIds(scope.hubStoreId);
+        if (cancelled) return;
+        pendingIncomingProductIdsRef.current = new Set(pendingIds);
+
         seedLastStockFromRows(rows);
-        await syncStockAlertsFromRows(rows, "hub");
+        const alertRows = rows.filter(
+          (r) => !pendingIncomingProductIdsRef.current.has(r.product_id)
+        );
+        await syncStockAlertsFromRows(alertRows, "hub");
         await bootstrapPendingTransfers();
         return;
       }
@@ -790,9 +896,17 @@ export function CashierNotificationsProvider({
       const rows = await fetchStoreInventoryRows(supabase, scope.storeId);
       if (cancelled) return;
 
+      const pendingIds = await fetchPendingIncomingProductIds(scope.storeId);
+      if (cancelled) return;
+      pendingIncomingProductIdsRef.current = new Set(pendingIds);
+
       seedLastStockFromRows(rows);
-      // Le caissier voit les ruptures / stock faible déjà présents sur son magasin.
-      await syncStockAlertsFromRows(rows, "store");
+      // Le caissier voit les ruptures / stock faible déjà présents sur son magasin,
+      // sauf les produits déjà commandés (transfert entrant en cours).
+      const alertRows = rows.filter(
+        (r) => !pendingIncomingProductIdsRef.current.has(r.product_id)
+      );
+      await syncStockAlertsFromRows(alertRows, "store");
       await bootstrapPendingTransfers();
     }
 
@@ -802,11 +916,25 @@ export function CashierNotificationsProvider({
     ) {
       const transferId = row.id as string;
       const status = row.status as string;
+      const destinationStoreId = (row.to_store_id as string) || null;
 
       if (!isTransferAwaitingReceipt(status)) {
         clearTransferNotification(transferId);
+        // Transfert reçu/annulé : les produits ne sont plus « en cours de réception ».
+        const productIds = await fetchHubTransferProductIds(transferId);
+        productIds.forEach((id) => pendingIncomingProductIdsRef.current.delete(id));
         scheduleRouterRefresh();
         return;
+      }
+
+      // Transfert envoyé vers le magasin : marquer les produits « en cours » et
+      // retirer leurs alertes de rupture (ils sont déjà commandés / en route).
+      const productIds = await fetchHubTransferProductIds(transferId);
+      if (destinationStoreId) {
+        productIds.forEach((id) => {
+          pendingIncomingProductIdsRef.current.add(id);
+          clearStockAlerts(destinationStoreId, id);
+        });
       }
 
       const unitCount = await fetchHubTransferUnitCount(supabase, transferId);
@@ -1103,7 +1231,7 @@ export function CashierNotificationsProvider({
       cancelled = true;
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [scope, pushNotification, scheduleRouterRefresh, handleInventoryRow, clearTransferNotification]);
+  }, [scope, pushNotification, scheduleRouterRefresh, handleInventoryRow, clearTransferNotification, clearStockAlerts]);
 
   const { badgeCount, otherUnreadCount, stockAlertCount } = useMemo(
     () => computeNotificationCounts(notifications),
@@ -1196,6 +1324,7 @@ export function CashierNotificationsProvider({
       setOpenPanel,
       setNotificationOpenHandler,
       reportStockChanges,
+      clearStockAlertsForProducts,
     }),
     [
       notifications,
@@ -1213,6 +1342,7 @@ export function CashierNotificationsProvider({
       openPanel,
       setNotificationOpenHandler,
       reportStockChanges,
+      clearStockAlertsForProducts,
     ]
   );
 

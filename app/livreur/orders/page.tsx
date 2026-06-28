@@ -35,7 +35,7 @@ export default async function LivreurOrdersPage() {
         products={products}
         livreurMode
         livreurProfileId={profile.id}
-        defaultDateThisWeek
+        dateOnlyFilters
       />
     </div>
   );
