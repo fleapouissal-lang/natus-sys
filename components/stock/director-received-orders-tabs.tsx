@@ -2,27 +2,20 @@
 
 import { Suspense } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowRightLeft, PackagePlus, Store, Warehouse } from "lucide-react";
-import { DirectorStockTransferManager } from "@/components/stock/director-stock-transfer-manager";
+import { ArrowRightLeft, Store, Warehouse } from "lucide-react";
 import { StoreTransfersList } from "@/components/stock/store-transfers-list";
 import { HubTransfersList } from "@/components/hub/hub-transfers-list";
 import { cn } from "@/lib/utils";
-import type { HubStockTransfer, Product, Profile, Store as StoreType, StoreStockTransfer } from "@/lib/types";
+import type { HubStockTransfer, Profile, StoreStockTransfer } from "@/lib/types";
 
-type SentTab = "new" | "store" | "hub" | "mixed";
+type ReceivedTab = "store" | "hub" | "mixed";
 
 const TABS: {
-  id: SentTab;
+  id: ReceivedTab;
   label: string;
   shortLabel: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  {
-    id: "new",
-    label: "Nouveau transfert",
-    shortLabel: "Nouveau",
-    icon: PackagePlus,
-  },
   {
     id: "store",
     label: "Transferts inter-magasins",
@@ -43,49 +36,27 @@ const TABS: {
   },
 ];
 
-function DirectorSentOrdersTabsInner({
-  retailStores,
-  hubStores,
-  products,
-  sourceType,
-  destType,
-  fromStoreId,
-  fromHubStoreId,
-  toStoreId,
-  toHubStoreId,
+function DirectorReceivedOrdersTabsInner({
   interStoreTransfers,
   hubHubTransfers,
   hubStoreMixedTransfers,
   retailStoreIds,
   livreurs,
-  successMessage,
 }: {
-  retailStores: StoreType[];
-  hubStores: StoreType[];
-  products: Product[];
-  sourceType: "store" | "hub";
-  destType: "store" | "hub";
-  fromStoreId: string;
-  fromHubStoreId: string;
-  toStoreId: string;
-  toHubStoreId: string;
   interStoreTransfers: StoreStockTransfer[];
   hubHubTransfers: HubStockTransfer[];
   hubStoreMixedTransfers: HubStockTransfer[];
   retailStoreIds: string[];
   livreurs: Profile[];
-  successMessage?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab: SentTab =
-    tabParam === "store" || tabParam === "hub" || tabParam === "mixed" || tabParam === "new"
-      ? tabParam
-      : "new";
+  const activeTab: ReceivedTab =
+    tabParam === "hub" || tabParam === "mixed" || tabParam === "store" ? tabParam : "store";
 
-  function setTab(tab: SentTab) {
+  function setTab(tab: ReceivedTab) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
     router.push(`${pathname}?${params.toString()}`);
@@ -93,12 +64,6 @@ function DirectorSentOrdersTabsInner({
 
   return (
     <div className="space-y-6">
-      {successMessage && (
-        <div className="rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm text-success">
-          {successMessage}
-        </div>
-      )}
-
       <div className="natus-mobile-tab-bar inline-flex w-full flex-wrap rounded-2xl border border-primary/25 bg-surface/80 p-1 shadow-[0_4px_20px_rgba(179,140,74,0.08)] backdrop-blur-sm">
         {TABS.map(({ id, label, shortLabel, icon: Icon }) => (
           <button
@@ -119,28 +84,15 @@ function DirectorSentOrdersTabsInner({
         ))}
       </div>
 
-      {activeTab === "new" && (
-        <DirectorStockTransferManager
-          retailStores={retailStores}
-          hubStores={hubStores}
-          products={products}
-          sourceType={sourceType}
-          destType={destType}
-          fromStoreId={fromStoreId}
-          fromHubStoreId={fromHubStoreId}
-          toStoreId={toStoreId}
-          toHubStoreId={toHubStoreId}
-        />
-      )}
-
       {activeTab === "store" && (
         <StoreTransfersList
           title="Transferts inter-magasins"
           perspective="all"
           managedStoreIds={retailStoreIds}
           transfers={interStoreTransfers}
+          actionMode="none"
           livreurs={livreurs}
-          emptyMessage="Aucun transfert magasin → magasin en cours"
+          emptyMessage="Aucun transfert inter-magasins livré ou reçu"
         />
       )}
 
@@ -148,12 +100,11 @@ function DirectorSentOrdersTabsInner({
         <HubTransfersList
           title="Transferts entre Hubs"
           transfers={hubHubTransfers}
-          allowManage
-          allowRepair
+          readOnly
           showOrigin
           showProductImages
           livreurs={livreurs}
-          emptyMessage="Aucun transfert dépôt → dépôt en cours"
+          emptyMessage="Aucun transfert hub → hub livré ou reçu"
         />
       )}
 
@@ -161,39 +112,27 @@ function DirectorSentOrdersTabsInner({
         <HubTransfersList
           title="Transferts Hub ↔ Magasin"
           transfers={hubStoreMixedTransfers}
-          allowManage
-          manageAsStoreSource
-          allowRepair
+          readOnly
           showOrigin
           showProductImages
           livreurs={livreurs}
-          emptyMessage="Aucun transfert hub ↔ magasin en cours"
+          emptyMessage="Aucun transfert hub ↔ magasin livré ou reçu"
         />
       )}
     </div>
   );
 }
 
-export function DirectorSentOrdersTabs(props: {
-  retailStores: StoreType[];
-  hubStores: StoreType[];
-  products: Product[];
-  sourceType: "store" | "hub";
-  destType: "store" | "hub";
-  fromStoreId: string;
-  fromHubStoreId: string;
-  toStoreId: string;
-  toHubStoreId: string;
+export function DirectorReceivedOrdersTabs(props: {
   interStoreTransfers: StoreStockTransfer[];
   hubHubTransfers: HubStockTransfer[];
   hubStoreMixedTransfers: HubStockTransfer[];
   retailStoreIds: string[];
   livreurs: Profile[];
-  successMessage?: string;
 }) {
   return (
     <Suspense fallback={null}>
-      <DirectorSentOrdersTabsInner {...props} />
+      <DirectorReceivedOrdersTabsInner {...props} />
     </Suspense>
   );
 }

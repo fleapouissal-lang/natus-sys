@@ -8,6 +8,10 @@ import {
   getTransferLivreurs,
 } from "@/lib/transfer-sites.server";
 import {
+  filterDirectorSentHubTransfers,
+  filterDirectorSentStoreTransfers,
+} from "@/lib/director-transfer-filters";
+import {
   filterHubStoreMixedTransfers,
   filterHubToHubTransfers,
   getDirectorHubStockTransfers,
@@ -115,12 +119,15 @@ export default async function DirectorStockTransfersPage({
     ] as string[]),
   ]);
 
-  const interStoreTransfers = filterInterStoreOutgoingTransfers(
-    storeTransfers,
-    retailStoreIds
+  const interStoreTransfers = filterDirectorSentStoreTransfers(
+    filterInterStoreOutgoingTransfers(storeTransfers, retailStoreIds)
   );
-  const hubHubTransfers = filterHubToHubTransfers(hubTransfers);
-  const hubStoreMixedTransfers = filterHubStoreMixedTransfers(hubTransfers);
+  const hubHubTransfers = filterDirectorSentHubTransfers(
+    filterHubToHubTransfers(hubTransfers)
+  );
+  const hubStoreMixedTransfers = filterDirectorSentHubTransfers(
+    filterHubStoreMixedTransfers(hubTransfers)
+  );
 
   const createdTab = params.tab || "new";
   const tabLabels: Record<string, string> = {
@@ -136,7 +143,7 @@ export default async function DirectorStockTransfersPage({
           Stocks envoyés
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Création et suivi de tous les transferts réseau — magasins et dépôts hub
+          Création et suivi des transferts en cours — magasins et dépôts hub
         </p>
       </div>
 
