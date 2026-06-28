@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { HubStockTransfer } from "@/lib/types";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
@@ -96,6 +97,7 @@ const TRANSFER_SELECT = `
 
 export async function getHubStockTransfers(options: {
   fromStoreId?: string;
+  fromStoreIds?: string[];
   toStoreId?: string;
   toStoreIds?: string[];
   status?: HubStockTransfer["status"];
@@ -110,6 +112,9 @@ export async function getHubStockTransfers(options: {
 
   if (options.fromStoreId) {
     query = query.eq("from_store_id", options.fromStoreId);
+  }
+  if (options.fromStoreIds?.length) {
+    query = query.in("from_store_id", options.fromStoreIds);
   }
   if (options.toStoreId) {
     query = query.eq("to_store_id", options.toStoreId);
@@ -185,22 +190,75 @@ export async function getManagerHubStockTransfers(storeIds: string[]): Promise<H
   return getHubStockTransfers({ toStoreIds: storeIds, limit: 100 });
 }
 
+async function getActiveHubStoreIds(): Promise<string[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("stores")
+    .select("id")
+    .eq("is_active", true)
+    .eq("is_hub", true);
+  return (data || []).map((row) => row.id as string);
+}
+
 /** Commandes magasin → dépôt envoyées par le gérant. */
 export async function getManagerOutgoingHubTransfers(
   fromStoreIds: string[]
 ): Promise<HubStockTransfer[]> {
   if (fromStoreIds.length === 0) return [];
 
-  const results = await Promise.all(
-    fromStoreIds.map((fromStoreId) =>
-      getHubStockTransfers({ fromStoreId, limit: 50 })
-    )
+  const hubStoreIds = await getActiveHubStoreIds();
+  if (hubStoreIds.length === 0) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("hub_stock_transfers")
+    .select(TRANSFER_SELECT)
+    .in("from_store_id", fromStoreIds)
+    .in("to_store_id", hubStoreIds)
+    .order("sent_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.error("getManagerOutgoingHubTransfers:", error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+}
+
+/** Commandes visibles par le gérant dépôt (hub). */
+export async function getHubDepotTransfersForOperator(input: {
+  hubStoreIds: string[];
+  assignedStoreIds: string[];
+}): Promise<HubStockTransfer[]> {
+  const { hubStoreIds, assignedStoreIds } = input;
+  const queries: Promise<HubStockTransfer[]>[] = [];
+
+  if (hubStoreIds.length > 0) {
+    queries.push(getHubStockTransfers({ fromStoreIds: hubStoreIds, limit: 100 }));
+    queries.push(getHubStockTransfers({ toStoreIds: hubStoreIds, limit: 100 }));
+  }
+
+  if (assignedStoreIds.length > 0) {
+    queries.push(getHubStockTransfers({ fromStoreIds: assignedStoreIds, limit: 100 }));
+  }
+
+  if (queries.length === 0) return [];
+
+  const merged = (await Promise.all(queries)).flat();
+  const byId = new Map<string, HubStockTransfer>();
+  for (const transfer of merged) {
+    byId.set(transfer.id, transfer);
+  }
+
+  return [...byId.values()].sort(
+    (a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
   );
+}
 
-  const merged = results.flat();
-  const byId = new Map(merged.map((transfer) => [transfer.id, transfer]));
-
-  return [...byId.values()]
-    .filter((transfer) => transfer.to_store_is_hub)
-    .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
+/** @deprecated Utiliser getHubDepotTransfersForOperator */
+export async function getHubDepotTransfersForCity(
+  hubStoreIds: string[]
+): Promise<HubStockTransfer[]> {
+  return getHubDepotTransfersForOperator({ hubStoreIds, assignedStoreIds: [] });
 }

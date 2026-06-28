@@ -51,6 +51,8 @@ export function SalesAgendaFilter({
   toggleLabel = "Filtrer les ventes",
   pagination,
   hideDateRangeFields = false,
+  dateMin,
+  dateMax,
 }: {
   dateFrom: string;
   dateTo: string;
@@ -78,6 +80,8 @@ export function SalesAgendaFilter({
   >;
   /** Masque les champs date début/fin du bas (période gérée ailleurs, ex. factures). */
   hideDateRangeFields?: boolean;
+  dateMin?: string;
+  dateMax?: string;
 }) {
   const hasFilters =
     hasActiveFilters ?? Boolean(dateFrom || dateTo || paymentFilter);
@@ -149,8 +153,20 @@ export function SalesAgendaFilter({
         )}
         {!hideDateRangeFields && (
           <>
-            <DateInputField label="Date début" value={dateFrom} onChange={onDateFromChange} />
-            <DateInputField label="Date fin" value={dateTo} onChange={onDateToChange} />
+            <DateInputField
+              label="Date début"
+              value={dateFrom}
+              onChange={onDateFromChange}
+              minDate={dateMin}
+              maxDate={dateMax}
+            />
+            <DateInputField
+              label="Date fin"
+              value={dateTo}
+              onChange={onDateToChange}
+              minDate={dateMin}
+              maxDate={dateMax}
+            />
           </>
         )}
         <PaymentSelectField value={paymentFilter} onChange={onPaymentChange} />

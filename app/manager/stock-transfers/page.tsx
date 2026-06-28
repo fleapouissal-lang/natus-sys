@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getCurrentProfile } from "@/lib/auth";
 import { getActiveStores } from "@/lib/inventory";
 import {
@@ -12,9 +13,7 @@ import {
 import { resolveSelectedStoreId, getProfileLockedStoreId } from "@/lib/management-store";
 import { getManagerOutgoingHubTransfers } from "@/lib/hub-transfers";
 import { getManagerStoreStockTransfers } from "@/lib/store-transfers";
-import { StoreStockTransferManager } from "@/components/stock/store-stock-transfer-manager";
-import { StoreTransfersList } from "@/components/stock/store-transfers-list";
-import { HubTransfersList } from "@/components/hub/hub-transfers-list";
+import { ManagerSentOrdersTabs } from "@/components/stock/manager-sent-orders-tabs";
 import type { Store } from "@/lib/types";
 
 function resolveTransferStoreIds(
@@ -59,7 +58,7 @@ function collectTransferLivreurCities(sourceStores: Store[], hubStores: Store[])
 export default async function ManagerStockTransfersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string; dest?: string; hub?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; dest?: string; hub?: string; tab?: string }>;
 }) {
   const { from: fromParam, to: toParam, dest: destParam, hub: hubParam } =
     await searchParams;
@@ -96,42 +95,36 @@ export default async function ManagerStockTransfersPage({
     getTransferLivreurs(collectTransferLivreurCities(sourceStores, hubStores)),
   ]);
 
+  const scopeLabel = city ? `Vos magasins — ${city}` : "Vos magasins";
+
   return (
-    <div className="space-y-10">
-      <StoreStockTransferManager
-        sourceStores={sourceStores}
-        stores={destinationStores}
-        products={products}
-        fromStoreId={fromStoreId}
-        toStoreId={toStoreId}
-        lockFromStore={Boolean(lockedStoreId)}
-        basePath="/manager"
-        hubStores={hubStores}
-        toHubStoreId={toHubStoreId}
-        enableHubDestination
-        initialDestination={initialDestination}
-        showAllDestinations
-      />
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-primary-dark">
+          Commandes envoyées
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          Nouveau transfert et suivi des envois vers magasins et dépôts — {scopeLabel}
+        </p>
+      </div>
 
-      <HubTransfersList
-        title="Commandes vers le dépôt (hub)"
-        transfers={hubOutgoingTransfers}
-        allowManage
-        manageAsStoreSource
-        showOrigin
-        showProductImages
-        livreurs={livreurs}
-        emptyMessage="Aucun envoi vers le dépôt"
-      />
-
-      <StoreTransfersList
-        title="Commandes inter-magasins (magasin source)"
-        perspective="outgoing"
-        managedStoreIds={managedStoreIds}
-        transfers={storeTransfers}
-        livreurs={livreurs}
-        emptyMessage="Aucune commande envoyée vers un autre magasin"
-      />
+      <Suspense fallback={null}>
+        <ManagerSentOrdersTabs
+          sourceStores={sourceStores}
+          destinationStores={destinationStores}
+          products={products}
+          fromStoreId={fromStoreId}
+          toStoreId={toStoreId}
+          lockFromStore={Boolean(lockedStoreId)}
+          hubStores={hubStores}
+          toHubStoreId={toHubStoreId}
+          initialDestination={initialDestination}
+          storeTransfers={storeTransfers}
+          hubOutgoingTransfers={hubOutgoingTransfers}
+          managedStoreIds={managedStoreIds}
+          livreurs={livreurs}
+        />
+      </Suspense>
     </div>
   );
 }

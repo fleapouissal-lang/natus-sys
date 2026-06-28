@@ -135,6 +135,23 @@ const PAGE_HOME_PRIORITY: UserPageKey[] = [
   "cheques",
 ];
 
+/** Ordre sidebar gérant : opérations magasin → caisse → admin */
+const MANAGER_NAV_PRIORITY: UserPageKey[] = [
+  "dashboard",
+  "planning",
+  "stock",
+  "sales",
+  "transfers",
+  "hub_orders",
+  "pos_closures",
+  "cheques",
+  "invoices",
+  "writeoffs",
+  "activity",
+  "reclamations",
+  "actualites",
+];
+
 const PAGE_GROUP_LABELS: Record<UserPageGroup, string> = {
   operations: "Opérations magasin",
   clients: "Clients & suivi",
@@ -394,9 +411,10 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
   return null;
 }
 
-function navLinkPriorityIndex(key: UserPageKey | null): number {
+function navLinkPriorityIndex(key: UserPageKey | null, role: UserRole): number {
   if (!key) return 500;
-  const idx = PAGE_HOME_PRIORITY.indexOf(key);
+  const order = role === "manager" ? MANAGER_NAV_PRIORITY : PAGE_HOME_PRIORITY;
+  const idx = order.indexOf(key);
   return idx >= 0 ? idx : 500;
 }
 
@@ -408,7 +426,7 @@ export function sortNavLinksByPriority(links: NavLinkItem[], role: UserRole): Na
     .map((link, stableIndex) => {
       const isSettings = link.href === settingsPath;
       const pageKey = isSettings ? null : getPageKeyForNavHref(link.href, role);
-      const priority = isSettings ? 1000 : navLinkPriorityIndex(pageKey);
+      const priority = isSettings ? 1000 : navLinkPriorityIndex(pageKey, role);
       return {
         link: {
           ...link,

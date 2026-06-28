@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import {
   createCashierShift,
   deleteCashierShift,
   setCashierWeekOff,
+  updateCashierShift,
 } from "@/lib/actions";
 import {
   addWeeks,
@@ -78,6 +80,7 @@ export function CashierScheduleManager({
   const [weekOffError, setWeekOffError] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingShift, setEditingShift] = useState<CashierShift | null>(null);
   const [weekPlanOpen, setWeekPlanOpen] = useState(false);
   const [transferCashier, setTransferCashier] = useState<CashierWithStore | null>(null);
 
@@ -160,6 +163,7 @@ export function CashierScheduleManager({
   function openAddModal(cId?: string, date?: string) {
     if (!selectedStoreId) return;
     setError("");
+    setEditingShift(null);
     setShiftDate(date || weekStart);
     setCashierId(cId || planningCashiers[0]?.id || "");
     setStartTime("10:00");
@@ -168,28 +172,53 @@ export function CashierScheduleManager({
     setModalOpen(true);
   }
 
-  function handleCreate(e: React.FormEvent) {
+  function openEditModal(shift: CashierShift) {
+    setError("");
+    setEditingShift(shift);
+    setShiftDate(shift.shift_date);
+    setCashierId(shift.cashier_id);
+    setStartTime(shift.start_time.slice(0, 5));
+    setEndTime(shift.end_time.slice(0, 5));
+    setNotes(shift.notes || "");
+    setModalOpen(true);
+  }
+
+  function handleSaveShift(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedStoreId) return;
     setError("");
-    if (isCashierOffOnDate(weekOffs, cashierId, shiftDate)) {
+    if (!editingShift && isCashierOffOnDate(weekOffs, cashierId, shiftDate)) {
       setError("Ce jour est le jour de repos de ce caissier");
       return;
     }
     startTransition(async () => {
-      const result = await createCashierShift({
-        storeId: selectedStoreId,
-        cashierId,
-        shiftDate,
-        startTime,
-        endTime,
-        notes,
-      });
-      if ("error" in result) {
-        setError(result.error);
-        return;
+      if (editingShift) {
+        const result = await updateCashierShift({
+          shiftId: editingShift.id,
+          startTime,
+          endTime,
+          notes,
+        });
+        if ("error" in result) {
+          setError(result.error);
+          return;
+        }
+      } else {
+        const result = await createCashierShift({
+          storeId: selectedStoreId,
+          cashierId,
+          shiftDate,
+          startTime,
+          endTime,
+          notes,
+        });
+        if ("error" in result) {
+          setError(result.error);
+          return;
+        }
       }
       setModalOpen(false);
+      setEditingShift(null);
       router.refresh();
     });
   }
@@ -371,15 +400,26 @@ export function CashierScheduleManager({
                                   {formatTimeLabel(shift.start_time)} – {formatTimeLabel(shift.end_time)}
                                 </p>
                                 {!readOnly && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDelete(shift.id)}
-                                    className="mt-1 inline-flex items-center gap-0.5 text-[10px] text-danger hover:underline cursor-pointer"
-                                    disabled={pending}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                    Retirer
-                                  </button>
+                                  <div className="mt-1 flex items-center justify-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => openEditModal(shift)}
+                                      className="inline-flex items-center gap-0.5 text-[10px] text-primary hover:underline cursor-pointer"
+                                      disabled={pending}
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                      Modifier
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDelete(shift.id)}
+                                      className="inline-flex items-center gap-0.5 text-[10px] text-danger hover:underline cursor-pointer"
+                                      disabled={pending}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                      Supprimer
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             </td>
@@ -420,14 +460,31 @@ export function CashierScheduleManager({
       )}
 
       {!readOnly && modalOpen && selectedStoreId && (
-        <Modal onClose={() => setModalOpen(false)} size="md">
-          <h3 className="text-lg font-semibold">Nouveau créneau</h3>
+        <Modal
+          onClose={() => {
+            setModalOpen(false);
+            setEditingShift(null);
+          }}
+          size="md"
+        >
+          <h3 className="text-lg font-semibold">
+            {editingShift ? "Modifier le créneau" : "Nouveau créneau"}
+          </h3>
           <p className="mt-1 text-sm text-muted">
             {selectedStore?.name} · {formatShiftDate(shiftDate)}
           </p>
 
-          <form onSubmit={handleCreate} className="mt-5 space-y-4">
-            {cashierOptions.length === 0 ? (
+          <form onSubmit={handleSaveShift} className="mt-5 space-y-4">
+            {editingShift ? (
+              <p className="text-sm text-muted">
+                Caissier :{" "}
+                <span className="font-medium text-foreground">
+                  {planningCashiers.find((c) => c.id === editingShift.cashier_id)?.full_name ||
+                    planningCashiers.find((c) => c.id === editingShift.cashier_id)?.email ||
+                    "—"}
+                </span>
+              </p>
+            ) : cashierOptions.length === 0 ? (
               <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
                 Aucun caissier disponible ce jour (déjà planifié ou en repos).
               </p>
@@ -472,13 +529,20 @@ export function CashierScheduleManager({
             )}
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setModalOpen(false);
+                  setEditingShift(null);
+                }}
+              >
                 Annuler
               </Button>
               <Button
                 type="submit"
                 loading={pending}
-                disabled={cashierOptions.length === 0 || !cashierId}
+                disabled={!editingShift && (cashierOptions.length === 0 || !cashierId)}
               >
                 <CalendarPlus className="h-4 w-4" />
                 Enregistrer
@@ -493,7 +557,7 @@ export function CashierScheduleManager({
           storeId={selectedStoreId}
           storeName={selectedStore.name}
           weekStart={weekStart}
-          cashierCount={planningCashiers.length}
+          planningCashiers={planningCashiers}
           onClose={() => setWeekPlanOpen(false)}
         />
       )}

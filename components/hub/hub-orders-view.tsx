@@ -1,10 +1,13 @@
 "use client";
 
 import { HubTransfersList } from "@/components/hub/hub-transfers-list";
-import type { HubStockTransfer, Profile } from "@/lib/types";
+import { StoreTransfersList } from "@/components/stock/store-transfers-list";
+import type { HubStockTransfer, Profile, StoreStockTransfer } from "@/lib/types";
 
 export function HubOrdersView({
   transfers,
+  storeTransfers = [],
+  assignedStoreIds = [],
   title = "Commandes dépôt",
   description,
   successMessage,
@@ -16,6 +19,8 @@ export function HubOrdersView({
   livreurs = [],
 }: {
   transfers: HubStockTransfer[];
+  storeTransfers?: StoreStockTransfer[];
+  assignedStoreIds?: string[];
   title?: string;
   description?: string;
   successMessage?: string;
@@ -41,7 +46,7 @@ export function HubOrdersView({
 
       <HubTransfersList
         transfers={transfers}
-        title="Liste des commandes"
+        title="Commandes dépôt / retours magasins"
         readOnly={readOnly}
         showOrigin={showOrigin}
         showProductImages={showProductImages}
@@ -51,9 +56,20 @@ export function HubOrdersView({
         emptyMessage={
           readOnly
             ? "Aucune commande dépôt pour vos magasins"
-            : "Aucune commande de transfert pour le moment"
+            : "Aucune commande dépôt ou retour magasin pour le moment"
         }
       />
+
+      {(storeTransfers.length > 0 || assignedStoreIds.length > 0) && (
+        <StoreTransfersList
+          title="Commandes inter-magasins (magasins associés)"
+          perspective="outgoing"
+          managedStoreIds={assignedStoreIds}
+          transfers={storeTransfers}
+          actionMode="none"
+          emptyMessage="Aucune commande inter-magasin depuis vos magasins associés"
+        />
+      )}
     </div>
   );
 }

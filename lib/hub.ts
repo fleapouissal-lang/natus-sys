@@ -2,6 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import type { Profile, Store } from "@/lib/types";
 
 export async function getHubStoreByCity(city: string): Promise<Store | null> {
+  const stores = await getHubStoresByCity(city);
+  return stores[0] ?? null;
+}
+
+export async function getHubStoresByCity(city: string): Promise<Store[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("stores")
@@ -9,8 +14,8 @@ export async function getHubStoreByCity(city: string): Promise<Store | null> {
     .eq("is_active", true)
     .eq("is_hub", true)
     .eq("city", city)
-    .maybeSingle();
-  return data;
+    .order("name");
+  return data || [];
 }
 
 /** Dépôt hub rattaché à un magasin retail (via hub_store_assignments). */

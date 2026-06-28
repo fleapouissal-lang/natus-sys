@@ -1,41 +1,61 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarRange } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { planCashierWeek } from "@/lib/actions";
 import { formatWeekRangeLabel } from "@/lib/scheduling/week";
+import type { CashierWithStore } from "@/lib/scheduling/shifts";
 
 export function WeekPlanModal({
   storeId,
   storeName,
   weekStart,
-  cashierCount,
+  planningCashiers,
   onClose,
 }: {
   storeId: string;
   storeName: string;
   weekStart: string;
-  cashierCount: number;
+  planningCashiers: CashierWithStore[];
   onClose: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [result, setResult] = useState<string | null>(null);
+  const [cashierId, setCashierId] = useState(planningCashiers[0]?.id || "");
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("15:00");
 
+  const cashierOptions = useMemo(
+    () =>
+      planningCashiers.map((c) => ({
+        value: c.id,
+        label: c.full_name || c.email,
+        description: c.store_name,
+      })),
+    [planningCashiers]
+  );
+
+  const selectedCashier = planningCashiers.find((c) => c.id === cashierId);
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!cashierId) {
+      setError("Sélectionnez un caissier");
+      return;
+    }
     setError("");
     setResult(null);
     startTransition(async () => {
       const response = await planCashierWeek({
         storeId,
+        cashierId,
         weekStart,
         startTime,
         endTime,
@@ -59,11 +79,26 @@ export function WeekPlanModal({
         {storeName} · semaine du {formatWeekRangeLabel(weekStart)}
       </p>
       <p className="mt-2 text-sm text-muted">
-        Crée un créneau pour chaque caissier du magasin, du lundi au samedi, sauf jour de repos ou
-        créneau déjà existant ({cashierCount} caissier{cashierCount !== 1 ? "s" : ""}).
+        Sélectionnez un caissier, puis créez ses créneaux du lundi au samedi (hors jour de repos et
+        créneaux déjà existants).
       </p>
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+        <SelectMenu
+          label="Caissier"
+          value={cashierId}
+          onChange={setCashierId}
+          options={cashierOptions}
+          searchable={cashierOptions.length > 6}
+          required
+        />
+
+        {selectedCashier && (
+          <p className="text-xs text-muted">
+            Planning hebdomadaire pour {selectedCashier.full_name || selectedCashier.email}
+          </p>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <Input
             label="Heure début"
@@ -94,7 +129,7 @@ export function WeekPlanModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Fermer
           </Button>
-          <Button type="submit" loading={pending}>
+          <Button type="submit" loading={pending} disabled={!cashierId}>
             <CalendarRange className="h-4 w-4" />
             Planifier
           </Button>

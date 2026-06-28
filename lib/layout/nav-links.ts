@@ -94,6 +94,39 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     ];
   }
 
+  if (basePath === "/manager") {
+    return [
+      { href: "/manager", label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
+      { href: "/manager/planning", label: "Planning", icon: CalendarClock, mobileOrder: 1 },
+      { href: "/manager/stock", label: "Stock", icon: Warehouse, mobileOrder: 2 },
+      { href: "/manager/sales", label: "Ventes", icon: Receipt, mobileOrder: 3 },
+      {
+        href: "/manager/stock-transfers",
+        label: "Commandes envoyées",
+        icon: ArrowRightLeft,
+        mobileOrder: 4,
+      },
+      {
+        href: "/manager/stock-transfers/received",
+        label: "Commandes reçues",
+        icon: Boxes,
+        mobileOrder: 5,
+      },
+      {
+        href: "/manager/pos-closures",
+        label: "Clôtures caisse",
+        icon: ScrollText,
+        mobileOrder: 6,
+      },
+      { href: "/manager/cheques", label: "Chèques", icon: Landmark, mobileOrder: 7 },
+      { href: "/manager/invoices", label: "Factures", icon: FileText, mobileOrder: 8 },
+      { href: "/manager/writeoffs", label: "Retours stock", icon: RotateCcw, mobileOrder: 9 },
+      { href: "/manager/activity", label: "Historique", icon: ClipboardList, mobileOrder: 10 },
+      { href: "/manager/reclamations", label: "Réclam.", icon: AlertTriangle, mobileOrder: 11 },
+      { href: "/manager/actualites", label: "Actus", icon: Newspaper, mobileOrder: 12 },
+    ];
+  }
+
   const links: NavLinkItem[] = [
     { href: basePath, label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
     { href: `${basePath}/planning`, label: "Planning", icon: CalendarClock, mobileOrder: 1 },
@@ -132,23 +165,12 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     }
   );
 
-  if (basePath === "/manager") {
-    links.push({
-      href: `${basePath}/pos-closures`,
-      label: "Clôtures caisse",
-      icon: ScrollText,
-      mobileOrder: 2.5,
-    });
-  }
-
-  if (basePath !== "/manager") {
-    links.push({
-      href: `${basePath}/products`,
-      label: "Produits",
-      icon: Package,
-      mobileOrder: 5,
-    });
-  }
+  links.push({
+    href: `${basePath}/products`,
+    label: "Produits",
+    icon: Package,
+    mobileOrder: 5,
+  });
 
   if (basePath === "/director") {
     links.push({
@@ -167,7 +189,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 8 }
   );
 
-  if (basePath === "/manager" || basePath === "/director") {
+  if (basePath === "/director") {
     links.push({
       href: `${basePath}/writeoffs`,
       label: "Retours stock",
@@ -191,16 +213,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     });
   }
 
-  if (basePath === "/manager") {
-    links.push({
-      href: `${basePath}/invoices`,
-      label: "Factures",
-      icon: FileText,
-      mobileOrder: 10,
-    });
-  }
-
-  if (basePath !== "/manager") {
+  if (basePath === "/director") {
     links.push(
       { href: `${basePath}/loyalty`, label: "Fidélité", icon: Gift, mobileOrder: 9 },
       { href: `${basePath}/invoices`, label: "Factures", icon: FileText, mobileOrder: 10 }
@@ -211,7 +224,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     { href: `${basePath}/actualites`, label: "Actus", icon: Newspaper, mobileOrder: 11 }
   );
 
-  if (basePath !== "/manager") {
+  if (basePath === "/director") {
     links.push({
       href: `${basePath}/users`,
       label: "Users",

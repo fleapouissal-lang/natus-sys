@@ -9,6 +9,10 @@ import { SaleDetailModal } from "@/components/sales/sale-detail-modal";
 import { SalesHistoryTable } from "@/components/sales/sales-history-table";
 import { formatCurrency, toLocalDateKey } from "@/lib/utils";
 import {
+  clampDateToManagerSalesWindow,
+  type getManagerSalesHistoryDateBounds,
+} from "@/lib/sales/manager-sales-window";
+import {
   canCancelSaleAsDirector,
   canCancelSaleAsManager,
 } from "@/lib/sales/sale-cancel";
@@ -20,11 +24,13 @@ export function ManagerSalesHistory({
   storeLabel,
   stores,
   selectedStoreId,
+  historyBounds = null,
 }: {
   sales: Sale[];
   storeLabel: string;
   stores: Store[];
   selectedStoreId: string;
+  historyBounds?: ReturnType<typeof getManagerSalesHistoryDateBounds> | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -41,12 +47,15 @@ export function ManagerSalesHistory({
       if (paymentFilter && sale.payment_method !== paymentFilter) return false;
 
       const saleDay = toLocalDateKey(sale.created_at);
+      if (historyBounds) {
+        if (saleDay < historyBounds.minDate || saleDay > historyBounds.maxDate) return false;
+      }
       if (dateFrom && saleDay < dateFrom) return false;
       if (dateTo && saleDay > dateTo) return false;
 
       return true;
     });
-  }, [sales, dateFrom, dateTo, paymentFilter]);
+  }, [sales, dateFrom, dateTo, paymentFilter, historyBounds]);
 
   const stats = useMemo(() => {
     const total = filtered.reduce((sum, s) => sum + Number(s.total), 0);
@@ -58,6 +67,16 @@ export function ManagerSalesHistory({
       .reduce((sum, s) => sum + Number(s.total), 0);
     return { count: filtered.length, total, cash, card };
   }, [filtered]);
+
+  function handleDateFromChange(value: string) {
+    setDateFrom(
+      historyBounds ? clampDateToManagerSalesWindow(value, historyBounds) : value
+    );
+  }
+
+  function handleDateToChange(value: string) {
+    setDateTo(historyBounds ? clampDateToManagerSalesWindow(value, historyBounds) : value);
+  }
 
   function resetFilters() {
     setDateFrom("");
@@ -85,43 +104,50 @@ export function ManagerSalesHistory({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-        <Card>
-          <p className="text-sm text-muted">Ventes affichées</p>
-          <p className="mt-1 text-2xl font-bold">{stats.count}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-muted">Chiffre d&apos;affaires</p>
-          <p className="mt-1 text-2xl font-bold">{formatCurrency(stats.total)}</p>
-        </Card>
-        <Card>
-          <p className="flex items-center gap-1.5 text-sm text-muted">
-            <Banknote className="h-4 w-4" />
-            Espèces
-          </p>
-          <p className="mt-1 text-2xl font-bold">{formatCurrency(stats.cash)}</p>
-        </Card>
-        <Card>
-          <p className="flex items-center gap-1.5 text-sm text-muted">
-            <CreditCard className="h-4 w-4" />
-            TPE
-          </p>
-          <p className="mt-1 text-2xl font-bold">{formatCurrency(stats.card)}</p>
-        </Card>
-      </div>
+      {isDirector && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          <Card>
+            <p className="text-sm text-muted">Ventes affichées</p>
+            <p className="mt-1 text-2xl font-bold">{stats.count}</p>
+          </Card>
+          <Card>
+            <p className="text-sm text-muted">Chiffre d&apos;affaires</p>
+            <p className="mt-1 text-2xl font-bold">{formatCurrency(stats.total)}</p>
+          </Card>
+          <Card>
+            <p className="flex items-center gap-1.5 text-sm text-muted">
+              <Banknote className="h-4 w-4" />
+              Espèces
+            </p>
+            <p className="mt-1 text-2xl font-bold">{formatCurrency(stats.cash)}</p>
+          </Card>
+          <Card>
+            <p className="flex items-center gap-1.5 text-sm text-muted">
+              <CreditCard className="h-4 w-4" />
+              TPE
+            </p>
+            <p className="mt-1 text-2xl font-bold">{formatCurrency(stats.card)}</p>
+          </Card>
+        </div>
+      )}
 
       <SalesAgendaFilter
         dateFrom={dateFrom}
         dateTo={dateTo}
         paymentFilter={paymentFilter}
-        onDateFromChange={setDateFrom}
-        onDateToChange={setDateTo}
+        onDateFromChange={handleDateFromChange}
+        onDateToChange={handleDateToChange}
         onPaymentChange={setPaymentFilter}
         onReset={resetFilters}
         resultCount={filtered.length}
         stores={stores}
         selectedStoreId={selectedStoreId}
         onStoreChange={handleStoreChange}
+        dateMin={historyBounds?.minDate}
+        dateMax={historyBounds?.maxDate}
+        periodHint={
+          historyBounds ? "Aujourd'hui et les 3 jours précédents" : undefined
+        }
         pagination={{
           page: listPagination.page,
           totalPages: listPagination.totalPages,

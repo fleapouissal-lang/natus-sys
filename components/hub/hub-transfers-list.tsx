@@ -16,7 +16,7 @@ import {
   pickupHubTransfer,
   repairHubStockTransfer,
 } from "@/lib/actions";
-import { hubTransferDirection } from "@/lib/hub-transfer-direction";
+import { hubTransferDirection, hubTransferDirectionLabel } from "@/lib/hub-transfer-direction";
 import { ProductImage } from "@/components/pos/product-image";
 import {
   hubTransferStatusLabel,
@@ -119,10 +119,10 @@ export function HubTransfersList({
             <tr className="border-b border-border bg-primary-light/30">
               <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
               {showOrigin && (
-                <th className="px-6 py-3 text-left font-medium text-muted">Dépôt</th>
+                <th className="px-6 py-3 text-left font-medium text-muted">Origine</th>
               )}
               <th className="px-6 py-3 text-left font-medium text-muted">
-                {showOrigin ? "Magasin" : "Destination"}
+                {showOrigin ? "Destination" : "Destination"}
               </th>
               <th className="px-6 py-3 text-left font-medium text-muted">Produits</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
@@ -135,6 +135,15 @@ export function HubTransfersList({
           <tbody>
             {paginated.map((transfer) => {
               const statusHint = readOnly ? hubTransferStoreStatusHint(transfer.status) : "";
+              const direction = hubTransferDirection(transfer);
+              const isStoreToDepot = direction === "store_to_depot";
+              const isDepotToStore = direction === "depot_to_store";
+              const canMarkReady =
+                (manageAsStoreSource && isStoreToDepot) ||
+                (!manageAsStoreSource && isDepotToStore);
+              const canManageLivreur =
+                (manageAsStoreSource && isStoreToDepot) ||
+                (!manageAsStoreSource && isDepotToStore);
               return (
               <tr key={transfer.id} className="border-b border-border last:border-b-0">
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -142,11 +151,15 @@ export function HubTransfersList({
                 </td>
                 {showOrigin && (
                   <td className="px-6 py-4">
-                    <p className="font-medium">{transfer.from_store_name || "Entrepôt"}</p>
+                    <p className="font-medium">{transfer.from_store_name || "—"}</p>
+                    {isStoreToDepot && transfer.from_store_city && (
+                      <p className="text-xs text-muted">{transfer.from_store_city}</p>
+                    )}
                   </td>
                 )}
                 <td className="px-6 py-4">
                   <p className="font-medium">{transfer.to_store_name || "—"}</p>
+                  <p className="text-xs text-muted">{hubTransferDirectionLabel(transfer)}</p>
                   {transfer.assigned_livreur_name && (
                     <p className="text-xs text-muted">Livreur : {transfer.assigned_livreur_name}</p>
                   )}
@@ -208,15 +221,14 @@ export function HubTransfersList({
                 </td>
                 {showActions && (
                   <td className="px-6 py-4 text-right">
-                    {allowManage && transfer.status === "en_cours" && (
+                    {allowManage && transfer.status === "en_cours" && canMarkReady && (
                       <Button
                         type="button"
                         size="sm"
                         loading={loadingId === transfer.id}
                         onClick={() =>
                           void runAction(transfer.id, () =>
-                            manageAsStoreSource &&
-                            hubTransferDirection(transfer) === "store_to_depot"
+                            manageAsStoreSource && isStoreToDepot
                               ? markStoreToHubTransferReady(transfer.id)
                               : markHubTransferReady(transfer.id)
                           )
@@ -226,7 +238,14 @@ export function HubTransfersList({
                       </Button>
                     )}
 
-                    {allowManage && transfer.status === "pret" && (
+                    {allowManage &&
+                      !manageAsStoreSource &&
+                      isStoreToDepot &&
+                      transfer.status === "en_cours" && (
+                        <span className="text-xs text-muted">En attente du magasin source</span>
+                      )}
+
+                    {allowManage && transfer.status === "pret" && canManageLivreur && (
                       <div className="flex flex-col items-end gap-2">
                         <SelectMenu
                           value={selectedLivreur[transfer.id] || transfer.assigned_livreur_id || ""}
@@ -252,8 +271,7 @@ export function HubTransfersList({
                                   selectedLivreur[transfer.id] ||
                                   transfer.assigned_livreur_id ||
                                   "";
-                                return manageAsStoreSource &&
-                                  hubTransferDirection(transfer) === "store_to_depot"
+                                return manageAsStoreSource && isStoreToDepot
                                   ? assignStoreToHubTransferLivreur(transfer.id, livreurId)
                                   : assignHubTransferLivreur(transfer.id, livreurId);
                               })
@@ -278,8 +296,15 @@ export function HubTransfersList({
 
                     {allowManage &&
                       !manageAsStoreSource &&
+                      isStoreToDepot &&
+                      transfer.status === "pret" && (
+                        <span className="text-xs text-muted">Prête — livraison par le magasin</span>
+                      )}
+
+                    {allowManage &&
+                      !manageAsStoreSource &&
                       transfer.status === "livre" &&
-                      hubTransferDirection(transfer) === "store_to_depot" && (
+                      isStoreToDepot && (
                         <Button
                           type="button"
                           size="sm"

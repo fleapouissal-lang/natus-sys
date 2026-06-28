@@ -34,11 +34,15 @@ function MonthCalendar({
   onSelect,
   onClose,
   style,
+  minDate,
+  maxDate,
 }: {
   value: string;
   onSelect: (iso: string) => void;
   onClose: () => void;
   style?: React.CSSProperties;
+  minDate?: string;
+  maxDate?: string;
 }) {
   const initial = value ? new Date(`${value}T12:00:00`) : new Date();
   const [viewYear, setViewYear] = useState(initial.getFullYear());
@@ -127,17 +131,23 @@ function MonthCalendar({
           const key = toLocalDateKey(day);
           const isSelected = value === key;
           const isToday = key === todayKey;
+          const isDisabled =
+            (minDate && key < minDate) || (maxDate && key > maxDate) || false;
 
           return (
             <button
               key={key}
               type="button"
+              disabled={isDisabled}
               onClick={() => onSelect(key)}
               className={cn(
-                "aspect-square bg-surface text-sm font-medium transition-colors cursor-pointer",
+                "aspect-square bg-surface text-sm font-medium transition-colors",
+                isDisabled
+                  ? "cursor-not-allowed text-muted/40"
+                  : "cursor-pointer",
                 isSelected && "bg-champagne text-black font-bold",
                 !isSelected && isToday && "ring-1 ring-inset ring-primary text-primary",
-                !isSelected && !isToday && "hover:bg-primary/10"
+                !isSelected && !isToday && !isDisabled && "hover:bg-primary/10"
               )}
             >
               {day.getDate()}
@@ -153,10 +163,14 @@ export function DateInputField({
   label,
   value,
   onChange,
+  minDate,
+  maxDate,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  minDate?: string;
+  maxDate?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -231,6 +245,8 @@ export function DateInputField({
               setOpenState(false);
             }}
             onClose={() => setOpenState(false)}
+            minDate={minDate}
+            maxDate={maxDate}
             style={{
               position: "fixed",
               top: position.top,

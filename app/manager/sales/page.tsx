@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter } from "@/lib/permissions";
+import { getCityFilter, isManager } from "@/lib/permissions";
 import { getActiveStores } from "@/lib/inventory";
 import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store";
+import { getManagerSalesHistoryDateBounds } from "@/lib/sales/manager-sales-window";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { ManagerSalesHistory } from "@/components/sales/manager-sales-history";
 import { Card } from "@/components/ui/card";
@@ -21,16 +22,27 @@ export default async function SalesPage({
   const stores = await getActiveStores(city);
   const storeId = resolveSelectedStoreId(stores, storeParam);
   const selectedStore = getSelectedStore(stores, storeId);
+  const managerView = profile ? isManager(profile) : false;
+  const historyBounds = managerView ? getManagerSalesHistoryDateBounds() : null;
 
   const supabase = await createClient();
-  const { data } = storeId
-    ? await supabase
+  let salesQuery = storeId
+    ? supabase
         .from("sales")
         .select(SALE_HISTORY_SELECT)
         .eq("store_id", storeId)
         .order("created_at", { ascending: false })
-        .limit(300)
-    : { data: [] };
+    : null;
+
+  if (salesQuery && historyBounds) {
+    salesQuery = salesQuery
+      .gte("created_at", `${historyBounds.minDate}T00:00:00`)
+      .lte("created_at", `${historyBounds.maxDate}T23:59:59.999`);
+  } else if (salesQuery) {
+    salesQuery = salesQuery.limit(300);
+  }
+
+  const { data } = salesQuery ? await salesQuery : { data: [] };
 
   const sales = (data || []) as Sale[];
 
@@ -38,7 +50,11 @@ export default async function SalesPage({
     <div className="animate-fade-in space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Ventes</h1>
-        <p className="mt-1 text-muted">Historique par magasin</p>
+        <p className="mt-1 text-muted">
+          {managerView
+            ? "Ventes du jour et des 3 jours précédents"
+            : "Historique par magasin"}
+        </p>
       </div>
 
       {selectedStore ? (
@@ -48,6 +64,7 @@ export default async function SalesPage({
             storeLabel={`${selectedStore.name} — ${selectedStore.city}`}
             stores={stores}
             selectedStoreId={storeId}
+            historyBounds={historyBounds}
           />
         </Suspense>
       ) : (

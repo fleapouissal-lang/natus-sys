@@ -101,6 +101,7 @@ const TRANSFER_SELECT = `
 
 export async function getStoreStockTransfers(options: {
   fromStoreId?: string;
+  fromStoreIds?: string[];
   toStoreId?: string;
   storeIds?: string[];
   limit?: number;
@@ -114,6 +115,9 @@ export async function getStoreStockTransfers(options: {
 
   if (options.fromStoreId) {
     query = query.eq("from_store_id", options.fromStoreId);
+  }
+  if (options.fromStoreIds?.length) {
+    query = query.in("from_store_id", options.fromStoreIds);
   }
   if (options.toStoreId) {
     query = query.eq("to_store_id", options.toStoreId);
@@ -131,6 +135,14 @@ export async function getStoreStockTransfers(options: {
   }
 
   return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+}
+
+/** Commandes inter-magasins envoyées par des magasins sources (lecture dépôt). */
+export async function getOutgoingStoreStockTransfers(
+  fromStoreIds: string[]
+): Promise<StoreStockTransfer[]> {
+  if (fromStoreIds.length === 0) return [];
+  return getStoreStockTransfers({ fromStoreIds, limit: 100 });
 }
 
 export async function getManagerStoreStockTransfers(
