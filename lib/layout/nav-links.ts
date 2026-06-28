@@ -279,16 +279,79 @@ function buildDirectorNavSections(role: UserRole): NavSection[] {
   ];
 }
 
+/** Menu Gérant regroupé en sections logiques (sidebar desktop). */
+function buildManagerNavSections(role: UserRole): NavSection[] {
+  return [
+    {
+      id: "tableau-de-bord",
+      label: "Tableau de bord",
+      links: [{ href: "/manager", label: "Accueil", icon: LayoutDashboard }],
+    },
+    {
+      id: "stock",
+      label: "Stock",
+      links: [
+        { href: "/manager/stock", label: "Stock", icon: Warehouse },
+        { href: "/manager/stock-transfers", label: "Stocks envoyés", icon: ArrowRightLeft },
+        { href: "/manager/stock-transfers/received", label: "Stocks reçus", icon: Boxes },
+        { href: "/manager/writeoffs", label: "Annulations de stock", icon: RotateCcw },
+      ],
+    },
+    {
+      id: "gestion",
+      label: "Gestion",
+      links: [{ href: "/manager/planning", label: "Planning", icon: CalendarClock }],
+    },
+    {
+      id: "comptabilite",
+      label: "Comptabilité",
+      links: [
+        { href: "/manager/pos-closures", label: "Clôtures caisse", icon: ScrollText },
+        { href: "/manager/invoices", label: "Factures", icon: FileText },
+        { href: "/manager/cheques", label: "Chèques", icon: Landmark },
+      ],
+    },
+    {
+      id: "suivi",
+      label: "Suivi",
+      links: [
+        { href: "/manager/reclamations", label: "Réclamations", icon: AlertTriangle },
+        { href: "/manager/history", label: "Historique", icon: ClipboardList },
+        { href: "/manager/actualites", label: "Actus", icon: Newspaper },
+      ],
+    },
+    {
+      id: "configuration",
+      label: "Configuration",
+      links: [getSettingsNavItem(role)],
+    },
+  ];
+}
+
 /**
- * Sections du menu Directeur (sidebar desktop), filtrées selon les pages
- * autorisées. Retourne null pour les rôles non concernés.
+ * Sections de la sidebar desktop (Directeur / Gérant), filtrées selon les
+ * pages autorisées. Retourne null pour les rôles non concernés.
  */
-export function resolveDirectorNavSections(input: {
+export function resolveNavSections(input: {
   role: UserRole;
   allowedPages?: string[] | null;
   accessPreset?: string | null;
+  requireManagerCode?: boolean;
 }): NavSection[] | null {
-  if (input.role !== "directeur" && input.role !== "admin") return null;
+  let sections: NavSection[];
+  if (input.role === "directeur" || input.role === "admin") {
+    sections = buildDirectorNavSections(input.role);
+  } else if (input.role === "manager") {
+    sections = buildManagerNavSections(input.role);
+    if (input.requireManagerCode === false) {
+      sections = sections.map((section) => ({
+        ...section,
+        links: section.links.filter((link) => link.href !== "/manager/pos-closures"),
+      }));
+    }
+  } else {
+    return null;
+  }
 
   const pageProfile = {
     role: input.role,
@@ -297,7 +360,7 @@ export function resolveDirectorNavSections(input: {
   };
 
   const seen = new Set<string>();
-  return buildDirectorNavSections(input.role)
+  return sections
     .map((section) => ({
       ...section,
       links: filterNavLinksByPages(section.links, pageProfile).filter((link) => {

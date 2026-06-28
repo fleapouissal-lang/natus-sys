@@ -7,7 +7,7 @@ import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
 import {
   isNavLinkActive,
   resolveNavLinks,
-  resolveDirectorNavSections,
+  resolveNavSections,
 } from "@/lib/layout/nav-links";
 import type { NavLinkItem } from "@/lib/layout/nav-links";
 import {
@@ -244,7 +244,12 @@ export function Sidebar({
     planningOnlyNav: false,
     requireManagerCode,
   });
-  const navSections = resolveDirectorNavSections({ role, allowedPages, accessPreset });
+  const navSections = resolveNavSections({
+    role,
+    allowedPages,
+    accessPreset,
+    requireManagerCode,
+  });
   const roleLabel = getRoleLabel(role);
   const operatorActive = isStorePos && hasPosOperator && Boolean(posOperatorName);
   const profileName = operatorActive ? posOperatorName! : userName;
