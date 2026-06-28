@@ -8,8 +8,13 @@ import { SalesAgendaFilter } from "@/components/sales/sales-agenda-filter";
 import { SaleDetailModal } from "@/components/sales/sale-detail-modal";
 import { SalesHistoryTable } from "@/components/sales/sales-history-table";
 import { OrderDatePeriodFilter } from "@/components/orders/order-date-period-filter";
+import { useSaleTicketReprint } from "@/components/sales/sale-ticket-reprint";
 import { createClient } from "@/lib/supabase/client";
 import { fetchCashierSales, fetchStoreSales } from "@/lib/sales/fetch-cashier-sales";
+import {
+  clampDateToCashierSalesWindow,
+  type getCashierSalesHistoryDateBounds,
+} from "@/lib/sales/manager-sales-window";
 import {
   detectOrderDatePreset,
   orderDatePresetLabel,
@@ -28,12 +33,14 @@ export function CashierSalesHistory({
   storeId,
   cashierId,
   cashierName,
+  historyBounds,
 }: {
   initialSales: Sale[];
   mode?: "personal" | "store";
   storeId?: string;
   cashierId?: string;
   cashierName?: string;
+  historyBounds: ReturnType<typeof getCashierSalesHistoryDateBounds>;
 }) {
   const router = useRouter();
   const [sales, setSales] = useState(initialSales);
@@ -43,6 +50,7 @@ export function CashierSalesHistory({
   const [dateTo, setDateTo] = useState(initialToday.to);
   const [paymentFilter, setPaymentFilter] = useState<"" | PaymentMethod>("");
   const [detailSale, setDetailSale] = useState<Sale | null>(null);
+  const { reprintSale, printingSaleId, printPortal } = useSaleTicketReprint();
 
   useEffect(() => {
     setSales(initialSales);
@@ -58,8 +66,8 @@ export function CashierSalesHistory({
       const supabase = createClient();
       const { sales: rows, error } =
         mode === "store" && storeId
-          ? await fetchStoreSales(supabase, storeId)
-          : await fetchCashierSales(supabase, cashierId!);
+          ? await fetchStoreSales(supabase, storeId, historyBounds)
+          : await fetchCashierSales(supabase, cashierId!, historyBounds);
       if (cancelled) return;
       if (error) {
         setRefreshError(error);
@@ -75,7 +83,14 @@ export function CashierSalesHistory({
     return () => {
       cancelled = true;
     };
-  }, [mode, storeId, cashierId, router]);
+  }, [mode, storeId, cashierId, router, historyBounds]);
+
+  const windowedSales = useMemo(() => {
+    return sales.filter((sale) => {
+      const saleDay = toLocalDateKey(sale.created_at);
+      return saleDay >= historyBounds.minDate && saleDay <= historyBounds.maxDate;
+    });
+  }, [sales, historyBounds]);
 
   const activeDatePreset = useMemo(
     () => detectOrderDatePreset(dateFrom, dateTo),
@@ -83,7 +98,7 @@ export function CashierSalesHistory({
   );
 
   const filtered = useMemo(() => {
-    return sales.filter((sale) => {
+    return windowedSales.filter((sale) => {
       if (paymentFilter && sale.payment_method !== paymentFilter) return false;
 
       const saleDay = toLocalDateKey(sale.created_at);
@@ -92,7 +107,7 @@ export function CashierSalesHistory({
 
       return true;
     });
-  }, [sales, dateFrom, dateTo, paymentFilter]);
+  }, [windowedSales, dateFrom, dateTo, paymentFilter]);
 
   const stats = useMemo(() => {
     const active = filtered.filter((s) => !s.cancelled_at);
@@ -115,8 +130,24 @@ export function CashierSalesHistory({
 
   function applyDatePreset(preset: OrderDatePreset) {
     const { from, to } = orderDatePresetToKeys(preset);
-    setDateFrom(from);
-    setDateTo(to);
+    if (preset === "all") {
+      setDateFrom(historyBounds.minDate);
+      setDateTo(historyBounds.maxDate);
+      return;
+    }
+
+    const clampedFrom = clampDateToCashierSalesWindow(from || historyBounds.minDate, historyBounds);
+    const clampedTo = clampDateToCashierSalesWindow(to || historyBounds.maxDate, historyBounds);
+    setDateFrom(clampedFrom);
+    setDateTo(clampedTo > clampedFrom ? clampedTo : clampedFrom);
+  }
+
+  function handleDateFromChange(value: string) {
+    setDateFrom(clampDateToCashierSalesWindow(value, historyBounds));
+  }
+
+  function handleDateToChange(value: string) {
+    setDateTo(clampDateToCashierSalesWindow(value, historyBounds));
   }
 
   function resetFilters() {
@@ -126,13 +157,13 @@ export function CashierSalesHistory({
   }
 
   const periodHint =
-    activeDatePreset !== "all"
+    activeDatePreset !== "all" && activeDatePreset !== "custom"
       ? orderDatePresetLabel(activeDatePreset)
-      : undefined;
+      : "Aujourd'hui et les 3 jours précédents";
 
   const activeSalesCount = useMemo(
-    () => sales.filter((s) => !s.cancelled_at).length,
-    [sales]
+    () => windowedSales.filter((s) => !s.cancelled_at).length,
+    [windowedSales]
   );
   const filteredHiddenByDate =
     activeSalesCount > 0 && stats.count === 0 && activeDatePreset !== "all";
@@ -174,9 +205,9 @@ export function CashierSalesHistory({
 
       {filteredHiddenByDate && (
         <p className="rounded-lg bg-primary-light/50 px-4 py-3 text-sm text-foreground">
-          Vous avez {activeSalesCount} vente{activeSalesCount > 1 ? "s" : ""} enregistrée
-          {activeSalesCount > 1 ? "s" : ""}, mais aucune pour « {periodHint} ». Essayez « Tout »
-          ou élargissez les dates.
+          Vous avez {activeSalesCount} vente{activeSalesCount > 1 ? "s" : ""} sur les 4
+          derniers jours, mais aucune pour « {periodHint} ». Essayez « Tout » ou ajustez les
+          dates.
         </p>
       )}
 
@@ -184,13 +215,15 @@ export function CashierSalesHistory({
         dateFrom={dateFrom}
         dateTo={dateTo}
         paymentFilter={paymentFilter}
-        onDateFromChange={setDateFrom}
-        onDateToChange={setDateTo}
+        onDateFromChange={handleDateFromChange}
+        onDateToChange={handleDateToChange}
         onPaymentChange={setPaymentFilter}
         onReset={resetFilters}
         resultCount={filtered.length}
         periodHint={periodHint}
         hasActiveFilters={hasFilters}
+        dateMin={historyBounds.minDate}
+        dateMax={historyBounds.maxDate}
         periodFilter={
           <OrderDatePeriodFilter
             activePreset={activeDatePreset}
@@ -223,7 +256,10 @@ export function CashierSalesHistory({
           sales={listPagination.paginated}
           showStore={mode !== "store"}
           showCashier={mode === "store"}
+          showLineItems={false}
           onViewSale={setDetailSale}
+          onPrintSale={reprintSale}
+          printingSaleId={printingSaleId}
           showPagination={false}
         />
       </Card>
@@ -236,6 +272,8 @@ export function CashierSalesHistory({
           onCancelled={() => router.refresh()}
         />
       )}
+
+      {printPortal}
     </div>
   );
 }

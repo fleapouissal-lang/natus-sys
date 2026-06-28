@@ -5,6 +5,7 @@ import {
   fetchStoreSales,
 } from "@/lib/sales/fetch-cashier-sales";
 import { CashierSalesHistory } from "@/components/sales/cashier-sales-history";
+import { getCashierSalesHistoryDateBounds } from "@/lib/sales/manager-sales-window";
 
 export const dynamic = "force-dynamic";
 
@@ -13,15 +14,17 @@ export default async function CashierSalesPage() {
   const supabase = await createClient();
   const isStorePos = profile?.is_store_pos === true;
 
+  const historyBounds = getCashierSalesHistoryDateBounds();
+
   let sales: Awaited<ReturnType<typeof fetchCashierSales>>["sales"] = [];
   let error: string | null = null;
 
   if (profile && isStorePos && profile.store_id) {
-    const result = await fetchStoreSales(supabase, profile.store_id);
+    const result = await fetchStoreSales(supabase, profile.store_id, historyBounds);
     sales = result.sales;
     error = result.error;
   } else if (profile) {
-    const result = await fetchCashierSales(supabase, profile.id);
+    const result = await fetchCashierSales(supabase, profile.id, historyBounds);
     sales = result.sales;
     error = result.error;
   }
@@ -34,8 +37,8 @@ export default async function CashierSalesPage() {
         </h1>
         <p className="mt-1 text-muted">
           {isStorePos
-            ? "Toutes les ventes de la caisse — chaque ligne indique le caissier ayant encaissé"
-            : "Historique de vos transactions — état des ventes et modes de paiement"}
+            ? "Ventes du magasin — aujourd'hui et les 3 jours précédents"
+            : "Vos ventes en caisse — aujourd'hui et les 3 jours précédents"}
         </p>
       </div>
 
@@ -55,6 +58,7 @@ export default async function CashierSalesPage() {
             ? profile?.full_name || profile?.email || undefined
             : profile?.full_name || profile?.email || undefined
         }
+        historyBounds={historyBounds}
       />
     </div>
   );

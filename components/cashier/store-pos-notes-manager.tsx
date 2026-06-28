@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { MessageSquare, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, MessageSquare, Pencil, Plus, Trash2 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -23,6 +23,7 @@ export function StorePosNotesManager({
   storeName?: string;
 }) {
   const [notes, setNotes] = useState(initialNotes);
+  const [formOpen, setFormOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [editingNote, setEditingNote] = useState<StorePosNote | null>(null);
@@ -46,7 +47,15 @@ export function StorePosNotesManager({
       }
       setNotes((prev) => [result.note, ...prev]);
       setDraft("");
+      setFormOpen(false);
     });
+  }
+
+  function handleCreateKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleCreate();
+    }
   }
 
   function openEdit(note: StorePosNote) {
@@ -92,38 +101,89 @@ export function StorePosNotesManager({
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader
-          title="Nouvelle note"
-          description={
-            storeName
-              ? `Visible uniquement sur le compte caisse de ${storeName}`
-              : "Visible uniquement sur le compte caisse magasin"
-          }
-        />
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          rows={4}
-          placeholder="Consignes du jour, rappels stock, infos pour l'équipe…"
-          className="natus-field w-full resize-y bg-surface px-3 py-2 text-sm"
-        />
-        {error && !editingNote && !deletingNote && (
-          <p className="mt-3 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
-        )}
-        <div className="mt-4 flex justify-end">
-          <Button type="button" onClick={handleCreate} loading={pending} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Ajouter la note
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Nouvelle note</h2>
+            <p className="mt-0.5 text-sm text-muted">
+              {storeName
+                ? `Visible uniquement sur le compte caisse de ${storeName}`
+                : "Visible uniquement sur le compte caisse magasin"}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setFormOpen((open) => !open)}
+            aria-expanded={formOpen}
+          >
+            {formOpen ? (
+              <>
+                <ChevronUp className="h-4 w-4" />
+                Masquer
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-4 w-4" />
+                Afficher
+              </>
+            )}
           </Button>
         </div>
-      </Card>
+
+        {!formOpen && draft.trim() && (
+          <Card className="flex flex-wrap items-center justify-between gap-3 border-primary/20 bg-champagne/10 px-4 py-3">
+            <p className="text-sm">
+              Note en cours —{" "}
+              <span className="font-medium line-clamp-1">{draft.trim()}</span>
+            </p>
+            <Button type="button" size="sm" onClick={() => setFormOpen(true)}>
+              Reprendre
+            </Button>
+          </Card>
+        )}
+
+        {formOpen && (
+          <Card className="space-y-3 p-4 md:p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                type="text"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={handleCreateKeyDown}
+                placeholder="Consignes du jour, rappels stock, infos pour l'équipe…"
+                className="natus-field min-w-0 flex-1 bg-surface px-3 py-2.5 text-sm"
+                autoComplete="off"
+              />
+              <Button
+                type="button"
+                onClick={handleCreate}
+                loading={pending}
+                disabled={!draft.trim()}
+                className="shrink-0 gap-2 sm:min-w-[7.5rem]"
+              >
+                <Plus className="h-4 w-4" />
+                Ajouter
+              </Button>
+            </div>
+            {error && !editingNote && !deletingNote && (
+              <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+            )}
+          </Card>
+        )}
+      </div>
 
       <div className="space-y-3">
-        <h2 className="font-heading text-lg font-semibold text-primary-dark">
-          Notes enregistrées ({notes.length})
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+            Notes enregistrées
+          </h2>
+          <span className="text-xs text-muted">
+            {notes.length} note{notes.length !== 1 ? "s" : ""}
+          </span>
+        </div>
 
         {notes.length === 0 ? (
           <Card className="px-6 py-12 text-center text-muted">

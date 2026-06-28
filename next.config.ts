@@ -22,6 +22,12 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  experimental: {
+    serverActions: {
+      // Retours magasin : jusqu'à 5 photos × 5 Mo
+      bodySizeLimit: "30mb",
+    },
+  },
   images: {
     remotePatterns: [
       {

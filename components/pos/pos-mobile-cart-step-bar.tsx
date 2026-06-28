@@ -2,10 +2,10 @@
 
 import { cn } from "@/lib/utils";
 
-export type PosMobileCartStep = "loyalty" | "payment";
+export type PosMobileCartStep = "cart" | "payment";
 
 const STEP_LABELS: Record<PosMobileCartStep, string> = {
-  loyalty: "Fidélité",
+  cart: "Panier",
   payment: "Paiement",
 };
 
@@ -22,7 +22,7 @@ export function PosMobileCartStepBar({
 
   return (
     <div className="natus-pos-checkout-pills shrink-0 px-4 py-2">
-      <div className="natus-pos-checkout-pills-track" role="tablist" aria-label="Étapes du panier">
+      <div className="natus-pos-checkout-pills-track" role="tablist" aria-label="Étapes de validation de la vente">
         {steps.map((id, index) => {
           const isActive = id === step;
           const isDone = steps.indexOf(step) > index;
@@ -50,7 +50,7 @@ export function PosMobileCartStepBar({
   );
 }
 
-export function resolveMobileCartSteps(skipLoyalty: boolean): PosMobileCartStep[] {
-  if (skipLoyalty) return ["payment"];
-  return ["loyalty", "payment"];
+export function resolveMobileCartSteps(skipCartStep: boolean): PosMobileCartStep[] {
+  if (skipCartStep) return ["payment"];
+  return ["cart", "payment"];
 }

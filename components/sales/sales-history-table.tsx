@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye } from "lucide-react";
+import { Eye, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PaginationBar } from "@/components/ui/pagination-bar";
@@ -14,6 +14,32 @@ const ACTION_COLOR = "#B38C4A";
 
 function paymentVariant(method: string): "default" | "success" | "accent" {
   return method === "card" ? "accent" : "success";
+}
+
+export function SalePrintButton({
+  onClick,
+  disabled = false,
+  loading = false,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      disabled={disabled || loading}
+      title="Imprimer le ticket"
+      aria-label="Imprimer le ticket de caisse"
+      className="order-action-icon flex h-8 w-8 shrink-0 items-center justify-center !p-0 border bg-transparent hover:bg-[#B38C4A]/10"
+      style={{ borderColor: ACTION_COLOR, color: ACTION_COLOR }}
+    >
+      <Printer className="h-3.5 w-3.5" />
+    </Button>
+  );
 }
 
 export function SaleViewButton({
@@ -43,6 +69,8 @@ export function SalesHistoryTable({
   showCashier = false,
   showLineItems = true,
   onViewSale,
+  onPrintSale,
+  printingSaleId = null,
   paginationKey,
   showPagination = true,
 }: {
@@ -51,6 +79,8 @@ export function SalesHistoryTable({
   showCashier?: boolean;
   showLineItems?: boolean;
   onViewSale: (sale: Sale) => void;
+  onPrintSale?: (sale: Sale) => void;
+  printingSaleId?: string | null;
   paginationKey?: string;
   showPagination?: boolean;
 }) {
@@ -75,15 +105,18 @@ export function SalesHistoryTable({
           </p>
         ) : (
           rows.map((sale) => (
-            <button
+            <div
               key={sale.id}
-              type="button"
-              onClick={() => onViewSale(sale)}
               className={cn(
-                "natus-card flex h-full min-h-[9.5rem] flex-col !p-3 text-left transition-opacity",
+                "natus-card flex h-full min-h-[9.5rem] flex-col !p-3 text-left",
                 sale.cancelled_at ? "opacity-60" : undefined
               )}
             >
+              <button
+                type="button"
+                onClick={() => onViewSale(sale)}
+                className="flex min-h-0 flex-1 flex-col text-left"
+              >
               <p className="text-[10px] text-muted">{formatDate(sale.created_at)}</p>
               <p
                 className={cn(
@@ -126,7 +159,17 @@ export function SalesHistoryTable({
               <p className="mt-1 text-[10px] font-medium text-muted">
                 Réf. {sale.id.slice(0, 8)}
               </p>
-            </button>
+              </button>
+              {onPrintSale && !sale.cancelled_at && (
+                <div className="mt-2 flex justify-end gap-1 border-t border-border pt-2">
+                  <SalePrintButton
+                    onClick={() => onPrintSale(sale)}
+                    loading={printingSaleId === sale.id}
+                  />
+                  <SaleViewButton onClick={() => onViewSale(sale)} />
+                </div>
+              )}
+            </div>
           ))
         )}
       </div>
@@ -202,7 +245,13 @@ export function SalesHistoryTable({
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-1">
+                    {onPrintSale && !sale.cancelled_at && (
+                      <SalePrintButton
+                        onClick={() => onPrintSale(sale)}
+                        loading={printingSaleId === sale.id}
+                      />
+                    )}
                     <SaleViewButton onClick={() => onViewSale(sale)} />
                   </div>
                 </td>

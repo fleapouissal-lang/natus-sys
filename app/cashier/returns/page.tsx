@@ -28,8 +28,8 @@ export default async function CashierReturnsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Retours magasin</h1>
         <p className="mt-1 text-muted">
-          Produits périmés ou cassés
-          {store ? ` — ${store.name}, ${store.city}` : ""}
+          Déclarez les produits périmés ou cassés — formulaire rapide et historique ci-dessous
+          {store ? ` · ${store.name}, ${store.city}` : ""}
         </p>
       </div>
 

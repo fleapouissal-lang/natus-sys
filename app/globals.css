@@ -1313,6 +1313,14 @@ textarea:focus {
   pointer-events: none;
 }
 
+.natus-sale-ticket-print-host {
+  position: fixed;
+  left: -99999px;
+  top: 0;
+  width: 300px;
+  pointer-events: none;
+}
+
 .natus-sales-report-print-only {
   position: absolute;
   left: -99999px;

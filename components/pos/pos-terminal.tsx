@@ -26,6 +26,10 @@ import { ManagerScanPanel } from "@/components/pos/manager-scan-panel";
 import { PosOrdersPanel } from "@/components/pos/pos-orders-panel";
 import type { SaleDocumentData } from "@/components/pos/sale-document-types";
 import { SaleDocumentsModal } from "@/components/pos/sale-documents-modal";
+import {
+  PosDailyTicketsButton,
+  PosDailyTicketsModal,
+} from "@/components/pos/pos-daily-tickets-modal";
 import { printSaleDocument } from "@/components/pos/print-sale-document";
 import { ProductCatalog } from "@/components/pos/product-catalog";
 import { PosCheckoutPanel } from "@/components/pos/pos-checkout-panel";
@@ -141,6 +145,7 @@ export function PosTerminal({
   );
   const [validatedQty, setValidatedQty] = useState<Record<string, number>>({});
   const [showOrdersPanel, setShowOrdersPanel] = useState(false);
+  const [showDailyTickets, setShowDailyTickets] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
   const [managerMode, setManagerMode] = useState<ManagerMode>("sale");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
@@ -156,7 +161,7 @@ export function PosTerminal({
   const [scanAlert, setScanAlert] = useState<PosScanAlert | null>(null);
   const [scanListening, setScanListening] = useState(true);
   const [mobilePosView, setMobilePosView] = useState<"catalog" | "cart">("catalog");
-  const [checkoutStep, setCheckoutStep] = useState<PosMobileCartStep>("loyalty");
+  const [checkoutStep, setCheckoutStep] = useState<PosMobileCartStep>("cart");
   const [showDayClosure, setShowDayClosure] = useState(false);
   const [storeDayPending, setStoreDayPending] = useState(false);
   const [storeDayValidated, setStoreDayValidated] = useState(false);
@@ -1051,13 +1056,13 @@ export function PosTerminal({
   }
 
   function renderCartCheckoutBody() {
-    const showLoyalty = checkoutStep === "loyalty" && !isShopifyOrderCheckout && !isStockScan;
-    const skipLoyalty = isShopifyOrderCheckout || isStockScan;
+    const showCartStep = checkoutStep === "cart" && !isShopifyOrderCheckout && !isStockScan;
+    const skipCartStep = isShopifyOrderCheckout || isStockScan;
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-natus">
-          {showLoyalty ? (
+          {showCartStep ? (
             <>
               <div className="shrink-0 border-b border-primary/10 px-4 py-3">
                 {renderLoyaltyStep()}
@@ -1066,7 +1071,7 @@ export function PosTerminal({
             </>
           ) : checkoutStep === "payment" ? (
             <>
-              {skipLoyalty && (
+              {skipCartStep && (
                 <div className="border-b border-primary/10 px-4 py-3">{renderCartItems()}</div>
               )}
               <div className="px-4 py-3">{renderPaymentStepContent()}</div>
@@ -1225,7 +1230,7 @@ export function PosTerminal({
             Retour
           </Button>
         ) : null}
-        {checkoutStep === "loyalty" ? (
+        {checkoutStep === "cart" ? (
           <Button
             type="button"
             variant="secondary"
@@ -1476,7 +1481,33 @@ export function PosTerminal({
                       storeName={storeName}
                       disabled={!defaultStoreId}
                     />
-                    {orderNotifications && (
+                    {role === "cashier" && defaultStoreId && (
+                      <div className="flex items-center gap-1.5">
+                        <PosDailyTicketsButton onOpen={() => setShowDailyTickets(true)} />
+                        {orderNotifications && (
+                          <div className="relative overflow-visible">
+                            <CashierNotificationBell
+                              onSelect={(notification) => {
+                                if (notification.kind === "hub_transfer") {
+                                  router.push(
+                                    notificationHref(notification.kind, notification.audience)
+                                  );
+                                  return;
+                                }
+                                if (
+                                  notification.kind === "stock_low" ||
+                                  notification.kind === "stock_out"
+                                ) {
+                                  return;
+                                }
+                                setShowOrdersPanel(true);
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {role !== "cashier" && orderNotifications && (
                       <div className="relative overflow-visible">
                         <CashierNotificationBell
                           onSelect={(notification) => {
@@ -1723,6 +1754,15 @@ export function PosTerminal({
         onClose={() => setShowOrdersPanel(false)}
         onSelectOrder={loadShopifyOrder}
       />
+
+      {role === "cashier" && defaultStoreId && (
+        <PosDailyTicketsModal
+          open={showDailyTickets}
+          onClose={() => setShowDailyTickets(false)}
+          storeId={defaultStoreId}
+          storeName={storeName}
+        />
+      )}
     </>
   );
 }

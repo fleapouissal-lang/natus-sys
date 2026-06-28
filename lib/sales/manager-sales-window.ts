@@ -13,6 +13,9 @@ export function getManagerSalesHistoryDateBounds(now = new Date()): {
   return { minDate: toLocalDateKey(min), maxDate };
 }
 
+/** Même fenêtre que le gérant — caissier : aujourd'hui + 3 jours précédents. */
+export const getCashierSalesHistoryDateBounds = getManagerSalesHistoryDateBounds;
+
 export function clampDateToManagerSalesWindow(
   value: string,
   bounds: { minDate: string; maxDate: string }
@@ -22,3 +25,5 @@ export function clampDateToManagerSalesWindow(
   if (value > bounds.maxDate) return bounds.maxDate;
   return value;
 }
+
+export const clampDateToCashierSalesWindow = clampDateToManagerSalesWindow;
