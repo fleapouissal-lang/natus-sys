@@ -248,6 +248,18 @@ export function PublicComplaintForm({ storesData }: Props) {
         </div>
       )}
 
+      {type !== "web_order" && (
+        <div>
+          <ImageUploadInput
+            name="photo"
+            label="Joindre une photo"
+            optional
+            onError={setPhotoError}
+          />
+          {photoError && <p className="text-sm text-danger">{photoError}</p>}
+        </div>
+      )}
+
       <label className="block text-sm font-medium text-foreground">
         Message
         <div className="relative mt-1.5">

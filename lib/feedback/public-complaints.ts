@@ -130,19 +130,30 @@ export async function submitPublicComplaint(input: {
     storeId = orderContext.storeId;
     shopifyOrderId = orderContext.shopifyOrderId;
 
+    // La photo reste obligatoire pour une réclamation de commande.
     if (!input.photo) {
       return { error: "Veuillez joindre une photo du problème" };
     }
-
-    const upload = await uploadComplaintPhoto(admin, input.photo, `order-${rawOrder}`);
-    if (upload.error || !upload.url) {
-      return { error: upload.error || "Échec du téléversement de la photo" };
-    }
-    photoUrl = upload.url;
   }
 
   if (input.type === "web_other") {
     storeId = null;
+  }
+
+  // Photo : obligatoire pour les commandes, optionnelle pour les autres types.
+  // Dès qu'une photo est jointe, on la téléverse et on la stocke afin qu'elle
+  // s'affiche dans le détail de la réclamation.
+  if (input.photo) {
+    const baseName =
+      input.type === "web_order" && orderNumber
+        ? `order-${orderNumber}`
+        : `${input.type}-${phone.replace(/\D/g, "")}`;
+
+    const upload = await uploadComplaintPhoto(admin, input.photo, baseName);
+    if (upload.error || !upload.url) {
+      return { error: upload.error || "Échec du téléversement de la photo" };
+    }
+    photoUrl = upload.url;
   }
 
   const { data, error } = await admin

@@ -23,6 +23,7 @@ import {
   Landmark,
   ArrowRightLeft,
   Factory,
+  PackagePlus,
 } from "lucide-react";
 import { getManagementBasePath } from "@/lib/permissions";
 import { getSettingsPath } from "@/lib/layout/settings-path";
@@ -45,6 +46,7 @@ export const personalCashierLinks: NavLinkItem[] = [
 export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 0 },
   { href: "/cashier/stock", label: "Stock", icon: Warehouse, mobileOrder: 1 },
+  { href: "/cashier/commander", label: "Commander", icon: PackagePlus, mobileOrder: 2 },
   { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 2 },
   {
     href: "/cashier/transfers/received",
@@ -70,9 +72,13 @@ export const cashierLinks: NavLinkItem[] = [
 
 export const livreurLinks: NavLinkItem[] = [
   { href: "/livreur/orders", label: "Livraisons", icon: Package, mobileOrder: 0 },
-  { href: "/livreur/transfers", label: "Transferts", icon: Boxes, mobileOrder: 1 },
-  { href: "/livreur/returns", label: "Retours", icon: RotateCcw, mobileOrder: 2 },
-  { href: "/livreur/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 3 },
+  {
+    href: "/livreur/history",
+    label: "Historique des livraisons",
+    icon: ClipboardList,
+    mobileOrder: 1,
+  },
+  { href: "/livreur/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 2 },
 ];
 
 function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavLinkItem[] {
@@ -341,6 +347,7 @@ function buildCashierNavSections(role: UserRole): NavSection[] {
       label: "Stock",
       links: [
         { href: "/cashier/stock", label: "Stock", icon: Warehouse },
+        { href: "/cashier/commander", label: "Commander", icon: PackagePlus },
         { href: "/cashier/transfers/received", label: "Stocks reçus", icon: Boxes },
         { href: "/cashier/transfers/sent", label: "Stocks envoyés", icon: ArrowRightLeft },
         { href: "/cashier/returns", label: "Annulations de stock", icon: RotateCcw },
@@ -423,8 +430,11 @@ function buildLivreurNavSections(role: UserRole): NavSection[] {
       label: "Livraisons",
       links: [
         { href: "/livreur/orders", label: "Livraisons", icon: Package },
-        { href: "/livreur/transfers", label: "Transferts", icon: Boxes },
-        { href: "/livreur/returns", label: "Retours", icon: RotateCcw },
+        {
+          href: "/livreur/history",
+          label: "Historique des livraisons",
+          icon: ClipboardList,
+        },
       ],
     },
     {

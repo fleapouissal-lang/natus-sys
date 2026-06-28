@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { getHubCityStaff, getHubStoreByCity, getHubStoresByCity, getHubAssignedStores } from "@/lib/hub";
 import { getHubDashboardStats } from "@/lib/hub/dashboard-stats";
 import { HubDashboardStats } from "@/components/hub/hub-dashboard-stats";
-import { HubDashboardAnalytics } from "@/components/hub/hub-dashboard-analytics";
+import { HubReportSwitcher } from "@/components/hub/hub-report-switcher";
 import { HubDashboardSummaryTables } from "@/components/hub/hub-dashboard-summary-tables";
 import { getStoresWithStats } from "@/lib/inventory";
 import { getActivityLog } from "@/lib/activity";
@@ -76,7 +76,16 @@ export default async function HubDashboardPage() {
 
       <HubDashboardStats stats={dashboardStats} />
 
-      <HubDashboardAnalytics stats={dashboardStats.analytics} />
+      <HubReportSwitcher
+        city={profile.city}
+        hubStoreName={hubStore?.name}
+        hubAnalytics={dashboardStats.analytics}
+        assignedStores={retailStores.map((store) => ({
+          id: store.id,
+          name: store.name,
+          city: store.city,
+        }))}
+      />
 
       <HubDashboardSummaryTables stats={dashboardStats} />
 

@@ -286,18 +286,28 @@ export function ShopifyOrdersManager({
         setMessage(result.error);
       } else {
         const nextStatus = resolveWorkflowStatusUpdate(status);
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.id === orderId
-              ? {
-                  ...o,
-                  workflow_status: nextStatus,
-                  financial_status:
-                    nextStatus === "paid" ? "paid" : o.financial_status,
-                }
-              : o
-          )
-        );
+        const livreurClosed =
+          livreurMode &&
+          (nextStatus === "delivered" ||
+            nextStatus === "paid" ||
+            nextStatus === "returned");
+        if (livreurClosed) {
+          // La commande livrée/clôturée quitte « Livraisons » pour l'historique.
+          setOrders((prev) => prev.filter((o) => o.id !== orderId));
+        } else {
+          setOrders((prev) =>
+            prev.map((o) =>
+              o.id === orderId
+                ? {
+                    ...o,
+                    workflow_status: nextStatus,
+                    financial_status:
+                      nextStatus === "paid" ? "paid" : o.financial_status,
+                  }
+                : o
+            )
+          );
+        }
       }
       setActiveId(null);
       router.refresh();
@@ -995,23 +1005,30 @@ export function ShopifyOrdersManager({
           onClose={() => setReturnNoteOrder(null)}
           onSaved={(note) => {
             const now = new Date().toISOString();
-            setOrders((prev) =>
-              prev.map((o) =>
-                o.id === returnNoteOrder.order.id
-                  ? {
-                      ...o,
-                      return_note: note,
-                      ...(returnNoteOrder.mode === "create"
-                        ? {
-                            workflow_status: "returned" as const,
-                            return_note_at: now,
-                            return_note_by: livreurProfileId ?? null,
-                          }
-                        : {}),
-                    }
-                  : o
-              )
-            );
+            if (livreurMode && returnNoteOrder.mode === "create") {
+              // Retour saisi par le livreur : la commande passe à l'historique.
+              setOrders((prev) =>
+                prev.filter((o) => o.id !== returnNoteOrder.order.id)
+              );
+            } else {
+              setOrders((prev) =>
+                prev.map((o) =>
+                  o.id === returnNoteOrder.order.id
+                    ? {
+                        ...o,
+                        return_note: note,
+                        ...(returnNoteOrder.mode === "create"
+                          ? {
+                              workflow_status: "returned" as const,
+                              return_note_at: now,
+                              return_note_by: livreurProfileId ?? null,
+                            }
+                          : {}),
+                      }
+                    : o
+                )
+              );
+            }
             router.refresh();
           }}
         />

@@ -10,6 +10,7 @@ import { getStoreProductSalesQuantities } from "@/lib/pos/product-sales-rank.ser
 import { listPosCategoryCards } from "@/lib/pos/pos-category-cards/queries";
 import { getLoyaltySettings } from "@/lib/loyalty/settings.server";
 import { getStorePosAccount } from "@/lib/pos/operator-session";
+import { getRestockBadgeCount } from "@/lib/restock/restock.server";
 import { Card } from "@/components/ui/card";
 
 export default async function PosPage({
@@ -72,6 +73,11 @@ export default async function PosPage({
   const loyaltySettings = await getLoyaltySettings();
   const posCategoryCards = await listPosCategoryCards();
 
+  const restockCount =
+    profile?.role === "cashier" && storeId
+      ? await getRestockBadgeCount(storeId)
+      : 0;
+
   const cashierName =
     profile?.full_name || profile?.email || "Caissier";
 
@@ -113,6 +119,7 @@ export default async function PosPage({
           productSalesQty={productSalesQty}
           posCategoryCards={posCategoryCards}
           openDayClosure={closureParam === "1"}
+          restockCount={restockCount}
         />
       </div>
     </div>

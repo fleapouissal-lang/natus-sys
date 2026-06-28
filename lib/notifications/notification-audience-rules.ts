@@ -1,8 +1,8 @@
 import type { NotificationScope } from "@/lib/notifications/notification-scope";
 
-/** Ruptures magasin : gérant (city) + directeur uniquement. */
+/** Ruptures magasin : caissier du magasin concerné + gérant (city) + directeur. */
 export function scopeReceivesRetailStockAlerts(scope: NotificationScope): boolean {
-  return scope.mode === "city" || scope.mode === "director";
+  return scope.mode === "store" || scope.mode === "city" || scope.mode === "director";
 }
 
 /** Ruptures dépôt : compte hub + directeur uniquement. */

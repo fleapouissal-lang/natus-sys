@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ScrollText,
+  PackagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -117,6 +118,7 @@ export function PosTerminal({
   productSalesQty = {},
   posCategoryCards = [],
   openDayClosure = false,
+  restockCount = 0,
 }: {
   products: Product[];
   role: UserRole;
@@ -134,6 +136,7 @@ export function PosTerminal({
   productSalesQty?: ProductSalesQtyMap;
   posCategoryCards?: import("@/lib/pos/pos-category-cards/types").PosCategoryCardConfig[];
   openDayClosure?: boolean;
+  restockCount?: number;
 }) {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>(initialCart ?? []);
@@ -1481,6 +1484,20 @@ export function PosTerminal({
                       storeName={storeName}
                       disabled={!defaultStoreId}
                     />
+                    {role === "cashier" && defaultStoreId && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="relative overflow-visible"
+                        onClick={() => router.push("/cashier/commander")}
+                        title="Commander du stock (ruptures)"
+                      >
+                        <PackagePlus className="h-4 w-4" />
+                        Commander
+                        {restockCount > 0 && <CountBadge count={restockCount} />}
+                      </Button>
+                    )}
                     {role === "cashier" && defaultStoreId && (
                       <div className="flex items-center gap-1.5">
                         <PosDailyTicketsButton onOpen={() => setShowDailyTickets(true)} />

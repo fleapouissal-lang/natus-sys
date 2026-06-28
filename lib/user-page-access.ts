@@ -292,7 +292,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
     case "notes":
       return "/cashier/notes";
     case "transfers":
-      if (role === "livreur") return "/livreur/transfers";
+      if (role === "livreur") return "/livreur/orders";
       if (role === "cashier") return "/cashier/transfers/received";
       if (role === "manager") return "/manager/stock-transfers";
       if (role === "hub") return "/hub/stock-transfers";
@@ -304,7 +304,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       if (role === "manager") return "/manager/stock-transfers/received";
       return null;
     case "returns":
-      return role === "livreur" ? "/livreur/returns" : "/cashier/returns";
+      return role === "livreur" ? "/livreur/orders" : "/cashier/returns";
     case "writeoffs":
       return base ? `${base}/writeoffs` : null;
     case "stock_access":

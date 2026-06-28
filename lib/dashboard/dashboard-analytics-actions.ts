@@ -8,6 +8,7 @@ import { buildDashboardAnalytics } from "@/lib/dashboard/compute-analytics";
 import { resolveAllowedDashboardStores } from "@/lib/dashboard/dashboard-store-access";
 import {
   resolveAnalyticsPeriods,
+  resolveCustomAnalyticsPeriods,
   type DashboardReportPeriod,
 } from "@/lib/dashboard/report-period";
 import type { DashboardAnalyticsPayload } from "@/lib/dashboard/analytics-types";
@@ -48,7 +49,9 @@ async function fetchSalesForRange(
 
 export async function fetchDashboardAnalytics(input: {
   storeIds: string[];
-  period: DashboardReportPeriod;
+  period: DashboardReportPeriod | "custom";
+  customFrom?: string;
+  customTo?: string;
   scopeLabel?: string;
 }): Promise<{ data: DashboardAnalyticsPayload } | { error: string }> {
   try {
@@ -60,7 +63,10 @@ export async function fetchDashboardAnalytics(input: {
 
     const storeIds = stores.map((s) => s.id);
     const storeMeta = new Map(stores.map((s) => [s.id, { name: s.name, city: s.city }]));
-    const { current, previous } = resolveAnalyticsPeriods(input.period);
+    const { current, previous } =
+      input.period === "custom"
+        ? resolveCustomAnalyticsPeriods(input.customFrom || "", input.customTo || "")
+        : resolveAnalyticsPeriods(input.period);
 
     const [currentSalesResult, previousSalesResult] = await Promise.all([
       fetchSalesForRange(storeIds, current.from, current.to),

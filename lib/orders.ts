@@ -114,7 +114,8 @@ export async function getShopifyOrders(
       dbQuery = dbQuery.eq("workflow_status", query.workflowStatus);
     }
   } else if (profile.role === "livreur") {
-    if (!profile.city) return [];
+    // Un livreur n'est pas restreint à une ville : il voit uniquement les
+    // commandes qui lui sont assignées, quelles que soient leurs villes.
     dbQuery = dbQuery.eq("assigned_livreur_id", profile.id);
     if (query.workflowStatus === "returned") {
       dbQuery = dbQuery.eq("workflow_status", "returned");

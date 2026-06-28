@@ -252,6 +252,10 @@ export function DashboardAnalyticsPanel({
   allScopeLabel,
   title = "Analytique avancée",
   className = "",
+  hidePeriodFilter = false,
+  controlledPeriod,
+  controlledCustomFrom = "",
+  controlledCustomTo = "",
 }: {
   storeIds: string[];
   scopeLabel: string;
@@ -259,12 +263,23 @@ export function DashboardAnalyticsPanel({
   allScopeLabel?: string;
   title?: string;
   className?: string;
+  /** Masque le sélecteur de période interne (piloté par un filtre global). */
+  hidePeriodFilter?: boolean;
+  /** Période imposée depuis l'extérieur (mode contrôlé). */
+  controlledPeriod?: DashboardReportPeriod | "custom";
+  controlledCustomFrom?: string;
+  controlledCustomTo?: string;
 }) {
-  const [period, setPeriod] = useState<DashboardReportPeriod>("week");
+  const [internalPeriod, setInternalPeriod] = useState<DashboardReportPeriod>("week");
   const [multiStore, setMultiStore] = useState(false);
   const [data, setData] = useState<DashboardAnalyticsPayload | null>(null);
   const [error, setError] = useState("");
   const [loading, startLoad] = useTransition();
+
+  const period: DashboardReportPeriod | "custom" =
+    hidePeriodFilter && controlledPeriod ? controlledPeriod : internalPeriod;
+  const customFrom = hidePeriodFilter ? controlledCustomFrom : "";
+  const customTo = hidePeriodFilter ? controlledCustomTo : "";
 
   const canToggleAllStores = Boolean(allStoreIds && allStoreIds.length > 1);
   const effectiveIds = useMemo(
@@ -286,6 +301,8 @@ export function DashboardAnalyticsPanel({
       const result = await fetchDashboardAnalytics({
         storeIds: effectiveIds,
         period,
+        customFrom,
+        customTo,
         scopeLabel: effectiveScope,
       });
       if ("error" in result) {
@@ -295,7 +312,7 @@ export function DashboardAnalyticsPanel({
       }
       setData(result.data);
     });
-  }, [idsKey, period, effectiveScope]);
+  }, [idsKey, period, customFrom, customTo, effectiveScope]);
 
   const cashShare =
     data && data.current.revenue > 0
@@ -347,19 +364,21 @@ export function DashboardAnalyticsPanel({
             </div>
           )}
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            {DASHBOARD_REPORT_PERIODS.map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setPeriod(id)}
-                disabled={loading}
-                className={natusFilterChipClass(period === id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          {!hidePeriodFilter && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {DASHBOARD_REPORT_PERIODS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setInternalPeriod(id)}
+                  disabled={loading}
+                  className={natusFilterChipClass(internalPeriod === id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </Card>
 

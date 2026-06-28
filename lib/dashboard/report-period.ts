@@ -105,6 +105,43 @@ export function resolveAnalyticsPeriods(
   }
 }
 
+function parseDateKey(key: string): Date | null {
+  if (!key) return null;
+  const [y, m, d] = key.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
+/**
+ * Plage personnalisée (date à date) pour l'analytique du tableau de bord.
+ * La période de comparaison est la fenêtre de même durée juste avant le début.
+ */
+export function resolveCustomAnalyticsPeriods(
+  fromKey: string,
+  toKey: string,
+  now = new Date()
+): {
+  current: { from: Date | null; to: Date; label: string };
+  previous: { from: Date | null; to: Date; label: string } | null;
+} {
+  const parsedFrom = parseDateKey(fromKey);
+  const parsedTo = parseDateKey(toKey);
+  const from = parsedFrom ? startOfDay(parsedFrom) : startOfDay(now);
+  let to = parsedTo ? endOfDay(parsedTo) : endOfDay(now);
+  if (to.getTime() < from.getTime()) to = endOfDay(from);
+
+  const label = fromKey && toKey ? `Du ${fromKey} au ${toKey}` : "Période personnalisée";
+
+  const durationMs = to.getTime() - from.getTime();
+  const prevTo = new Date(from.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - durationMs);
+
+  return {
+    current: { from, to, label },
+    previous: { from: prevFrom, to: prevTo, label: "Période précédente" },
+  };
+}
+
 export function reportFilenameSuffix(period: DashboardReportPeriod): string {
   const dateKey = toLocalDateKey(new Date());
   return `natus-rapport-${period}-${dateKey}.xlsx`;

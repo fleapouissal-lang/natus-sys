@@ -104,6 +104,16 @@ export function livreurActiveOrderStatuses(): ShopifyWorkflowStatus[] {
   return ["ready", "shipping", "delivered", "paid", "returned"];
 }
 
+/** Onglet « Livraisons » : commandes assignées encore à livrer. */
+export function livreurPendingDeliveryStatuses(): ShopifyWorkflowStatus[] {
+  return ["ready", "shipping"];
+}
+
+/** Onglet « Historique des livraisons » : commandes livrées / clôturées. */
+export function livreurDeliveryHistoryStatuses(): ShopifyWorkflowStatus[] {
+  return ["delivered", "paid", "returned"];
+}
+
 export function editableWorkflowStatuses(order: {
   payment_type: ShopifyPaymentType;
   financial_status: string | null;

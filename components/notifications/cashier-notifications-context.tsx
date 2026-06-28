@@ -76,8 +76,8 @@ const REFRESH_PATH_PREFIXES = [
   "/hub/stock-transfers",
   "/hub/orders",
   "/manager/hub-orders",
-  "/livreur/transfers",
   "/livreur/orders",
+  "/livreur/history",
 ];
 
 function shouldRefreshRoute(pathname: string): boolean {
@@ -791,6 +791,8 @@ export function CashierNotificationsProvider({
       if (cancelled) return;
 
       seedLastStockFromRows(rows);
+      // Le caissier voit les ruptures / stock faible déjà présents sur son magasin.
+      await syncStockAlertsFromRows(rows, "store");
       await bootstrapPendingTransfers();
     }
 
