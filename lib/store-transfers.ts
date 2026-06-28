@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { StoreStockTransfer } from "@/lib/types";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
@@ -99,6 +100,41 @@ const TRANSFER_SELECT = `
   )
 `;
 
+async function enrichStoreTransferNames(
+  transfers: StoreStockTransfer[]
+): Promise<StoreStockTransfer[]> {
+  const missingIds = new Set<string>();
+  for (const transfer of transfers) {
+    if (!transfer.from_store_name) missingIds.add(transfer.from_store_id);
+    if (!transfer.to_store_name) missingIds.add(transfer.to_store_id);
+  }
+  if (missingIds.size === 0) return transfers;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("stores")
+    .select("id, name, city")
+    .in("id", [...missingIds]);
+
+  if (error || !data?.length) return transfers;
+
+  const storeById = new Map(
+    data.map((store) => [store.id as string, store as { id: string; name: string; city: string }])
+  );
+
+  return transfers.map((transfer) => {
+    const fromStore = storeById.get(transfer.from_store_id);
+    const toStore = storeById.get(transfer.to_store_id);
+    return {
+      ...transfer,
+      from_store_name: transfer.from_store_name || fromStore?.name || null,
+      to_store_name: transfer.to_store_name || toStore?.name || null,
+      from_store_city: transfer.from_store_city || fromStore?.city || null,
+      to_store_city: transfer.to_store_city || toStore?.city || null,
+    };
+  });
+}
+
 export async function getStoreStockTransfers(options: {
   fromStoreId?: string;
   fromStoreIds?: string[];
@@ -134,7 +170,8 @@ export async function getStoreStockTransfers(options: {
     return [];
   }
 
-  return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+  const transfers = (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+  return enrichStoreTransferNames(transfers);
 }
 
 /** Commandes inter-magasins envoyées par des magasins sources (lecture dépôt). */
@@ -224,5 +261,6 @@ export async function getLivreurStoreStockTransfers(
     return [];
   }
 
-  return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+  const transfers = (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+  return enrichStoreTransferNames(transfers);
 }
