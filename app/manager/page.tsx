@@ -1,5 +1,5 @@
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter, filterStoresByProfile, isDirector } from "@/lib/permissions";
+import { getCityFilter, filterRetailStoresByProfile, filterStoresByProfile, isDirector } from "@/lib/permissions";
 import { getActiveStores, getStoresWithStats } from "@/lib/inventory";
 import { getDashboardStats, getStoreOverviewStats, getStoresSnapshots } from "@/lib/dashboard";
 import {
@@ -19,10 +19,17 @@ export default async function ManagerDashboard({
   const profile = await getCurrentProfile();
   const city = profile ? getCityFilter(profile) : null;
   const storesAll = await getActiveStores(city);
-  const stores = profile ? filterStoresByProfile(storesAll, profile) : storesAll;
+  const filterDashboardStores = profile
+    ? isDirector(profile)
+      ? filterStoresByProfile
+      : filterRetailStoresByProfile
+    : null;
+  const stores = filterDashboardStores
+    ? filterDashboardStores(storesAll, profile!)
+    : storesAll;
   const storesWithStatsAll = await getStoresWithStats(city);
-  const storesWithStatsFiltered = profile
-    ? filterStoresByProfile(storesWithStatsAll, profile)
+  const storesWithStatsFiltered = filterDashboardStores
+    ? filterDashboardStores(storesWithStatsAll, profile!)
     : storesWithStatsAll;
   const storeId = resolveSelectedStoreId(
     stores,
