@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getStoreById } from "@/lib/inventory";
+import { getPosClosureSettings } from "@/lib/sales/pos-closure-settings.server";
 
 export default async function ManagerLayout({
   children,
@@ -11,7 +12,10 @@ export default async function ManagerLayout({
   const profile = await requireRole(["manager"]);
   if (!profile) redirect("/cashier/pos");
 
-  const store = profile.store_id ? await getStoreById(profile.store_id) : null;
+  const [store, closureSettings] = await Promise.all([
+    profile.store_id ? getStoreById(profile.store_id) : Promise.resolve(null),
+    getPosClosureSettings(),
+  ]);
 
   return (
     <DashboardShell
@@ -24,6 +28,7 @@ export default async function ManagerLayout({
       storeName={store?.name}
       accessPreset={profile.access_preset}
       allowedPages={profile.allowed_pages}
+      requireManagerCode={closureSettings.requireManagerCode}
     >
       {children}
     </DashboardShell>

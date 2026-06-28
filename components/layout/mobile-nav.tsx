@@ -88,6 +88,7 @@ export function MobileBottomNav({
   accessPreset,
   allowedPages,
   hidden = false,
+  requireManagerCode = true,
 }: {
   role: UserRole;
   isStorePos?: boolean;
@@ -96,6 +97,7 @@ export function MobileBottomNav({
   accessPreset?: string | null;
   allowedPages?: string[] | null;
   hidden?: boolean;
+  requireManagerCode?: boolean;
 }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -144,6 +146,7 @@ export function MobileBottomNav({
     hasPosOperator,
     planningOnlyNav: isPersonalCashier || isStorePos,
     hideMobilePos: isMobilePosDesktopOnlyRole(role),
+    requireManagerCode,
   });
 
   if (

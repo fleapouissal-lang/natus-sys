@@ -214,6 +214,11 @@ export function resolveNavLinks(input: {
   hasPosOperator?: boolean;
   planningOnlyNav?: boolean;
   hideMobilePos?: boolean;
+  /**
+   * Configuration directeur : code gérant requis pour clôturer.
+   * Si false (clôture directe), la page « Clôtures caisse » du gérant est masquée.
+   */
+  requireManagerCode?: boolean;
 }): NavLinkItem[] {
   const basePath = getManagementBasePath(input.role);
   const pageProfile = {
@@ -251,6 +256,10 @@ export function resolveNavLinks(input: {
   }
 
   let links = basePath ? buildManagementLinks(basePath) : cashierLinks;
+
+  if (input.role === "manager" && input.requireManagerCode === false) {
+    links = links.filter((link) => link.href !== "/manager/pos-closures");
+  }
 
   if (input.hideMobilePos) {
     links = links.filter((link) => link.href !== "/cashier/pos");

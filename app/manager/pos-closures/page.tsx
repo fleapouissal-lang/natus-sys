@@ -12,11 +12,14 @@ export default async function ManagerPosClosuresPage() {
   const profile = await getCurrentProfile();
   if (!profile || !isManager(profile)) redirect("/login");
 
-  const [pendingResult, closureSettings] = await Promise.all([
-    listPendingStoreDayClosures(),
-    getPosClosureSettings(),
-  ]);
+  const closureSettings = await getPosClosureSettings();
 
+  // Clôture directe activée par le directeur : la page gérant n'a rien à valider.
+  if (!closureSettings.requireManagerCode) {
+    redirect("/manager/history?tab=closures");
+  }
+
+  const pendingResult = await listPendingStoreDayClosures();
   const pending = "closures" in pendingResult ? pendingResult.closures : [];
 
   return (
@@ -25,9 +28,8 @@ export default async function ManagerPosClosuresPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Clôtures caisse</h1>
           <p className="mt-1 text-muted">
-            {closureSettings.requireManagerCode
-              ? "Recevez le code de clôture (valide 2 h), transmettez-le au caissier pour l'impression, puis validez pour fermer le jour métier."
-              : "Clôture directe activée par le directeur — le caissier clôture sans code gérant."}
+            Recevez le code de clôture (valide 2 h), transmettez-le au caissier pour
+            l&apos;impression, puis validez pour fermer le jour métier.
           </p>
         </div>
         <Link
@@ -38,17 +40,7 @@ export default async function ManagerPosClosuresPage() {
         </Link>
       </div>
 
-      {closureSettings.requireManagerCode ? (
-        <StoreDayClosureValidationPanel initialClosures={pending} roleLabel="gérant" />
-      ) : (
-        <p className="rounded-lg border border-primary/20 bg-primary-light/30 px-4 py-3 text-sm text-foreground">
-          Aucune validation par code requise. Consultez l&apos;historique des rapports dans{" "}
-          <Link href="/manager/history?tab=closures" className="font-medium text-primary underline-offset-2 hover:underline">
-            Historique
-          </Link>
-          .
-        </p>
-      )}
+      <StoreDayClosureValidationPanel initialClosures={pending} roleLabel="gérant" />
     </div>
   );
 }

@@ -43,6 +43,7 @@ export function DashboardShell({
   posOperatorAvatarUrl,
   accessPreset,
   allowedPages,
+  requireManagerCode = true,
   children,
 }: {
   role: UserRole;
@@ -61,6 +62,7 @@ export function DashboardShell({
   posOperatorAvatarUrl?: string | null;
   accessPreset?: string | null;
   allowedPages?: string[] | null;
+  requireManagerCode?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -134,6 +136,7 @@ export function DashboardShell({
             posOperatorAvatarUrl={posOperatorAvatarUrl}
             accessPreset={accessPreset}
             allowedPages={allowedPages}
+            requireManagerCode={requireManagerCode}
           />
         </div>
 
@@ -189,6 +192,7 @@ export function DashboardShell({
           hasPosOperator={hasPosOperator}
           accessPreset={accessPreset}
           allowedPages={allowedPages}
+          requireManagerCode={requireManagerCode}
           hidden={isPos}
         />
       </div>

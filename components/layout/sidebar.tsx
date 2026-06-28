@@ -207,6 +207,7 @@ export function Sidebar({
   posOperatorAvatarUrl,
   accessPreset,
   allowedPages,
+  requireManagerCode = true,
 }: {
   role: UserRole;
   userName: string;
@@ -221,6 +222,7 @@ export function Sidebar({
   posOperatorAvatarUrl?: string | null;
   accessPreset?: string | null;
   allowedPages?: string[] | null;
+  requireManagerCode?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -238,6 +240,7 @@ export function Sidebar({
     isPersonalCashier,
     hasPosOperator,
     planningOnlyNav: false,
+    requireManagerCode,
   });
   const roleLabel = getRoleLabel(role);
   const operatorActive = isStorePos && hasPosOperator && Boolean(posOperatorName);
