@@ -205,6 +205,110 @@ export function getSettingsNavItem(role: UserRole): NavLinkItem {
   };
 }
 
+export type NavSection = {
+  id: string;
+  label: string;
+  links: NavLinkItem[];
+};
+
+/** Menu Directeur regroupé en sections logiques (sidebar desktop). */
+function buildDirectorNavSections(role: UserRole): NavSection[] {
+  return [
+    {
+      id: "tableau-de-bord",
+      label: "Tableau de bord",
+      links: [{ href: "/director", label: "Accueil", icon: LayoutDashboard }],
+    },
+    {
+      id: "ventes",
+      label: "Ventes",
+      links: [
+        { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
+        { href: "/director/pos-closures", label: "Clôtures caisse", icon: ScrollText },
+        { href: "/director/cheques", label: "Chèques", icon: Landmark },
+        { href: "/director/invoices", label: "Factures", icon: FileText },
+        { href: "/director/reclamations", label: "Réclamations", icon: AlertTriangle },
+      ],
+    },
+    {
+      id: "stock",
+      label: "Stock",
+      links: [
+        { href: "/director/stock", label: "Stock", icon: Warehouse },
+        { href: "/director/stock-transfers", label: "Stocks envoyés", icon: ArrowRightLeft },
+        { href: "/director/stock-transfers/received", label: "Stocks reçus", icon: Boxes },
+        { href: "/director/writeoffs", label: "Annulations de stock", icon: RotateCcw },
+        { href: "/director/stock-access", label: "Accès stock", icon: KeyRound },
+      ],
+    },
+    {
+      id: "catalogue",
+      label: "Catalogue",
+      links: [
+        { href: "/director/products", label: "Produits", icon: Package },
+        { href: "/director/categories", label: "Catégories des produits", icon: LayoutGrid },
+        { href: "/director/fabrication-products", label: "Fabrication", icon: Factory },
+      ],
+    },
+    {
+      id: "clients",
+      label: "Clients",
+      links: [
+        { href: "/director/clients", label: "Clients fidélité", icon: Gift },
+        { href: "/director/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness },
+      ],
+    },
+    {
+      id: "organisation",
+      label: "Organisation",
+      links: [
+        { href: "/director/planning", label: "Planning", icon: CalendarClock },
+        { href: "/director/stores", label: "Magasins & Dépôts", icon: Store },
+      ],
+    },
+    {
+      id: "administration",
+      label: "Administration",
+      links: [
+        { href: "/director/users", label: "Users", icon: Users },
+        { href: "/director/history", label: "Historique", icon: ClipboardList },
+        { href: "/director/actualites", label: "Actus", icon: Newspaper },
+        getSettingsNavItem(role),
+      ],
+    },
+  ];
+}
+
+/**
+ * Sections du menu Directeur (sidebar desktop), filtrées selon les pages
+ * autorisées. Retourne null pour les rôles non concernés.
+ */
+export function resolveDirectorNavSections(input: {
+  role: UserRole;
+  allowedPages?: string[] | null;
+  accessPreset?: string | null;
+}): NavSection[] | null {
+  if (input.role !== "directeur" && input.role !== "admin") return null;
+
+  const pageProfile = {
+    role: input.role,
+    allowed_pages: input.allowedPages ?? null,
+    access_preset: input.accessPreset ?? null,
+  };
+
+  const seen = new Set<string>();
+  return buildDirectorNavSections(input.role)
+    .map((section) => ({
+      ...section,
+      links: filterNavLinksByPages(section.links, pageProfile).filter((link) => {
+        if (seen.has(link.href)) return false;
+        seen.add(link.href);
+        return true;
+      }),
+    }))
+    .filter((section) => section.links.length > 0);
+}
+
 export function resolveNavLinks(input: {
   role: UserRole;
   allowedPages?: string[] | null;

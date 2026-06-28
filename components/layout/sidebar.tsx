@@ -7,7 +7,9 @@ import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
 import {
   isNavLinkActive,
   resolveNavLinks,
+  resolveDirectorNavSections,
 } from "@/lib/layout/nav-links";
+import type { NavLinkItem } from "@/lib/layout/nav-links";
 import {
   LogOut,
   PanelLeftClose,
@@ -242,6 +244,7 @@ export function Sidebar({
     planningOnlyNav: false,
     requireManagerCode,
   });
+  const navSections = resolveDirectorNavSections({ role, allowedPages, accessPreset });
   const roleLabel = getRoleLabel(role);
   const operatorActive = isStorePos && hasPosOperator && Boolean(posOperatorName);
   const profileName = operatorActive ? posOperatorName! : userName;
@@ -286,6 +289,51 @@ export function Sidebar({
 
   async function handleLogout() {
     await performClientLogout({ isStorePos });
+  }
+
+  function renderExpandedLink({ href, label, icon: Icon }: NavLinkItem) {
+    const isActive = isNavLinkActive(pathname, href);
+    return (
+      <li
+        key={href}
+        className={cn("natus-nav-item", isActive && "natus-nav-item-active")}
+      >
+        <Link
+          href={href}
+          onDoubleClick={(e) => e.stopPropagation()}
+          className={cn("natus-nav-link", isActive && "natus-nav-link-active")}
+        >
+          <Icon
+            className={cn(
+              "h-5 w-5 shrink-0",
+              isActive ? "text-primary" : "text-black"
+            )}
+          />
+          <span>{label}</span>
+        </Link>
+      </li>
+    );
+  }
+
+  function renderCollapsedLink({ href, label, icon: Icon }: NavLinkItem) {
+    const isActive = isNavLinkActive(pathname, href);
+    return (
+      <li key={href} className="flex w-full justify-center">
+        <Link
+          href={href}
+          title={label}
+          onDoubleClick={(e) => e.stopPropagation()}
+          className={cn(
+            "flex h-10 w-10 items-center justify-center rounded-[10px] transition-colors",
+            isActive
+              ? "bg-white text-primary shadow-sm"
+              : "text-black hover:bg-white/40"
+          )}
+        >
+          <Icon className="h-5 w-5 shrink-0" />
+        </Link>
+      </li>
+    );
   }
 
   return (
@@ -339,55 +387,30 @@ export function Sidebar({
             : "natus-sidebar-nav scrollbar-natus"
         )}
       >
-        <ul className={cn("m-0 list-none p-0", collapsed && "flex flex-col items-center gap-1")}>
-          {links.map(({ href, label, icon: Icon }) => {
-            const isActive = isNavLinkActive(pathname, href);
-
-            if (collapsed) {
-              return (
-                <li key={href} className="flex w-full justify-center">
-                  <Link
-                    href={href}
-                    title={label}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-[10px] transition-colors",
-                      isActive
-                        ? "bg-white text-primary shadow-sm"
-                        : "text-black hover:bg-white/40"
-                    )}
-                  >
-                    <Icon className="h-5 w-5 shrink-0" />
-                  </Link>
-                </li>
-              );
-            }
-
-            return (
-              <li
-                key={href}
-                className={cn("natus-nav-item", isActive && "natus-nav-item-active")}
-              >
-                <Link
-                  href={href}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                  className={cn(
-                    "natus-nav-link",
-                    isActive && "natus-nav-link-active"
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      "h-5 w-5 shrink-0",
-                      isActive ? "text-primary" : "text-black"
-                    )}
-                  />
-                  <span>{label}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        {navSections ? (
+          collapsed ? (
+            <ul className="m-0 flex list-none flex-col items-center gap-1 p-0">
+              {navSections.flatMap((section) => section.links).map(renderCollapsedLink)}
+            </ul>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {navSections.map((section) => (
+                <div key={section.id}>
+                  <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-black/45">
+                    {section.label}
+                  </p>
+                  <ul className="m-0 list-none p-0">
+                    {section.links.map(renderExpandedLink)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )
+        ) : (
+          <ul className={cn("m-0 list-none p-0", collapsed && "flex flex-col items-center gap-1")}>
+            {(collapsed ? links.map(renderCollapsedLink) : links.map(renderExpandedLink))}
+          </ul>
+        )}
       </nav>
 
       <div
