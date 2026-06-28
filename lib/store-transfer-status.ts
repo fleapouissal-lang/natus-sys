@@ -4,7 +4,7 @@ const STATUS_LABELS: Record<StoreStockTransferStatus, string> = {
   en_cours: "En cours",
   pret: "Prête",
   en_livraison: "En livraison",
-  livre: "Livré — à valider",
+  livre: "Livré",
   received: "Reçu",
 };
 
@@ -32,15 +32,15 @@ export function storeTransferStatusVariant(
 export function storeTransferSourceHint(status: StoreStockTransferStatus): string {
   switch (status) {
     case "en_cours":
-      return "À préparer au magasin source";
+      return "Commande confirmée — stock déduit au magasin source";
     case "pret":
       return "Prête — assigner un livreur puis remettre le colis";
     case "en_livraison":
-      return "Colis remis au livreur — stock déduit au magasin source";
+      return "Colis remis au livreur — en route vers la destination";
     case "livre":
-      return "Livré — en attente de validation destination";
+      return "Livré — stock crédité à destination";
     case "received":
-      return "Transfert terminé";
+      return "Réception validée — transfert terminé";
     default:
       return "";
   }
@@ -49,15 +49,15 @@ export function storeTransferSourceHint(status: StoreStockTransferStatus): strin
 export function storeTransferDestinationHint(status: StoreStockTransferStatus): string {
   switch (status) {
     case "en_cours":
-      return "Commande en préparation";
+      return "Commande confirmée — stock source déduit, en préparation";
     case "pret":
       return "En attente d'expédition depuis le magasin source";
     case "en_livraison":
       return "En route — le livreur marquera livré à destination";
     case "livre":
-      return "Valider la réception pour créditer le stock";
+      return "Livré — stock crédité, validation réception possible";
     case "received":
-      return "Stock crédité au magasin";
+      return "Réception validée — transfert terminé";
     default:
       return "";
   }

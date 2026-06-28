@@ -16,7 +16,7 @@ import {
   getDirectorHubStockTransfers,
 } from "@/lib/hub-transfers";
 import {
-  filterInterStoreOutgoingTransfers,
+  filterInterStoreIncomingTransfers,
   getDirectorStoreStockTransfers,
 } from "@/lib/store-transfers";
 import { DirectorReceivedOrdersTabs } from "@/components/stock/director-received-orders-tabs";
@@ -38,7 +38,7 @@ export default async function DirectorStockTransfersReceivedPage() {
   ]);
 
   const interStoreTransfers = filterDirectorReceivedStoreTransfers(
-    filterInterStoreOutgoingTransfers(storeTransfers, retailStoreIds)
+    filterInterStoreIncomingTransfers(storeTransfers, retailStoreIds)
   );
   const hubHubTransfers = filterDirectorReceivedHubTransfers(
     filterHubToHubTransfers(hubTransfers)
@@ -54,7 +54,7 @@ export default async function DirectorStockTransfersReceivedPage() {
           Stocks reçus
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Transferts livrés ou réception validée — magasins et dépôts hub
+          Transferts entrants dès la création — magasins et dépôts hub
         </p>
       </div>
 

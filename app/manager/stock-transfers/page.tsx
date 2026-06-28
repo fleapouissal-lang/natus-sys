@@ -13,6 +13,7 @@ import {
 import { resolveSelectedStoreId, getProfileLockedStoreId } from "@/lib/management-store";
 import { getManagerOutgoingHubTransfers } from "@/lib/hub-transfers";
 import { getManagerStoreStockTransfers } from "@/lib/store-transfers";
+import { filterSentHubTransfers } from "@/lib/director-transfer-filters";
 import { ManagerSentOrdersTabs } from "@/components/stock/manager-sent-orders-tabs";
 import type { Store } from "@/lib/types";
 
@@ -120,7 +121,7 @@ export default async function ManagerStockTransfersPage({
           toHubStoreId={toHubStoreId}
           initialDestination={initialDestination}
           storeTransfers={storeTransfers}
-          hubOutgoingTransfers={hubOutgoingTransfers}
+          hubOutgoingTransfers={filterSentHubTransfers(hubOutgoingTransfers)}
           managedStoreIds={managedStoreIds}
           livreurs={livreurs}
         />

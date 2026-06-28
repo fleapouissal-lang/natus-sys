@@ -126,6 +126,7 @@ function ManagerSentOrdersTabsInner({
           perspective="outgoing"
           managedStoreIds={managedStoreIds}
           transfers={storeTransfers}
+          actionMode="none"
           livreurs={livreurs}
           emptyMessage="Aucune commande envoyée vers un autre magasin"
         />
@@ -135,8 +136,7 @@ function ManagerSentOrdersTabsInner({
         <HubTransfersList
           title="Commandes envoyées vers un dépôt"
           transfers={hubOutgoingTransfers}
-          allowManage
-          manageAsStoreSource
+          readOnly
           showOrigin
           showProductImages
           livreurs={livreurs}

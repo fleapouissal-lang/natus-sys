@@ -162,6 +162,20 @@ export function filterInterStoreOutgoingTransfers(
   );
 }
 
+/** Transferts inter-magasins reçus par les magasins retail du périmètre. */
+export function filterInterStoreIncomingTransfers(
+  transfers: StoreStockTransfer[],
+  retailStoreIds: string[]
+): StoreStockTransfer[] {
+  const ids = new Set(retailStoreIds);
+  return transfers.filter(
+    (transfer) =>
+      ids.has(transfer.to_store_id) &&
+      ids.has(transfer.from_store_id) &&
+      transfer.from_store_id !== transfer.to_store_id
+  );
+}
+
 export async function getManagerStoreStockTransfers(
   storeIds: string[]
 ): Promise<StoreStockTransfer[]> {
@@ -174,6 +188,22 @@ export async function getCashierStoreStockTransfers(
 ): Promise<StoreStockTransfer[]> {
   if (!storeId) return [];
   return getStoreStockTransfers({ storeIds: [storeId], limit: 100 });
+}
+
+/** Transferts inter-magasins envoyés depuis le magasin caissier. */
+export async function getCashierOutgoingStoreTransfers(
+  storeId: string
+): Promise<StoreStockTransfer[]> {
+  if (!storeId) return [];
+  return getStoreStockTransfers({ fromStoreId: storeId, limit: 100 });
+}
+
+/** Transferts inter-magasins reçus par le magasin caissier. */
+export async function getCashierIncomingStoreTransfers(
+  storeId: string
+): Promise<StoreStockTransfer[]> {
+  if (!storeId) return [];
+  return getStoreStockTransfers({ toStoreId: storeId, limit: 100 });
 }
 
 export async function getLivreurStoreStockTransfers(

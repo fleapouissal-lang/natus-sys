@@ -1,41 +1,57 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { getStoreById } from "@/lib/inventory";
 import { getHubCityLivreurs } from "@/lib/hub";
-import { getCashierStoreStockTransfers } from "@/lib/store-transfers";
-import { StoreTransfersList } from "@/components/stock/store-transfers-list";
+import {
+  filterCashierOutgoingInterStore,
+  filterCashierOutgoingStoreToHub,
+} from "@/lib/cashier-transfer-filters";
+import { filterSentHubTransfers } from "@/lib/director-transfer-filters";
+import {
+  getCashierOutgoingStoreToHubTransfers,
+} from "@/lib/hub-transfers";
+import { getCashierOutgoingStoreTransfers } from "@/lib/store-transfers";
+import { CashierSentOrdersTabs } from "@/components/stock/cashier-sent-orders-tabs";
 
 export default async function CashierTransfersSentPage() {
   const profile = await requireRole(["cashier"]);
   if (!profile?.store_id) redirect("/login");
 
-  const store = await getStoreById(profile.store_id);
+  const storeId = profile.store_id;
+  const store = await getStoreById(storeId);
   const city = store?.city || profile.city;
-  const [transfers, livreurs] = await Promise.all([
-    getCashierStoreStockTransfers(profile.store_id),
+
+  const [storeTransfers, hubTransfers, livreurs] = await Promise.all([
+    getCashierOutgoingStoreTransfers(storeId),
+    getCashierOutgoingStoreToHubTransfers(storeId),
     city ? getHubCityLivreurs(city) : Promise.resolve([]),
   ]);
+
+  const interStoreTransfers = filterCashierOutgoingInterStore(storeTransfers, storeId);
+  const storeToHubTransfers = filterSentHubTransfers(
+    filterCashierOutgoingStoreToHub(hubTransfers, storeId)
+  );
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
         <h1 className="font-heading text-2xl font-bold tracking-tight text-primary-dark">
-          Commandes envoyées
+          Stocks envoyés
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Préparer, assigner un livreur et remettre le colis — {store?.name || "votre magasin"}
+          Transferts sortants depuis {store?.name || "votre magasin"} — préparation et expédition
         </p>
       </div>
 
-      <StoreTransfersList
-        title="Commandes envoyées (magasin source)"
-        perspective="outgoing"
-        managedStoreIds={[profile.store_id]}
-        transfers={transfers}
-        livreurs={livreurs}
-        actionMode="full"
-        emptyMessage="Aucune commande envoyée depuis votre magasin"
-      />
+      <Suspense fallback={null}>
+        <CashierSentOrdersTabs
+          storeId={storeId}
+          interStoreTransfers={interStoreTransfers}
+          storeToHubTransfers={storeToHubTransfers}
+          livreurs={livreurs}
+        />
+      </Suspense>
     </div>
   );
 }

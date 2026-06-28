@@ -1,7 +1,7 @@
 import { getCurrentProfile } from "@/lib/auth";
 import { getActiveStores } from "@/lib/inventory";
 import { filterRetailStoresByProfile, getCityFilter } from "@/lib/permissions";
-import { getManagerHubStockTransfers } from "@/lib/hub-transfers";
+import { getManagerIncomingHubToStoreTransfers } from "@/lib/hub-transfers";
 import { getManagerStoreStockTransfers } from "@/lib/store-transfers";
 import { resolveSelectedStoreId } from "@/lib/management-store";
 import { ManagerReceivedOrdersTabs } from "@/components/stock/manager-received-orders-tabs";
@@ -23,7 +23,7 @@ export default async function ManagerStockTransfersReceivedPage({
   const storeIds = storeId ? [storeId] : stores.map((store) => store.id);
 
   const [hubTransfers, storeTransfers] = await Promise.all([
-    getManagerHubStockTransfers(storeIds),
+    getManagerIncomingHubToStoreTransfers(storeIds),
     getManagerStoreStockTransfers(storeIds),
   ]);
 
@@ -40,7 +40,7 @@ export default async function ManagerStockTransfersReceivedPage({
           Commandes reçues
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Réceptions dépôt hub et transferts inter-magasins — {scopeLabel}
+          Transferts entrants dès la création — réceptions dépôt hub et transferts inter-magasins — {scopeLabel}
         </p>
       </div>
 

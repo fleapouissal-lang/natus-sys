@@ -118,12 +118,8 @@ export function HubTransfersList({
           <thead>
             <tr className="border-b border-border bg-primary-light/30">
               <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
-              {showOrigin && (
-                <th className="px-6 py-3 text-left font-medium text-muted">Origine</th>
-              )}
-              <th className="px-6 py-3 text-left font-medium text-muted">
-                {showOrigin ? "Destination" : "Destination"}
-              </th>
+              <th className="px-6 py-3 text-left font-medium text-muted">Source</th>
+              <th className="px-6 py-3 text-left font-medium text-muted">Destination</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Produits</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
               <th className="px-6 py-3 text-right font-medium text-muted">Unités</th>
@@ -149,14 +145,12 @@ export function HubTransfersList({
                 <td className="px-6 py-4 whitespace-nowrap">
                   {formatDate(transfer.sent_at)}
                 </td>
-                {showOrigin && (
-                  <td className="px-6 py-4">
-                    <p className="font-medium">{transfer.from_store_name || "—"}</p>
-                    {isStoreToDepot && transfer.from_store_city && (
-                      <p className="text-xs text-muted">{transfer.from_store_city}</p>
-                    )}
-                  </td>
-                )}
+                <td className="px-6 py-4">
+                  <p className="font-medium">{transfer.from_store_name || "—"}</p>
+                  {isStoreToDepot && transfer.from_store_city && (
+                    <p className="text-xs text-muted">{transfer.from_store_city}</p>
+                  )}
+                </td>
                 <td className="px-6 py-4">
                   <p className="font-medium">{transfer.to_store_name || "—"}</p>
                   <p className="text-xs text-muted">{hubTransferDirectionLabel(transfer)}</p>

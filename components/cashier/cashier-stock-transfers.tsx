@@ -62,7 +62,7 @@ function TransferProductsTable({
       const inStore = storeStockByProductId[item.product_id] ?? 0;
       acc.inStore += inStore;
       acc.received += item.quantity;
-      acc.total += inStore + (canValidate ? item.quantity : 0);
+      acc.total += inStore;
       return acc;
     },
     { inStore: 0, received: 0, total: 0 }
@@ -76,10 +76,10 @@ function TransferProductsTable({
             <th className="px-4 py-3 text-left font-medium text-muted">Produit</th>
             <th className="px-4 py-3 text-right font-medium text-muted">En magasin</th>
             <th className="px-4 py-3 text-right font-medium text-muted">
-              {canValidate ? "À recevoir" : "Commandé"}
+              {canValidate ? "Livré" : "Commandé"}
             </th>
             {canValidate && (
-              <th className="px-4 py-3 text-right font-medium text-muted">Total magasin</th>
+              <th className="px-4 py-3 text-right font-medium text-muted">Stock magasin</th>
             )}
           </tr>
         </thead>
@@ -88,7 +88,6 @@ function TransferProductsTable({
             const product = productsById[item.product_id];
             const inStore = storeStockByProductId[item.product_id] ?? 0;
             const ordered = item.quantity;
-            const totalInStore = inStore + ordered;
 
             return (
               <tr key={item.id} className="border-b border-border last:border-b-0">
@@ -103,11 +102,10 @@ function TransferProductsTable({
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-muted">{inStore}</td>
                 <td className="px-4 py-3 text-right tabular-nums font-semibold text-primary">
-                  {canValidate ? "+" : ""}
                   {ordered}
                 </td>
                 {canValidate && (
-                  <td className="px-4 py-3 text-right tabular-nums font-bold">{totalInStore}</td>
+                  <td className="px-4 py-3 text-right tabular-nums font-bold">{inStore}</td>
                 )}
               </tr>
             );
@@ -121,7 +119,7 @@ function TransferProductsTable({
                 {transferTotals.inStore}
               </td>
               <td className="px-4 py-3 text-right tabular-nums text-primary">
-                +{transferTotals.received}
+                {transferTotals.received}
               </td>
               <td className="px-4 py-3 text-right tabular-nums">{transferTotals.total}</td>
             </tr>
@@ -175,7 +173,7 @@ export function CashierStockTransfers({
       return;
     }
 
-    setSuccess("Réception validée — le stock magasin a été mis à jour");
+    setSuccess("Réception validée — transfert clôturé");
     setDetailTransfer(null);
     router.refresh();
   }
@@ -217,7 +215,8 @@ export function CashierStockTransfers({
             <thead>
               <tr className="border-y border-border bg-primary-light/50">
                 <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
-                <th className="px-6 py-3 text-left font-medium text-muted">Origine</th>
+                <th className="px-6 py-3 text-left font-medium text-muted">Source</th>
+                <th className="px-6 py-3 text-left font-medium text-muted">Destination</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">Produits</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">Unités</th>
@@ -227,7 +226,7 @@ export function CashierStockTransfers({
             <tbody>
               {paginatedTransfers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted">
+                  <td colSpan={7} className="px-6 py-12 text-center text-muted">
                     Aucune commande dépôt en cours
                   </td>
                 </tr>
@@ -246,17 +245,20 @@ export function CashierStockTransfers({
                             {transfer.from_store_name || "Entrepôt hub"}
                           </span>
                         </div>
-                        {transfer.assigned_livreur_name && (
-                          <p className="mt-1 text-xs text-muted">
-                            Livreur : {transfer.assigned_livreur_name}
-                          </p>
-                        )}
+                      </td>
+                      <td className="px-6 py-4 font-medium">
+                        {transfer.to_store_name || storeName}
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant={hubTransferStatusVariant(transfer.status)}>
                           {hubTransferStatusLabel(transfer.status)}
                         </Badge>
                         {statusHint && <p className="mt-1 text-xs text-muted">{statusHint}</p>}
+                        {transfer.assigned_livreur_name && (
+                          <p className="mt-1 text-xs text-muted">
+                            Livreur : {transfer.assigned_livreur_name}
+                          </p>
+                        )}
                         {transfer.notes && (
                           <p className="mt-1 text-xs text-muted line-clamp-2">{transfer.notes}</p>
                         )}

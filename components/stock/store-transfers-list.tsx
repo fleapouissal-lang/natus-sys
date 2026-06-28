@@ -54,12 +54,13 @@ export function StoreTransfersList({
 
   const filtered = transfers.filter((transfer) => {
     if (perspective === "outgoing") {
-      return managedStoreIds.includes(transfer.from_store_id);
+      if (!managedStoreIds.includes(transfer.from_store_id)) return false;
+      return transfer.status !== "received";
     }
     if (perspective === "incoming") {
       return managedStoreIds.includes(transfer.to_store_id);
     }
-    return true;
+    return transfer.status !== "received";
   });
 
   const {

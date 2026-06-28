@@ -4,7 +4,7 @@ const STATUS_LABELS: Record<HubStockTransferStatus, string> = {
   en_cours: "En cours",
   pret: "Prête",
   en_livraison: "En livraison",
-  livre: "Livré — à valider",
+  livre: "Livré",
   sent: "Envoyé",
   received: "Reçu",
 };
@@ -48,19 +48,27 @@ export function hubTransferVisibleAtStore(status: HubStockTransferStatus): boole
 }
 
 export function hubTransferDepotStockReserved(status: HubStockTransferStatus): boolean {
-  return status === "en_cours" || status === "pret";
+  return (
+    status === "en_cours" ||
+    status === "pret" ||
+    status === "en_livraison" ||
+    status === "livre" ||
+    status === "sent"
+  );
 }
 
 export function hubTransferStoreStatusHint(status: HubStockTransferStatus): string {
   switch (status) {
     case "en_cours":
-      return "Commande en préparation au dépôt";
+      return "Commande confirmée — stock déduit à la source";
     case "pret":
       return "Commande prête — en attente du livreur";
     case "en_livraison":
-      return "En route depuis le dépôt";
+      return "En route depuis la source";
     case "livre":
-      return "Livré par le livreur — validation caissier requise";
+      return "Livré — stock crédité à destination";
+    case "received":
+      return "Réception validée — transfert terminé";
     default:
       return "";
   }

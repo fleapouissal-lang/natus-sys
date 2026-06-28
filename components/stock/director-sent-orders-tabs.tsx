@@ -139,6 +139,7 @@ function DirectorSentOrdersTabsInner({
           perspective="all"
           managedStoreIds={retailStoreIds}
           transfers={interStoreTransfers}
+          actionMode="none"
           livreurs={livreurs}
           emptyMessage="Aucun transfert magasin → magasin en cours"
         />
@@ -148,8 +149,7 @@ function DirectorSentOrdersTabsInner({
         <HubTransfersList
           title="Transferts entre Hubs"
           transfers={hubHubTransfers}
-          allowManage
-          allowRepair
+          readOnly
           showOrigin
           showProductImages
           livreurs={livreurs}
@@ -161,9 +161,7 @@ function DirectorSentOrdersTabsInner({
         <HubTransfersList
           title="Transferts Hub ↔ Magasin"
           transfers={hubStoreMixedTransfers}
-          allowManage
-          manageAsStoreSource
-          allowRepair
+          readOnly
           showOrigin
           showProductImages
           livreurs={livreurs}

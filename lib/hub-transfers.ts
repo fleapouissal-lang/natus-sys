@@ -154,6 +154,22 @@ export async function getCashierPendingTransfers(storeId: string): Promise<HubSt
   return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
 }
 
+/** Transferts magasin → hub envoyés par le magasin caissier. */
+export async function getCashierOutgoingStoreToHubTransfers(
+  storeId: string
+): Promise<HubStockTransfer[]> {
+  if (!storeId) return [];
+  return getHubStockTransfers({ fromStoreId: storeId, limit: 100 });
+}
+
+/** Transferts hub → magasin reçus par le magasin caissier. */
+export async function getCashierIncomingHubToStoreTransfers(
+  storeId: string
+): Promise<HubStockTransfer[]> {
+  if (!storeId) return [];
+  return getIncomingHubToStoreTransfers({ toStoreId: storeId });
+}
+
 export async function getLivreurHubTransfers(livreurId: string): Promise<HubStockTransfer[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -185,9 +201,16 @@ export async function getHubTransferById(transferId: string): Promise<HubStockTr
 }
 
 /** Commandes dépôt → magasins visibles par le gérant (lecture seule). */
-export async function getManagerHubStockTransfers(storeIds: string[]): Promise<HubStockTransfer[]> {
+export async function getManagerIncomingHubToStoreTransfers(
+  storeIds: string[]
+): Promise<HubStockTransfer[]> {
   if (storeIds.length === 0) return [];
-  return getHubStockTransfers({ toStoreIds: storeIds, limit: 100 });
+  return getIncomingHubToStoreTransfers({ toStoreIds: storeIds });
+}
+
+/** @deprecated Utiliser getManagerIncomingHubToStoreTransfers */
+export async function getManagerHubStockTransfers(storeIds: string[]): Promise<HubStockTransfer[]> {
+  return getManagerIncomingHubToStoreTransfers(storeIds);
 }
 
 async function getActiveHubStoreIds(): Promise<string[]> {
@@ -198,6 +221,52 @@ async function getActiveHubStoreIds(): Promise<string[]> {
     .eq("is_active", true)
     .eq("is_hub", true);
   return (data || []).map((row) => row.id as string);
+}
+
+/** Transferts hub → magasin retail (destination). */
+async function getIncomingHubToStoreTransfers(options: {
+  toStoreId?: string;
+  toStoreIds?: string[];
+  limit?: number;
+}): Promise<HubStockTransfer[]> {
+  const hubStoreIds = await getActiveHubStoreIds();
+  if (hubStoreIds.length === 0) return [];
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("hub_stock_transfers")
+    .select(TRANSFER_SELECT)
+    .in("from_store_id", hubStoreIds)
+    .order("sent_at", { ascending: false })
+    .limit(options.limit ?? 100);
+
+  if (options.toStoreId) {
+    query = query.eq("to_store_id", options.toStoreId);
+  } else if (options.toStoreIds?.length) {
+    query = query.in("to_store_id", options.toStoreIds);
+  } else {
+    return [];
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("getIncomingHubToStoreTransfers:", error.message);
+    return [];
+  }
+
+  const hubIdSet = new Set(hubStoreIds);
+  const transfers = (data || []).map((row) => {
+    const transfer = mapTransferRow(row as Record<string, unknown>);
+    return {
+      ...transfer,
+      from_store_is_hub: true,
+      to_store_is_hub: hubIdSet.has(transfer.to_store_id),
+      from_store_name: transfer.from_store_name || "Entrepôt hub",
+    };
+  });
+
+  return transfers.filter((transfer) => !hubIdSet.has(transfer.to_store_id));
 }
 
 /** Commandes magasin → dépôt envoyées par le gérant. */

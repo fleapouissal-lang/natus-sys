@@ -6,6 +6,7 @@ import {
   getHubOutgoingTransfersToHubs,
   getHubOutgoingTransfersToStores,
 } from "@/lib/hub-transfers";
+import { filterSentHubTransfers } from "@/lib/director-transfer-filters";
 import {
   getAllActiveTransferSites,
   getProductsWithStoreStockForTransfer,
@@ -109,8 +110,8 @@ export default async function HubStockTransfersSentPage({
           products={products}
           retailStores={retailStores}
           destinationHubStores={destinationHubStores}
-          outgoingToStores={outgoingToStores}
-          outgoingToHubs={outgoingToHubs}
+          outgoingToStores={filterSentHubTransfers(outgoingToStores)}
+          outgoingToHubs={filterSentHubTransfers(outgoingToHubs)}
           livreurs={livreurs}
           initialDestination={initialDestination}
           toStoreId={toStoreId}
