@@ -92,7 +92,7 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
   ],
   cashier: [
     "pos", "planning", "pos_closures", "actualites", "sales", "notes", "transfers",
-    "customers", "returns", "invoices", "cheques",
+    "customers", "returns", "invoices", "cheques", "stock",
   ],
   livreur: ["actualites", "orders", "transfers", "returns"],
   hub: [
@@ -133,20 +133,25 @@ const DIRECTOR_NAV_PRIORITY: UserPageKey[] = [
   "activity",
 ];
 
-/** Ordre sidebar gérant : magasin & stock → caisse → suivi → secondaire → historique */
+/**
+ * Ordre sidebar gérant par priorité :
+ * Accueil → Stock → Stocks envoyés → Stocks reçus → Planning → Clôtures →
+ * Factures → Chèques → Annulations → Réclamations → Actualités →
+ * Historique (forcé avant Paramètres).
+ */
 const MANAGER_NAV_PRIORITY: UserPageKey[] = [
-  "dashboard",
-  "stock",
-  "planning",
-  "transfers",
-  "hub_orders",
-  "pos_closures",
-  "cheques",
-  "invoices",
-  "writeoffs",
-  "reclamations",
-  "actualites",
-  "activity",
+  "dashboard",    // Accueil
+  "stock",        // Stock
+  "transfers",    // Stocks envoyés
+  "hub_orders",   // Stocks reçus
+  "planning",     // Planning
+  "pos_closures", // Clôtures de caisse
+  "invoices",     // Factures
+  "cheques",      // Chèques
+  "writeoffs",    // Annulations de stock
+  "reclamations", // Réclamations
+  "actualites",   // Actualités
+  "activity",     // Historique — replacé en pénultième via HISTORY_NAV_PRIORITY
 ];
 
 /** Ordre sidebar hub : stock & transferts → opérations → secondaire → historique */
@@ -161,20 +166,26 @@ const HUB_NAV_PRIORITY: UserPageKey[] = [
   "activity",
 ];
 
-/** Ordre sidebar caissier : caisse → stock → clients → secondaire → historique */
+/**
+ * Ordre sidebar caissier par priorité d'utilisation :
+ * Caisse → Stock → Stocks reçus → Stocks envoyés → Annulations → Factures →
+ * Clients fidélité → Clients Pro → Chèques → Horaires → Notes → Actualités →
+ * Historique (forcé avant Paramètres).
+ */
 const CASHIER_NAV_PRIORITY: UserPageKey[] = [
-  "pos",
-  "planning",
-  "hub_orders",
-  "transfers",
-  "notes",
-  "customers",
-  "returns",
-  "invoices",
-  "cheques",
+  "pos",          // Caisse
+  "stock",        // Stock
+  "hub_orders",   // Stocks reçus
+  "transfers",    // Stocks envoyés
+  "returns",      // Annulations de stock
+  "invoices",     // Factures
+  "customers",    // Clients fidélité puis Clients Pro (départage par ordre des liens)
+  "cheques",      // Chèques
+  "planning",     // Horaires
+  "notes",        // Notes
+  "actualites",   // Actualités
   "pos_closures",
-  "actualites",
-  "sales",
+  "sales",        // Historique — replacé en pénultième via HISTORY_NAV_PRIORITY
 ];
 
 /** Ordre sidebar livreur : livraisons → transferts → secondaire */
@@ -243,6 +254,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       if (role === "manager") return "/manager/history";
       return base ? `${base}/sales` : null;
     case "stock":
+      if (role === "cashier") return "/cashier/stock";
       return base === "/hub" ? "/hub/stock" : base ? `${base}/stock` : null;
     case "products":
       return base ? `${base}/products` : null;

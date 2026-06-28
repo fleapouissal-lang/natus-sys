@@ -136,7 +136,7 @@ export function Ticket({ data }: { data: SaleDocumentData }) {
         <TicketRule />
 
         {/* Totaux */}
-        <div className="space-y-0.5 text-[10px]">
+        <div className="natus-ticket-summary space-y-0.5 text-[10px]">
           <TicketRow label="Sous-total articles" value={formatCurrency(itemsSubtotal)} />
           {hasDiscounts ? (
             <>
@@ -180,7 +180,7 @@ export function Ticket({ data }: { data: SaleDocumentData }) {
 
         <TicketRule heavy />
 
-        <div className="flex items-center justify-between border-2 border-black px-2 py-2">
+        <div className="natus-ticket-total flex items-center justify-between border-2 border-black px-2 py-2">
           <span className="text-[10px] font-black uppercase tracking-wide">Total TTC</span>
           <span className="text-lg font-black tabular-nums leading-none">
             {formatCurrency(ttc)}
@@ -189,13 +189,15 @@ export function Ticket({ data }: { data: SaleDocumentData }) {
 
         <TicketRule heavy />
 
-        <p className="text-center text-[8px] font-semibold leading-relaxed">
-          {NATUS_INVOICE_COMPANY.legalMention}
-        </p>
-        <p className="mt-2 text-center text-[10px] font-black leading-snug">
-          Merci de votre confiance
-        </p>
-        <p className="text-center text-[9px] font-bold">{NATUS_INVOICE_COMPANY.website}</p>
+        <div className="natus-ticket-footer">
+          <p className="text-center text-[8px] font-semibold leading-relaxed">
+            {NATUS_INVOICE_COMPANY.legalMention}
+          </p>
+          <p className="mt-2 text-center text-[10px] font-black leading-snug">
+            Merci de votre confiance
+          </p>
+          <p className="text-center text-[9px] font-bold">{NATUS_INVOICE_COMPANY.website}</p>
+        </div>
       </div>
     </div>
   );

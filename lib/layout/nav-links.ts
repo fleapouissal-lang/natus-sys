@@ -45,27 +45,28 @@ export const personalCashierLinks: NavLinkItem[] = [
 /** Ordre de repli — le tri final est appliqué par sortNavLinksByPriority. */
 export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 0 },
-  { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 1 },
+  { href: "/cashier/stock", label: "Stock", icon: Warehouse, mobileOrder: 1 },
+  { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 2 },
   {
     href: "/cashier/transfers/received",
     label: "Stocks reçus",
     icon: Boxes,
-    mobileOrder: 2,
+    mobileOrder: 3,
   },
   {
     href: "/cashier/transfers/sent",
     label: "Stocks envoyés",
     icon: ArrowRightLeft,
-    mobileOrder: 3,
+    mobileOrder: 4,
   },
-  { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 4 },
-  { href: "/cashier/customers", label: "Clients fidélité", icon: Gift, mobileOrder: 5 },
-  { href: "/cashier/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness, mobileOrder: 6 },
-  { href: "/cashier/returns", label: "Annulations de stock", icon: RotateCcw, mobileOrder: 7 },
-  { href: "/cashier/invoices", label: "Factures", icon: FileText, mobileOrder: 8 },
-  { href: "/cashier/cheques", label: "Chèques", icon: Landmark, mobileOrder: 9 },
-  { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 10 },
-  { href: "/cashier/history", label: "Historique", icon: ClipboardList, mobileOrder: 11 },
+  { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 5 },
+  { href: "/cashier/customers", label: "Clients fidélité", icon: Gift, mobileOrder: 6 },
+  { href: "/cashier/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness, mobileOrder: 7 },
+  { href: "/cashier/returns", label: "Annulations de stock", icon: RotateCcw, mobileOrder: 8 },
+  { href: "/cashier/invoices", label: "Factures", icon: FileText, mobileOrder: 9 },
+  { href: "/cashier/cheques", label: "Chèques", icon: Landmark, mobileOrder: 10 },
+  { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 11 },
+  { href: "/cashier/history", label: "Historique", icon: ClipboardList, mobileOrder: 12 },
 ];
 
 export const livreurLinks: NavLinkItem[] = [
@@ -79,7 +80,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   if (basePath === "/hub") {
     return [
       { href: "/hub", label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
-      { href: "/hub/stock", label: "Stock", icon: Warehouse, mobileOrder: 1 },
+      { href: "/hub/stock", label: "Stock des produits", icon: Warehouse, mobileOrder: 1 },
       {
         href: "/hub/stock-transfers",
         label: "Stocks envoyés",
@@ -94,7 +95,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       },
       {
         href: "/hub/fabrication-products",
-        label: "Fabrication",
+        label: "Stock des fabrications",
         icon: Factory,
         mobileOrder: 4,
       },

@@ -12,11 +12,11 @@ export const A4_PAGE_CSS = `
   }
 `;
 
-/** Ticket thermique 80 mm — pagination automatique si contenu long. */
+/** Ticket thermique 80 mm — hauteur automatique selon le contenu. */
 export const TICKET_PAGE_CSS = `
   @page {
     size: 80mm auto;
-    margin: 2mm;
+    margin: 0;
   }
 `;
 
@@ -167,7 +167,7 @@ export const TICKET_PAGE_RULES_FOR_INJECT = `@media print {${TICKET_PAGE_CSS}
       width: 80mm !important;
       height: auto !important;
       min-height: 0 !important;
-      margin: 0 !important;
+      margin: 0 auto !important;
       padding: 0 !important;
       overflow: visible !important;
       background: #fff !important;

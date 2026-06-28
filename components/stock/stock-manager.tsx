@@ -55,7 +55,9 @@ export function StockManager({
     ? "/director"
     : pathname.startsWith("/hub")
       ? "/hub"
-      : "/manager";
+      : pathname.startsWith("/cashier")
+        ? "/cashier"
+        : "/manager";
   const [storeId, setStoreId] = useState(defaultStoreId);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [perProductTotals, setPerProductTotals] = useState<Record<string, string>>({});
@@ -342,7 +344,14 @@ export function StockManager({
 
       {!embedded && (
         <Card>
-          <CardHeader title="Magasin" description="Sélectionnez le magasin à gérer" />
+          <CardHeader
+            title="Magasin ou dépôt"
+            description={
+              canModifyStock
+                ? "Sélectionnez le magasin à gérer"
+                : "Sélectionnez un magasin ou un dépôt à consulter"
+            }
+          />
           <StoreSelect
             stores={stores}
             value={storeId}

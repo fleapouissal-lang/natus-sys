@@ -1833,6 +1833,19 @@ table.natus-print-table tfoot {
     display: none !important;
   }
 
+  /* Réimpression (tickets du jour / historique) : le ticket est rendu dans un
+     hôte hors-écran (left: -99999px). On le ramène en haut à gauche de la page
+     pour qu'il soit visible à l'impression. */
+  body[data-print-doc="ticket"] .natus-sale-ticket-print-host {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    margin: 0 auto !important;
+    overflow: visible !important;
+  }
+
   body[data-print-doc="ticket"] #ticket-print {
     position: static;
     width: 80mm;
@@ -1840,7 +1853,7 @@ table.natus-print-table tfoot {
     height: auto !important;
     min-height: 0 !important;
     margin: 0 auto;
-    padding: 2mm !important;
+    padding: 3mm 3.5mm !important;
     background: #fff !important;
     color: #000 !important;
     box-shadow: none !important;
@@ -1868,8 +1881,57 @@ table.natus-print-table tfoot {
     background: #fff !important;
   }
 
+  /* Bannière de table répétée : inutile sur un ticket thermique */
+  body[data-print-doc="ticket"] #ticket-print .natus-print-doc-banner {
+    display: none !important;
+  }
+
+  /* Tableau articles : colonnes stables, texte aligné, aucun débordement */
+  body[data-print-doc="ticket"] #ticket-print table.natus-print-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+
+  body[data-print-doc="ticket"] #ticket-print table.natus-print-table th,
+  body[data-print-doc="ticket"] #ticket-print table.natus-print-table td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    vertical-align: top;
+  }
+
+  body[data-print-doc="ticket"] #ticket-print table.natus-print-table th:nth-child(1),
+  body[data-print-doc="ticket"] #ticket-print table.natus-print-table td:nth-child(1) {
+    width: auto;
+    text-align: left;
+  }
+  body[data-print-doc="ticket"] #ticket-print table.natus-print-table th:nth-child(2),
+  body[data-print-doc="ticket"] #ticket-print table.natus-print-table td:nth-child(2) {
+    width: 11%;
+    text-align: center;
+  }
+  body[data-print-doc="ticket"] #ticket-print table.natus-print-table th:nth-child(3),
+  body[data-print-doc="ticket"] #ticket-print table.natus-print-table td:nth-child(3) {
+    width: 27%;
+    text-align: right;
+  }
+  body[data-print-doc="ticket"] #ticket-print table.natus-print-table th:nth-child(4),
+  body[data-print-doc="ticket"] #ticket-print table.natus-print-table td:nth-child(4) {
+    width: 28%;
+    text-align: right;
+  }
+
   body[data-print-doc="ticket"] #ticket-print thead tr,
   body[data-print-doc="ticket"] #ticket-print tbody tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Totaux, TVA, TTC et pied de page : blocs insécables */
+  body[data-print-doc="ticket"] #ticket-print .natus-ticket-summary,
+  body[data-print-doc="ticket"] #ticket-print .natus-ticket-total,
+  body[data-print-doc="ticket"] #ticket-print .natus-ticket-footer {
+    break-inside: avoid;
     page-break-inside: avoid;
   }
 
