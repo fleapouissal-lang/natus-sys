@@ -5,7 +5,10 @@ import Link from "next/link";
 import { Store, Warehouse } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { StoreTrackingPeriodFilter } from "@/components/dashboard/store-tracking-period-filter";
-import { DashboardAnalyticsPanel } from "@/components/dashboard/dashboard-analytics-panel";
+import {
+  DashboardStockPanel,
+  overviewRowsToStockStores,
+} from "@/components/dashboard/dashboard-stock-panel";
 import { StoreSnapshotsPanel } from "@/components/dashboard/store-snapshots-panel";
 import { toLocalDateKey } from "@/lib/utils";
 import type { Store as StoreType, StoreOverviewRow, StoreSnapshot } from "@/lib/types";
@@ -20,15 +23,21 @@ import {
 export function HubDashboardPanel({
   city,
   hubStoreName,
+  hubStoreId,
+  hubOverview,
   retailStores,
   storeSnapshots,
   overviewByStore,
+  storesWithStats = [],
 }: {
   city: string;
   hubStoreName?: string;
+  hubStoreId?: string;
+  hubOverview?: StoreOverviewRow | null;
   retailStores: StoreType[];
   storeSnapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
+  storesWithStats?: Array<{ id: string; productCount?: number }>;
 }) {
   const today = toLocalDateKey(new Date());
   const [selectedStoreId, setSelectedStoreId] = useState(retailStores[0]?.id ?? "");
@@ -57,6 +66,33 @@ export function HubDashboardPanel({
     () => scopedSnapshots.map((s) => filterStoreSnapshot(s, from, to)),
     [scopedSnapshots, from, to]
   );
+
+  const retailStockRows = useMemo(
+    () =>
+      overviewRowsToStockStores(
+        retailStores
+          .map((store) => overviewByStore[store.id])
+          .filter((row): row is StoreOverviewRow => Boolean(row)),
+        {
+          stockHref: (storeId) => `/hub/stock?store=${storeId}`,
+          storesWithStats,
+        }
+      ),
+    [retailStores, overviewByStore, storesWithStats]
+  );
+
+  const hubStockRow = useMemo(() => {
+    if (!hubStoreId || !hubOverview) return null;
+    return {
+      storeId: hubStoreId,
+      storeName: hubStoreName || hubOverview.storeName,
+      totalUnits: hubOverview.totalUnits,
+      lowStockCount: hubOverview.lowStockCount,
+      productCount: storesWithStats.find((s) => s.id === hubStoreId)?.productCount,
+      isHub: true,
+      stockHref: "/hub/hub-stock",
+    };
+  }, [hubStoreId, hubStoreName, hubOverview, storesWithStats]);
 
   return (
     <div className="space-y-6">
@@ -97,12 +133,17 @@ export function HubDashboardPanel({
         <Card className="py-12 text-center text-muted">Aucun magasin assigné au dépôt</Card>
       ) : (
         <>
-          <DashboardAnalyticsPanel
-            storeIds={selectedStoreId ? [selectedStoreId] : retailStores.map((s) => s.id)}
+          <DashboardStockPanel
             scopeLabel={selectedStoreLabel || allScopeLabel}
-            allStoreIds={retailStores.map((s) => s.id)}
-            allScopeLabel={allScopeLabel}
-            title="Performance réseau"
+            storeRows={
+              selectedStoreId
+                ? retailStockRows.filter((row) => row.storeId === selectedStoreId)
+                : retailStockRows
+            }
+            hubRow={selectedStoreId ? null : hubStockRow}
+            stockSnapshots={filteredSnapshots}
+            periodLabel={periodLabel}
+            title="Statistiques stock réseau"
           />
 
           <StoreTrackingPeriodFilter
@@ -119,6 +160,7 @@ export function HubDashboardPanel({
             snapshots={filteredSnapshots}
             overviewByStore={overviewByStore}
             periodLabel={periodLabel}
+            stockOnly
           />
         </>
       )}

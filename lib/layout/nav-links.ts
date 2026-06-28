@@ -23,6 +23,7 @@ import {
   KeyRound,
   Landmark,
   ArrowRightLeft,
+  Factory,
 } from "lucide-react";
 import { getManagementBasePath } from "@/lib/permissions";
 import { getSettingsPath } from "@/lib/layout/settings-path";
@@ -80,6 +81,12 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       { href: "/hub", label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
       { href: "/hub/stock", label: "Stock", icon: Warehouse, mobileOrder: 1 },
       { href: "/hub/hub-stock", label: "Entrepôt", icon: Boxes, mobileOrder: 2 },
+      {
+        href: "/hub/fabrication-products",
+        label: "Fabrication",
+        icon: Factory,
+        mobileOrder: 2.5,
+      },
       { href: "/hub/orders", label: "Commandes", icon: Package, mobileOrder: 3 },
       { href: "/hub/writeoffs", label: "Retours stock", icon: RotateCcw, mobileOrder: 4 },
       { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 5 },
@@ -140,6 +147,15 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       label: "Produits",
       icon: Package,
       mobileOrder: 5,
+    });
+  }
+
+  if (basePath === "/director") {
+    links.push({
+      href: "/director/fabrication-products",
+      label: "Fabrication",
+      icon: Factory,
+      mobileOrder: 5.5,
     });
   }
 

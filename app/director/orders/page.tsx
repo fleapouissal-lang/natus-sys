@@ -7,6 +7,7 @@ import { isDirector } from "@/lib/permissions";
 import { getActiveStores, getProductCatalog, getHubStore } from "@/lib/inventory";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getSelectedStore } from "@/lib/management-store";
+import { getOrderAssignmentLivreurs } from "@/lib/hub";
 import { CityStoreFilterBar } from "@/components/stores/city-store-filter-bar";
 import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
 import { ShopifySyncButton } from "@/components/orders/shopify-sync-button";
@@ -44,12 +45,18 @@ export default async function DirectorOrdersPage({
     ? getSelectedStore(retailStores, selectedStoreId)
     : undefined;
 
-  const orders = await getShopifyOrders(profile, {
-    city: selectedCity || null,
-    storeId: selectedStoreId || null,
-    excludeStoreId: hubStore?.id ?? null,
-  });
-  const products = await getProductCatalog();
+  const [orders, products, livreurs] = await Promise.all([
+    getShopifyOrders(profile, {
+      city: selectedCity || null,
+      storeId: selectedStoreId || null,
+      excludeStoreId: hubStore?.id ?? null,
+    }),
+    getProductCatalog(),
+    getOrderAssignmentLivreurs(profile, {
+      city: selectedCity || null,
+      storeId: selectedStoreId || null,
+    }),
+  ]);
 
   const scopeLabel = getOrdersScopeLabel(profile, {
     city: selectedCity || selectedStore?.city,
@@ -81,6 +88,8 @@ export default async function DirectorOrdersPage({
         scopeLabel={scopeLabel}
         editable
         products={products}
+        enableLivreurHandoff
+        livreurs={livreurs}
         enableOrderTransfer
         transferTargets={transferTargets}
         transferProfile={profile}

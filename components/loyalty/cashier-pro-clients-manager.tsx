@@ -138,7 +138,7 @@ export function CashierProClientsManager({
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant={isEntreprise ? "default" : "accent"}>
-                        {isEntreprise ? "Entreprise" : "Particulier"}
+                        {isEntreprise ? "Professionnel" : "Particulier"}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 font-mono">{customer.card_number}</td>
@@ -166,6 +166,16 @@ export function CashierProClientsManager({
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                         </Link>
+                        {customer.pro_client_type === "particulier" && (
+                          <Link
+                            href={`/carte/${customer.qr_token}?tab=commandes`}
+                            target="_blank"
+                            title="Voir les commandes"
+                            className="order-action-icon flex h-8 w-8 items-center justify-center border border-primary/30 bg-page text-primary hover:bg-primary-light"
+                          >
+                            <BriefcaseBusiness className="h-3.5 w-3.5" />
+                          </Link>
+                        )}
                       </div>
                     </td>
                   </tr>

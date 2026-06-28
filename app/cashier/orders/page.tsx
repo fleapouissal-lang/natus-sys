@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getStoreById, getProductCatalog, getOrderTransferTargets } from "@/lib/inventory";
+import { getOrderAssignmentLivreurs } from "@/lib/hub";
 import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
 
 export default async function CashierOrdersPage() {
@@ -18,9 +19,12 @@ export default async function CashierOrdersPage() {
   }
 
   const store = await getStoreById(profile.store_id);
-  const orders = await getShopifyOrders(profile);
-  const products = await getProductCatalog();
-  const transferTargets = await getOrderTransferTargets(profile.store_id);
+  const [orders, products, transferTargets, livreurs] = await Promise.all([
+    getShopifyOrders(profile),
+    getProductCatalog(),
+    getOrderTransferTargets(profile.store_id),
+    getOrderAssignmentLivreurs(profile),
+  ]);
   const scopeLabel = getOrdersScopeLabel(profile, { storeName: store?.name });
 
   return (
@@ -45,6 +49,7 @@ export default async function CashierOrdersPage() {
         products={products}
         defaultDateThisWeek
         enableLivreurHandoff
+        livreurs={livreurs}
         enableOrderTransfer
         transferTargets={transferTargets}
         transferProfile={profile}

@@ -35,7 +35,7 @@ import {
   formatWeekRangeLabel,
   getWeekDays,
 } from "@/lib/scheduling/week";
-import { isCashierOffOnDate } from "@/lib/scheduling/week-off-utils";
+import { isCashierOffOnDate, normalizePlanningDate } from "@/lib/scheduling/week-off-utils";
 import type { CashierWeekOff } from "@/lib/scheduling/week-off-utils";
 import {
   availableCashiersForShift,
@@ -112,7 +112,7 @@ export function CashierScheduleManager({
 
   const weekOffByCashier = useMemo(() => {
     const map = new Map<string, string>();
-    for (const off of weekOffs) map.set(off.cashier_id, off.off_date);
+    for (const off of weekOffs) map.set(off.cashier_id, normalizePlanningDate(off.off_date));
     return map;
   }, [weekOffs]);
 
@@ -249,7 +249,7 @@ export function CashierScheduleManager({
           <Button
             type="button"
             onClick={() => setWeekPlanOpen(true)}
-            disabled={!selectedStoreId || planningCashiers.length === 0}
+            disabled={!selectedStoreId || planningCashiers.length === 0 || pending}
           >
             <CalendarRange className="h-4 w-4" />
             Planifier la semaine

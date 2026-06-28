@@ -51,13 +51,13 @@ function TypeChoice({
     [
       {
         type: "entreprise",
-        label: "Entreprise",
-        description: "Raison sociale, ville, contact, email et adresse",
+        label: "Professionnel",
+        description: "Entreprise, responsable, ICE, RC, email et adresse",
         icon: BriefcaseBusiness,
       },
       {
         type: "particulier",
-        label: "Client normal",
+        label: "Particulier",
         description: "Nom complet, téléphone, email et adresse",
         icon: UserRound,
       },
@@ -81,10 +81,8 @@ function TypeChoice({
           >
             <div className="flex items-start gap-3">
               <div
-                className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                  active ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
-                )}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-primary"
+                style={{ backgroundColor: "#FAEAA1" }}
               >
                 <Icon className="h-5 w-5" />
               </div>
@@ -112,6 +110,9 @@ export function ProClientRegistrationForm({
   const [clientType, setClientType] = useState<ProClientType | null>(null);
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [responsibleName, setResponsibleName] = useState("");
+  const [companyIce, setCompanyIce] = useState("");
+  const [companyRc, setCompanyRc] = useState("");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
@@ -125,6 +126,9 @@ export function ProClientRegistrationForm({
     setClientType(null);
     setFullName("");
     setCompanyName("");
+    setResponsibleName("");
+    setCompanyIce("");
+    setCompanyRc("");
     setCity("");
     setAddress("");
     setPhone("");
@@ -135,7 +139,7 @@ export function ProClientRegistrationForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!clientType) {
-      setError("Choisissez entreprise ou client normal.");
+      setError("Choisissez professionnel ou particulier.");
       return;
     }
 
@@ -148,6 +152,9 @@ export function ProClientRegistrationForm({
         clientType,
         fullName: fullName.trim(),
         companyName: clientType === "entreprise" ? companyName : undefined,
+        responsibleName: clientType === "entreprise" ? responsibleName : undefined,
+        companyIce: clientType === "entreprise" ? companyIce : undefined,
+        companyRc: clientType === "entreprise" ? companyRc : undefined,
         city: clientType === "entreprise" ? city : undefined,
         address,
         email: email.trim(),
@@ -222,15 +229,27 @@ export function ProClientRegistrationForm({
               required
             />
             <Input
-              label="Ville"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
+              label="Nom du responsable"
+              value={responsibleName}
+              onChange={(e) => setResponsibleName(e.target.value)}
               required
             />
             <Input
-              label="Nom complet"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              label="ICE"
+              value={companyIce}
+              onChange={(e) => setCompanyIce(e.target.value)}
+              required
+            />
+            <Input
+              label="RC"
+              value={companyRc}
+              onChange={(e) => setCompanyRc(e.target.value)}
+              required
+            />
+            <Input
+              label="Ville"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
               required
             />
             <Input

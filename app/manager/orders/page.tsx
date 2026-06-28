@@ -6,6 +6,7 @@ import { getActiveStores, getProductCatalog, getHubStore } from "@/lib/inventory
 import { getCityFilter } from "@/lib/permissions";
 import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { getSelectedStore } from "@/lib/management-store";
+import { getOrderAssignmentLivreurs } from "@/lib/hub";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
 
@@ -36,10 +37,13 @@ export default async function ManagerOrdersPage({
     await autoRouteOrdersAtStore(admin, storeId);
   }
 
-  const orders = await getShopifyOrders(profile, {
-    storeId: storeId || null,
-  });
-  const products = await getProductCatalog();
+  const [orders, products, livreurs] = await Promise.all([
+    getShopifyOrders(profile, {
+      storeId: storeId || null,
+    }),
+    getProductCatalog(),
+    getOrderAssignmentLivreurs(profile, { city, storeId: storeId || null }),
+  ]);
 
   const scopeLabel = getOrdersScopeLabel(profile, {
     city: profile.city || selectedStore?.city || undefined,
@@ -64,6 +68,8 @@ export default async function ManagerOrdersPage({
         scopeLabel={scopeLabel}
         editable
         products={products}
+        enableLivreurHandoff
+        livreurs={livreurs}
         enableOrderTransfer
         transferTargets={transferTargets}
         transferProfile={profile}

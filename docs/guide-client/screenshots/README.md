@@ -1,6 +1,6 @@
 # Captures d'écran — Guide client
 
-Placez ici les images référencées dans [GUIDE_ROLES_CLIENT.md](./GUIDE_ROLES_CLIENT.md).
+Placez ici les images référencées dans [GUIDE_ROLES_CLIENT.md](./GUIDE_ROLES_CLIENT.md) et [GUIDE_FACTURES_CLOTURE.md](./GUIDE_FACTURES_CLOTURE.md).
 
 ## Fichiers attendus
 
@@ -22,5 +22,9 @@ Placez ici les images référencées dans [GUIDE_ROLES_CLIENT.md](./GUIDE_ROLES_
 | `13-client-carte-fidelite.png` | `/carte/[token]` | lien public |
 | `14-client-suivi-commande.png` | `/commande/[token]` | lien public |
 | `15-client-reclamation.png` | `/reclamation` | public |
+| `16-directeur-factures.png` | `/director/invoices` | directeur |
+| `17-directeur-clotures.png` | `/director/pos-closures` | directeur |
+| `18-directeur-categories.png` | `/director/categories` | directeur |
+| `19-caissier-cloture.png` | Clôture du jour (modal) | caissier |
 
 Mot de passe démo : `Natus2026!`

@@ -142,6 +142,9 @@ export interface LoyaltyCustomer {
   pro_client_active?: boolean;
   pro_client_type?: "entreprise" | "particulier" | null;
   company_name?: string | null;
+  responsible_name?: string | null;
+  company_ice?: string | null;
+  company_rc?: string | null;
   city?: string | null;
   address?: string | null;
   is_active?: boolean;
@@ -455,4 +458,17 @@ export interface ShopifyOrder {
   updated_at: string;
   stores?: Pick<Store, "name" | "city"> | null;
   transferred_from_store?: Pick<Store, "name" | "city"> | null;
+}
+
+export interface FabricationProduct {
+  id: string;
+  name: string;
+  product_code: string | null;
+  unit: string;
+  category: string | null;
+  description: string | null;
+  is_active: boolean;
+  stock: number;
+  created_at?: string;
+  updated_at?: string;
 }

@@ -7,6 +7,7 @@ import { getStoreOverviewStats, getStoresSnapshots } from "@/lib/dashboard";
 import { RecentActivityPanel } from "@/components/activity/recent-activity-panel";
 import { HubCashiersTable } from "@/components/hub/hub-cashiers-table";
 import { HubDashboardPanel } from "@/components/hub/hub-dashboard-panel";
+import type { StoreOverviewRow } from "@/lib/types";
 
 export default async function HubDashboardPage() {
   const profile = await requireRole(["hub"]);
@@ -33,6 +34,20 @@ export default async function HubDashboardPage() {
   ]);
 
   const overviewByStore = Object.fromEntries(storeOverview.map((row) => [row.storeId, row]));
+  const hubStats = hubStore ? storesWithStatsAll.find((s) => s.id === hubStore.id) : null;
+  const hubOverview: StoreOverviewRow | null = hubStats
+    ? {
+        storeId: hubStats.id,
+        storeName: hubStats.name,
+        todayRevenue: 0,
+        todaySales: 0,
+        weekRevenue: 0,
+        totalRevenue: 0,
+        totalSales: 0,
+        lowStockCount: hubStats.lowStockCount,
+        totalUnits: hubStats.totalUnits,
+      }
+    : null;
   const hubActivities = allActivities.filter((entry) => entry.actor_role === "hub");
 
   return (
@@ -41,16 +56,19 @@ export default async function HubDashboardPage() {
         <h1 className="text-2xl font-bold tracking-tight">{profile.full_name}</h1>
         <p className="mt-1 text-muted">
           Dépôt {profile.city}
-          {hubStore ? ` · ${hubStore.name}` : ""}
+          {hubStore ? ` · ${hubStore.name}` : ""} — stock des magasins assignés
         </p>
       </div>
 
       <HubDashboardPanel
         city={profile.city}
         hubStoreName={hubStore?.name}
+        hubStoreId={hubStore?.id}
+        hubOverview={hubOverview}
         retailStores={retailStores}
         storeSnapshots={storeSnapshots}
         overviewByStore={overviewByStore}
+        storesWithStats={storesWithStatsAll}
       />
 
       <RecentActivityPanel

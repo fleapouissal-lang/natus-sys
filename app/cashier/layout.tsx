@@ -14,12 +14,12 @@ export default async function CashierLayout({
   if (!profile) redirect("/login");
 
   const supabase = await createClient();
-  const isPersonalCashier =
+  const [isPersonalCashier, store] = await Promise.all([
     profile.role === "cashier"
-      ? await isPersonalCashierPlanningMode(supabase, profile)
-      : false;
-
-  const store = profile.store_id ? await getStoreById(profile.store_id) : null;
+      ? isPersonalCashierPlanningMode(supabase, profile)
+      : Promise.resolve(false),
+    profile.store_id ? getStoreById(profile.store_id) : Promise.resolve(null),
+  ]);
 
   return (
     <DashboardShell

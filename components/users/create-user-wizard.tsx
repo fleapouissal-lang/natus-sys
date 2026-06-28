@@ -193,7 +193,7 @@ export function CreateUserWizard({
     : isDirector(viewer)
       ? [
           { value: "cashier", label: "Caissier" },
-          { value: "livreur", label: "Livreur (ville)" },
+          { value: "livreur", label: "Livreur" },
           { value: "manager", label: "Gérant" },
         ]
       : [{ value: "cashier", label: "Caissier" }];

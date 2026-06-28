@@ -9,8 +9,10 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
 import {
   assignHubTransferLivreur,
+  assignStoreToHubTransferLivreur,
   confirmHubStockTransfer,
   markHubTransferReady,
+  markStoreToHubTransferReady,
   pickupHubTransfer,
   repairHubStockTransfer,
 } from "@/lib/actions";
@@ -35,6 +37,7 @@ export function HubTransfersList({
   showProductImages = false,
   emptyMessage = "Aucune commande de transfert pour le moment",
   livreurs = [],
+  manageAsStoreSource = false,
 }: {
   transfers: HubStockTransfer[];
   title?: string;
@@ -45,6 +48,8 @@ export function HubTransfersList({
   showProductImages?: boolean;
   emptyMessage?: string;
   livreurs?: Profile[];
+  /** Gérant : gère les retours magasin → dépôt */
+  manageAsStoreSource?: boolean;
 }) {
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -209,7 +214,12 @@ export function HubTransfersList({
                         size="sm"
                         loading={loadingId === transfer.id}
                         onClick={() =>
-                          void runAction(transfer.id, () => markHubTransferReady(transfer.id))
+                          void runAction(transfer.id, () =>
+                            manageAsStoreSource &&
+                            hubTransferDirection(transfer) === "store_to_depot"
+                              ? markStoreToHubTransferReady(transfer.id)
+                              : markHubTransferReady(transfer.id)
+                          )
                         }
                       >
                         Marquer prête
@@ -237,12 +247,16 @@ export function HubTransfersList({
                             loading={loadingId === transfer.id}
                             disabled={!(selectedLivreur[transfer.id] || transfer.assigned_livreur_id)}
                             onClick={() =>
-                              void runAction(transfer.id, () =>
-                                assignHubTransferLivreur(
-                                  transfer.id,
-                                  selectedLivreur[transfer.id] || transfer.assigned_livreur_id || ""
-                                )
-                              )
+                              void runAction(transfer.id, () => {
+                                const livreurId =
+                                  selectedLivreur[transfer.id] ||
+                                  transfer.assigned_livreur_id ||
+                                  "";
+                                return manageAsStoreSource &&
+                                  hubTransferDirection(transfer) === "store_to_depot"
+                                  ? assignStoreToHubTransferLivreur(transfer.id, livreurId)
+                                  : assignHubTransferLivreur(transfer.id, livreurId);
+                              })
                             }
                           >
                             Assigner livreur
@@ -263,6 +277,7 @@ export function HubTransfersList({
                     )}
 
                     {allowManage &&
+                      !manageAsStoreSource &&
                       transfer.status === "livre" &&
                       hubTransferDirection(transfer) === "store_to_depot" && (
                         <Button

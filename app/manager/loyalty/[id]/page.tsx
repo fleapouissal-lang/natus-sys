@@ -28,6 +28,7 @@ export default async function ManagerLoyaltyCustomerPage({
       customer={data.customer}
       transactions={data.transactions}
       notes={data.notes}
+      sales={data.sales}
       backHref={`${basePath}/loyalty`}
       loyaltySettings={loyaltySettings}
     />

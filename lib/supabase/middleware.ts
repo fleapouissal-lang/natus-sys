@@ -68,7 +68,7 @@ export async function updateSession(request: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(url));
   }
 
-  if (user) {
+  if (user && (isProtected || isAuthRoute)) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role, is_active, city, is_store_pos, store_id, access_preset, allowed_pages")

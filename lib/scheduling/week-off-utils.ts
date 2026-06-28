@@ -8,12 +8,19 @@ export type CashierWeekOff = {
   profiles?: { full_name: string | null; email: string } | null;
 };
 
+export function normalizePlanningDate(date: string): string {
+  return date.slice(0, 10);
+}
+
 export function isCashierOffOnDate(
   weekOffs: CashierWeekOff[],
   cashierId: string,
   date: string
 ): boolean {
-  return weekOffs.some((o) => o.cashier_id === cashierId && o.off_date === date);
+  const day = normalizePlanningDate(date);
+  return weekOffs.some(
+    (o) => o.cashier_id === cashierId && normalizePlanningDate(o.off_date) === day
+  );
 }
 
 export function weekOffsForDate(

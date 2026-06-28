@@ -50,9 +50,9 @@ import {
   isConfirmationCallOverdue,
   isConfirmationFollowUpResolved,
 } from "@/lib/shopify/confirmation-follow-up";
-import { updateShopifyOrderStatus, markShopifyCodPaid, handOrderToLivreur, confirmShopifyOrderReturn } from "@/lib/actions";
+import { updateShopifyOrderStatus, markShopifyCodPaid, handOrderToLivreur, confirmShopifyOrderReturn, assignShopifyOrderLivreur } from "@/lib/actions";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
-import type { ShopifyOrder, ShopifyPaymentType, ShopifyWorkflowStatus, Store } from "@/lib/types";
+import type { Profile, ShopifyOrder, ShopifyPaymentType, ShopifyWorkflowStatus, Store } from "@/lib/types";
 
 const STATUS_CELL_WIDTH = "w-[172px]";
 const ACTION_COLOR = "#B38C4A";
@@ -167,6 +167,7 @@ export function ShopifyOrdersManager({
   cashierReturnsMode = false,
   livreurProfileId,
   enableLivreurHandoff = false,
+  livreurs = [],
   enableOrderTransfer = false,
   transferTargets = [],
   transferProfile,
@@ -186,6 +187,7 @@ export function ShopifyOrdersManager({
   cashierReturnsMode?: boolean;
   livreurProfileId?: string;
   enableLivreurHandoff?: boolean;
+  livreurs?: Profile[];
   enableOrderTransfer?: boolean;
   transferTargets?: Store[];
   transferProfile?: import("@/lib/types").Profile | null;
@@ -207,6 +209,7 @@ export function ShopifyOrdersManager({
   } | null>(null);
   const [confirmationFollowUpOrder, setConfirmationFollowUpOrder] =
     useState<ShopifyOrder | null>(null);
+  const [selectedLivreur, setSelectedLivreur] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState(defaultDateRange.from);
   const [dateTo, setDateTo] = useState(defaultDateRange.to);
@@ -301,11 +304,63 @@ export function ShopifyOrdersManager({
     });
   }
 
-  function handleHandoffToLivreur(orderId: string) {
+  const livreurOptions = useMemo(
+    () =>
+      livreurs.map((livreur) => ({
+        value: livreur.id,
+        label: livreur.full_name || livreur.email,
+      })),
+    [livreurs]
+  );
+
+  function livreurNameForOrder(order: ShopifyOrder): string | null {
+    const id = selectedLivreur[order.id] || order.assigned_livreur_id;
+    if (!id) return null;
+    const match = livreurs.find((livreur) => livreur.id === id);
+    return match?.full_name || match?.email || null;
+  }
+
+  function handleAssignLivreur(orderId: string) {
+    const livreurId =
+      selectedLivreur[orderId] ||
+      orders.find((order) => order.id === orderId)?.assigned_livreur_id ||
+      "";
+    if (!livreurId) {
+      setMessage("Choisissez un livreur");
+      return;
+    }
+
     setMessage(null);
     setActiveId(orderId);
     startTransition(async () => {
-      const result = await handOrderToLivreur(orderId);
+      const result = await assignShopifyOrderLivreur(orderId, livreurId);
+      if ("error" in result) {
+        setMessage(result.error);
+      } else {
+        setOrders((prev) =>
+          prev.map((order) =>
+            order.id === orderId
+              ? { ...order, assigned_livreur_id: livreurId }
+              : order
+          )
+        );
+        setSelectedLivreur((prev) => ({ ...prev, [orderId]: livreurId }));
+      }
+      setActiveId(null);
+      router.refresh();
+    });
+  }
+
+  function handleHandoffToLivreur(orderId: string) {
+    const livreurId =
+      selectedLivreur[orderId] ||
+      orders.find((order) => order.id === orderId)?.assigned_livreur_id ||
+      undefined;
+
+    setMessage(null);
+    setActiveId(orderId);
+    startTransition(async () => {
+      const result = await handOrderToLivreur(orderId, livreurId);
       if ("error" in result) {
         setMessage(result.error);
       } else {
@@ -786,7 +841,64 @@ export function ShopifyOrdersManager({
                             <ShoppingCart className="h-3.5 w-3.5" />
                           </IconAction>
                         )}
-                        {!cashierReturnsMode && canHandoffToLivreur && (
+                        {!cashierReturnsMode && canHandoffToLivreur && livreurOptions.length > 0 && (
+                          <div className="flex flex-col items-end gap-2">
+                            <SelectMenu
+                              value={
+                                selectedLivreur[order.id] ||
+                                order.assigned_livreur_id ||
+                                ""
+                              }
+                              onChange={(value) =>
+                                setSelectedLivreur((prev) => ({
+                                  ...prev,
+                                  [order.id]: value,
+                                }))
+                              }
+                              options={[
+                                { value: "", label: "Choisir un livreur" },
+                                ...livreurOptions,
+                              ]}
+                              size="sm"
+                            />
+                            <div className="flex flex-wrap justify-end gap-1.5">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                loading={loading}
+                                disabled={
+                                  !(
+                                    selectedLivreur[order.id] ||
+                                    order.assigned_livreur_id
+                                  )
+                                }
+                                onClick={() => handleAssignLivreur(order.id)}
+                              >
+                                Assigner livreur
+                              </Button>
+                              <IconAction
+                                label="Remise au livreur — en cours de livraison"
+                                onClick={() => handleHandoffToLivreur(order.id)}
+                                loading={loading}
+                                disabled={!(
+                                  order.assigned_livreur_id ||
+                                  selectedLivreur[order.id]
+                                )}
+                              >
+                                <Truck className="h-3.5 w-3.5" />
+                              </IconAction>
+                            </div>
+                            {livreurNameForOrder(order) && (
+                              <p className="text-xs text-muted">
+                                Livreur : {livreurNameForOrder(order)}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {!cashierReturnsMode &&
+                          canHandoffToLivreur &&
+                          livreurOptions.length === 0 && (
                           <IconAction
                             label="Remise au livreur — en cours de livraison"
                             onClick={() => handleHandoffToLivreur(order.id)}

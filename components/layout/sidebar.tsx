@@ -14,8 +14,7 @@ import {
   Clock,
   ScrollText,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
+import { performClientLogout } from "@/lib/auth/client-logout";
 import { signOutPosOperator } from "@/lib/pos/actions";
 import { PosDayClosureModal } from "@/components/pos/pos-day-closure-modal";
 import { cn } from "@/lib/utils";
@@ -278,21 +277,12 @@ export function Sidebar({
     if (!isStorePos || switchingCashier) return;
     setSwitchingCashier(true);
     await signOutPosOperator();
-    router.push("/cashier/pos?switch=1");
-    router.refresh();
+    router.replace("/cashier/pos?switch=1");
     setSwitchingCashier(false);
   }
 
   async function handleLogout() {
-    if (isStorePos) {
-      await signOutPosOperator();
-    }
-
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    localStorage.removeItem(SESSION_LAST_ACTIVITY_KEY);
-    router.push("/login");
-    router.refresh();
+    await performClientLogout({ isStorePos });
   }
 
   return (

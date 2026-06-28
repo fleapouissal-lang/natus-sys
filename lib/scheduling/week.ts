@@ -15,6 +15,15 @@ export function getWeekStart(date = new Date()): string {
   return toDateInputValue(d);
 }
 
+/** Lundi de la semaine contenant dateStr (YYYY-MM-DD). */
+export function normalizeWeekStart(dateStr: string): string {
+  const d = new Date(`${dateStr}T12:00:00`);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return toDateInputValue(d);
+}
+
 export function addDays(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T12:00:00`);
   d.setDate(d.getDate() + days);
@@ -31,9 +40,14 @@ export function getWeekDays(weekStart: string): string[] {
 
 export function parseWeekParam(week?: string | null): string {
   if (week && /^\d{4}-\d{2}-\d{2}$/.test(week)) {
-    return week;
+    return normalizeWeekStart(week);
   }
   return getWeekStart();
+}
+
+/** Lundi–samedi (6 jours ouvrés). */
+export function getWeekWorkDays(weekStart: string): string[] {
+  return getWeekDays(normalizeWeekStart(weekStart)).slice(0, 6);
 }
 
 const DAY_NAMES = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];

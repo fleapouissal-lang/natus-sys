@@ -4,6 +4,10 @@ import { useMemo, useState } from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StoreTrackingPeriodFilter } from "@/components/dashboard/store-tracking-period-filter";
 import { StoreSnapshotsPanel } from "@/components/dashboard/store-snapshots-panel";
+import {
+  DashboardStockPanel,
+  overviewRowsToStockStores,
+} from "@/components/dashboard/dashboard-stock-panel";
 import { DashboardAnalyticsPanel } from "@/components/dashboard/dashboard-analytics-panel";
 import { toLocalDateKey } from "@/lib/utils";
 import type { Store, StoreOverviewRow, StoreSnapshot } from "@/lib/types";
@@ -23,6 +27,8 @@ export function StoreTrackingView({
   hideStoreHeader = false,
   allStores = [],
   allStoresScopeLabel = "",
+  stockOnly = false,
+  stockHref,
 }: {
   storeSnapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
@@ -31,6 +37,8 @@ export function StoreTrackingView({
   hideStoreHeader?: boolean;
   allStores?: Pick<Store, "id" | "name" | "city">[];
   allStoresScopeLabel?: string;
+  stockOnly?: boolean;
+  stockHref?: (storeId: string) => string;
 }) {
   const today = toLocalDateKey(new Date());
   const [preset, setPreset] = useState<StoreTrackingPreset>("week");
@@ -51,6 +59,23 @@ export function StoreTrackingView({
     () => scopedSnapshots.map((s) => filterStoreSnapshot(s, from, to)),
     [scopedSnapshots, from, to]
   );
+
+  const stockStoreRows = useMemo(() => {
+    const ids = selectedStoreId
+      ? [selectedStoreId]
+      : allStores.map((s) => s.id);
+    return overviewRowsToStockStores(
+      ids
+        .map((id) => overviewByStore[id])
+        .filter((row): row is StoreOverviewRow => Boolean(row)),
+      { stockHref }
+    );
+  }, [selectedStoreId, allStores, overviewByStore, stockHref]);
+
+  const stockScopeLabel =
+    selectedStoreLabel ||
+    allStoresScopeLabel ||
+    `${allStores.length} magasin${allStores.length !== 1 ? "s" : ""}`;
 
   if (storeSnapshots.length === 0) {
     return (
@@ -79,17 +104,23 @@ export function StoreTrackingView({
         </Card>
       )}
 
-      <DashboardAnalyticsPanel
-        storeIds={selectedStoreId ? [selectedStoreId] : allStores.map((s) => s.id)}
-        scopeLabel={
-          selectedStoreLabel ||
-          allStoresScopeLabel ||
-          `${allStores.length} magasin${allStores.length !== 1 ? "s" : ""}`
-        }
-        allStoreIds={allStores.map((s) => s.id)}
-        allScopeLabel={allStoresScopeLabel}
-        title="Performance & analytique"
-      />
+      {stockOnly ? (
+        <DashboardStockPanel
+          scopeLabel={stockScopeLabel}
+          storeRows={stockStoreRows}
+          stockSnapshots={filteredSnapshots}
+          periodLabel={periodLabel}
+          title="Statistiques stock"
+        />
+      ) : (
+        <DashboardAnalyticsPanel
+          storeIds={selectedStoreId ? [selectedStoreId] : allStores.map((s) => s.id)}
+          scopeLabel={stockScopeLabel}
+          allStoreIds={allStores.map((s) => s.id)}
+          allScopeLabel={allStoresScopeLabel}
+          title="Performance & analytique"
+        />
+      )}
 
       <StoreTrackingPeriodFilter
         preset={preset}
@@ -105,6 +136,7 @@ export function StoreTrackingView({
         snapshots={filteredSnapshots}
         overviewByStore={overviewByStore}
         periodLabel={periodLabel}
+        stockOnly={stockOnly}
       />
     </div>
   );

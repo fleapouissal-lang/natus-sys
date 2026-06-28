@@ -21,18 +21,23 @@ import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import type { LoyaltyCustomer, LoyaltyTransaction, LoyaltySettings, CustomerNote } from "@/lib/types";
+import type { CustomerSaleSummary } from "@/lib/loyalty/customer-sales";
+import { isProParticulierCustomer } from "@/lib/pro-client/account-type";
 import { LoyaltyCustomerNotes } from "@/components/loyalty/loyalty-customer-notes";
+import { LoyaltyCustomerSalesSection } from "@/components/loyalty/loyalty-customer-sales-section";
 
 export function LoyaltyCustomerDetailView({
   customer,
   transactions,
   notes = [],
+  sales = [],
   backHref,
   loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
 }: {
   customer: LoyaltyCustomer;
   transactions: LoyaltyTransaction[];
   notes?: CustomerNote[];
+  sales?: CustomerSaleSummary[];
   backHref: string;
   loyaltySettings?: LoyaltySettings;
 }) {
@@ -41,6 +46,7 @@ export function LoyaltyCustomerDetailView({
   const publicUrl = loyaltyCardPublicUrl(customer.qr_token);
   const isPro = isProClientCustomer(customer);
   const isProActive = isActiveProClient(customer);
+  const showProOrders = isProParticulierCustomer(customer);
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -161,6 +167,13 @@ export function LoyaltyCustomerDetailView({
           </div>
         </Card>
 
+        {showProOrders && (
+          <Card padding={false} className="lg:col-span-2">
+            <LoyaltyCustomerSalesSection sales={sales} />
+          </Card>
+        )}
+
+        {!showProOrders && (
         <Card padding={false}>
           <div className="border-b border-border px-6 py-4">
             <h2 className="text-lg font-semibold">Historique des points</h2>
@@ -210,6 +223,7 @@ export function LoyaltyCustomerDetailView({
             </div>
           )}
         </Card>
+        )}
       </div>
     </div>
   );

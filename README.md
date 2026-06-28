@@ -73,7 +73,11 @@ supabase/migrations/  # Schéma SQL (52+ migrations)
 - **WhatsApp** : confirmation commande, statuts, avis 2 h après livraison, bot Gemini
 - **Marketing** : win-back 60 j (code unique 24 h), cross-sell, avis Google CTA
 
-## Déploiement (Vercel)
+## Documentation client
+
+**Guide complet à remettre au client :** [docs/guide-client/GUIDE_NATUS_POS_COMPLET.md](./docs/guide-client/GUIDE_NATUS_POS_COMPLET.md)
+
+## Déploiement (VPS)
 
 1. Variables d'environnement (voir `.env.local.example`)
 2. `CRON_SECRET` pour les crons `/api/cron/*`

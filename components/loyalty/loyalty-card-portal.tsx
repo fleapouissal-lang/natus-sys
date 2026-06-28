@@ -19,6 +19,7 @@ import {
   TrendingDown,
   Receipt,
   ShieldCheck,
+  ShoppingBag,
 } from "lucide-react";
 import { LoyaltyCardInstall } from "@/components/loyalty/loyalty-card-install";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,10 @@ import {
 } from "@/lib/loyalty/settings";
 import { loyaltyTierFromPoints, loyaltyTierLabel } from "@/lib/loyalty/tiers";
 import { PRO_CLIENT_DISCOUNT_PERCENT } from "@/lib/pro-client/discount";
+import { isProParticulierCustomer } from "@/lib/pro-client/account-type";
 import { DEFAULT_LOYALTY_SETTINGS } from "@/lib/loyalty/config";
+import { LoyaltyCustomerPortalOrdersList } from "@/components/loyalty/loyalty-customer-sales-section";
+import type { CustomerSaleDetail, CustomerSaleSummary } from "@/lib/loyalty/customer-sales";
 import { PAYMENT_METHOD_LABELS } from "@/lib/constants/sales";
 import { saleDocumentNumber } from "@/components/pos/sale-document-types";
 import type { LoyaltyCustomer, LoyaltySettings } from "@/lib/types";
@@ -49,13 +53,14 @@ import type {
 } from "@/lib/loyalty/public";
 import { cn } from "@/lib/utils";
 
-type PortalTab = "carte" | "points" | "historique" | "factures";
+type PortalTab = "carte" | "points" | "historique" | "factures" | "commandes";
 
 const TABS: { id: PortalTab; label: string; short: string; icon: typeof CreditCard }[] = [
   { id: "carte", label: "Ma carte", short: "Carte", icon: CreditCard },
   { id: "points", label: "Mes points", short: "Points", icon: Coins },
   { id: "historique", label: "Historique", short: "Historique", icon: History },
   { id: "factures", label: "Factures", short: "Factures", icon: FileText },
+  { id: "commandes", label: "Commandes", short: "Commandes", icon: ShoppingBag },
 ];
 
 function tabDescription(tab: PortalTab): string {
@@ -68,6 +73,8 @@ function tabDescription(tab: PortalTab): string {
       return "Mouvements de points en boutique";
     case "factures":
       return "Tickets et factures de vos achats";
+    case "commandes":
+      return "Toutes vos ventes en magasin avec ce compte Client Pro";
   }
 }
 
@@ -243,33 +250,41 @@ export function LoyaltyCardPortal({
   initialCustomer,
   initialTransactions,
   loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
+  initialTab,
 }: {
   initialCustomer: LoyaltyCustomer;
   initialTransactions: PublicLoyaltyTransaction[];
   loyaltySettings?: LoyaltySettings;
+  initialTab?: PortalTab;
 }) {
-  const [tab, setTab] = useState<PortalTab>("carte");
+  const [tab, setTab] = useState<PortalTab>(initialTab || "carte");
   const [customer, setCustomer] = useState(initialCustomer);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [settings, setSettings] = useState(loyaltySettings);
   const [invoices, setInvoices] = useState<PublicCustomerInvoice[]>([]);
+  const [orders, setOrders] = useState<CustomerSaleSummary[]>([]);
   const [selectedInvoice, setSelectedInvoice] =
     useState<PublicCustomerInvoiceDetail | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<CustomerSaleDetail | null>(null);
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingInvoiceDetail, setLoadingInvoiceDetail] = useState(false);
 
   const cardUrl = loyaltyCardPublicUrl(customer.qr_token);
   const isPro = Boolean(customer.is_pro_client);
   const isProActive = Boolean(customer.is_pro_client && customer.pro_client_active);
-  const visibleTabs = useMemo(
-    () =>
-      isPro
-        ? TABS.filter((item) => item.id !== "points" && item.id !== "historique")
-        : TABS,
-    [isPro]
-  );
+  const isProParticulier = isProParticulierCustomer(customer);
+  const visibleTabs = useMemo(() => {
+    if (isProParticulier) {
+      return TABS.filter((item) => item.id === "carte" || item.id === "commandes");
+    }
+    if (isPro) {
+      return TABS.filter((item) => item.id !== "points" && item.id !== "historique");
+    }
+    return TABS;
+  }, [isPro, isProParticulier]);
   const firstName = customer.full_name.trim().split(/\s+/)[0] || "Client";
   const initial = firstName.charAt(0).toUpperCase();
   const tier = loyaltyTierFromPoints(customer.loyalty_points);
@@ -294,6 +309,18 @@ export function LoyaltyCardPortal({
     }
   }, [customer.qr_token]);
 
+  const loadOrders = useCallback(async () => {
+    setLoadingOrders(true);
+    try {
+      const res = await fetch(`/api/loyalty/card/${customer.qr_token}/orders`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setOrders(data.orders || []);
+    } finally {
+      setLoadingOrders(false);
+    }
+  }, [customer.qr_token]);
+
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -304,22 +331,29 @@ export function LoyaltyCardPortal({
       setTransactions(data.transactions);
       if (data.settings) setSettings(data.settings);
       if (tab === "factures") void loadInvoices();
+      if (tab === "commandes") void loadOrders();
     } finally {
       setRefreshing(false);
     }
-  }, [customer.qr_token, tab, loadInvoices]);
+  }, [customer.qr_token, tab, loadInvoices, loadOrders]);
 
   useEffect(() => {
     if (isPro && (tab === "points" || tab === "historique")) {
       setTab("carte");
     }
-  }, [isPro, tab]);
+    if (isProParticulier && tab === "factures") {
+      setTab("commandes");
+    }
+  }, [isPro, isProParticulier, tab]);
 
   useEffect(() => {
     if (tab === "factures") {
       void loadInvoices();
     }
-  }, [tab, loadInvoices]);
+    if (tab === "commandes") {
+      void loadOrders();
+    }
+  }, [tab, loadInvoices, loadOrders]);
 
   async function copyLink() {
     try {
@@ -367,6 +401,7 @@ export function LoyaltyCardPortal({
   function switchTab(id: PortalTab) {
     setTab(id);
     setSelectedInvoice(null);
+    setSelectedOrder(null);
   }
 
   return (
@@ -746,7 +781,7 @@ export function LoyaltyCardPortal({
           </div>
         )}
 
-        {tab === "factures" && (
+        {tab === "factures" && !isProParticulier && (
           <div className="space-y-4 animate-fade-in">
             {selectedInvoice ? (
               <>
@@ -839,6 +874,17 @@ export function LoyaltyCardPortal({
               </div>
             )}
           </div>
+        )}
+
+        {tab === "commandes" && isProParticulier && (
+          <LoyaltyCustomerPortalOrdersList
+            orders={orders}
+            loading={loadingOrders}
+            qrToken={customer.qr_token}
+            selectedOrder={selectedOrder}
+            onSelectOrder={setSelectedOrder}
+            onBack={() => setSelectedOrder(null)}
+          />
         )}
           </div>
             <div className="natus-mobile-nav-spacer md:hidden" aria-hidden />

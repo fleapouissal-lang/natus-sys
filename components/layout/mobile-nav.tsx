@@ -2,11 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { LogOut, MoreHorizontal } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { SESSION_LAST_ACTIVITY_KEY } from "@/lib/auth/session-config";
-import { signOutPosOperator } from "@/lib/pos/actions";
+import { performClientLogout } from "@/lib/auth/client-logout";
 import {
   isNavLinkActive,
   pickMobileBottomLinks,
@@ -35,17 +33,8 @@ export function MobileTopBar({
   isStorePos?: boolean;
   alwaysVisible?: boolean;
 }) {
-  const router = useRouter();
-
   async function handleLogout() {
-    if (isStorePos) {
-      await signOutPosOperator();
-    }
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    localStorage.removeItem(SESSION_LAST_ACTIVITY_KEY);
-    router.push("/login");
-    router.refresh();
+    await performClientLogout({ isStorePos });
   }
 
   return (

@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter, filterRetailStoresByProfile } from "@/lib/permissions";
 import { getActiveStores } from "@/lib/inventory";
+import { filterRetailStoresByProfile, getCityFilter } from "@/lib/permissions";
 import { getManagerHubStockTransfers } from "@/lib/hub-transfers";
 import { getManagerStoreStockTransfers } from "@/lib/store-transfers";
-import { getProfileLockedStoreId, resolveSelectedStoreId } from "@/lib/management-store";
+import { resolveSelectedStoreId } from "@/lib/management-store";
 import { HubOrdersView } from "@/components/hub/hub-orders-view";
 import { StoreTransfersList } from "@/components/stock/store-transfers-list";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
@@ -21,11 +21,7 @@ export default async function ManagerStockTransfersReceivedPage({
   const city = getCityFilter(profile);
   const storesAll = await getActiveStores(city);
   const stores = filterRetailStoresByProfile(storesAll, profile);
-  const storeId = resolveSelectedStoreId(
-    stores,
-    storeParam,
-    getProfileLockedStoreId(profile)
-  );
+  const storeId = resolveSelectedStoreId(stores, storeParam);
   const selectedStore = stores.find((store) => store.id === storeId);
   const storeIds = storeId ? [storeId] : stores.map((store) => store.id);
 
@@ -37,7 +33,7 @@ export default async function ManagerStockTransfersReceivedPage({
   const scopeLabel = selectedStore
     ? selectedStore.name
     : city
-      ? `Tous les magasins — ${city}`
+      ? `Tous vos magasins — ${city}`
       : "Vos magasins";
 
   return (

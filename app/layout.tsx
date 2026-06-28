@@ -14,11 +14,18 @@ const jost = Jost({
 export const metadata: Metadata = {
   title: "Natus POS",
   description: "Application de caisse Natus Cosmétiques",
-  applicationName: "Natus POS",
+  applicationName: "natus",
+  icons: {
+    icon: [
+      { url: "/pwa/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/pwa/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/pwa/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Natus POS",
+    title: "natus",
   },
   formatDetection: {
     telephone: false,

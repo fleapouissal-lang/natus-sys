@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   loadCashierNotifications,
@@ -58,6 +58,27 @@ export type { CashierNotification, CashierOrderNotification } from "@/lib/notifi
 
 const TOAST_DURATION_MS = 8000;
 const MAX_TOASTS = 3;
+const REFRESH_DEBOUNCE_MS = 3000;
+const REFRESH_MIN_INTERVAL_MS = 15_000;
+
+const REFRESH_PATH_PREFIXES = [
+  "/cashier/orders",
+  "/manager/orders",
+  "/manager/stock-transfers",
+  "/director/stock-transfers",
+  "/cashier/transfers",
+  "/hub/orders",
+  "/manager/hub-orders",
+  "/livreur/transfers",
+  "/livreur/orders",
+];
+
+function shouldRefreshRoute(pathname: string): boolean {
+  if (pathname.startsWith("/cashier/pos")) return false;
+  return REFRESH_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
 
 interface CashierNotificationsContextValue {
   notifications: CashierNotification[];
@@ -174,6 +195,9 @@ export function CashierNotificationsProvider({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRefreshAtRef = useRef(0);
   const storageKey = notificationStorageKey(scope);
   const [notifications, setNotifications] = useState<CashierNotification[]>([]);
   const [toasts, setToasts] = useState<CashierNotification[]>([]);
@@ -199,6 +223,23 @@ export function CashierNotificationsProvider({
     },
     [storageKey]
   );
+
+  const scheduleRouterRefresh = useCallback(() => {
+    if (!shouldRefreshRoute(pathname)) return;
+
+    const now = Date.now();
+    if (now - lastRefreshAtRef.current < REFRESH_MIN_INTERVAL_MS) return;
+
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+    }
+
+    refreshTimerRef.current = setTimeout(() => {
+      refreshTimerRef.current = null;
+      lastRefreshAtRef.current = Date.now();
+      router.refresh();
+    }, REFRESH_DEBOUNCE_MS);
+  }, [router, pathname]);
 
   const scheduleToastDismiss = useCallback((id: string) => {
     const existing = toastTimersRef.current.get(id);
@@ -432,6 +473,9 @@ export function CashierNotificationsProvider({
 
   useEffect(() => {
     return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
       for (const timer of toastTimersRef.current.values()) {
         clearTimeout(timer);
       }
@@ -671,7 +715,7 @@ export function CashierNotificationsProvider({
             if (seenEventIdsRef.current.has(id)) return;
             seenEventIdsRef.current.add(id);
             pushNotification(orderRowToNotification(row, "order_new"));
-            router.refresh();
+            scheduleRouterRefresh();
           }
         )
         .on(
@@ -698,7 +742,7 @@ export function CashierNotificationsProvider({
             seenEventIdsRef.current.add(id);
 
             pushNotification(orderRowToNotification(row, "order_transferred"));
-            router.refresh();
+            scheduleRouterRefresh();
           }
         )
         .on(
@@ -725,7 +769,7 @@ export function CashierNotificationsProvider({
             pushNotification(
               hubTransferToNotification(row, unitCount, "Commande dépôt reçue")
             );
-            router.refresh();
+            scheduleRouterRefresh();
           }
         )
         .on(
@@ -761,7 +805,7 @@ export function CashierNotificationsProvider({
                 "store"
               )
             );
-            router.refresh();
+            scheduleRouterRefresh();
           }
         );
     }
@@ -798,7 +842,7 @@ export function CashierNotificationsProvider({
                 "city"
               )
             );
-            router.refresh();
+            scheduleRouterRefresh();
           }
         )
         .on(
@@ -835,7 +879,7 @@ export function CashierNotificationsProvider({
                 "city"
               )
             );
-            router.refresh();
+            scheduleRouterRefresh();
           }
         );
     }
@@ -873,7 +917,7 @@ export function CashierNotificationsProvider({
                 "livreur"
               )
             );
-            router.refresh();
+            scheduleRouterRefresh();
           }
         )
         .on(
@@ -911,7 +955,7 @@ export function CashierNotificationsProvider({
                 "livreur"
               )
             );
-            router.refresh();
+            scheduleRouterRefresh();
           }
         )
         .on(
@@ -944,7 +988,7 @@ export function CashierNotificationsProvider({
               ...orderRowToNotification(row, kind),
               audience: "livreur",
             });
-            router.refresh();
+            scheduleRouterRefresh();
           }
         );
     }
@@ -1000,7 +1044,7 @@ export function CashierNotificationsProvider({
       cancelled = true;
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [scope, pushNotification, router, handleInventoryRow]);
+  }, [scope, pushNotification, scheduleRouterRefresh, handleInventoryRow]);
 
   const { badgeCount, otherUnreadCount, stockAlertCount } = useMemo(
     () => computeNotificationCounts(notifications),

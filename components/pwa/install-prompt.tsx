@@ -109,7 +109,7 @@ export function InstallPrompt() {
           </p>
           {installed ? (
             <p className="mt-0.5 text-sm text-black/80">
-              Natus POS est déjà sur votre écran d&apos;accueil.
+              natus est déjà sur votre écran d&apos;accueil.
             </p>
           ) : iosHint || !deferredRef.current ? (
             <p className="mt-0.5 text-sm leading-snug text-black/85">

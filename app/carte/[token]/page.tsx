@@ -62,20 +62,32 @@ export async function generateMetadata({
 
 export default async function LoyaltyCardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { token } = await params;
+  const { tab: tabParam } = await searchParams;
   const data = await getPublicLoyaltyCustomer(token);
   if (!data) notFound();
 
   const loyaltySettings = await getPublicLoyaltySettings();
+  const initialTab =
+    tabParam === "commandes" ||
+    tabParam === "factures" ||
+    tabParam === "points" ||
+    tabParam === "historique" ||
+    tabParam === "carte"
+      ? tabParam
+      : undefined;
 
   return (
     <LoyaltyCardClientView
       initialCustomer={toPublicLoyaltyCustomer(data.customer)}
       initialTransactions={data.transactions}
       loyaltySettings={loyaltySettings}
+      initialTab={initialTab}
     />
   );
 }

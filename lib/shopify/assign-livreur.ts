@@ -88,6 +88,90 @@ export async function resolveLivreurForReadyOrder(
   return store?.city ? getCityLivreurId(store.city) : null;
 }
 
+export async function resolveHubCityForOrder(
+  storeId: string | null,
+  orderCity?: string | null
+): Promise<string | null> {
+  if (storeId) {
+    const hubCity = await getHubDepotCityForStore(storeId);
+    if (hubCity) return hubCity;
+  }
+  if (orderCity) return orderCity;
+  if (!storeId) return null;
+
+  const supabase = createAdminClient();
+  const { data: store } = await supabase
+    .from("stores")
+    .select("city")
+    .eq("id", storeId)
+    .maybeSingle();
+
+  return (store?.city as string | null) ?? null;
+}
+
+/** Affecte un livreur choisi à une commande (validation ville dépôt). */
+export async function assignOrderToLivreur(
+  orderId: string,
+  livreurId: string,
+  order: {
+    store_id: string | null;
+    city: string | null;
+    workflow_status: string;
+  }
+): Promise<{ success: true; livreurName: string } | { error: string }> {
+  if (!livreurId?.trim()) {
+    return { error: "Choisissez un livreur" };
+  }
+
+  if (order.workflow_status !== "ready" && order.workflow_status !== "shipping") {
+    return {
+      error: "Assignation possible uniquement pour commandes prêtes ou en livraison",
+    };
+  }
+
+  const targetCity = await resolveHubCityForOrder(order.store_id, order.city);
+  if (!targetCity) {
+    return { error: "Ville de livraison introuvable pour cette commande" };
+  }
+
+  const supabase = createAdminClient();
+  const { data: livreur, error: livreurError } = await supabase
+    .from("profiles")
+    .select("id, role, city, is_active, full_name, email")
+    .eq("id", livreurId)
+    .maybeSingle();
+
+  if (livreurError || !livreur) {
+    return { error: "Livreur introuvable" };
+  }
+
+  if (livreur.role !== "livreur" || !livreur.is_active) {
+    return { error: "Livreur invalide ou inactif" };
+  }
+
+  if ((livreur.city as string | null) !== targetCity) {
+    return { error: "Ce livreur n'est pas disponible pour cette commande" };
+  }
+
+  const { error } = await supabase
+    .from("shopify_orders")
+    .update({
+      assigned_livreur_id: livreurId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", orderId);
+
+  if (error) {
+    console.error("assignOrderToLivreur:", error.message);
+    return { error: error.message };
+  }
+
+  return {
+    success: true,
+    livreurName: (livreur.full_name as string | null) || (livreur.email as string),
+  };
+}
+
 /** Affecte un livreur du dépôt (ville hub) à une commande prête. */
 export async function assignOrderToStoreLivreur(
   orderId: string,

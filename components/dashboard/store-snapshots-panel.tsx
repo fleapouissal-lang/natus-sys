@@ -87,11 +87,13 @@ function StoreSnapshotCard({
   overview,
   periodLabel,
   displayLimit = 5,
+  stockOnly = false,
 }: {
   snapshot: StoreSnapshot;
   overview?: StoreOverviewRow;
   periodLabel: string;
   displayLimit?: number;
+  stockOnly?: boolean;
 }) {
   const periodRevenue = snapshot.recentSales.reduce((s, sale) => s + sale.total, 0);
   const salesShown = snapshot.recentSales.slice(0, displayLimit);
@@ -109,11 +111,22 @@ function StoreSnapshotCard({
               <h3 className="font-heading text-base font-bold md:text-lg">{snapshot.storeName}</h3>
               <p className="mt-1 text-[11px] leading-relaxed text-muted md:text-xs">
                 {periodLabel}
-                {" · "}
-                {snapshot.recentSales.length} vente
-                {snapshot.recentSales.length !== 1 ? "s" : ""}
-                {" · "}
-                {formatCurrency(periodRevenue)}
+                {!stockOnly && (
+                  <>
+                    {" · "}
+                    {snapshot.recentSales.length} vente
+                    {snapshot.recentSales.length !== 1 ? "s" : ""}
+                    {" · "}
+                    {formatCurrency(periodRevenue)}
+                  </>
+                )}
+                {stockOnly && (
+                  <>
+                    {" · "}
+                    {snapshot.recentStockAdds.length} action
+                    {snapshot.recentStockAdds.length !== 1 ? "s" : ""} stock
+                  </>
+                )}
                 {overview ? (
                   <>
                     {" · "}
@@ -132,7 +145,8 @@ function StoreSnapshotCard({
         </div>
       </div>
 
-      <div className="grid gap-3 p-3 md:gap-4 md:p-4 lg:grid-cols-2">
+      <div className={`grid gap-3 p-3 md:gap-4 md:p-4 ${stockOnly ? "" : "lg:grid-cols-2"}`}>
+        {!stockOnly && (
         <MiniList
           title={`Ventes (${snapshot.recentSales.length})`}
           icon={ShoppingBag}
@@ -158,6 +172,7 @@ function StoreSnapshotCard({
             </div>
           )}
         />
+        )}
 
         <MiniList
           title={`Actions stock (${snapshot.recentStockAdds.length})`}
@@ -165,6 +180,7 @@ function StoreSnapshotCard({
           emptyLabel="Aucune action stock sur cette période"
           items={stockShown}
           mobileCollapsible
+          defaultOpen={stockOnly}
           renderItem={(item) => (
             <div
               key={item.id}
@@ -195,10 +211,12 @@ export function StoreSnapshotsPanel({
   snapshots,
   overviewByStore,
   periodLabel = "Période sélectionnée",
+  stockOnly = false,
 }: {
   snapshots: StoreSnapshot[];
   overviewByStore: Record<string, StoreOverviewRow>;
   periodLabel?: string;
+  stockOnly?: boolean;
 }) {
   if (snapshots.length === 0) return null;
 
@@ -207,7 +225,11 @@ export function StoreSnapshotsPanel({
       <div className="px-1 md:px-0">
         <CardHeader
           title="Vue détaillée par magasin"
-          description={`Ventes et stock — ${periodLabel}`}
+          description={
+            stockOnly
+              ? `Mouvements stock — ${periodLabel}`
+              : `Ventes et stock — ${periodLabel}`
+          }
         />
       </div>
 
@@ -218,6 +240,7 @@ export function StoreSnapshotsPanel({
             snapshot={snapshot}
             overview={overviewByStore[snapshot.storeId]}
             periodLabel={periodLabel}
+            stockOnly={stockOnly}
           />
         ))}
       </div>

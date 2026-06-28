@@ -98,6 +98,7 @@ export async function deleteProfileAvatarFile(
 }
 
 const COMPLAINT_PHOTOS_BUCKET = "complaint-photos";
+export const WRITEOFF_PHOTOS_BUCKET = "writeoff-photos";
 
 export async function uploadComplaintPhoto(
   supabase: SupabaseClient,
@@ -125,6 +126,36 @@ export async function uploadComplaintPhoto(
 
   const { data } = supabase.storage.from(COMPLAINT_PHOTOS_BUCKET).getPublicUrl(path);
   return { url: data.publicUrl };
+}
+
+export async function uploadWriteoffPhoto(
+  supabase: SupabaseClient,
+  storeId: string,
+  writeoffId: string,
+  file: File,
+  index: number
+): Promise<{ url?: string; path?: string; error?: string }> {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { error: "Format d'image non supporté (JPG, PNG, WebP, GIF)" };
+  }
+
+  if (file.size > MAX_SIZE) {
+    return { error: "Image trop volumineuse (max 5 Mo)" };
+  }
+
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${storeId}/${writeoffId}/${Date.now()}-${index}.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error } = await supabase.storage.from(WRITEOFF_PHOTOS_BUCKET).upload(path, buffer, {
+    contentType: file.type,
+    upsert: false,
+  });
+
+  if (error) return { error: error.message };
+
+  const { data } = supabase.storage.from(WRITEOFF_PHOTOS_BUCKET).getPublicUrl(path);
+  return { url: data.publicUrl, path };
 }
 
 const NEWS_IMAGES_BUCKET = "news-images";

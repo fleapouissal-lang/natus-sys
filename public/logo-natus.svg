@@ -1,11 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" fill="none">
-  <rect width="300" height="300" fill="#FAF7F2"/>
-  <circle cx="150" cy="150" r="118" fill="#FFFFFF" stroke="#D4C4A8" stroke-width="2"/>
+  <rect x="24" y="24" width="252" height="252" rx="56" fill="#FFFFFF"/>
   <text
     x="150"
-    y="158"
+    y="168"
     text-anchor="middle"
     fill="#B38C4A"
-    style="font-family: Georgia, 'Times New Roman', serif; font-size: 64px; font-weight: 600; letter-spacing: -0.02em;"
+    style="font-family: Georgia, 'Times New Roman', serif; font-size: 72px; font-weight: 600; letter-spacing: -0.02em;"
   >natus</text>
 </svg>

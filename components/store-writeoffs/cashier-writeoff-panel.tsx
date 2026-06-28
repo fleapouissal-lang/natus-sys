@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProductImage } from "@/components/pos/product-image";
+import {
+  WriteoffPhotoUpload,
+  WriteoffPhotosGallery,
+  type PendingPhoto,
+} from "@/components/store-writeoffs/writeoff-photos";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { createStoreProductWriteoff } from "@/lib/actions";
 import { productDisplayName } from "@/lib/products/product-utils";
@@ -40,6 +45,7 @@ export function CashierWriteoffPanel({
   const [notes, setNotes] = useState("");
   const [search, setSearch] = useState("");
   const [lines, setLines] = useState<LineItem[]>([]);
+  const [photos, setPhotos] = useState<PendingPhoto[]>([]);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -138,20 +144,24 @@ export function CashierWriteoffPanel({
     }
     setError("");
     startTransition(async () => {
-      const result = await createStoreProductWriteoff({
-        notes,
-        items: lines.map((l) => ({
-          productId: l.product.id,
-          quantity: l.quantity,
-          reason: l.reason,
-        })),
-      });
+      const result = await createStoreProductWriteoff(
+        {
+          notes,
+          items: lines.map((l) => ({
+            productId: l.product.id,
+            quantity: l.quantity,
+            reason: l.reason,
+          })),
+        },
+        photos.map((photo) => photo.file)
+      );
       if ("error" in result) {
         setError(result.error);
         return;
       }
       setLines([]);
       setNotes("");
+      setPhotos([]);
       router.refresh();
     });
   }
@@ -281,6 +291,8 @@ export function CashierWriteoffPanel({
           className="natus-field w-full bg-surface px-3 py-2 text-sm"
         />
 
+        <WriteoffPhotoUpload photos={photos} onChange={setPhotos} disabled={pending} />
+
         {error && (
           <p className="rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-sm text-danger">
             {error}
@@ -333,6 +345,12 @@ export function CashierWriteoffPanel({
                   </li>
                 ))}
               </ul>
+              {writeoff.notes && (
+                <p className="border-t border-border px-4 py-2 text-sm text-foreground">
+                  {writeoff.notes}
+                </p>
+              )}
+              <WriteoffPhotosGallery photos={writeoff.photos || []} />
               {writeoff.rejection_note && (
                 <p className="border-t border-border px-4 py-2 text-xs text-warning">
                   Refus : {writeoff.rejection_note}

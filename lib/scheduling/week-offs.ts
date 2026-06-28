@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { normalizeWeekStart } from "@/lib/scheduling/week";
 import type { CashierWeekOff } from "@/lib/scheduling/week-off-utils";
 
 export type { CashierWeekOff } from "@/lib/scheduling/week-off-utils";
@@ -15,6 +16,7 @@ export async function getCashierWeekOffs(input: {
 }): Promise<CashierWeekOff[]> {
   if (input.cashierIds.length === 0) return [];
 
+  const weekStart = normalizeWeekStart(input.weekStart);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("cashier_week_offs")
@@ -27,7 +29,7 @@ export async function getCashierWeekOffs(input: {
       cashier:store_planning_cashiers!cashier_id ( full_name )
     `
     )
-    .eq("week_start", input.weekStart)
+    .eq("week_start", weekStart)
     .in("cashier_id", input.cashierIds);
 
   if (error) {

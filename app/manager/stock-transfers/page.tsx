@@ -1,86 +1,136 @@
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter, filterRetailStoresByProfile } from "@/lib/permissions";
 import { getActiveStores } from "@/lib/inventory";
-import { getProfileLockedStoreId, resolveSelectedStoreId } from "@/lib/management-store";
-import { getHubCityLivreurs } from "@/lib/hub";
+import {
+  getAllActiveTransferSites,
+  getProductsWithStoreStockForTransfer,
+  getTransferLivreurs,
+} from "@/lib/transfer-sites.server";
+import {
+  filterRetailStoresByProfile,
+  getCityFilter,
+} from "@/lib/permissions";
+import { resolveSelectedStoreId, getProfileLockedStoreId } from "@/lib/management-store";
+import { getManagerOutgoingHubTransfers } from "@/lib/hub-transfers";
 import { getManagerStoreStockTransfers } from "@/lib/store-transfers";
 import { StoreStockTransferManager } from "@/components/stock/store-stock-transfer-manager";
 import { StoreTransfersList } from "@/components/stock/store-transfers-list";
+import { HubTransfersList } from "@/components/hub/hub-transfers-list";
 import type { Store } from "@/lib/types";
 
 function resolveTransferStoreIds(
-  stores: Store[],
+  sourceStores: Store[],
+  destinationStores: Store[],
   fromParam?: string | null,
   toParam?: string | null,
-  lockedFromId?: string | null
+  lockedStoreId?: string | null
 ) {
-  const fromStoreId = resolveSelectedStoreId(stores, fromParam || lockedFromId, lockedFromId);
-  const destinationCandidates = stores.filter((s) => s.id !== fromStoreId);
+  const fromStoreId = resolveSelectedStoreId(sourceStores, fromParam, lockedStoreId);
+  const destinationCandidates = destinationStores.filter((s) => s.id !== fromStoreId);
   const toStoreId =
     toParam &&
     toParam !== fromStoreId &&
-    stores.some((s) => s.id === toParam)
+    destinationStores.some((s) => s.id === toParam)
       ? toParam
       : destinationCandidates[0]?.id || "";
 
   return { fromStoreId, toStoreId };
 }
 
+function resolveHubStoreId(
+  hubStores: Store[],
+  hubParam?: string | null
+): string {
+  if (hubParam && hubStores.some((hub) => hub.id === hubParam)) {
+    return hubParam;
+  }
+  return hubStores[0]?.id || "";
+}
+
+function collectTransferLivreurCities(sourceStores: Store[], hubStores: Store[]) {
+  return [
+    ...new Set(
+      [...sourceStores, ...hubStores]
+        .map((store) => store.city)
+        .filter(Boolean)
+    ),
+  ] as string[];
+}
+
 export default async function ManagerStockTransfersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; dest?: string; hub?: string }>;
 }) {
-  const { from: fromParam, to: toParam } = await searchParams;
+  const { from: fromParam, to: toParam, dest: destParam, hub: hubParam } =
+    await searchParams;
   const profile = await getCurrentProfile();
   if (!profile) return null;
 
   const city = getCityFilter(profile);
-  const storesAll = await getActiveStores(city);
-  const stores = filterRetailStoresByProfile(storesAll, profile);
-  const storeIds = stores.map((s) => s.id);
-  const lockedFromId = getProfileLockedStoreId(profile);
+  const lockedStoreId = getProfileLockedStoreId(profile);
+  const sourceStores = filterRetailStoresByProfile(
+    await getActiveStores(city),
+    profile
+  );
+  const sitesAll = await getAllActiveTransferSites();
+  const destinationStores = sitesAll.filter((store) => store.is_active && !store.is_hub);
+  const hubStores = sitesAll.filter((store) => store.is_active && store.is_hub);
+  const managedStoreIds = sourceStores.map((store) => store.id);
   const { fromStoreId, toStoreId } = resolveTransferStoreIds(
-    stores,
+    sourceStores,
+    destinationStores,
     fromParam,
     toParam,
-    lockedFromId
+    lockedStoreId
   );
+  const toHubStoreId = resolveHubStoreId(hubStores, hubParam);
+  const initialDestination = destParam === "hub" ? "hub" : "store";
 
-  const { getProductsWithStoreStock } = await import("@/lib/inventory");
-  const products = fromStoreId ? await getProductsWithStoreStock(fromStoreId) : [];
-  const [transfers, livreurs] = await Promise.all([
-    getManagerStoreStockTransfers(storeIds),
-    city ? getHubCityLivreurs(city) : Promise.resolve([]),
+  const products = fromStoreId
+    ? await getProductsWithStoreStockForTransfer(fromStoreId)
+    : [];
+
+  const [storeTransfers, hubOutgoingTransfers, livreurs] = await Promise.all([
+    getManagerStoreStockTransfers(managedStoreIds),
+    getManagerOutgoingHubTransfers(managedStoreIds),
+    getTransferLivreurs(collectTransferLivreurCities(sourceStores, hubStores)),
   ]);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-heading text-2xl font-bold tracking-tight text-primary-dark">
-          Commandes envoyées
-        </h1>
-        <p className="mt-1 text-sm text-muted">
-          Créer et suivre les transferts de stock depuis vos magasins
-        </p>
-      </div>
-
+    <div className="space-y-10">
       <StoreStockTransferManager
-        stores={stores}
+        sourceStores={sourceStores}
+        stores={destinationStores}
         products={products}
         fromStoreId={fromStoreId}
         toStoreId={toStoreId}
-        lockFromStore={Boolean(lockedFromId)}
+        lockFromStore={Boolean(lockedStoreId)}
         basePath="/manager"
+        hubStores={hubStores}
+        toHubStoreId={toHubStoreId}
+        enableHubDestination
+        initialDestination={initialDestination}
+        showAllDestinations
+      />
+
+      <HubTransfersList
+        title="Commandes vers le dépôt (hub)"
+        transfers={hubOutgoingTransfers}
+        allowManage
+        manageAsStoreSource
+        showOrigin
+        showProductImages
+        livreurs={livreurs}
+        emptyMessage="Aucun envoi vers le dépôt"
       />
 
       <StoreTransfersList
-        title="Commandes envoyées (magasin source)"
+        title="Commandes inter-magasins (magasin source)"
         perspective="outgoing"
-        managedStoreIds={storeIds}
-        transfers={transfers}
+        managedStoreIds={managedStoreIds}
+        transfers={storeTransfers}
         livreurs={livreurs}
-        emptyMessage="Aucune commande envoyée depuis vos magasins"
+        emptyMessage="Aucune commande envoyée vers un autre magasin"
       />
     </div>
   );

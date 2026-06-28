@@ -42,11 +42,6 @@ export async function applyShopifyOrderWorkflowStatus(
 
   if (error) return { error: error.message };
 
-  if (effectiveStatus === "ready" && order.store_id) {
-    const { assignOrderToStoreLivreur } = await import("@/lib/shopify/assign-livreur");
-    await assignOrderToStoreLivreur(orderId, order.store_id);
-  }
-
   try {
     const { notifyShopifyOrderWorkflowStatus } = await import(
       "@/lib/kapso/order-status-notifications"

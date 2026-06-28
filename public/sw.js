@@ -1,4 +1,4 @@
-const CACHE_VERSION = "natus-pwa-v1";
+const CACHE_VERSION = "natus-pwa-v3";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());

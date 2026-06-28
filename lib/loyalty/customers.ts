@@ -98,7 +98,12 @@ export async function canStaffAccessLoyaltyCustomer(
 export async function getLoyaltyCustomerForStaff(
   profile: Profile,
   customerId: string
-): Promise<{ customer: LoyaltyCustomer; transactions: LoyaltyTransaction[]; notes: import("@/lib/types").CustomerNote[] } | null> {
+): Promise<{
+  customer: LoyaltyCustomer;
+  transactions: LoyaltyTransaction[];
+  notes: import("@/lib/types").CustomerNote[];
+  sales: import("@/lib/loyalty/customer-sales").CustomerSaleSummary[];
+} | null> {
   const supabase = await createClient();
 
   const { data: customer, error } = await supabase
@@ -120,10 +125,17 @@ export async function getLoyaltyCustomerForStaff(
   const { getCustomerNotes } = await import("@/lib/loyalty/customer-notes");
   const notes = await getCustomerNotes(supabase, customer.id, 30);
 
+  const { isProParticulierCustomer } = await import("@/lib/pro-client/account-type");
+  const { getCustomerSalesForStaff } = await import("@/lib/loyalty/customer-sales.server");
+  const sales = isProParticulierCustomer(customer as LoyaltyCustomer)
+    ? await getCustomerSalesForStaff(customer.id, 50)
+    : [];
+
   return {
     customer: customer as LoyaltyCustomer,
     transactions,
     notes,
+    sales,
   };
 }
 

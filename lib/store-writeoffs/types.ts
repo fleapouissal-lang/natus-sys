@@ -1,6 +1,8 @@
 import { getRoleLabel, isDirector, isManager } from "@/lib/permissions";
 import type { Product, Profile, UserRole } from "@/lib/types";
 
+export const MAX_WRITEOFF_PHOTOS = 5;
+
 export type StoreWriteoffReason = "expired" | "broken";
 export type StoreWriteoffStatus = "pending" | "approved" | "rejected";
 
@@ -10,6 +12,15 @@ export type StoreWriteoffItem = {
   quantity: number;
   reason: StoreWriteoffReason;
   products?: Pick<Product, "id" | "name" | "barcode" | "image_url" | "price"> | null;
+};
+
+export type StoreWriteoffPhoto = {
+  id: string;
+  writeoff_id: string;
+  storage_path: string;
+  public_url: string;
+  sort_order: number;
+  created_at?: string;
 };
 
 export type StoreProductWriteoff = {
@@ -28,6 +39,7 @@ export type StoreProductWriteoff = {
   creator?: { full_name: string | null; email: string } | null;
   validator?: { full_name: string | null; email: string; role?: UserRole } | null;
   items?: StoreWriteoffItem[];
+  photos?: StoreWriteoffPhoto[];
 };
 
 export const WRITEOFF_REASON_LABELS: Record<StoreWriteoffReason, string> = {

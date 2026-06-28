@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -9,6 +9,7 @@ import {
   Package,
   Search,
   Store as StoreIcon,
+  Warehouse,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
@@ -21,7 +22,7 @@ import { StoreSelect } from "@/components/stores/store-select";
 import { ProductImage } from "@/components/pos/product-image";
 import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
-import { transferStoreStock } from "@/lib/actions";
+import { transferStoreStock, transferStoreStockToHub } from "@/lib/actions";
 import { formatCurrency } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, Store } from "@/lib/types";
@@ -33,22 +34,45 @@ type TransferAlert = {
   requested?: number;
 };
 
+type TransferDestination = "store" | "hub";
+
 export function StoreStockTransferManager({
   stores,
+  sourceStores,
   products,
   fromStoreId,
   toStoreId,
   lockFromStore = false,
   basePath,
+  hubStores = [],
+  toHubStoreId = "",
+  enableHubDestination = false,
+  initialDestination = "store",
+  showAllDestinations = false,
 }: {
   stores: Store[];
+  sourceStores?: Store[];
   products: Product[];
   fromStoreId: string;
   toStoreId: string;
   lockFromStore?: boolean;
   basePath: "/manager" | "/director";
+  hubStores?: Store[];
+  toHubStoreId?: string;
+  enableHubDestination?: boolean;
+  initialDestination?: TransferDestination;
+  showAllDestinations?: boolean;
 }) {
   const router = useRouter();
+  const [destinationType, setDestinationType] = useState<TransferDestination>(
+    enableHubDestination && initialDestination === "hub" ? "hub" : "store"
+  );
+
+  useEffect(() => {
+    setDestinationType(
+      enableHubDestination && initialDestination === "hub" ? "hub" : "store"
+    );
+  }, [enableHubDestination, initialDestination, fromStoreId]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [notes, setNotes] = useState("");
@@ -58,8 +82,10 @@ export function StoreStockTransferManager({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState<TransferAlert | null>(null);
 
-  const fromStore = stores.find((s) => s.id === fromStoreId);
+  const fromStoreOptions = sourceStores ?? stores;
+  const fromStore = fromStoreOptions.find((s) => s.id === fromStoreId);
   const toStore = stores.find((s) => s.id === toStoreId);
+  const selectedHubStore = hubStores.find((s) => s.id === toHubStoreId) ?? null;
   const destinationStores = useMemo(
     () => stores.filter((s) => s.id !== fromStoreId),
     [stores, fromStoreId]
@@ -136,10 +162,19 @@ export function StoreStockTransferManager({
     };
   }, [transferPayload.payload, products]);
 
-  function navigateStores(nextFrom: string, nextTo: string) {
+  function navigateTransfer(
+    nextFrom: string,
+    nextTo: string,
+    nextDestination = destinationType,
+    nextHubId = toHubStoreId
+  ) {
     const params = new URLSearchParams();
     if (nextFrom) params.set("from", nextFrom);
-    if (nextTo) params.set("to", nextTo);
+    if (nextDestination === "store" && nextTo) params.set("to", nextTo);
+    if (enableHubDestination) {
+      params.set("dest", nextDestination);
+      if (nextDestination === "hub" && nextHubId) params.set("hub", nextHubId);
+    }
     router.push(`${basePath}/stock-transfers?${params.toString()}`);
     router.refresh();
   }
@@ -151,13 +186,26 @@ export function StoreStockTransferManager({
         : toStoreId;
     setQuantities({});
     setSuccess("");
-    navigateStores(storeId, nextTo);
+    navigateTransfer(storeId, nextTo);
   }
 
   function handleToChange(storeId: string) {
     setQuantities({});
     setSuccess("");
-    navigateStores(fromStoreId, storeId);
+    navigateTransfer(fromStoreId, storeId, "store");
+  }
+
+  function handleDestinationChange(nextDestination: TransferDestination) {
+    setDestinationType(nextDestination);
+    setQuantities({});
+    setSuccess("");
+    navigateTransfer(fromStoreId, toStoreId, nextDestination, toHubStoreId);
+  }
+
+  function handleHubChange(hubId: string) {
+    setQuantities({});
+    setSuccess("");
+    navigateTransfer(fromStoreId, toStoreId, "hub", hubId);
   }
 
   function showTransferAlert(alert: TransferAlert) {
@@ -186,10 +234,18 @@ export function StoreStockTransferManager({
       return;
     }
 
-    if (!toStoreId) {
+    if (destinationType === "store" && !toStoreId) {
       showTransferAlert({
         title: "Magasin destination requis",
         message: "Sélectionnez le magasin qui recevra le stock.",
+      });
+      return;
+    }
+
+    if (destinationType === "hub" && !toHubStoreId) {
+      showTransferAlert({
+        title: "Dépôt requis",
+        message: "Sélectionnez le dépôt hub de destination.",
       });
       return;
     }
@@ -218,12 +274,20 @@ export function StoreStockTransferManager({
 
   async function handleTransferConfirm() {
     setLoading(true);
-    const result = await transferStoreStock(
-      fromStoreId,
-      toStoreId,
-      transferPayload.payload,
-      notes
-    );
+    const result =
+      destinationType === "hub"
+        ? await transferStoreStockToHub(
+            fromStoreId,
+            transferPayload.payload,
+            notes,
+            toHubStoreId
+          )
+        : await transferStoreStock(
+            fromStoreId,
+            toStoreId,
+            transferPayload.payload,
+            notes
+          );
     setLoading(false);
     setConfirmOpen(false);
 
@@ -237,26 +301,48 @@ export function StoreStockTransferManager({
 
     resetTransfer();
     setSuccess(
-      `Commande créée vers ${result.toStoreName} — statut « En cours ». Validez l'expédition depuis la liste ci-dessous.`
+      destinationType === "hub"
+        ? `Commande créée vers ${"hubStoreName" in result ? result.hubStoreName : "dépôt"} — statut « En cours ». Marquez-la prête puis assignez un livreur.`
+        : `Commande créée vers ${"toStoreName" in result ? result.toStoreName : "magasin"} — statut « En cours ». Validez l'expédition depuis la liste ci-dessous.`
     );
     router.refresh();
   }
 
-  const canTransfer = stores.length >= 2 && destinationStores.length > 0;
+  const canTransferStore =
+    fromStoreOptions.length >= 1 && destinationStores.length > 0;
+  const canTransferHub = Boolean(fromStoreId && toHubStoreId && hubStores.length > 0);
+  const canTransfer =
+    destinationType === "hub" ? canTransferHub : canTransferStore;
+  const destinationName =
+    destinationType === "hub" ? selectedHubStore?.name : toStore?.name;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Transfert entre magasins</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Transfert de stock</h1>
         <p className="mt-1 text-muted">
-          Déplacez du stock d&apos;un magasin vers un autre magasin de vente.
+          {enableHubDestination
+            ? showAllDestinations
+              ? "Choisissez votre magasin source, puis envoyez le stock vers n'importe quel autre magasin ou dépôt hub actif."
+              : "Envoyez du stock d'un magasin vers un autre magasin ou vers un dépôt hub."
+            : "Déplacez du stock d'un magasin vers un autre magasin de vente."}
         </p>
       </div>
 
-      {!canTransfer && (
+      {destinationType === "store" && !canTransferStore && (
         <Card className="border-warning/40 bg-warning/5">
           <p className="text-sm">
-            Au moins deux magasins actifs sont nécessaires pour effectuer un transfert.
+            {fromStoreOptions.length === 0
+              ? "Aucun magasin source ne vous est associé."
+              : "Aucun magasin destination disponible."}
+          </p>
+        </Card>
+      )}
+
+      {destinationType === "hub" && hubStores.length === 0 && (
+        <Card className="border-warning/40 bg-warning/5">
+          <p className="text-sm">
+            Aucun dépôt hub actif. Contactez le directeur.
           </p>
         </Card>
       )}
@@ -282,25 +368,50 @@ export function StoreStockTransferManager({
             <h2 className="text-lg font-semibold">Nouveau transfert</h2>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
             <StoreSelect
               stores={
                 lockFromStore
-                  ? stores.filter((s) => s.id === fromStoreId)
-                  : stores
+                  ? fromStoreOptions.filter((s) => s.id === fromStoreId)
+                  : fromStoreOptions
               }
               value={fromStoreId}
               onChange={handleFromChange}
               label="Magasin source"
               size="sm"
             />
-            <StoreSelect
-              stores={destinationStores}
-              value={toStoreId}
-              onChange={handleToChange}
-              label="Magasin destination"
-              size="sm"
-            />
+            {enableHubDestination && (
+              <SelectMenu
+                label="Destination"
+                value={destinationType}
+                onChange={(value) =>
+                  handleDestinationChange(value as TransferDestination)
+                }
+                options={[
+                  { value: "store", label: "Autre magasin" },
+                  { value: "hub", label: "Dépôt hub" },
+                ]}
+                size="sm"
+                showIcons={false}
+              />
+            )}
+            {destinationType === "store" ? (
+              <StoreSelect
+                stores={destinationStores}
+                value={toStoreId}
+                onChange={handleToChange}
+                label="Magasin destination"
+                size="sm"
+              />
+            ) : (
+              <StoreSelect
+                stores={hubStores}
+                value={toHubStoreId}
+                onChange={handleHubChange}
+                label="Dépôt destination"
+                size="sm"
+              />
+            )}
             <Input
               label="Note (optionnel)"
               inputSize="sm"
@@ -320,12 +431,15 @@ export function StoreStockTransferManager({
             </Button>
           </div>
 
-          {fromStore && toStore && (
+          {fromStore && destinationName && (
             <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
               <StoreIcon className="h-4 w-4 shrink-0 text-primary" />
               <span>{fromStore.name}</span>
               <ArrowRight className="h-4 w-4 shrink-0" />
-              <span>{toStore.name}</span>
+              {destinationType === "hub" ? (
+                <Warehouse className="h-4 w-4 shrink-0 text-primary" />
+              ) : null}
+              <span>{destinationName}</span>
             </p>
           )}
 
@@ -379,7 +493,9 @@ export function StoreStockTransferManager({
                     <th className="px-4 py-3 text-left font-medium text-muted">Catégorie</th>
                     <th className="px-4 py-3 text-right font-medium text-muted">Prix</th>
                     <th className="px-4 py-3 text-right font-medium text-muted">Stock source</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted">Qté à transférer</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted">
+                      Qté à envoyer
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -427,11 +543,15 @@ export function StoreStockTransferManager({
         )}
       </Card>
 
-      {confirmOpen && fromStore && toStore && (
+      {confirmOpen && fromStore && destinationName && (
         <Modal onClose={() => setConfirmOpen(false)} size="md">
-          <h3 className="text-lg font-semibold">Confirmer la commande</h3>
+          <h3 className="text-lg font-semibold">
+            {destinationType === "hub"
+              ? "Confirmer l'envoi au dépôt"
+              : "Confirmer la commande"}
+          </h3>
           <p className="mt-2 text-sm text-muted">
-            {fromStore?.name} → {toStore?.name} · {confirmSummary.totalQty} unité
+            {fromStore.name} → {destinationName} · {confirmSummary.totalQty} unité
             {confirmSummary.totalQty !== 1 ? "s" : ""} · statut initial « En cours »
           </p>
           <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto text-sm">

@@ -10,6 +10,7 @@ export type UserPageKey =
   | "sales"
   | "stock"
   | "products"
+  | "fabrication_products"
   | "stores"
   | "activity"
   | "reclamations"
@@ -46,6 +47,12 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "sales", label: "Ventes", description: "Historique des ventes POS", group: "operations" },
   { key: "stock", label: "Stock", description: "Vue globale et stock par magasin ou dépôt", group: "operations" },
   { key: "products", label: "Produits", description: "Catalogue et fiches produit", group: "admin" },
+  {
+    key: "fabrication_products",
+    label: "Fabrication",
+    description: "Matières premières et stock dépôt fabrication",
+    group: "admin",
+  },
   { key: "stores", label: "Magasins", description: "Points de vente et paramètres", group: "admin" },
   { key: "activity", label: "Historique", description: "Historique des actions et mouvements", group: "admin" },
   { key: "reclamations", label: "Réclamations", description: "Suivi des réclamations clients", group: "clients" },
@@ -68,17 +75,19 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
 
 const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
   directeur: [
-    "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products", "stores",
+    "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products",
+    "fabrication_products", "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
     "hub_stock", "hubs", "writeoffs", "stock_access", "cheques",
   ],
   admin: [
-    "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products", "stores",
+    "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products",
+    "fabrication_products", "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
     "hub_stock", "hubs", "writeoffs", "stock_access", "cheques",
   ],
   manager: [
-    "dashboard", "planning", "pos_closures", "sales", "stock", "hub_orders", "stores",
+    "dashboard", "planning", "pos_closures", "sales", "stock", "transfers", "hub_orders", "stores",
     "activity", "reclamations", "writeoffs", "invoices", "actualites", "cheques",
   ],
   cashier: [
@@ -86,7 +95,16 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
     "customers", "returns", "invoices", "cheques",
   ],
   livreur: ["actualites", "orders", "transfers", "returns"],
-  hub: ["dashboard", "stock", "hub_stock", "hub_orders", "activity", "actualites", "writeoffs"],
+  hub: [
+    "dashboard",
+    "stock",
+    "hub_stock",
+    "fabrication_products",
+    "hub_orders",
+    "activity",
+    "actualites",
+    "writeoffs",
+  ],
 };
 
 const PAGE_HOME_PRIORITY: UserPageKey[] = [
@@ -98,6 +116,7 @@ const PAGE_HOME_PRIORITY: UserPageKey[] = [
   "stock",
   "hub_orders",
   "products",
+  "fabrication_products",
   "stores",
   "reclamations",
   "loyalty",
@@ -173,6 +192,10 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       return base === "/hub" ? "/hub/stock" : base ? `${base}/stock` : null;
     case "products":
       return base ? `${base}/products` : null;
+    case "fabrication_products":
+      if (role === "directeur" || role === "admin") return "/director/fabrication-products";
+      if (role === "hub") return "/hub/fabrication-products";
+      return null;
     case "stores":
       return base ? `${base}/stores` : null;
     case "activity":
@@ -203,6 +226,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
     case "transfers":
       if (role === "livreur") return "/livreur/transfers";
       if (role === "cashier") return "/cashier/transfers/received";
+      if (role === "manager") return "/manager/stock-transfers";
       return null;
     case "orders":
       return role === "livreur" ? "/livreur/orders" : null;
@@ -280,11 +304,11 @@ export function getAllowedHrefsForProfile(
   }
 
   if (profile.role === "manager") {
-    if (keys.includes("stock")) {
+    if (keys.includes("stock") || keys.includes("transfers") || keys.includes("hub_orders")) {
       hrefs.push("/manager/stock-transfers", "/manager/stock-transfers/received");
     }
     if (keys.includes("hub_orders")) {
-      hrefs.push("/manager/stock-transfers/received", "/manager/hub-orders");
+      hrefs.push("/manager/hub-orders");
     }
   }
 
@@ -362,7 +386,7 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
     (href === "/director/stock-transfers/received" &&
       (role === "directeur" || role === "admin"))
   ) {
-    return "stock";
+    return role === "manager" ? "transfers" : "stock";
   }
   if (href === "/manager/stock-transfers/received" && role === "manager") {
     return "hub_orders";

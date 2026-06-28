@@ -25,6 +25,9 @@ export async function submitProClientRegistration(input: {
   companyName?: string;
   city?: string;
   address?: string;
+  responsibleName?: string;
+  companyIce?: string;
+  companyRc?: string;
 }): Promise<ProClientSubmitResult | { error: string }> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("submit_pro_client_registration_by_store", {
@@ -36,6 +39,9 @@ export async function submitProClientRegistration(input: {
     p_company_name: input.companyName?.trim() || null,
     p_city: input.city?.trim() || null,
     p_address: input.address?.trim() || null,
+    p_responsible_name: input.responsibleName?.trim() || null,
+    p_company_ice: input.companyIce?.trim() || null,
+    p_company_rc: input.companyRc?.trim() || null,
   });
 
   if (error) {

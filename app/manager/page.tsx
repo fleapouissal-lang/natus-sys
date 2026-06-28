@@ -52,7 +52,7 @@ export default async function ManagerDashboard({
       <div className={showPageHeader ? undefined : "hidden md:block"}>
         <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
         <p className="mt-1 text-muted">
-          Suivi multi-magasins et statistiques détaillées par point de vente
+          Suivi du stock des magasins et statistiques par point de vente
         </p>
       </div>
 

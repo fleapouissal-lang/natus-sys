@@ -13,6 +13,7 @@ import {
 } from "@/lib/user-page-access";
 import { NATUS_CITIES } from "@/lib/constants/cities";
 import { getStoreById } from "@/lib/inventory";
+import { getTransferStoreById } from "@/lib/transfer-sites.server";
 import { PRODUCT_BRAND, PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { buildParentBarcode } from "@/lib/products/product-utils";
 import { uploadProductImage } from "@/lib/storage";
@@ -21,6 +22,7 @@ import {
   resolveLoyaltyLookupResult,
   type LoyaltyLookupResult,
 } from "@/lib/loyalty/lookup-result";
+import { getWeekWorkDays, normalizeWeekStart } from "@/lib/scheduling/week";
 
 const MANAGEMENT = ["directeur", "admin", "manager"] as const;
 const STOCK_READ = ["directeur", "admin", "manager", "hub"] as const;
@@ -132,7 +134,9 @@ async function assertStoreTransferAccess(
   }
 
   const fromStore = await getStoreById(fromStoreId);
-  const toStore = await getStoreById(toStoreId);
+  const toStore = isManager(profile)
+    ? await getTransferStoreById(toStoreId)
+    : await getStoreById(toStoreId);
 
   if (!fromStore || !toStore) {
     return { error: "Magasin introuvable" };
@@ -151,21 +155,44 @@ async function assertStoreTransferAccess(
   }
 
   if (isManager(profile)) {
-    if (isStoreScopedManager(profile) && profile.store_id) {
-      if (profile.store_id !== fromStoreId) {
-        return { error: "Vous ne pouvez transférer que depuis votre magasin" };
-      }
-      if (toStore.city !== profile.city) {
-        return { error: "Magasin destination hors périmètre" };
-      }
-      return { fromStore, toStore };
+    if (!canManageStore(profile, fromStore)) {
+      return { error: "Vous n'avez pas accès à ce magasin source" };
     }
-
-    if (!canManageStore(profile, fromStore) || !canManageStore(profile, toStore)) {
-      return { error: "Magasins hors périmètre" };
-    }
-
     return { fromStore, toStore };
+  }
+
+  return { error: "Non autorisé" };
+}
+
+async function assertStoreTransferToHubAccess(
+  profile: Profile,
+  fromStoreId: string,
+  toHubStoreId: string
+) {
+  const fromStore = await getStoreById(fromStoreId);
+  const hubStore = await getTransferStoreById(toHubStoreId);
+
+  if (!fromStore || !hubStore) {
+    return { error: "Magasin ou dépôt introuvable" };
+  }
+
+  if (fromStore.is_hub || !hubStore.is_hub) {
+    return { error: "Transfert magasin → dépôt invalide" };
+  }
+
+  if (!fromStore.is_active || !hubStore.is_active) {
+    return { error: "Magasin ou dépôt inactif" };
+  }
+
+  if (isDirector(profile)) {
+    return { fromStore, hubStore };
+  }
+
+  if (isManager(profile)) {
+    if (!canManageStore(profile, fromStore)) {
+      return { error: "Vous n'avez pas accès à ce magasin source" };
+    }
+    return { fromStore, hubStore };
   }
 
   return { error: "Non autorisé" };
@@ -884,6 +911,101 @@ export async function transferStoreStock(
     transferId: String(payload.transfer_id || ""),
     toStoreName: String(payload.to_store || access.toStore?.name || ""),
   };
+}
+
+export async function transferStoreStockToHub(
+  fromStoreId: string,
+  items: HubStockTransferItem[],
+  notes?: string,
+  toHubStoreId?: string
+): Promise<{ success: true; transferId: string; hubStoreName: string } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  if (!fromStoreId) return { error: "Sélectionnez un magasin source" };
+
+  const cleaned = items
+    .map((item) => ({
+      product_id: item.productId,
+      quantity: Math.floor(item.quantity),
+    }))
+    .filter((item) => item.product_id && item.quantity > 0);
+
+  if (cleaned.length === 0) {
+    return { error: "Indiquez au moins une quantité à transférer" };
+  }
+
+  if (toHubStoreId && (profile.role === "directeur" || profile.role === "admin" || profile.role === "manager")) {
+    const access = await assertStoreTransferToHubAccess(profile, fromStoreId, toHubStoreId);
+    if ("error" in access && access.error) return { error: access.error };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("create_store_to_hub_stock_transfer", {
+    p_from_store_id: fromStoreId,
+    p_items: cleaned,
+    p_notes: notes?.trim() || null,
+    p_to_hub_store_id: toHubStoreId || null,
+  });
+
+  if (error) {
+    const msg = error.message;
+    if (msg.includes("Stock insuffisant")) {
+      return { error: "Stock insuffisant au magasin source pour un ou plusieurs produits" };
+    }
+    if (msg.includes("dépôt")) {
+      return { error: "Aucun dépôt rattaché à ce magasin" };
+    }
+    return { error: msg };
+  }
+
+  revalidateManagement();
+
+  const payload =
+    typeof data === "object" && data !== null
+      ? (data as { transfer_id?: string; hub_store?: string })
+      : {};
+
+  return {
+    success: true,
+    transferId: String(payload.transfer_id || ""),
+    hubStoreName: String(payload.hub_store || "dépôt"),
+  };
+}
+
+export async function markStoreToHubTransferReady(
+  transferId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("mark_store_to_hub_transfer_ready", {
+    p_transfer_id: transferId,
+  });
+  if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function assignStoreToHubTransferLivreur(
+  transferId: string,
+  livreurId: string
+): Promise<{ success: true } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+  if (!livreurId) return { error: "Sélectionnez un livreur" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("assign_store_to_hub_transfer_livreur", {
+    p_transfer_id: transferId,
+    p_livreur_id: livreurId,
+  });
+  if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
 }
 
 export async function markStoreTransferReady(
@@ -1723,20 +1845,12 @@ export async function completeShopifyOrderSale(
 
   const now = new Date().toISOString();
 
-  const { resolveLivreurForReadyOrder } = await import("@/lib/shopify/assign-livreur");
-  const livreurId = order.store_id
-    ? await resolveLivreurForReadyOrder(order.store_id)
-    : null;
-
   const updates: Record<string, unknown> = {
     fulfilled_at: now,
     fulfilled_by: effective.cashierId,
     workflow_status: "ready",
     updated_at: now,
   };
-  if (livreurId) {
-    updates.assigned_livreur_id = livreurId;
-  }
 
   const { error: updateError } = await supabase
     .from("shopify_orders")
@@ -2585,8 +2699,43 @@ export async function confirmShopifyOrderReturn(
   return { success: true };
 }
 
+export async function assignShopifyOrderLivreur(
+  orderId: string,
+  livreurId: string
+): Promise<{ success: true; livreurName: string } | { error: string }> {
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  const { getShopifyOrderById, canAccessShopifyOrder } = await import(
+    "@/lib/shopify/order-access"
+  );
+  const order = await getShopifyOrderById(orderId);
+  if (!order) return { error: "Commande introuvable" };
+
+  if (!(await canAccessShopifyOrder(profile, order))) {
+    return { error: "Accès refusé" };
+  }
+
+  if (!order.fulfilled_at) {
+    return { error: "Préparez la commande en caisse avant d'assigner un livreur" };
+  }
+
+  const { assignOrderToLivreur } = await import("@/lib/shopify/assign-livreur");
+  const result = await assignOrderToLivreur(orderId, livreurId, order);
+  if ("error" in result) return result;
+
+  revalidatePath("/cashier/orders");
+  revalidatePath("/manager/orders");
+  revalidatePath("/director/orders");
+  revalidatePath("/director/hub");
+  revalidatePath("/livreur/orders");
+
+  return result;
+}
+
 export async function handOrderToLivreur(
-  orderId: string
+  orderId: string,
+  livreurId?: string
 ): Promise<{ success: true } | { error: string }> {
   const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
   if (!profile) return { error: "Non autorisé" };
@@ -2611,9 +2760,17 @@ export async function handOrderToLivreur(
 
   const supabase = await createClient();
 
-  if (!order.assigned_livreur_id && (order.store_id || order.city)) {
-    const { assignOrderToStoreLivreur } = await import("@/lib/shopify/assign-livreur");
-    await assignOrderToStoreLivreur(orderId, order.store_id, order.city);
+  let assignedLivreurId = order.assigned_livreur_id;
+
+  if (livreurId) {
+    const { assignOrderToLivreur } = await import("@/lib/shopify/assign-livreur");
+    const assignResult = await assignOrderToLivreur(orderId, livreurId, order);
+    if ("error" in assignResult) return assignResult;
+    assignedLivreurId = livreurId;
+  }
+
+  if (!assignedLivreurId) {
+    return { error: "Assignez un livreur avant la remise" };
   }
 
   const { error } = await supabase
@@ -3140,17 +3297,6 @@ async function assertNotWeekOff(
   return {};
 }
 
-function normalizeWeekStart(dateStr: string): string {
-  const d = new Date(`${dateStr}T12:00:00`);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-}
-
 export async function createCashierShift(input: {
   storeId: string;
   cashierId: string;
@@ -3374,6 +3520,8 @@ export async function planCashierWeek(input: {
     return d.toISOString().slice(0, 10);
   })();
 
+  const weekDays = getWeekWorkDays(weekStart);
+
   const [{ data: weekOffRows }, { data: shiftRows }] = await Promise.all([
     admin
       .from("cashier_week_offs")
@@ -3393,15 +3541,6 @@ export async function planCashierWeek(input: {
         planningCashiers.map((c) => c.id)
       ),
   ]);
-
-  const weekDays = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(`${weekStart}T12:00:00`);
-    d.setDate(d.getDate() + i);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${dd}`;
-  });
 
   let created = 0;
   let skipped = 0;
@@ -3425,7 +3564,7 @@ export async function planCashierWeek(input: {
         continue;
       }
 
-      if (weekOffRows?.some((o) => o.cashier_id === cashier.id && o.off_date === day)) {
+      if (weekOffRows?.some((o) => o.cashier_id === cashier.id && o.off_date.slice(0, 10) === day)) {
         skipped += 1;
         continue;
       }
@@ -3789,10 +3928,13 @@ export async function deleteProClientCustomer(
   return { success: true };
 }
 
-export async function createStoreProductWriteoff(input: {
-  items: { productId: string; quantity: number; reason: "expired" | "broken" }[];
-  notes?: string;
-}): Promise<{ success: true; writeoffId: string } | { error: string }> {
+export async function createStoreProductWriteoff(
+  input: {
+    items: { productId: string; quantity: number; reason: "expired" | "broken" }[];
+    notes?: string;
+  },
+  photos: File[] = []
+): Promise<{ success: true; writeoffId: string } | { error: string }> {
   const profile = await requireRole(["cashier", "hub"]);
   if (!profile) return { error: "Non autorisé" };
 
@@ -3810,8 +3952,28 @@ export async function createStoreProductWriteoff(input: {
 
   if (error) return { error: error.message };
 
+  const writeoffId = data as string;
+
+  if (photos.length > 0) {
+    const { data: writeoffRow } = await supabase
+      .from("store_product_writeoffs")
+      .select("store_id")
+      .eq("id", writeoffId)
+      .maybeSingle();
+
+    if (!writeoffRow?.store_id) {
+      return { error: "Retour créé mais magasin introuvable pour les photos" };
+    }
+
+    const { attachWriteoffPhotos } = await import("@/lib/store-writeoffs/photos");
+    const photoResult = await attachWriteoffPhotos(writeoffId, writeoffRow.store_id, photos);
+    if (photoResult.error) {
+      return { error: `Retour enregistré mais photo non envoyée : ${photoResult.error}` };
+    }
+  }
+
   revalidateWriteoffPaths();
-  return { success: true, writeoffId: data as string };
+  return { success: true, writeoffId };
 }
 
 export async function validateStoreProductWriteoff(

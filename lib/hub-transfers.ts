@@ -184,3 +184,23 @@ export async function getManagerHubStockTransfers(storeIds: string[]): Promise<H
   if (storeIds.length === 0) return [];
   return getHubStockTransfers({ toStoreIds: storeIds, limit: 100 });
 }
+
+/** Commandes magasin → dépôt envoyées par le gérant. */
+export async function getManagerOutgoingHubTransfers(
+  fromStoreIds: string[]
+): Promise<HubStockTransfer[]> {
+  if (fromStoreIds.length === 0) return [];
+
+  const results = await Promise.all(
+    fromStoreIds.map((fromStoreId) =>
+      getHubStockTransfers({ fromStoreId, limit: 50 })
+    )
+  );
+
+  const merged = results.flat();
+  const byId = new Map(merged.map((transfer) => [transfer.id, transfer]));
+
+  return [...byId.values()]
+    .filter((transfer) => transfer.to_store_is_hub)
+    .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime());
+}

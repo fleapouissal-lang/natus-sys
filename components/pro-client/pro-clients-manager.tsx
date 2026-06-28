@@ -154,7 +154,7 @@ export function ProClientsManager({
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant={isEntreprise ? "default" : "accent"}>
-                        {isEntreprise ? "Entreprise" : "Particulier"}
+                        {isEntreprise ? "Professionnel" : "Particulier"}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-muted">
@@ -162,6 +162,18 @@ export function ProClientsManager({
                         <>
                           <p>{customer.company_name || "—"}</p>
                           <p className="text-xs">{customer.city || "—"}</p>
+                          {customer.responsible_name && (
+                            <p className="text-xs text-muted">
+                              Resp. {customer.responsible_name}
+                            </p>
+                          )}
+                          {(customer.company_ice || customer.company_rc) && (
+                            <p className="text-xs text-muted">
+                              {[customer.company_ice && `ICE ${customer.company_ice}`, customer.company_rc && `RC ${customer.company_rc}`]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          )}
                         </>
                       ) : (
                         <span>{customer.city || customer.email || "—"}</span>

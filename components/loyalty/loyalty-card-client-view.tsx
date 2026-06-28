@@ -9,16 +9,19 @@ export function LoyaltyCardClientView({
   initialCustomer,
   initialTransactions,
   loyaltySettings = DEFAULT_LOYALTY_SETTINGS,
+  initialTab,
 }: {
   initialCustomer: LoyaltyCustomer;
   initialTransactions: PublicLoyaltyTransaction[];
   loyaltySettings?: LoyaltySettings;
+  initialTab?: "carte" | "points" | "historique" | "factures" | "commandes";
 }) {
   return (
     <LoyaltyCardPortal
       initialCustomer={initialCustomer}
       initialTransactions={initialTransactions}
       loyaltySettings={loyaltySettings}
+      initialTab={initialTab}
     />
   );
 }

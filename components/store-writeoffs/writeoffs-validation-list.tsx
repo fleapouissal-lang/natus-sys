@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { ProductImage } from "@/components/pos/product-image";
+import { WriteoffPhotosGallery } from "@/components/store-writeoffs/writeoff-photos";
 import { WRITEOFF_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import {
   rejectStoreProductWriteoff,
@@ -180,6 +181,7 @@ export function WriteoffsValidationList({
                 </div>
               ))}
             </div>
+            <WriteoffPhotosGallery photos={writeoff.photos || []} />
             {writeoff.rejection_note && (
               <p className="border-t border-border px-4 py-3 text-sm text-warning md:px-6">
                 Refus : {writeoff.rejection_note}

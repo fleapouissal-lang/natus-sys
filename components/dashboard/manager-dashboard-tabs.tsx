@@ -28,7 +28,7 @@ const TABS: {
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
   { id: "suivi", label: "Suivi des magasins", icon: StoreIcon },
-  { id: "stats", label: "Statistiques", icon: BarChart3 },
+  { id: "stats", label: "Statistiques stock", icon: BarChart3 },
 ];
 
 function ManagerDashboardTabsInner({
@@ -53,6 +53,9 @@ function ManagerDashboardTabsInner({
   const searchParams = useSearchParams();
   const isDirector = pathname.startsWith("/director");
   const activityBase = isDirector ? "/director" : "/manager";
+  const stockOnly = !isDirector;
+  const stockBasePath = isDirector ? "/director" : "/manager";
+  const stockHref = (storeId: string) => `${stockBasePath}/stock?store=${storeId}`;
   const tabParam = searchParams.get("tab");
   const activeTab: DashboardTab =
     tabParam === "stats" || tabParam === "suivi" ? tabParam : "suivi";
@@ -102,7 +105,7 @@ function ManagerDashboardTabsInner({
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            <span className="md:hidden">{id === "suivi" ? "Suivi" : "Stats"}</span>
+            <span className="md:hidden">{id === "suivi" ? "Suivi" : "Stock"}</span>
             <span className="hidden md:inline">{label}</span>
           </button>
         ))}
@@ -130,6 +133,8 @@ function ManagerDashboardTabsInner({
               hideStoreHeader={isDirector}
               allStores={stores}
               allStoresScopeLabel={allStoresScopeLabel}
+              stockOnly={stockOnly}
+              stockHref={stockHref}
             />
           ) : (
             <Card className="py-12 text-center text-muted">
@@ -159,6 +164,9 @@ function ManagerDashboardTabsInner({
             stats={stats}
             allStoresScopeLabel={allStoresScopeLabel}
             hideDescription={isDirector}
+            stockOnly={stockOnly}
+            overviewByStore={overviewByStore}
+            stockHref={stockHref}
           />
 
           {selectedStoreId && (

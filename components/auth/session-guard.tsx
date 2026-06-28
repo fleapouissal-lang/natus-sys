@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { performClientLogout } from "@/lib/auth/client-logout";
 import {
   SESSION_ACTIVITY_THROTTLE_MS,
   SESSION_IDLE_CHECK_MS,
   SESSION_IDLE_TIMEOUT_MS,
   SESSION_LAST_ACTIVITY_KEY,
 } from "@/lib/auth/session-config";
-import { signOutPosOperator } from "@/lib/pos/actions";
 
 const ACTIVITY_EVENTS = [
   "mousedown",
@@ -37,7 +35,6 @@ export function SessionGuard({
   disableIdleLogout?: boolean;
   isStorePos?: boolean;
 }) {
-  const router = useRouter();
   const signingOut = useRef(false);
   const lastTouch = useRef(0);
 
@@ -49,16 +46,7 @@ export function SessionGuard({
     async function logoutIdle() {
       if (signingOut.current) return;
       signingOut.current = true;
-
-      if (isStorePos) {
-        await signOutPosOperator();
-      }
-
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      localStorage.removeItem(SESSION_LAST_ACTIVITY_KEY);
-      router.push("/login");
-      router.refresh();
+      await performClientLogout({ isStorePos });
     }
 
     function isIdle(): boolean {
@@ -112,7 +100,7 @@ export function SessionGuard({
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.clearInterval(intervalId);
     };
-  }, [router, disableIdleLogout, isStorePos]);
+  }, [disableIdleLogout, isStorePos]);
 
   return null;
 }

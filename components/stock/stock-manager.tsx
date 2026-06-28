@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { Search } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { StoreSelect } from "@/components/stores/store-select";
 import { AddStockCard } from "@/components/stock/add-stock-card";
@@ -67,6 +69,7 @@ export function StockManager({
   const [pickMode, setPickMode] = useState<ProductPickMode>("scan");
   const [scanHint, setScanHint] = useState("");
   const [scanQuery, setScanQuery] = useState("");
+  const [inventorySearch, setInventorySearch] = useState("");
 
   const selectedStore = stores.find((s) => s.id === storeId);
   const singleProduct =
@@ -297,6 +300,20 @@ export function StockManager({
   }
 
   const lowStockProducts = products.filter((p) => p.stock > 0 && p.stock < 10);
+
+  const filteredInventory = useMemo(() => {
+    const q = inventorySearch.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter(
+      (product) =>
+        product.name.toLowerCase().includes(q) ||
+        (product.barcode?.toLowerCase().includes(q) ?? false) ||
+        (product.product_code?.toLowerCase().includes(q) ?? false) ||
+        (product.category?.toLowerCase().includes(q) ?? false)
+    );
+  }, [products, inventorySearch]);
+
+  const inventoryFilterToken = `${storeId}|${inventorySearch}`;
   const {
     paginated: paginatedProducts,
     page,
@@ -305,7 +322,7 @@ export function StockManager({
     rangeStart,
     rangeEnd,
     totalItems,
-  } = usePagination(products, INVENTORY_PAGE_SIZE, storeId);
+  } = usePagination(filteredInventory, INVENTORY_PAGE_SIZE, inventoryFilterToken);
 
   return (
     <div className={embedded ? "space-y-6" : "space-y-6 animate-fade-in"}>
@@ -334,6 +351,7 @@ export function StockManager({
               setSelectedIds([]);
               setPerProductTotals({});
               setPerProductAdds({});
+              setInventorySearch("");
               router.push(`${basePath}/stock?store=${id}`);
             }}
           />
@@ -413,9 +431,51 @@ export function StockManager({
         <div className="p-6">
           <CardHeader
             title="Inventaire"
-            description={`État du stock — ${selectedStore?.name || ""}`}
+            description={
+              inventorySearch.trim()
+                ? `${filteredInventory.length} sur ${products.length} produit(s) — ${selectedStore?.name || ""}`
+                : `${products.length} produit(s) — ${selectedStore?.name || ""}`
+            }
           />
         </div>
+
+        <FilterTogglePanel
+          toggleLabel="Rechercher dans l'inventaire"
+          summary={`${filteredInventory.length} produit${filteredInventory.length !== 1 ? "s" : ""}`}
+        >
+          <div className="natus-filter-bar border-b border-border p-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div className="min-w-[min(100%,20rem)] flex-1">
+                <label className="mb-1.5 block text-sm font-medium">Rechercher</label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                  <input
+                    type="text"
+                    value={inventorySearch}
+                    onChange={(e) => setInventorySearch(e.target.value)}
+                    placeholder="Nom, code-barres, code produit, catégorie…"
+                    className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
+                  />
+                </div>
+              </div>
+              {inventorySearch.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setInventorySearch("")}
+                  className="cursor-pointer text-xs font-medium text-primary underline-offset-2 hover:underline"
+                >
+                  Effacer
+                </button>
+              )}
+            </div>
+          </div>
+        </FilterTogglePanel>
+
+        {filteredInventory.length === 0 ? (
+          <p className="px-6 py-12 text-center text-sm text-muted">
+            Aucun produit ne correspond à votre recherche
+          </p>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -454,6 +514,7 @@ export function StockManager({
             </tbody>
           </table>
         </div>
+        )}
         {totalItems > 0 && (
           <PaginationBar
             page={page}

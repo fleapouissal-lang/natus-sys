@@ -15,6 +15,14 @@ const WRITEOFF_SELECT = `
     quantity,
     reason,
     products(id, name, barcode, image_url, price)
+  ),
+  photos:store_product_writeoff_photos(
+    id,
+    writeoff_id,
+    storage_path,
+    public_url,
+    sort_order,
+    created_at
   )
 `;
 
