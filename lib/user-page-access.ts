@@ -67,7 +67,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "orders", label: "Livraisons", description: "Commandes Shopify à livrer", group: "operations" },
   { key: "hub_orders", label: "Commandes dépôt", description: "Commandes entrepôt vers magasins", group: "operations" },
   { key: "returns", label: "Retours", description: "Retours produits et SAV", group: "clients" },
-  { key: "writeoffs", label: "Retours stock", description: "Validation retours périmés ou cassés", group: "operations" },
+  { key: "writeoffs", label: "Annulations de stock", description: "Validation annulations périmées ou cassées", group: "operations" },
   { key: "stock_access", label: "Accès stock", description: "Demandes d'accès modification stock", group: "operations" },
   { key: "cheques", label: "Chèques", description: "Paiements par chèque en caisse", group: "operations" },
   { key: "customers", label: "Clients fidélité", description: "Clients fidélité en magasin", group: "clients" },
@@ -108,37 +108,36 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
   ],
 };
 
-/** Ordre sidebar directeur / admin : opérations quotidiennes → stock → clients → admin */
+/** Ordre sidebar directeur / admin : opérations → clients → admin → secondaire → historique */
 const DIRECTOR_NAV_PRIORITY: UserPageKey[] = [
   "dashboard",
   "pos",
-  "sales",
   "stock",
   "transfers",
   "hub_orders",
   "planning",
   "pos_closures",
   "cheques",
-  "products",
-  "fabrication_products",
-  "stores",
+  "sales",
   "loyalty",
   "invoices",
   "writeoffs",
-  "hubs",
   "reclamations",
-  "activity",
+  "products",
+  "fabrication_products",
+  "stores",
+  "hubs",
   "stock_access",
   "actualites",
   "users",
+  "activity",
 ];
 
-/** Ordre sidebar gérant : magasin & stock → caisse → suivi → admin */
+/** Ordre sidebar gérant : magasin & stock → caisse → suivi → secondaire → historique */
 const MANAGER_NAV_PRIORITY: UserPageKey[] = [
   "dashboard",
-  "planning",
   "stock",
-  "sales",
+  "planning",
   "transfers",
   "hub_orders",
   "pos_closures",
@@ -146,11 +145,11 @@ const MANAGER_NAV_PRIORITY: UserPageKey[] = [
   "invoices",
   "writeoffs",
   "reclamations",
-  "activity",
   "actualites",
+  "activity",
 ];
 
-/** Ordre sidebar hub : stock & transferts → opérations → suivi */
+/** Ordre sidebar hub : stock & transferts → opérations → secondaire → historique */
 const HUB_NAV_PRIORITY: UserPageKey[] = [
   "dashboard",
   "stock",
@@ -158,15 +157,14 @@ const HUB_NAV_PRIORITY: UserPageKey[] = [
   "hub_orders",
   "fabrication_products",
   "writeoffs",
-  "activity",
   "actualites",
+  "activity",
 ];
 
-/** Ordre sidebar caissier : caisse → ventes → stock → clients */
+/** Ordre sidebar caissier : caisse → stock → clients → secondaire → historique */
 const CASHIER_NAV_PRIORITY: UserPageKey[] = [
   "pos",
   "planning",
-  "sales",
   "hub_orders",
   "transfers",
   "notes",
@@ -176,9 +174,10 @@ const CASHIER_NAV_PRIORITY: UserPageKey[] = [
   "cheques",
   "pos_closures",
   "actualites",
+  "sales",
 ];
 
-/** Ordre sidebar livreur : livraisons → transferts → retours */
+/** Ordre sidebar livreur : livraisons → transferts → secondaire */
 const LIVREUR_NAV_PRIORITY: UserPageKey[] = [
   "orders",
   "transfers",
@@ -235,12 +234,14 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       if (role === "hub") return null;
       return "/cashier/pos";
     case "pos_closures":
-      if (role === "cashier") return "/cashier/pos-closures";
+      if (role === "cashier") return "/cashier/history";
       if (role === "manager") return "/manager/pos-closures";
       if (role === "directeur" || role === "admin") return "/director/pos-closures";
       return null;
     case "sales":
-      return role === "cashier" ? "/cashier/sales" : base ? `${base}/sales` : null;
+      if (role === "cashier") return "/cashier/history";
+      if (role === "manager") return "/manager/history";
+      return base ? `${base}/sales` : null;
     case "stock":
       return base === "/hub" ? "/hub/stock" : base ? `${base}/stock` : null;
     case "products":
@@ -252,6 +253,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
     case "stores":
       return base ? `${base}/stores` : null;
     case "activity":
+      if (role === "manager") return "/manager/history";
       return base === "/hub" ? "/hub/activity" : base ? `${base}/activity` : null;
     case "reclamations":
       return base ? `${base}/reclamations` : null;
@@ -364,6 +366,9 @@ export function getAllowedHrefsForProfile(
     if (keys.includes("hub_orders")) {
       hrefs.push("/manager/hub-orders");
     }
+    if (keys.includes("pos_closures")) {
+      hrefs.push("/manager/history");
+    }
   }
 
   if (profile.role === "hub") {
@@ -395,6 +400,29 @@ export function isRouteAllowedForProfile(
 ): boolean {
   const allowed = getAllowedHrefsForProfile(profile);
   if (!allowed) return true;
+
+  if (profile.role === "cashier") {
+    if (
+      pathname === "/cashier/sales" ||
+      pathname.startsWith("/cashier/sales/") ||
+      pathname === "/cashier/pos-closures" ||
+      pathname.startsWith("/cashier/pos-closures/")
+    ) {
+      return pathAllowed("/cashier/history", allowed);
+    }
+  }
+
+  if (profile.role === "manager") {
+    if (
+      pathname === "/manager/activity" ||
+      pathname.startsWith("/manager/activity/") ||
+      pathname === "/manager/sales" ||
+      pathname.startsWith("/manager/sales/")
+    ) {
+      return pathAllowed("/manager/history", allowed);
+    }
+  }
+
   return pathAllowed(pathname, allowed);
 }
 
@@ -425,8 +453,11 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
   if (href === "/director/hub" && (role === "directeur" || role === "admin")) {
     return "hub_stock";
   }
-  if (href === "/cashier/pos-closures" && role === "cashier") {
-    return "pos_closures";
+  if (href === "/cashier/history" && role === "cashier") {
+    return "sales";
+  }
+  if (href === "/manager/history" && role === "manager") {
+    return "activity";
   }
   if (href === "/manager/pos-closures" && role === "manager") {
     return "pos_closures";
@@ -488,7 +519,19 @@ function navLinkPriorityIndex(key: UserPageKey | null, role: UserRole): number {
   return idx >= 0 ? idx : 500;
 }
 
-/** Trie les liens sidebar / mobile selon la priorité métier (paramètres en dernier). */
+const SETTINGS_NAV_PRIORITY = 10_000;
+const HISTORY_NAV_PRIORITY = 9_000;
+
+function isHistoryNavLink(
+  href: string,
+  role: UserRole,
+  pageKey: UserPageKey | null
+): boolean {
+  if (pageKey === "activity") return true;
+  return role === "cashier" && pageKey === "sales" && href === "/cashier/history";
+}
+
+/** Trie les liens sidebar / mobile selon la priorité métier (historique avant paramètres). */
 export function sortNavLinksByPriority(links: NavLinkItem[], role: UserRole): NavLinkItem[] {
   const settingsPath = getSettingsPath(role);
 
@@ -496,7 +539,11 @@ export function sortNavLinksByPriority(links: NavLinkItem[], role: UserRole): Na
     .map((link, stableIndex) => {
       const isSettings = link.href === settingsPath;
       const pageKey = isSettings ? null : getPageKeyForNavHref(link.href, role);
-      const priority = isSettings ? 1000 : navLinkPriorityIndex(pageKey, role);
+      const priority = isSettings
+        ? SETTINGS_NAV_PRIORITY
+        : isHistoryNavLink(link.href, role, pageKey)
+          ? HISTORY_NAV_PRIORITY
+          : navLinkPriorityIndex(pageKey, role);
       return {
         link: {
           ...link,

@@ -27,3 +27,17 @@ export function clampDateToManagerSalesWindow(
 }
 
 export const clampDateToCashierSalesWindow = clampDateToManagerSalesWindow;
+
+export function isWithinCashierHistoryDateWindow(
+  dateKey: string,
+  bounds: { minDate: string; maxDate: string }
+): boolean {
+  return dateKey >= bounds.minDate && dateKey <= bounds.maxDate;
+}
+
+export function filterByCashierHistoryDateBounds<T extends { business_date: string }>(
+  rows: T[],
+  bounds: { minDate: string; maxDate: string }
+): T[] {
+  return rows.filter((row) => isWithinCashierHistoryDateWindow(row.business_date, bounds));
+}

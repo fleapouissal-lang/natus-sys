@@ -15,6 +15,7 @@ import {
 import {
   canCancelSaleAsDirector,
   canCancelSaleAsManager,
+  managerSaleCancelBlockedMessage,
 } from "@/lib/sales/sale-cancel";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { PaymentMethod, Sale, Store } from "@/lib/types";
@@ -25,12 +26,18 @@ export function ManagerSalesHistory({
   stores,
   selectedStoreId,
   historyBounds = null,
+  localStoreFilter = false,
+  storeAllowAll = false,
+  showStoreColumn = false,
 }: {
   sales: Sale[];
   storeLabel: string;
   stores: Store[];
   selectedStoreId: string;
   historyBounds?: ReturnType<typeof getManagerSalesHistoryDateBounds> | null;
+  localStoreFilter?: boolean;
+  storeAllowAll?: boolean;
+  showStoreColumn?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -39,11 +46,14 @@ export function ManagerSalesHistory({
   const [dateTo, setDateTo] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<"" | PaymentMethod>("");
   const [detailSale, setDetailSale] = useState<Sale | null>(null);
+  const [localStoreId, setLocalStoreId] = useState(selectedStoreId);
 
   const isDirector = pathname.startsWith("/director");
+  const activeStoreId = localStoreFilter ? localStoreId : selectedStoreId;
 
   const filtered = useMemo(() => {
     return sales.filter((sale) => {
+      if (activeStoreId && sale.store_id !== activeStoreId) return false;
       if (paymentFilter && sale.payment_method !== paymentFilter) return false;
 
       const saleDay = toLocalDateKey(sale.created_at);
@@ -55,7 +65,7 @@ export function ManagerSalesHistory({
 
       return true;
     });
-  }, [sales, dateFrom, dateTo, paymentFilter, historyBounds]);
+  }, [sales, activeStoreId, dateFrom, dateTo, paymentFilter, historyBounds]);
 
   const stats = useMemo(() => {
     const total = filtered.reduce((sum, s) => sum + Number(s.total), 0);
@@ -85,6 +95,10 @@ export function ManagerSalesHistory({
   }
 
   function handleStoreChange(storeId: string) {
+    if (localStoreFilter) {
+      setLocalStoreId(storeId);
+      return;
+    }
     const params = new URLSearchParams(searchParams.toString());
     if (storeId) {
       params.set("store", storeId);
@@ -99,7 +113,7 @@ export function ManagerSalesHistory({
     return isDirector ? canCancelSaleAsDirector(sale) : canCancelSaleAsManager(sale);
   }
 
-  const paginationKey = `${dateFrom}|${dateTo}|${paymentFilter}|${selectedStoreId}`;
+  const paginationKey = `${dateFrom}|${dateTo}|${paymentFilter}|${activeStoreId}`;
   const listPagination = usePagination(filtered, DEFAULT_PAGE_SIZE, paginationKey);
 
   return (
@@ -141,8 +155,9 @@ export function ManagerSalesHistory({
         onReset={resetFilters}
         resultCount={filtered.length}
         stores={stores}
-        selectedStoreId={selectedStoreId}
+        selectedStoreId={activeStoreId}
         onStoreChange={handleStoreChange}
+        storeAllowAll={storeAllowAll}
         dateMin={historyBounds?.minDate}
         dateMax={historyBounds?.maxDate}
         periodHint={
@@ -168,7 +183,7 @@ export function ManagerSalesHistory({
 
         <SalesHistoryTable
           sales={listPagination.paginated}
-          showStore={false}
+          showStore={showStoreColumn}
           showCashier
           showLineItems={isDirector}
           onViewSale={setDetailSale}
@@ -183,7 +198,7 @@ export function ManagerSalesHistory({
           canCancel={canCancelSale(detailSale)}
           cancelBlockedHint={
             !isDirector && !canCancelSaleAsManager(detailSale) && !detailSale.cancelled_at
-              ? "Annulation impossible après 1 h — contactez le directeur"
+              ? managerSaleCancelBlockedMessage(detailSale)
               : undefined
           }
           onCancelled={() => router.refresh()}

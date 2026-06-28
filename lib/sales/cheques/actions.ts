@@ -10,7 +10,9 @@ function revalidateChequePaths() {
   revalidatePath("/manager/cheques");
   revalidatePath("/director/cheques");
   revalidatePath("/cashier/sales");
+  revalidatePath("/cashier/history");
   revalidatePath("/manager/sales");
+  revalidatePath("/manager/history");
   revalidatePath("/director/sales");
   revalidatePath("/cashier/pos");
 }

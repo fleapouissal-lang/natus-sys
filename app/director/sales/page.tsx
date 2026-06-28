@@ -1,1 +1,1 @@
-export { default } from "@/app/manager/sales/page";
+export { default } from "@/app/manager/sales/management-sales-content";

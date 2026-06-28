@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
-import { getHubCityStaff, getHubStoreByCity, getHubAssignedStores } from "@/lib/hub";
+import { getHubCityStaff, getHubStoreByCity, getHubStoresByCity, getHubAssignedStores } from "@/lib/hub";
+import { getHubDashboardStats } from "@/lib/hub/dashboard-stats";
+import { HubDashboardStats } from "@/components/hub/hub-dashboard-stats";
+import { HubDashboardSummaryTables } from "@/components/hub/hub-dashboard-summary-tables";
 import { getStoresWithStats } from "@/lib/inventory";
 import { getActivityLog } from "@/lib/activity";
 import { getStoreOverviewStats, getStoresSnapshots } from "@/lib/dashboard";
@@ -13,10 +16,11 @@ export default async function HubDashboardPage() {
   const profile = await requireRole(["hub"]);
   if (!profile || !profile.city) redirect("/login");
 
-  const [staff, hubStore, assignedStores] = await Promise.all([
+  const [staff, hubStore, assignedStores, hubStores] = await Promise.all([
     getHubCityStaff(profile.city),
     getHubStoreByCity(profile.city),
     getHubAssignedStores(profile.id),
+    getHubStoresByCity(profile.city),
   ]);
 
   const retailStores = assignedStores;
@@ -50,13 +54,33 @@ export default async function HubDashboardPage() {
     : null;
   const hubActivities = allActivities.filter((entry) => entry.actor_role === "hub");
 
+  const dashboardStats = await getHubDashboardStats({
+    profile,
+    hubStoreId: hubStore?.id ?? null,
+    hubStoreIds: hubStores.map((store) => store.id),
+    assignedStoreIds: retailStores.map((store) => store.id),
+    retailStoresWithStats: storesWithStats,
+    hubStoreStats: hubStats ?? null,
+  });
+
   return (
     <div className="animate-fade-in space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{profile.full_name}</h1>
         <p className="mt-1 text-muted">
           Dépôt {profile.city}
-          {hubStore ? ` · ${hubStore.name}` : ""} — stock des magasins assignés
+          {hubStore ? ` · ${hubStore.name}` : ""} — vue d&apos;ensemble de l&apos;activité
+        </p>
+      </div>
+
+      <HubDashboardStats stats={dashboardStats} />
+
+      <HubDashboardSummaryTables stats={dashboardStats} />
+
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">Suivi stock détaillé</h2>
+        <p className="mt-1 text-sm text-muted">
+          Évolution et statistiques par magasin assigné
         </p>
       </div>
 

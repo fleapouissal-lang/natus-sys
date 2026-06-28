@@ -145,7 +145,7 @@ export function ManagerUnifiedDashboard({
             activities={storeActivities}
             title="Activité récente"
             description={`${selectedStoreLabel} · ${periodLabel}`}
-            viewAllHref={`/manager/activity?store=${selectedStoreId}`}
+            viewAllHref="/manager/history"
             limit={8}
           />
         </>

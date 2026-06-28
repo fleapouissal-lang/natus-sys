@@ -86,6 +86,7 @@ export function writeoffValidatorLine(
   return null;
 }
 
+/** Magasin : gérant ou directeur. Dépôt Hub : directeur uniquement. */
 export function canValidateWriteoff(
   profile: Pick<Profile, "role">,
   writeoff: Pick<StoreProductWriteoff, "stores">

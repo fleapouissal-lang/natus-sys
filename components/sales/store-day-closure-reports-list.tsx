@@ -28,6 +28,10 @@ import {
   downloadDayClosuresHtml,
   type DayClosureDownloadData,
 } from "@/lib/sales/download-day-closure";
+import {
+  filterByCashierHistoryDateBounds,
+  type getCashierSalesHistoryDateBounds,
+} from "@/lib/sales/manager-sales-window";
 import type { StoreDayClosureReportRow } from "@/lib/sales/store-day-closure";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
@@ -111,11 +115,13 @@ export function StoreDayClosureReportsList({
   storeId,
   isCashier = false,
   showStoreColumn = true,
+  historyBounds,
 }: {
   initialClosures: StoreDayClosureReportRow[];
   storeId?: string;
   isCashier?: boolean;
   showStoreColumn?: boolean;
+  historyBounds?: ReturnType<typeof getCashierSalesHistoryDateBounds>;
 }) {
   const [closures, setClosures] = useState(initialClosures);
   const [error, setError] = useState("");
@@ -217,11 +223,14 @@ export function StoreDayClosureReportsList({
         setError(result.error);
         return;
       }
-      setClosures(result.closures);
+      const rows = historyBounds
+        ? filterByCashierHistoryDateBounds(result.closures, historyBounds)
+        : result.closures;
+      setClosures(rows);
       setError("");
       setPage(1);
     });
-  }, [storeId, setPage]);
+  }, [storeId, historyBounds, setPage]);
 
   useEffect(() => {
     const timer = window.setInterval(reload, 20000);

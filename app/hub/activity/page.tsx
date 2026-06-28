@@ -1,102 +1,82 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { getActivityLog } from "@/lib/activity";
-import {
-  getHubStoreByCity,
-  getHubRetailStoresForTransfer,
-} from "@/lib/hub";
-import { getHubStockTransfers } from "@/lib/hub-transfers";
+import { getHubAssignedStores, getHubStoresByCity } from "@/lib/hub";
+import { getHubDepotTransfersForOperator } from "@/lib/hub-transfers";
+import { HubActivityPanel } from "@/components/hub/hub-activity-panel";
 import { HubTransfersList } from "@/components/hub/hub-transfers-list";
-import { resolveSelectedStoreId, getSelectedStore } from "@/lib/management-store";
-import { StoreFilterBar } from "@/components/stores/store-filter-bar";
-import { ActivityLog } from "@/components/activity/activity-log";
 import { Card } from "@/components/ui/card";
 
-export default async function HubActivityPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ store?: string }>;
-}) {
+export default async function HubActivityPage() {
   const profile = await requireRole(["hub"]);
   if (!profile?.city) redirect("/login");
 
-  const { store: storeParam } = await searchParams;
-  const hubStore = await getHubStoreByCity(profile.city);
-  const retailStores = await getHubRetailStoresForTransfer(profile.id);
-  const stores = hubStore ? [hubStore, ...retailStores] : retailStores;
+  const [hubStores, assignedStores] = await Promise.all([
+    getHubStoresByCity(profile.city),
+    getHubAssignedStores(profile.id),
+  ]);
 
-  const storeId = resolveSelectedStoreId(stores, storeParam || hubStore?.id);
-  const selectedStore = getSelectedStore(stores, storeId);
+  const hubStoreIds = hubStores.map((store) => store.id);
+  const assignedStoreIds = assignedStores.map((store) => store.id);
+  const primaryHub = hubStores[0];
 
-  const [activities, hubTransfers] = await Promise.all([
-    storeId ? getActivityLog([storeId]) : Promise.resolve([]),
-    hubStore
-      ? getHubStockTransfers({
-          fromStoreId: hubStore.id,
-          limit: 20,
-        })
+  const scopeLabel = primaryHub
+    ? `${primaryHub.name} — ${primaryHub.city}`
+    : `Dépôt — ${profile.city}`;
+
+  const [allActivities, transfers] = await Promise.all([
+    hubStoreIds.length > 0
+      ? getActivityLog(hubStoreIds, 200)
+      : Promise.resolve([]),
+    hubStoreIds.length > 0
+      ? getHubDepotTransfersForOperator({ hubStoreIds, assignedStoreIds })
       : Promise.resolve([]),
   ]);
 
-  const stockAdds = activities.filter((a) => a.kind === "stock_add").length;
-  const adjustments = activities.filter((a) => a.kind === "stock_adjustment").length;
-  const transferCount = activities.filter(
-    (a) => a.kind === "stock_transfer_in" || a.kind === "stock_transfer_out"
-  ).length;
+  const activities = allActivities.filter((entry) => entry.actor_role === "hub");
+  const recentTransfers = transfers.slice(0, 20);
+
+  if (!primaryHub) {
+    return (
+      <div className="animate-fade-in space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Historique</h1>
+          <p className="mt-1 text-muted">Journal d&apos;activité du dépôt Hub</p>
+        </div>
+        <Card className="py-12 text-center text-muted">
+          Aucun entrepôt configuré pour {profile.city}.
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="animate-fade-in space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Historique</h1>
         <p className="mt-1 text-muted">
-          Historique des actions hub — entrepôt et magasins de {profile.city}
+          Activités du dépôt {primaryHub.name} — modifications de stock et transferts
+          effectués par votre compte Hub
         </p>
       </div>
 
-      <Suspense fallback={null}>
-        <StoreFilterBar stores={stores} selectedStoreId={storeId} />
-      </Suspense>
+      <HubActivityPanel activities={activities} scopeLabel={scopeLabel} />
 
-      {selectedStore ? (
-        <>
-          <div className="grid gap-4 sm:grid-cols-4">
-            <Card>
-              <p className="text-sm text-muted">Actions récentes</p>
-              <p className="mt-1 text-2xl font-bold">{activities.length}</p>
-            </Card>
-            <Card>
-              <p className="text-sm text-muted">Ajouts stock</p>
-              <p className="mt-1 text-2xl font-bold">{stockAdds}</p>
-            </Card>
-            <Card>
-              <p className="text-sm text-muted">Ajustements</p>
-              <p className="mt-1 text-2xl font-bold">{adjustments}</p>
-            </Card>
-            <Card>
-              <p className="text-sm text-muted">Transferts</p>
-              <p className="mt-1 text-2xl font-bold">{transferCount}</p>
-            </Card>
-          </div>
-
-          <ActivityLog
-            activities={activities}
-            scopeLabel={`${selectedStore.name} — ${selectedStore.city}`}
-          />
-
-          {hubStore && selectedStore.id === hubStore.id && hubTransfers.length > 0 && (
-            <HubTransfersList
-              transfers={hubTransfers}
-              title="Transferts hub (envoyés / reçus)"
-              allowRepair
-            />
-          )}
-        </>
-      ) : (
-        <p className="py-12 text-center text-muted">
-          Sélectionnez un magasin ou l&apos;entrepôt pour voir l&apos;activité
-        </p>
-      )}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Transferts du dépôt</h2>
+          <p className="mt-1 text-sm text-muted">
+            Envois et réceptions liés à l&apos;entrepôt — historique des commandes
+          </p>
+        </div>
+        <HubTransfersList
+          transfers={recentTransfers}
+          title="Commandes hub (envois / réceptions)"
+          readOnly
+          showOrigin
+          emptyMessage="Aucun transfert enregistré pour ce dépôt"
+        />
+      </section>
     </div>
   );
 }

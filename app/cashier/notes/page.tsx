@@ -9,7 +9,7 @@ export default async function CashierNotesPage() {
   if (!profile) redirect("/login");
 
   if (!profile.is_store_pos) {
-    redirect("/cashier/sales");
+    redirect("/cashier/history");
   }
 
   if (!profile.store_id) {

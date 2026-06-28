@@ -23,6 +23,7 @@ import {
   type LoyaltyLookupResult,
 } from "@/lib/loyalty/lookup-result";
 import { getWeekWorkDays, normalizeWeekStart } from "@/lib/scheduling/week";
+import { assertCanValidateWriteoff } from "@/lib/store-writeoffs/validation";
 
 const MANAGEMENT = ["directeur", "admin", "manager"] as const;
 const STOCK_READ = ["directeur", "admin", "manager", "hub"] as const;
@@ -81,6 +82,7 @@ function revalidateManagement() {
   revalidatePath("/manager/stock-transfers/received");
   revalidatePath("/manager/hub-orders");
   revalidatePath("/manager/activity");
+  revalidatePath("/manager/history");
   revalidatePath("/manager/stores");
   revalidatePath("/manager/users");
   revalidatePath("/manager/planning");
@@ -1537,7 +1539,9 @@ export async function completeSale(
 
   revalidatePath("/cashier/pos");
   revalidatePath("/cashier/sales");
+  revalidatePath("/cashier/history");
   revalidatePath("/manager/sales");
+  revalidatePath("/manager/history");
   revalidatePath("/manager");
   revalidatePath("/manager/loyalty");
   revalidatePath("/director/sales");
@@ -1561,8 +1565,10 @@ export async function cancelSale(
   if (error) return { error: error.message };
 
   revalidatePath("/cashier/sales");
+  revalidatePath("/cashier/history");
   revalidatePath("/cashier/pos");
   revalidatePath("/manager/sales");
+  revalidatePath("/manager/history");
   revalidatePath("/director/sales");
   revalidatePath("/manager/stock");
   revalidatePath("/director/stock");
@@ -1591,7 +1597,9 @@ export async function validateSaleInvoice(
   revalidateInvoicePaths();
   revalidatePath(`/director/invoices/${saleId}`);
   revalidatePath("/cashier/sales");
+  revalidatePath("/cashier/history");
   revalidatePath("/manager/sales");
+  revalidatePath("/manager/history");
   revalidatePath("/director/sales");
 
   return { success: true };
@@ -1918,6 +1926,7 @@ export async function completeShopifyOrderSale(
 
   revalidatePath("/cashier/orders");
   revalidatePath("/cashier/sales");
+  revalidatePath("/cashier/history");
   revalidatePath("/manager/orders");
   revalidatePath("/director/orders");
   revalidatePath("/director/hub");
@@ -2952,9 +2961,11 @@ export async function markShopifyCodPaid(
 
   revalidatePath("/cashier/orders");
   revalidatePath("/cashier/sales");
+  revalidatePath("/cashier/history");
   revalidatePath("/cashier/invoices");
   revalidatePath("/manager/orders");
   revalidatePath("/manager/sales");
+  revalidatePath("/manager/history");
   revalidatePath("/manager/invoices");
   revalidatePath("/director/orders");
   revalidatePath("/director/sales");
@@ -4077,6 +4088,9 @@ export async function validateStoreProductWriteoff(
   const profile = await requireRole(["directeur", "admin", "manager"]);
   if (!profile) return { error: "Non autorisé" };
 
+  const allowed = await assertCanValidateWriteoff(profile, writeoffId);
+  if ("error" in allowed) return { error: allowed.error };
+
   const supabase = await createClient();
   const { error } = await supabase.rpc("validate_store_product_writeoff", {
     p_writeoff_id: writeoffId,
@@ -4095,6 +4109,9 @@ export async function rejectStoreProductWriteoff(
 ): Promise<{ success: true } | { error: string }> {
   const profile = await requireRole(["directeur", "admin", "manager"]);
   if (!profile) return { error: "Non autorisé" };
+
+  const allowed = await assertCanValidateWriteoff(profile, writeoffId);
+  if ("error" in allowed) return { error: allowed.error };
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("reject_store_product_writeoff", {

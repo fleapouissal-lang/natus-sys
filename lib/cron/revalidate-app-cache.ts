@@ -4,6 +4,7 @@ const APP_PATHS = [
   "/",
   "/cashier/pos",
   "/cashier/orders",
+  "/cashier/history",
   "/cashier/sales",
   "/cashier/returns",
   "/manager",

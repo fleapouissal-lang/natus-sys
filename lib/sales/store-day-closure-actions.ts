@@ -21,7 +21,9 @@ const CLOSURE_ROLES = [...MANAGEMENT, "cashier"] as const;
 
 function revalidatePosClosurePaths() {
   revalidatePath("/cashier/pos");
+  revalidatePath("/cashier/history");
   revalidatePath("/cashier/pos-closures");
+  revalidatePath("/manager/history");
   revalidatePath("/manager/pos-closures");
   revalidatePath("/director/pos-closures");
 }
@@ -253,7 +255,9 @@ export async function validateStoreDayClosure(
     revalidatePosClosurePaths();
     revalidatePath("/director/sales");
     revalidatePath("/manager/sales");
+    revalidatePath("/manager/history");
     revalidatePath("/cashier/sales");
+    revalidatePath("/cashier/history");
 
     return {
       storeName: String(row.store_name ?? "Magasin"),

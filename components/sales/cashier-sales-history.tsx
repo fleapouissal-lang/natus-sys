@@ -22,6 +22,10 @@ import {
   type OrderDatePreset,
 } from "@/lib/store-tracking-period";
 import { formatCurrency, toLocalDateKey } from "@/lib/utils";
+import {
+  canCancelSaleAsCashier,
+  cashierSaleCancelBlockedMessage,
+} from "@/lib/sales/sale-cancel";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { PaymentMethod, Sale } from "@/lib/types";
 
@@ -268,7 +272,12 @@ export function CashierSalesHistory({
         <SaleDetailModal
           sale={detailSale}
           onClose={() => setDetailSale(null)}
-          canCancel={!detailSale.cancelled_at}
+          canCancel={canCancelSaleAsCashier(detailSale)}
+          cancelBlockedHint={
+            !canCancelSaleAsCashier(detailSale) && !detailSale.cancelled_at
+              ? cashierSaleCancelBlockedMessage()
+              : undefined
+          }
           onCancelled={() => router.refresh()}
         />
       )}

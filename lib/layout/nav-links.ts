@@ -42,31 +42,30 @@ export const personalCashierLinks: NavLinkItem[] = [
   { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 0 },
 ];
 
-/** Ordre de repli si le tri par rôle ne s'applique pas (stableIndex). */
+/** Ordre de repli — le tri final est appliqué par sortNavLinksByPriority. */
 export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 0 },
   { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 1 },
-  { href: "/cashier/sales", label: "Historique de vente", icon: Receipt, mobileOrder: 2 },
   {
     href: "/cashier/transfers/received",
     label: "Stocks reçus",
     icon: Boxes,
-    mobileOrder: 3,
+    mobileOrder: 2,
   },
   {
     href: "/cashier/transfers/sent",
     label: "Stocks envoyés",
     icon: ArrowRightLeft,
-    mobileOrder: 4,
+    mobileOrder: 3,
   },
-  { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 5 },
-  { href: "/cashier/customers", label: "Clients fidélité", icon: Gift, mobileOrder: 6 },
-  { href: "/cashier/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness, mobileOrder: 7 },
-  { href: "/cashier/returns", label: "Retours", icon: RotateCcw, mobileOrder: 8 },
-  { href: "/cashier/invoices", label: "Factures", icon: FileText, mobileOrder: 9 },
-  { href: "/cashier/cheques", label: "Chèques", icon: Landmark, mobileOrder: 10 },
-  { href: "/cashier/pos-closures", label: "Historique clôtures", icon: ScrollText, mobileOrder: 11 },
-  { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 12 },
+  { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 4 },
+  { href: "/cashier/customers", label: "Clients fidélité", icon: Gift, mobileOrder: 5 },
+  { href: "/cashier/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness, mobileOrder: 6 },
+  { href: "/cashier/returns", label: "Annulations de stock", icon: RotateCcw, mobileOrder: 7 },
+  { href: "/cashier/invoices", label: "Factures", icon: FileText, mobileOrder: 8 },
+  { href: "/cashier/cheques", label: "Chèques", icon: Landmark, mobileOrder: 9 },
+  { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 10 },
+  { href: "/cashier/history", label: "Historique", icon: ClipboardList, mobileOrder: 11 },
 ];
 
 export const livreurLinks: NavLinkItem[] = [
@@ -99,70 +98,69 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
         icon: Factory,
         mobileOrder: 4,
       },
-      { href: "/hub/writeoffs", label: "Retours stock", icon: RotateCcw, mobileOrder: 5 },
-      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 6 },
-      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 7 },
+      { href: "/hub/writeoffs", label: "Annulations de stock", icon: RotateCcw, mobileOrder: 5 },
+      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 6 },
+      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 7 },
     ];
   }
 
   if (basePath === "/manager") {
     return [
       { href: "/manager", label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
-      { href: "/manager/planning", label: "Planning", icon: CalendarClock, mobileOrder: 1 },
-      { href: "/manager/stock", label: "Stock", icon: Warehouse, mobileOrder: 2 },
-      { href: "/manager/sales", label: "Ventes", icon: Receipt, mobileOrder: 3 },
+      { href: "/manager/stock", label: "Stock", icon: Warehouse, mobileOrder: 1 },
+      { href: "/manager/planning", label: "Planning", icon: CalendarClock, mobileOrder: 2 },
       {
         href: "/manager/stock-transfers",
         label: "Stocks envoyés",
         icon: ArrowRightLeft,
-        mobileOrder: 4,
+        mobileOrder: 3,
       },
       {
         href: "/manager/stock-transfers/received",
         label: "Stocks reçus",
         icon: Boxes,
-        mobileOrder: 5,
+        mobileOrder: 4,
       },
       {
         href: "/manager/pos-closures",
         label: "Clôtures caisse",
         icon: ScrollText,
-        mobileOrder: 6,
+        mobileOrder: 5,
       },
-      { href: "/manager/cheques", label: "Chèques", icon: Landmark, mobileOrder: 7 },
-      { href: "/manager/invoices", label: "Factures", icon: FileText, mobileOrder: 8 },
-      { href: "/manager/writeoffs", label: "Retours stock", icon: RotateCcw, mobileOrder: 9 },
-      { href: "/manager/reclamations", label: "Réclam.", icon: AlertTriangle, mobileOrder: 10 },
-      { href: "/manager/activity", label: "Historique", icon: ClipboardList, mobileOrder: 11 },
-      { href: "/manager/actualites", label: "Actus", icon: Newspaper, mobileOrder: 12 },
+      { href: "/manager/cheques", label: "Chèques", icon: Landmark, mobileOrder: 6 },
+      { href: "/manager/invoices", label: "Factures", icon: FileText, mobileOrder: 7 },
+      { href: "/manager/writeoffs", label: "Annulations de stock", icon: RotateCcw, mobileOrder: 8 },
+      { href: "/manager/reclamations", label: "Réclam.", icon: AlertTriangle, mobileOrder: 9 },
+      { href: "/manager/actualites", label: "Actus", icon: Newspaper, mobileOrder: 10 },
+      { href: "/manager/history", label: "Historique", icon: ClipboardList, mobileOrder: 11 },
     ];
   }
 
   return [
     { href: basePath, label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
     { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 1 },
-    { href: `${basePath}/sales`, label: "Ventes", icon: Receipt, mobileOrder: 2 },
-    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 3 },
+    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 2 },
     {
       href: `${basePath}/stock-transfers`,
       label: "Stocks envoyés",
       icon: ArrowRightLeft,
-      mobileOrder: 4,
+      mobileOrder: 3,
     },
     {
       href: `${basePath}/stock-transfers/received`,
       label: "Stocks reçus",
       icon: Boxes,
-      mobileOrder: 5,
+      mobileOrder: 4,
     },
-    { href: `${basePath}/planning`, label: "Planning", icon: CalendarClock, mobileOrder: 6 },
+    { href: `${basePath}/planning`, label: "Planning", icon: CalendarClock, mobileOrder: 5 },
     {
       href: "/director/pos-closures",
       label: "Clôtures caisse",
       icon: ScrollText,
-      mobileOrder: 7,
+      mobileOrder: 6,
     },
-    { href: `${basePath}/cheques`, label: "Chèques", icon: Landmark, mobileOrder: 8 },
+    { href: `${basePath}/cheques`, label: "Chèques", icon: Landmark, mobileOrder: 7 },
+    { href: `${basePath}/sales`, label: "Ventes", icon: Receipt, mobileOrder: 8 },
     { href: `${basePath}/products`, label: "Produits", icon: Package, mobileOrder: 9 },
     {
       href: "/director/fabrication-products",
@@ -184,19 +182,19 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       mobileOrder: 13,
     },
     { href: `${basePath}/invoices`, label: "Factures", icon: FileText, mobileOrder: 14 },
-    { href: `${basePath}/writeoffs`, label: "Retours stock", icon: RotateCcw, mobileOrder: 15 },
+    { href: `${basePath}/writeoffs`, label: "Annulations de stock", icon: RotateCcw, mobileOrder: 15 },
     { href: "/director/hubs", label: "Dépôts", icon: Users, mobileOrder: 16 },
     { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 17 },
-    { href: `${basePath}/activity`, label: "Historique", icon: ClipboardList, mobileOrder: 18 },
-    { href: "/director/stock-access", label: "Accès stock", icon: KeyRound, mobileOrder: 19 },
+    { href: "/director/stock-access", label: "Accès stock", icon: KeyRound, mobileOrder: 18 },
     {
       href: "/director/categories",
       label: "Catégories caisse",
       icon: LayoutGrid,
-      mobileOrder: 20,
+      mobileOrder: 19,
     },
-    { href: `${basePath}/actualites`, label: "Actus", icon: Newspaper, mobileOrder: 21 },
-    { href: `${basePath}/users`, label: "Users", icon: Users, mobileOrder: 22 },
+    { href: `${basePath}/actualites`, label: "Actus", icon: Newspaper, mobileOrder: 20 },
+    { href: `${basePath}/users`, label: "Users", icon: Users, mobileOrder: 21 },
+    { href: `${basePath}/activity`, label: "Historique", icon: ClipboardList, mobileOrder: 22 },
   ];
 }
 
@@ -239,7 +237,7 @@ export function resolveNavLinks(input: {
       ? [...personalCashierLinks]
       : [...cashierLinks];
     if (input.planningOnlyNav && input.isStorePos) {
-      for (const href of ["/cashier/notes", "/cashier/pos-closures"] as const) {
+      for (const href of ["/cashier/notes", "/cashier/history"] as const) {
         const extra = cashierLinks.find((link) => link.href === href);
         if (extra) links.push(extra);
       }

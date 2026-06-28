@@ -96,17 +96,6 @@ export function HubDashboardPanel({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <p className="text-sm text-muted">Magasins assignés</p>
-          <p className="mt-1 text-3xl font-bold">{retailStores.length}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-muted">Ville dépôt</p>
-          <p className="mt-1 text-3xl font-bold">{city}</p>
-        </Card>
-      </div>
-
       {retailStores.length > 1 && (
         <div className="natus-filter-bar overflow-visible rounded-2xl p-4 md:rounded-lg">
           <p className="mb-3 text-sm font-medium text-primary">Magasin</p>
