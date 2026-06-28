@@ -29,7 +29,7 @@ export function ShopifyOrdersList({
     <>
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
-          <p className="text-sm text-muted">Commandes Shopify</p>
+          <p className="text-sm text-muted">Commandes en ligne</p>
           <p className="mt-1 text-2xl font-bold">{orders.length}</p>
         </Card>
         <Card>
@@ -110,7 +110,7 @@ export function ShopifyOrdersList({
                     colSpan={showStore ? 8 : 7}
                     className="px-6 py-12 text-center text-muted"
                   >
-                    Aucune commande Shopify pour cette sélection
+                    Aucune commande en ligne pour cette sélection
                   </td>
                 </tr>
               )}

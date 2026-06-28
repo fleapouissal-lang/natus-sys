@@ -36,7 +36,7 @@ function getGeminiConfig(): { apiKey: string; model: string } | null {
 
 async function buildOrderContext(order: CustomerOrderRow | null): Promise<string> {
   if (!order) {
-    return "Aucune commande Shopify récente liée à ce numéro WhatsApp.";
+    return "Aucune commande récente liée à ce numéro WhatsApp.";
   }
   const tracking = order.tracking_token
     ? await orderTrackingShortUrl(order.tracking_token)

@@ -64,7 +64,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "hubs", label: "Dépôts", description: "Comptes dépôt ville (indépendants des gérants)", group: "admin" },
   { key: "notes", label: "Notes", description: "Notes clients et suivi caisse", group: "clients" },
   { key: "transfers", label: "Transferts", description: "Commandes envoyées et reçues (hub et magasins)", group: "operations" },
-  { key: "orders", label: "Livraisons", description: "Commandes Shopify à livrer", group: "operations" },
+  { key: "orders", label: "Livraisons", description: "Commandes en ligne à livrer", group: "operations" },
   { key: "hub_orders", label: "Commandes dépôt", description: "Commandes entrepôt vers magasins", group: "operations" },
   { key: "returns", label: "Retours", description: "Retours produits et SAV", group: "clients" },
   { key: "writeoffs", label: "Annulations de stock", description: "Validation annulations périmées ou cassées", group: "operations" },

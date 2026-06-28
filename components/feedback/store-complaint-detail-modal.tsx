@@ -11,7 +11,7 @@ import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import type { StoreComplaint } from "@/lib/feedback/complaints";
 
 const SOURCE_LABELS: Record<StoreComplaint["source"], string> = {
-  shopify_delivery: "Livraison Shopify",
+  shopify_delivery: "Livraison en ligne",
   pos_sale: "Achat magasin",
   web_service: "Service magasin (web)",
   web_order: "Commande (web)",

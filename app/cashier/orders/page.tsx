@@ -12,7 +12,7 @@ export default async function CashierOrdersPage() {
   if (!profile.store_id) {
     return (
       <div className="animate-fade-in space-y-6">
-        <h1 className="text-2xl font-bold tracking-tight">Commandes Shopify</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Commandes en ligne</h1>
         <p className="text-muted">Aucun magasin assigné à votre compte.</p>
       </div>
     );
@@ -30,7 +30,7 @@ export default async function CashierOrdersPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Commandes Shopify</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Commandes en ligne</h1>
         <p className="mt-1 text-muted">
           Commandes en ligne affectées à votre magasin
           {store ? ` — ${store.name}, ${store.city}` : ""}

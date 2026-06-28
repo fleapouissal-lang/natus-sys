@@ -467,7 +467,7 @@ export function ShopifyOrdersManager({
 
       <div className="hidden gap-4 md:grid md:grid-cols-2">
         <Card>
-          <p className="text-sm text-muted">Commandes Shopify</p>
+          <p className="text-sm text-muted">Commandes en ligne</p>
           <p className="mt-1 text-2xl font-bold">{filteredOrders.length}</p>
           {hasFilters && (
             <p className="mt-1 text-xs text-muted">sur {orders.length} au total</p>
@@ -583,7 +583,7 @@ export function ShopifyOrdersManager({
           {paginatedOrders.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted">
               {orders.length === 0
-                ? "Aucune commande Shopify pour cette sélection"
+                ? "Aucune commande en ligne pour cette sélection"
                 : "Aucune commande ne correspond aux filtres"}
             </p>
           ) : (
@@ -995,7 +995,7 @@ export function ShopifyOrdersManager({
                 <tr>
                   <td colSpan={colSpan} className="px-6 py-12 text-center text-muted">
                     {orders.length === 0
-                      ? "Aucune commande Shopify pour cette sélection"
+                      ? "Aucune commande en ligne pour cette sélection"
                       : "Aucune commande ne correspond aux filtres"}
                   </td>
                 </tr>

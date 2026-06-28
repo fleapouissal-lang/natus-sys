@@ -111,7 +111,7 @@ export async function buildStructuredReply(
 
 export function buildNoOrderReply(lang: BotLanguage): string {
   if (lang === "darija") {
-    return "Ma lqina hta commande b had numéro. Jarb mn Shopify Natus wla 3iyet lina f magasin.";
+    return "Ma lqina hta commande b had numéro. Jarb mn site Natus wla 3iyet lina f magasin.";
   }
-  return "Aucune commande récente avec ce numéro. Passez commande sur Shopify Natus ou contactez le magasin.";
+  return "Aucune commande récente avec ce numéro. Passez commande sur le site Natus ou contactez le magasin.";
 }

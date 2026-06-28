@@ -67,7 +67,7 @@ export default async function DirectorOrdersPage({
     <div className="animate-fade-in space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Commandes Shopify</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Commandes en ligne</h1>
           <p className="mt-1 text-muted">
             Commandes magasins — le hub stock a sa propre page
           </p>

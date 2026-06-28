@@ -53,7 +53,7 @@ export default async function ManagerOrdersPage({
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Commandes Shopify</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Commandes en ligne</h1>
         <p className="mt-1 text-muted">
           Commandes en ligne affectées à votre ville et magasins
         </p>

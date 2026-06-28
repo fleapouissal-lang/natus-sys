@@ -28,7 +28,7 @@ export function ShopifySyncButton() {
       )}
       <Button onClick={handleSync} disabled={pending} className="gap-2">
         <RefreshCw className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} />
-        {pending ? "Synchronisation…" : "Sync Shopify"}
+        {pending ? "Synchronisation…" : "Synchroniser les commandes"}
       </Button>
     </div>
   );

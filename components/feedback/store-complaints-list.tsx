@@ -17,7 +17,7 @@ import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { StoreComplaint } from "@/lib/feedback/complaints";
 
 const SOURCE_LABELS: Record<StoreComplaint["source"], string> = {
-  shopify_delivery: "Livraison Shopify",
+  shopify_delivery: "Livraison en ligne",
   pos_sale: "Achat magasin",
   web_service: "Service magasin (web)",
   web_order: "Commande (web)",
@@ -32,7 +32,7 @@ const STATUS_OPTIONS = [
 
 const SOURCE_OPTIONS = [
   { value: "", label: "Toutes les sources" },
-  { value: "shopify_delivery", label: "Livraison Shopify" },
+  { value: "shopify_delivery", label: "Livraison en ligne" },
   { value: "pos_sale", label: "Achat magasin" },
   { value: "web_service", label: "Service magasin (web)" },
   { value: "web_order", label: "Commande (web)" },

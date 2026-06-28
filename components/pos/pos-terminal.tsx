@@ -1584,7 +1584,7 @@ export function PosTerminal({
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-semibold text-foreground">
-                            Commande Shopify {activeShopifyOrder.orderNumber}
+                            Commande en ligne {activeShopifyOrder.orderNumber}
                           </p>
                           <Badge variant="warning">
                             {workflowStatusLabel(activeShopifyOrder.workflowStatus)}
