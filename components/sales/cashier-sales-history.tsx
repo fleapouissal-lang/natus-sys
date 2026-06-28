@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Banknote, CreditCard } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SalesAgendaFilter } from "@/components/sales/sales-agenda-filter";
 import { SaleDetailModal } from "@/components/sales/sale-detail-modal";
 import { SalesHistoryTable } from "@/components/sales/sales-history-table";
@@ -26,10 +27,36 @@ import {
   canCancelSaleAsCashier,
   cashierSaleCancelBlockedMessage,
 } from "@/lib/sales/sale-cancel";
-import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/use-pagination";
 import type { PaymentMethod, Sale } from "@/lib/types";
 
 const DEFAULT_DATE_PRESET: OrderDatePreset = "today";
+
+const PARAM_FROM = "vfrom";
+const PARAM_TO = "vto";
+const PARAM_PAY = "vpay";
+const PARAM_SEARCH = "vq";
+const PARAM_PAGE = "vpage";
+
+function saleMatchesSearch(sale: Sale, query: string): boolean {
+  if (!query) return true;
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  const haystack = [
+    sale.id,
+    sale.id.slice(0, 8),
+    sale.customer_name,
+    sale.customer_phone,
+    sale.customer_email,
+    sale.customer_ice,
+    sale.customers?.full_name,
+    sale.customers?.card_number,
+    sale.customers?.phone,
+    sale.profiles?.full_name,
+    sale.profiles?.email,
+  ];
+  return haystack.some((value) => value?.toLowerCase().includes(needle));
+}
 
 export function CashierSalesHistory({
   initialSales,
@@ -47,14 +74,33 @@ export function CashierSalesHistory({
   historyBounds: ReturnType<typeof getCashierSalesHistoryDateBounds>;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [sales, setSales] = useState(initialSales);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const initialToday = useMemo(() => orderDatePresetToKeys(DEFAULT_DATE_PRESET), []);
-  const [dateFrom, setDateFrom] = useState(initialToday.from);
-  const [dateTo, setDateTo] = useState(initialToday.to);
-  const [paymentFilter, setPaymentFilter] = useState<"" | PaymentMethod>("");
   const [detailSale, setDetailSale] = useState<Sale | null>(null);
   const { reprintSale, printingSaleId, printPortal } = useSaleTicketReprint();
+
+  const dateFrom = searchParams.get(PARAM_FROM) || initialToday.from;
+  const dateTo = searchParams.get(PARAM_TO) || initialToday.to;
+  const paymentFilter = (searchParams.get(PARAM_PAY) as "" | PaymentMethod) || "";
+  const search = searchParams.get(PARAM_SEARCH) || "";
+  const page = Math.max(1, Number(searchParams.get(PARAM_PAGE)) || 1);
+
+  const updateParams = useCallback(
+    (updates: Record<string, string | null>, resetPage = true) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null || value === "") params.delete(key);
+        else params.set(key, value);
+      }
+      if (resetPage) params.delete(PARAM_PAGE);
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [searchParams, pathname, router]
+  );
 
   useEffect(() => {
     setSales(initialSales);
@@ -109,9 +155,11 @@ export function CashierSalesHistory({
       if (dateFrom && saleDay < dateFrom) return false;
       if (dateTo && saleDay > dateTo) return false;
 
+      if (!saleMatchesSearch(sale, search)) return false;
+
       return true;
     });
-  }, [windowedSales, dateFrom, dateTo, paymentFilter]);
+  }, [windowedSales, dateFrom, dateTo, paymentFilter, search]);
 
   const stats = useMemo(() => {
     const active = filtered.filter((s) => !s.cancelled_at);
@@ -130,34 +178,64 @@ export function CashierSalesHistory({
 
   const hasDateFilter =
     dateFrom !== initialToday.from || dateTo !== initialToday.to;
-  const hasFilters = Boolean(hasDateFilter || paymentFilter);
+  const hasFilters = Boolean(hasDateFilter || paymentFilter || search);
+
+  const dateParamValue = useCallback(
+    (key: string, value: string) =>
+      value === (key === PARAM_FROM ? initialToday.from : initialToday.to)
+        ? null
+        : value,
+    [initialToday]
+  );
 
   function applyDatePreset(preset: OrderDatePreset) {
-    const { from, to } = orderDatePresetToKeys(preset);
     if (preset === "all") {
-      setDateFrom(historyBounds.minDate);
-      setDateTo(historyBounds.maxDate);
+      updateParams({
+        [PARAM_FROM]: dateParamValue(PARAM_FROM, historyBounds.minDate),
+        [PARAM_TO]: dateParamValue(PARAM_TO, historyBounds.maxDate),
+      });
       return;
     }
 
+    const { from, to } = orderDatePresetToKeys(preset);
     const clampedFrom = clampDateToCashierSalesWindow(from || historyBounds.minDate, historyBounds);
-    const clampedTo = clampDateToCashierSalesWindow(to || historyBounds.maxDate, historyBounds);
-    setDateFrom(clampedFrom);
-    setDateTo(clampedTo > clampedFrom ? clampedTo : clampedFrom);
+    const clampedToRaw = clampDateToCashierSalesWindow(to || historyBounds.maxDate, historyBounds);
+    const clampedTo = clampedToRaw > clampedFrom ? clampedToRaw : clampedFrom;
+    updateParams({
+      [PARAM_FROM]: dateParamValue(PARAM_FROM, clampedFrom),
+      [PARAM_TO]: dateParamValue(PARAM_TO, clampedTo),
+    });
   }
 
   function handleDateFromChange(value: string) {
-    setDateFrom(clampDateToCashierSalesWindow(value, historyBounds));
+    const clamped = clampDateToCashierSalesWindow(value, historyBounds);
+    updateParams({ [PARAM_FROM]: dateParamValue(PARAM_FROM, clamped) });
   }
 
   function handleDateToChange(value: string) {
-    setDateTo(clampDateToCashierSalesWindow(value, historyBounds));
+    const clamped = clampDateToCashierSalesWindow(value, historyBounds);
+    updateParams({ [PARAM_TO]: dateParamValue(PARAM_TO, clamped) });
+  }
+
+  function handlePaymentChange(value: "" | PaymentMethod) {
+    updateParams({ [PARAM_PAY]: value || null });
+  }
+
+  function handleSearchChange(value: string) {
+    updateParams({ [PARAM_SEARCH]: value || null });
   }
 
   function resetFilters() {
-    setDateFrom(initialToday.from);
-    setDateTo(initialToday.to);
-    setPaymentFilter("");
+    updateParams({
+      [PARAM_FROM]: null,
+      [PARAM_TO]: null,
+      [PARAM_PAY]: null,
+      [PARAM_SEARCH]: null,
+    });
+  }
+
+  function setPage(next: number) {
+    updateParams({ [PARAM_PAGE]: next <= 1 ? null : String(next) }, false);
   }
 
   const periodHint =
@@ -172,8 +250,15 @@ export function CashierSalesHistory({
   const filteredHiddenByDate =
     activeSalesCount > 0 && stats.count === 0 && activeDatePreset !== "all";
 
-  const paginationKey = `${mode}|${dateFrom}|${dateTo}|${paymentFilter}`;
-  const listPagination = usePagination(filtered, DEFAULT_PAGE_SIZE, paginationKey);
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / DEFAULT_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = useMemo(
+    () => filtered.slice((safePage - 1) * DEFAULT_PAGE_SIZE, safePage * DEFAULT_PAGE_SIZE),
+    [filtered, safePage]
+  );
+  const rangeStart = totalItems === 0 ? 0 : (safePage - 1) * DEFAULT_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(safePage * DEFAULT_PAGE_SIZE, totalItems);
 
   return (
     <div className="space-y-6">
@@ -221,27 +306,22 @@ export function CashierSalesHistory({
         paymentFilter={paymentFilter}
         onDateFromChange={handleDateFromChange}
         onDateToChange={handleDateToChange}
-        onPaymentChange={setPaymentFilter}
+        onPaymentChange={handlePaymentChange}
         onReset={resetFilters}
         resultCount={filtered.length}
         periodHint={periodHint}
         hasActiveFilters={hasFilters}
         dateMin={historyBounds.minDate}
         dateMax={historyBounds.maxDate}
+        search={search}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder="N° de ticket, client, téléphone, ICE..."
         periodFilter={
           <OrderDatePeriodFilter
             activePreset={activeDatePreset}
             onPresetChange={applyDatePreset}
           />
         }
-        pagination={{
-          page: listPagination.page,
-          totalPages: listPagination.totalPages,
-          rangeStart: listPagination.rangeStart,
-          rangeEnd: listPagination.rangeEnd,
-          totalItems: listPagination.totalItems,
-          onPageChange: listPagination.setPage,
-        }}
       />
 
       <Card padding={false}>
@@ -257,7 +337,7 @@ export function CashierSalesHistory({
         </div>
 
         <SalesHistoryTable
-          sales={listPagination.paginated}
+          sales={paginated}
           showStore={mode !== "store"}
           showCashier={mode === "store"}
           showLineItems={false}
@@ -266,6 +346,17 @@ export function CashierSalesHistory({
           printingSaleId={printingSaleId}
           showPagination={false}
         />
+
+        {totalItems > 0 && (
+          <PaginationBar
+            page={safePage}
+            totalPages={totalPages}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            totalItems={totalItems}
+            onPageChange={setPage}
+          />
+        )}
       </Card>
 
       {detailSale && (

@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MapPin } from "lucide-react";
+import { MapPin, Search } from "lucide-react";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { Input } from "@/components/ui/input";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { PaginationBar, type PaginationBarProps } from "@/components/ui/pagination-bar";
 import { DateInputField } from "@/components/ui/date-input-field";
@@ -53,6 +54,9 @@ export function SalesAgendaFilter({
   hideDateRangeFields = false,
   dateMin,
   dateMax,
+  search,
+  onSearchChange,
+  searchPlaceholder = "Rechercher...",
 }: {
   dateFrom: string;
   dateTo: string;
@@ -82,9 +86,14 @@ export function SalesAgendaFilter({
   hideDateRangeFields?: boolean;
   dateMin?: string;
   dateMax?: string;
+  /** Champ de recherche libre (optionnel). */
+  search?: string;
+  onSearchChange?: (v: string) => void;
+  searchPlaceholder?: string;
 }) {
+  const showSearch = typeof onSearchChange === "function";
   const hasFilters =
-    hasActiveFilters ?? Boolean(dateFrom || dateTo || paymentFilter);
+    hasActiveFilters ?? Boolean(dateFrom || dateTo || paymentFilter || search);
   const showStore = stores && stores.length > 0 && onStoreChange;
   const summary = `${resultCount} transaction${resultCount !== 1 ? "s" : ""}${
     periodHint ? ` — ${periodHint}` : ""
@@ -124,6 +133,19 @@ export function SalesAgendaFilter({
       </div>
 
       {periodFilter ? <div className="mb-4">{periodFilter}</div> : null}
+
+      {showSearch && (
+        <div className="mb-4">
+          <Input
+            label="Recherche"
+            icon={Search}
+            value={search ?? ""}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            placeholder={searchPlaceholder}
+            inputSize="sm"
+          />
+        </div>
+      )}
 
       <div
         className={cn(

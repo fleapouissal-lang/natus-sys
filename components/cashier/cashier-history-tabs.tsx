@@ -1,15 +1,27 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Receipt, ScrollText } from "lucide-react";
 import { CashierSalesHistory } from "@/components/sales/cashier-sales-history";
-import { StoreDayClosureReportsList } from "@/components/sales/store-day-closure-reports-list";
+import {
+  StoreDayClosureReportsList,
+  filterStoreDayClosures,
+} from "@/components/sales/store-day-closure-reports-list";
+import { ClosureHistoryFilterBar } from "@/components/sales/closure-history-filter-bar";
 import { cn } from "@/lib/utils";
-import type { getCashierSalesHistoryDateBounds } from "@/lib/sales/manager-sales-window";
+import {
+  clampDateToCashierSalesWindow,
+  type getCashierSalesHistoryDateBounds,
+} from "@/lib/sales/manager-sales-window";
 import type { StoreDayClosureReportRow } from "@/lib/sales/store-day-closure";
 import type { Sale } from "@/lib/types";
+
+const PARAM_CLOSURE_FROM = "cfrom";
+const PARAM_CLOSURE_TO = "cto";
+const PARAM_CLOSURE_SEARCH = "cq";
+const PARAM_CLOSURE_PAGE = "cpage";
 
 type HistoryTab = "sales" | "closures";
 
@@ -84,6 +96,61 @@ function CashierHistoryTabsInner({
     router.push(query ? `${pathname}?${query}` : pathname);
   }
 
+  const closureDefaultFrom = historyBounds.maxDate;
+  const closureDefaultTo = historyBounds.maxDate;
+  const closureFrom = searchParams.get(PARAM_CLOSURE_FROM) || closureDefaultFrom;
+  const closureTo = searchParams.get(PARAM_CLOSURE_TO) || closureDefaultTo;
+  const closureSearch = searchParams.get(PARAM_CLOSURE_SEARCH) || "";
+  const closurePage = Math.max(1, Number(searchParams.get(PARAM_CLOSURE_PAGE)) || 1);
+  const closureHasFilters =
+    closureFrom !== closureDefaultFrom ||
+    closureTo !== closureDefaultTo ||
+    Boolean(closureSearch);
+
+  const updateClosureParams = useCallback(
+    (updates: Record<string, string | null>, resetPage = true) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null || value === "") params.delete(key);
+        else params.set(key, value);
+      }
+      if (resetPage) params.delete(PARAM_CLOSURE_PAGE);
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [searchParams, pathname, router]
+  );
+
+  function handleClosureFromChange(value: string) {
+    const clamped = clampDateToCashierSalesWindow(value, historyBounds);
+    updateClosureParams({
+      [PARAM_CLOSURE_FROM]: clamped === closureDefaultFrom ? null : clamped,
+    });
+  }
+
+  function handleClosureToChange(value: string) {
+    const clamped = clampDateToCashierSalesWindow(value, historyBounds);
+    updateClosureParams({
+      [PARAM_CLOSURE_TO]: clamped === closureDefaultTo ? null : clamped,
+    });
+  }
+
+  function handleClosureSearchChange(value: string) {
+    updateClosureParams({ [PARAM_CLOSURE_SEARCH]: value || null });
+  }
+
+  function resetClosureFilters() {
+    updateClosureParams({
+      [PARAM_CLOSURE_FROM]: null,
+      [PARAM_CLOSURE_TO]: null,
+      [PARAM_CLOSURE_SEARCH]: null,
+    });
+  }
+
+  function setClosurePage(next: number) {
+    updateClosureParams({ [PARAM_CLOSURE_PAGE]: next <= 1 ? null : String(next) }, false);
+  }
+
   return (
     <div className="space-y-6">
       {visibleTabs.length > 1 && (
@@ -141,12 +208,36 @@ function CashierHistoryTabsInner({
               Clôture du jour
             </Link>
           </div>
+          <ClosureHistoryFilterBar
+            dateFrom={closureFrom}
+            dateTo={closureTo}
+            search={closureSearch}
+            onDateFromChange={handleClosureFromChange}
+            onDateToChange={handleClosureToChange}
+            onSearchChange={handleClosureSearchChange}
+            onReset={resetClosureFilters}
+            resultCount={
+              filterStoreDayClosures(initialClosures, {
+                dateFrom: closureFrom,
+                dateTo: closureTo,
+                searchQuery: closureSearch,
+              }).length
+            }
+            hasActiveFilters={closureHasFilters}
+            dateMin={historyBounds.minDate}
+            dateMax={historyBounds.maxDate}
+          />
           <StoreDayClosureReportsList
             initialClosures={initialClosures}
             storeId={storeId}
             isCashier
             showStoreColumn={false}
             historyBounds={historyBounds}
+            dateFrom={closureFrom}
+            dateTo={closureTo}
+            searchQuery={closureSearch}
+            page={closurePage}
+            onPageChange={setClosurePage}
           />
         </div>
       )}

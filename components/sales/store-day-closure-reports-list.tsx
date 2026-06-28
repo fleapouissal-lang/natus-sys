@@ -34,7 +34,7 @@ import {
 } from "@/lib/sales/manager-sales-window";
 import type { StoreDayClosureReportRow } from "@/lib/sales/store-day-closure";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
-import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/use-pagination";
 import type { Sale } from "@/lib/types";
 
 const ACTION_COLOR = "#B38C4A";
@@ -89,6 +89,32 @@ function ClosureIconButton({
   );
 }
 
+function closureMatchesSearch(closure: StoreDayClosureReportRow, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  const haystack = [
+    closure.business_date,
+    closure.store_name,
+    closure.store_city,
+    closure.requested_by_name,
+    closure.validated_by_name,
+  ];
+  return haystack.some((value) => value?.toLowerCase().includes(needle));
+}
+
+export function filterStoreDayClosures(
+  closures: StoreDayClosureReportRow[],
+  filters: { dateFrom?: string; dateTo?: string; searchQuery?: string }
+): StoreDayClosureReportRow[] {
+  const { dateFrom, dateTo, searchQuery } = filters;
+  return closures.filter((closure) => {
+    if (dateFrom && closure.business_date < dateFrom) return false;
+    if (dateTo && closure.business_date > dateTo) return false;
+    if (searchQuery && !closureMatchesSearch(closure, searchQuery)) return false;
+    return true;
+  });
+}
+
 function closureCashierLabel(sales: Sale[], fallback?: string): string | undefined {
   const labels = uniqueCashierLabels(sales);
   if (labels.length === 0) return fallback;
@@ -116,12 +142,27 @@ export function StoreDayClosureReportsList({
   isCashier = false,
   showStoreColumn = true,
   historyBounds,
+  dateFrom,
+  dateTo,
+  searchQuery,
+  page: controlledPage,
+  onPageChange,
 }: {
   initialClosures: StoreDayClosureReportRow[];
   storeId?: string;
   isCashier?: boolean;
   showStoreColumn?: boolean;
   historyBounds?: ReturnType<typeof getCashierSalesHistoryDateBounds>;
+  /** Filtre optionnel : ne garder que les clôtures à partir de cette date métier. */
+  dateFrom?: string;
+  /** Filtre optionnel : ne garder que les clôtures jusqu'à cette date métier. */
+  dateTo?: string;
+  /** Recherche libre optionnelle (date, magasin, demandeur, valideur). */
+  searchQuery?: string;
+  /** Pagination contrôlée (page courante) — sinon état interne. */
+  page?: number;
+  /** Callback de changement de page — active le mode contrôlé. */
+  onPageChange?: (page: number) => void;
 }) {
   const [closures, setClosures] = useState(initialClosures);
   const [error, setError] = useState("");
@@ -140,28 +181,45 @@ export function StoreDayClosureReportsList({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const {
-    paginated,
-    page,
-    setPage,
-    totalPages,
-    rangeStart,
-    rangeEnd,
-    totalItems,
-  } = usePagination(closures, DEFAULT_PAGE_SIZE, storeId ?? "all");
+  const displayed = useMemo(
+    () => filterStoreDayClosures(closures, { dateFrom, dateTo, searchQuery }),
+    [closures, dateFrom, dateTo, searchQuery]
+  );
+
+  const isControlledPagination = typeof onPageChange === "function";
+  const [internalPage, setInternalPage] = useState(1);
+
+  const totalItems = displayed.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / DEFAULT_PAGE_SIZE));
+  const requestedPage = isControlledPagination ? controlledPage ?? 1 : internalPage;
+  const page = Math.min(Math.max(1, requestedPage), totalPages);
+  const setPage = useCallback(
+    (next: number) => {
+      if (isControlledPagination) onPageChange!(next);
+      else setInternalPage(next);
+    },
+    [isControlledPagination, onPageChange]
+  );
+
+  const paginated = useMemo(
+    () => displayed.slice((page - 1) * DEFAULT_PAGE_SIZE, page * DEFAULT_PAGE_SIZE),
+    [displayed, page]
+  );
+  const rangeStart = totalItems === 0 ? 0 : (page - 1) * DEFAULT_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * DEFAULT_PAGE_SIZE, totalItems);
 
   const summary = useMemo(() => {
-    const validated = closures.filter((c) => c.status === "validated").length;
-    const pending = closures.filter((c) => c.status === "pending").length;
-    const totalCa = closures
+    const validated = displayed.filter((c) => c.status === "validated").length;
+    const pending = displayed.filter((c) => c.status === "pending").length;
+    const totalCa = displayed
       .filter((c) => c.status === "validated")
       .reduce((sum, c) => sum + c.stats.total, 0);
     return { validated, pending, totalCa };
-  }, [closures]);
+  }, [displayed]);
 
   const downloadableClosures = useMemo(
-    () => closures.filter((closure) => canDownloadClosure(closure, isCashier)),
-    [closures, isCashier]
+    () => displayed.filter((closure) => canDownloadClosure(closure, isCashier)),
+    [displayed, isCashier]
   );
 
   const selectedClosures = useMemo(
@@ -228,9 +286,8 @@ export function StoreDayClosureReportsList({
         : result.closures;
       setClosures(rows);
       setError("");
-      setPage(1);
     });
-  }, [storeId, historyBounds, setPage]);
+  }, [storeId, historyBounds]);
 
   useEffect(() => {
     const timer = window.setInterval(reload, 20000);
@@ -440,7 +497,11 @@ export function StoreDayClosureReportsList({
                   <td colSpan={colSpan} className="px-6 py-10 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <CalendarDays className="h-9 w-9 text-muted/50" />
-                      <p className="text-sm text-muted">Aucun rapport de clôture enregistré.</p>
+                      <p className="text-sm text-muted">
+                        {dateFrom || dateTo || searchQuery
+                          ? "Aucun rapport de clôture pour ces filtres."
+                          : "Aucun rapport de clôture enregistré."}
+                      </p>
                     </div>
                   </td>
                 </tr>
