@@ -21,7 +21,6 @@ export function StoreOutOfStockPanel({
         <CardHeader
           title="Produits en rupture"
           description={`${storeLabel} · ${products.length} référence${products.length !== 1 ? "s" : ""} à 0 unité`}
-          className="gap-1"
         />
       </div>
 

@@ -70,6 +70,27 @@ function buildUsers(stores) {
       store: null,
       is_store_pos: false,
     });
+
+    users.push(
+      {
+        email: `livreur.${citySlug(city)}.1@natus.ma`,
+        password: PASSWORD,
+        full_name: `Livreur ${city} 1`,
+        role: "livreur",
+        city,
+        store: null,
+        is_store_pos: false,
+      },
+      {
+        email: `livreur.${citySlug(city)}.2@natus.ma`,
+        password: PASSWORD,
+        full_name: `Livreur ${city} 2`,
+        role: "livreur",
+        city,
+        store: null,
+        is_store_pos: false,
+      }
+    );
   }
 
   for (const store of stores) {
@@ -83,16 +104,6 @@ function buildUsers(stores) {
       city: store.city,
       store: store.name,
       is_store_pos: true,
-    });
-
-    users.push({
-      email: `livreur.${slug}@natus.ma`,
-      password: PASSWORD,
-      full_name: `Livreur ${store.name}`,
-      role: "livreur",
-      city: store.city,
-      store: store.name,
-      is_store_pos: false,
     });
   }
 

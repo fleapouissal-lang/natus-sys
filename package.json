@@ -29,6 +29,7 @@
     "seed:users": "npm run db:migrate && node scripts/reset-users.mjs && node scripts/seed-users.mjs && node scripts/backfill-livreur-orders.mjs",
     "seed:orders": "npm run db:migrate && node scripts/reset-orders.mjs && node scripts/seed-shopify-orders.mjs && node scripts/backfill-livreur-orders.mjs",
     "backfill:livreur": "node scripts/backfill-livreur-orders.mjs",
+    "reset:livreurs": "node scripts/reset-livreurs.mjs",
     "seed:shopify-whatsapp": "node scripts/seed-shopify-whatsapp-test.mjs",
     "seed:shopify-feedback": "node scripts/seed-shopify-feedback-test.mjs",
     "seed:marketing-demo": "node scripts/seed-marketing-demo.mjs",

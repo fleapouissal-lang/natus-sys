@@ -4,20 +4,31 @@ export function isStockAlertNotification(n: CashierNotification): boolean {
   return n.kind === "stock_low" || n.kind === "stock_out";
 }
 
+export function isPendingTransferNotification(n: CashierNotification): boolean {
+  return n.kind === "hub_transfer";
+}
+
+/** Reste affichée jusqu'à résolution (stock réapprovisionné ou transfert reçu). */
+export function isPersistentNotification(n: CashierNotification): boolean {
+  return isStockAlertNotification(n) || isPendingTransferNotification(n);
+}
+
 export function notificationNeedsAttention(n: CashierNotification): boolean {
-  return isStockAlertNotification(n) || !n.read;
+  return isPersistentNotification(n) || !n.read;
 }
 
 export function computeNotificationCounts(notifications: CashierNotification[]) {
   const stockAlertCount = notifications.filter(isStockAlertNotification).length;
+  const pendingTransferCount = notifications.filter(isPendingTransferNotification).length;
   const otherUnreadCount = notifications.filter(
-    (n) => !isStockAlertNotification(n) && !n.read
+    (n) => !isPersistentNotification(n) && !n.read
   ).length;
 
   return {
     stockAlertCount,
+    pendingTransferCount,
     otherUnreadCount,
-    badgeCount: stockAlertCount + otherUnreadCount,
+    badgeCount: stockAlertCount + pendingTransferCount + otherUnreadCount,
   };
 }
 

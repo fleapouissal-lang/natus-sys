@@ -8,6 +8,22 @@ const WRITEOFF_VALIDATION_SELECT = `
   stores(name, city, is_hub)
 `;
 
+type WriteoffValidationRow = Pick<StoreProductWriteoff, "id" | "status" | "stores">;
+
+function normalizeWriteoffStore(
+  stores: unknown
+): WriteoffValidationRow["stores"] {
+  if (!stores) return null;
+  if (Array.isArray(stores)) {
+    const row = stores[0];
+    return row && typeof row === "object" ? (row as NonNullable<WriteoffValidationRow["stores"]>) : null;
+  }
+  if (typeof stores === "object") {
+    return stores as NonNullable<WriteoffValidationRow["stores"]>;
+  }
+  return null;
+}
+
 export function writeoffValidationDeniedMessage(
   profile: Pick<Profile, "role">,
   writeoff: Pick<StoreProductWriteoff, "stores">
@@ -20,7 +36,7 @@ export function writeoffValidationDeniedMessage(
 
 export async function getWriteoffForValidation(
   writeoffId: string
-): Promise<Pick<StoreProductWriteoff, "id" | "status" | "stores"> | null> {
+): Promise<WriteoffValidationRow | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("store_product_writeoffs")
@@ -29,13 +45,17 @@ export async function getWriteoffForValidation(
     .maybeSingle();
 
   if (error || !data) return null;
-  return data as Pick<StoreProductWriteoff, "id" | "status" | "stores">;
+  return {
+    id: data.id,
+    status: data.status,
+    stores: normalizeWriteoffStore(data.stores),
+  };
 }
 
 export async function assertCanValidateWriteoff(
   profile: Pick<Profile, "role">,
   writeoffId: string
-): Promise<{ ok: true; writeoff: Pick<StoreProductWriteoff, "id" | "status" | "stores"> } | { error: string }> {
+): Promise<{ ok: true; writeoff: WriteoffValidationRow } | { error: string }> {
   const writeoff = await getWriteoffForValidation(writeoffId);
   if (!writeoff) return { error: "Annulation introuvable" };
   if (writeoff.status !== "pending") {

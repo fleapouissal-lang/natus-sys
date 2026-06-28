@@ -10,7 +10,7 @@ import {
   notificationHref,
 } from "@/lib/notifications/display";
 import { formatTimeAgo } from "@/lib/notifications/format-time-ago";
-import { isStockAlertNotification } from "@/lib/notifications/notification-counts";
+import { isPersistentNotification } from "@/lib/notifications/notification-counts";
 import type { CashierNotification } from "@/lib/notifications/types";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +26,7 @@ export function CashierNotificationBar({
 
   const { latestUnread, openNotification, dismissBar, badgeCount } = ctx;
   const meta = formatNotificationMeta(latestUnread);
-  const stockAlertActive = isStockAlertNotification(latestUnread);
+  const persistentAlertActive = isPersistentNotification(latestUnread);
 
   function handleView() {
     openNotification(latestUnread.id);
@@ -93,7 +93,7 @@ export function CashierNotificationBar({
           Voir
           <ChevronRight className="h-3.5 w-3.5 text-primary-dark" aria-hidden />
         </button>
-        {!stockAlertActive ? (
+        {!persistentAlertActive ? (
           <button
             type="button"
             onClick={dismissBar}
