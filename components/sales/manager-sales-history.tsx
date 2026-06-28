@@ -185,7 +185,7 @@ export function ManagerSalesHistory({
           sales={listPagination.paginated}
           showStore={showStoreColumn}
           showCashier
-          showLineItems={isDirector}
+          showLineItems={false}
           onViewSale={setDetailSale}
           showPagination={false}
         />
