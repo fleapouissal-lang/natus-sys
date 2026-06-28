@@ -145,6 +145,7 @@ export interface LoyaltyCustomer {
   responsible_name?: string | null;
   company_ice?: string | null;
   company_rc?: string | null;
+  country?: string | null;
   city?: string | null;
   address?: string | null;
   is_active?: boolean;

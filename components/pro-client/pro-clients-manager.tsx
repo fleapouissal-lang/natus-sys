@@ -161,7 +161,9 @@ export function ProClientsManager({
                       {isEntreprise ? (
                         <>
                           <p>{customer.company_name || "—"}</p>
-                          <p className="text-xs">{customer.city || "—"}</p>
+                          <p className="text-xs">
+                            {[customer.city, customer.country].filter(Boolean).join(", ") || "—"}
+                          </p>
                           {customer.responsible_name && (
                             <p className="text-xs text-muted">
                               Resp. {customer.responsible_name}

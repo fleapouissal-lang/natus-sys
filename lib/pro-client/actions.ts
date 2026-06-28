@@ -23,6 +23,7 @@ export async function submitProClientRegistration(input: {
   phone?: string;
   email: string;
   companyName?: string;
+  country?: string;
   city?: string;
   address?: string;
   responsibleName?: string;
@@ -37,6 +38,7 @@ export async function submitProClientRegistration(input: {
     p_phone: input.phone?.trim() || null,
     p_email: input.email.trim(),
     p_company_name: input.companyName?.trim() || null,
+    p_country: input.country?.trim() || null,
     p_city: input.city?.trim() || null,
     p_address: input.address?.trim() || null,
     p_responsible_name: input.responsibleName?.trim() || null,

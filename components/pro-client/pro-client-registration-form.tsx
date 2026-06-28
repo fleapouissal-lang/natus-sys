@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BriefcaseBusiness, CheckCircle2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CountryCitySelect, countryNameFromCode } from "@/components/ui/country-city-select";
 import { submitProClientRegistration } from "@/lib/pro-client/actions";
 import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
 import type { ProClientType } from "@/lib/pro-client/types";
@@ -113,6 +114,7 @@ export function ProClientRegistrationForm({
   const [responsibleName, setResponsibleName] = useState("");
   const [companyIce, setCompanyIce] = useState("");
   const [companyRc, setCompanyRc] = useState("");
+  const [countryCode, setCountryCode] = useState("MA");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
@@ -129,6 +131,7 @@ export function ProClientRegistrationForm({
     setResponsibleName("");
     setCompanyIce("");
     setCompanyRc("");
+    setCountryCode("MA");
     setCity("");
     setAddress("");
     setPhone("");
@@ -155,6 +158,7 @@ export function ProClientRegistrationForm({
         responsibleName: clientType === "entreprise" ? responsibleName : undefined,
         companyIce: clientType === "entreprise" ? companyIce : undefined,
         companyRc: clientType === "entreprise" ? companyRc : undefined,
+        country: clientType === "entreprise" ? countryNameFromCode(countryCode) : undefined,
         city: clientType === "entreprise" ? city : undefined,
         address,
         email: email.trim(),
@@ -246,10 +250,11 @@ export function ProClientRegistrationForm({
               onChange={(e) => setCompanyRc(e.target.value)}
               required
             />
-            <Input
-              label="Ville"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
+            <CountryCitySelect
+              countryCode={countryCode}
+              city={city}
+              onCountryChange={setCountryCode}
+              onCityChange={setCity}
               required
             />
             <Input
