@@ -264,3 +264,26 @@ export async function getLivreurStoreStockTransfers(
   const transfers = (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
   return enrichStoreTransferNames(transfers);
 }
+
+/** Transferts inter-magasins livrés/reçus assignés au livreur (historique). */
+export async function getLivreurStoreTransferHistory(
+  livreurId: string
+): Promise<StoreStockTransfer[]> {
+  if (!livreurId) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("store_stock_transfers")
+    .select(TRANSFER_SELECT)
+    .eq("assigned_livreur_id", livreurId)
+    .in("status", ["livre", "received"])
+    .order("sent_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.error("getLivreurStoreTransferHistory:", error.message);
+    return [];
+  }
+
+  const transfers = (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+  return enrichStoreTransferNames(transfers);
+}

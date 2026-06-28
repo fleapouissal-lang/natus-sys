@@ -188,6 +188,28 @@ export async function getLivreurHubTransfers(livreurId: string): Promise<HubStoc
   return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
 }
 
+/** Transferts dépôt ↔ magasin livrés/reçus assignés au livreur (historique). */
+export async function getLivreurHubTransferHistory(
+  livreurId: string
+): Promise<HubStockTransfer[]> {
+  if (!livreurId) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("hub_stock_transfers")
+    .select(TRANSFER_SELECT)
+    .eq("assigned_livreur_id", livreurId)
+    .in("status", ["livre", "sent", "received"])
+    .order("sent_at", { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.error("getLivreurHubTransferHistory:", error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+}
+
 export async function getHubTransferById(transferId: string): Promise<HubStockTransfer | null> {
   const supabase = await createClient();
   const { data } = await supabase

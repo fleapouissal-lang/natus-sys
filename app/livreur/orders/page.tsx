@@ -4,16 +4,33 @@ import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
 import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
 import { getProductCatalog } from "@/lib/inventory";
 import { livreurPendingDeliveryStatuses } from "@/lib/shopify/order-status";
+import { getLivreurHubTransfers } from "@/lib/hub-transfers";
+import { getLivreurStoreStockTransfers } from "@/lib/store-transfers";
+import { LivreurHubTransfers } from "@/components/livreur/livreur-hub-transfers";
 
 export default async function LivreurOrdersPage() {
   const profile = await getCurrentProfile();
   if (!profile || profile.role !== "livreur") redirect("/login");
 
-  const orders = await getShopifyOrders(profile, {
-    workflowStatuses: livreurPendingDeliveryStatuses(),
-  });
-  const products = await getProductCatalog();
+  const [orders, products, hubTransfers, storeTransfers] = await Promise.all([
+    getShopifyOrders(profile, {
+      workflowStatuses: livreurPendingDeliveryStatuses(),
+    }),
+    getProductCatalog(),
+    getLivreurHubTransfers(profile.id),
+    getLivreurStoreStockTransfers(profile.id),
+  ]);
   const scopeLabel = getOrdersScopeLabel(profile, {});
+
+  // Transferts encore à livrer (les livrés passent dans l'historique).
+  const activeHubTransfers = hubTransfers.filter(
+    (t) => t.status === "pret" || t.status === "en_livraison"
+  );
+  const activeStoreTransfers = storeTransfers.filter(
+    (t) => t.status === "pret" || t.status === "en_livraison"
+  );
+  const hasActiveTransfers =
+    activeHubTransfers.length > 0 || activeStoreTransfers.length > 0;
 
   return (
     <div className="animate-fade-in space-y-4 md:space-y-6">
@@ -37,6 +54,13 @@ export default async function LivreurOrdersPage() {
         livreurProfileId={profile.id}
         dateOnlyFilters
       />
+
+      {hasActiveTransfers && (
+        <LivreurHubTransfers
+          transfers={activeHubTransfers}
+          storeTransfers={activeStoreTransfers}
+        />
+      )}
     </div>
   );
 }
