@@ -1,3 +1,5 @@
+import { publicSubdomainOrigin } from "@/lib/public-subdomain";
+
 const QR_PREFIX = "NATUS:LOYALTY:";
 
 export function normalizeLoyaltyCardNumber(cardNumber: string): string {
@@ -52,10 +54,6 @@ export function loyaltyCardScanPayload(cardNumber: string): string {
 }
 
 export function loyaltyCardPublicUrl(qrToken: string, baseUrl?: string): string {
-  const origin =
-    baseUrl ||
-    (typeof window !== "undefined" ? window.location.origin : "") ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "";
+  const origin = publicSubdomainOrigin("loyalty", baseUrl);
   return `${origin.replace(/\/$/, "")}/carte/${qrToken}`;
 }

@@ -4,6 +4,7 @@ import {
   shopifyOrderTrackingPublicUrl,
 } from "@/lib/kapso/urls";
 import { loyaltyCardPublicUrl } from "@/lib/loyalty/qr";
+import { publicSubdomainOrigin } from "@/lib/public-subdomain";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ShortLinkKind = "order" | "loyalty_card" | "product";
@@ -84,7 +85,9 @@ export async function loyaltyCardShortUrl(
   baseUrl?: string
 ): Promise<string> {
   const code = await getOrCreateShortCode("loyalty_card", qrToken);
-  if (code) return `${publicOrigin(baseUrl)}/f/${code}`;
+  if (code) {
+    return `${publicSubdomainOrigin("loyalty", baseUrl).replace(/\/$/, "")}/f/${code}`;
+  }
   return loyaltyCardPublicUrl(qrToken, baseUrl);
 }
 
