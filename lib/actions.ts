@@ -15,6 +15,7 @@ import { NATUS_CITIES } from "@/lib/constants/cities";
 import { getStoreById } from "@/lib/inventory";
 import { getTransferStoreById } from "@/lib/transfer-sites.server";
 import { PRODUCT_BRAND, PRODUCT_CATEGORIES } from "@/lib/constants/products";
+import { parseAssignableCategoriesFromForm } from "@/lib/products/assignable-categories";
 import { buildParentBarcode } from "@/lib/products/product-utils";
 import { uploadProductImage } from "@/lib/storage";
 import type { PaymentMethod, Profile } from "@/lib/types";
@@ -232,24 +233,6 @@ function movementAccessRequestId(
   return null;
 }
 
-function parseCategories(formData: FormData): string[] | null {
-  const raw = formData
-    .getAll("categories")
-    .map((value) => (value as string).trim())
-    .filter(Boolean);
-
-  const unique = [...new Set(raw)];
-  if (unique.length === 0) return null;
-
-  for (const category of unique) {
-    if (!PRODUCT_CATEGORIES.includes(category as (typeof PRODUCT_CATEGORIES)[number])) {
-      return null;
-    }
-  }
-
-  return unique;
-}
-
 function parseCategory(value: FormDataEntryValue | null): string | null {
   const category = (value as string)?.trim();
   if (!category) return null;
@@ -297,11 +280,11 @@ export async function createProduct(formData: FormData) {
     return { error: "Type de produit invalide" };
   }
 
-  const categories = parseCategories(formData);
-  if (!categories) return { error: "Veuillez sélectionner au moins une catégorie" };
+  const supabase = await createClient();
+  const categories = await parseAssignableCategoriesFromForm(supabase, formData);
+  if (!categories) return { error: "Veuillez sélectionner au moins une catégorie valide" };
 
   const primaryCategory = categories[0];
-  const supabase = await createClient();
   const storeStocks = parseStoreStocks(formData);
 
   if (productKind === "parent") {
@@ -441,7 +424,7 @@ export async function createProductVariant(parentId: string, formData: FormData)
   }
 
   const categories =
-    parseCategories(formData) ||
+    (await parseAssignableCategoriesFromForm(supabase, formData)) ||
     (parent.categories?.length ? parent.categories : parent.category ? [parent.category] : null);
 
   if (!categories?.length) {
@@ -529,8 +512,8 @@ export async function updateProduct(id: string, formData: FormData) {
 
   if (!isParent && !barcode) return { error: "Code-barres requis" };
 
-  const categories = parseCategories(formData);
-  if (!categories) return { error: "Veuillez sélectionner au moins une catégorie" };
+  const categories = await parseAssignableCategoriesFromForm(supabase, formData);
+  if (!categories) return { error: "Veuillez sélectionner au moins une catégorie valide" };
 
   if (!isParent && barcode) {
     const { data: duplicate } = await supabase

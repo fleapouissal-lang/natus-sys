@@ -4,9 +4,11 @@ import {
   PRODUCT_CATEGORIES,
   type ProductCategory,
 } from "@/lib/constants/products";
+import { getAssignableCategoryNames } from "@/lib/products/assignable-categories";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_SIZE = 5 * 1024 * 1024;
+const POS_CATEGORY_CARDS_BUCKET = "pos-category-cards";
 
 function sanitizeFileName(name: string): string {
   return name
@@ -17,8 +19,21 @@ function sanitizeFileName(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export function isValidProductCategory(category: string): category is ProductCategory {
+export function isKnownProductCategoryBucket(category: string): category is ProductCategory {
   return PRODUCT_CATEGORIES.includes(category as ProductCategory);
+}
+
+export async function isAssignableProductCategory(
+  supabase: SupabaseClient,
+  category: string
+): Promise<boolean> {
+  const assignable = await getAssignableCategoryNames(supabase);
+  return assignable.has(category);
+}
+
+/** @deprecated Préférer isAssignableProductCategory pour les catégories POS dynamiques. */
+export function isValidProductCategory(category: string): category is ProductCategory {
+  return isKnownProductCategoryBucket(category);
 }
 
 export async function uploadProductImage(
@@ -27,7 +42,7 @@ export async function uploadProductImage(
   file: File,
   fileBaseName: string
 ): Promise<{ url?: string; error?: string }> {
-  if (!isValidProductCategory(category)) {
+  if (!(await isAssignableProductCategory(supabase, category))) {
     return { error: "Catégorie invalide pour le stockage" };
   }
 
@@ -39,9 +54,13 @@ export async function uploadProductImage(
     return { error: "Image trop volumineuse (max 5 Mo)" };
   }
 
-  const bucket = getCategoryBucketSlug(category);
   const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-  const path = `${sanitizeFileName(fileBaseName)}.${ext}`;
+  const safeName = sanitizeFileName(fileBaseName);
+  const usesLegacyBucket = isKnownProductCategoryBucket(category);
+  const bucket = usesLegacyBucket ? getCategoryBucketSlug(category) : POS_CATEGORY_CARDS_BUCKET;
+  const path = usesLegacyBucket
+    ? `${safeName}.${ext}`
+    : `${getCategoryBucketSlug(category)}/products/${safeName}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error } = await supabase.storage.from(bucket).upload(path, buffer, {
@@ -159,7 +178,6 @@ export async function uploadWriteoffPhoto(
 }
 
 const NEWS_IMAGES_BUCKET = "news-images";
-const POS_CATEGORY_CARDS_BUCKET = "pos-category-cards";
 
 export async function uploadPosCategoryCardImage(
   supabase: SupabaseClient,

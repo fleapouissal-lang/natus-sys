@@ -14,6 +14,7 @@ import {
   updatePosCategoryCardImage,
 } from "@/lib/pos/pos-category-cards/actions";
 import { POS_MIN_CATEGORY_PRODUCTS, type PosCategoryCardConfig } from "@/lib/pos/pos-category-cards/types";
+import { UNCATEGORIZED_PRODUCT_CATEGORY } from "@/lib/constants/products";
 import { getProductCategoryIcon } from "@/lib/products/category-icons";
 
 function CategoryPreview({
@@ -125,9 +126,14 @@ export function PosCategoryCardsManager({
   }
 
   function handleDeleteCategory(category: PosCategoryCardConfig, productCount: number) {
+    if (category.name === UNCATEGORIZED_PRODUCT_CATEGORY) {
+      setError("Impossible de supprimer la catégorie par défaut.");
+      return;
+    }
+
     const message =
       productCount > 0
-        ? `Supprimer la catégorie « ${category.name} » et ${productCount} produit${productCount > 1 ? "s" : ""} associé${productCount > 1 ? "s" : ""} ?\n\nCette action est irréversible.`
+        ? `Supprimer la catégorie « ${category.name} » ?\n\n${productCount} produit${productCount > 1 ? "s" : ""} ser${productCount > 1 ? "ont" : "a"} reclasse${productCount > 1 ? "s" : ""} dans « ${UNCATEGORIZED_PRODUCT_CATEGORY} ».`
         : `Supprimer la catégorie « ${category.name} » ?`;
 
     if (!window.confirm(message)) return;
@@ -147,8 +153,8 @@ export function PosCategoryCardsManager({
     <div className="space-y-6">
       <Card>
         <CardHeader
-          title="Nouvelle catégorie"
-          description="Ajoutez une catégorie POS avec son image. Elle apparaît à la caisse dès qu'elle contient au moins 1 produit."
+          title="Catégorie vide (optionnel)"
+          description="Créez une catégorie avant d'y affecter des produits, ou laissez les catégories se créer automatiquement lors de l'ajout de produits."
         />
         <form onSubmit={handleCreate} className="space-y-4 px-4 pb-4 md:px-6 md:pb-6">
           <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
@@ -230,7 +236,7 @@ export function PosCategoryCardsManager({
                     size="sm"
                     variant="danger"
                     onClick={() => handleDeleteCategory(category, productCount)}
-                    disabled={pending}
+                    disabled={pending || category.name === UNCATEGORIZED_PRODUCT_CATEGORY}
                   >
                     <Trash2 className="h-4 w-4" />
                     Supprimer

@@ -263,7 +263,9 @@ export function ProductForm({
           value={categories}
           onChange={setCategories}
           required
+          allowCreate
           categories={assignableCategories}
+          createHint="Choisissez une catégorie existante ou créez-en une nouvelle si besoin."
         />
 
         <p className="text-sm text-muted">

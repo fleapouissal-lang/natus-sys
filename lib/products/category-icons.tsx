@@ -29,6 +29,7 @@ export const PRODUCT_CATEGORY_ICONS: Record<string, LucideIcon> = {
   Homme: User,
   Soleil: Sun,
   Voyage: Plane,
+  "Produits sans catégorie": Package,
 };
 
 export function getProductCategoryIcon(category: string): LucideIcon {

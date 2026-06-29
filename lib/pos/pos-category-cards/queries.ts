@@ -6,6 +6,7 @@ import {
 } from "@/lib/constants/products";
 import { getProductCategories, isSellableProduct, productHasCategory } from "@/lib/products/product-utils";
 import { createClient } from "@/lib/supabase/server";
+import { listAssignableCategoryNames } from "@/lib/products/assignable-categories";
 import type { Product } from "@/lib/types";
 import {
   POS_MIN_CATEGORY_PRODUCTS,
@@ -54,12 +55,8 @@ export async function listPosCategoryCards(): Promise<PosCategoryCardConfig[]> {
 }
 
 export async function listAssignableProductCategories(): Promise<string[]> {
-  const configs = await listPosCategoryCards();
-  const names = new Set<string>([...PRODUCT_CATEGORIES]);
-  for (const config of configs) {
-    names.add(config.name);
-  }
-  return [...names].sort((a, b) => a.localeCompare(b, "fr"));
+  const supabase = await createClient();
+  return listAssignableCategoryNames(supabase);
 }
 
 export function countProductsByCategory(products: Product[]): Record<string, number> {
@@ -90,7 +87,7 @@ export async function getGlobalProductCountsByCategory(): Promise<Record<string,
 }
 
 export async function listProductsInCategory(categoryName: string): Promise<
-  Pick<Product, "id" | "name" | "product_kind">[]
+  Pick<Product, "id" | "name" | "product_kind" | "category" | "categories">[]
 > {
   const supabase = await createClient();
   const { data, error } = await supabase

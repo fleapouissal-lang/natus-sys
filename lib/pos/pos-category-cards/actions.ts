@@ -4,12 +4,19 @@ import { revalidatePath } from "next/cache";
 import {
   getCategoryBucketSlug,
   PRODUCT_CATEGORIES,
+  UNCATEGORIZED_PRODUCT_CATEGORY,
 } from "@/lib/constants/products";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { uploadPosCategoryCardImage } from "@/lib/storage";
 import { listProductsInCategory } from "@/lib/pos/pos-category-cards/queries";
 import { POS_MIN_CATEGORY_PRODUCTS } from "@/lib/pos/pos-category-cards/types";
+import type { Product } from "@/lib/types";
+import {
+  ensureUncategorizedCategoryCard,
+  normalizeCategoryName,
+} from "@/lib/products/assignable-categories";
+import { getProductCategories } from "@/lib/products/product-utils";
 
 function actionError(message: string): { error: string } {
   return { error: message };
@@ -23,15 +30,6 @@ function revalidateCategoryPaths() {
   revalidatePath("/manager/products");
 }
 
-function normalizeCategoryName(raw: string): string | null {
-  const trimmed = raw.replace(/\s+/g, " ").trim();
-  if (trimmed.length < 2 || trimmed.length > 48) return null;
-  return trimmed
-    .split(" ")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(" ");
-}
-
 export async function createPosCategoryCard(formData: FormData): Promise<
   { success: true; id: string } | { error: string }
 > {
@@ -40,17 +38,42 @@ export async function createPosCategoryCard(formData: FormData): Promise<
 
   const name = normalizeCategoryName(String(formData.get("name") ?? ""));
   if (!name) return actionError("Nom de catégorie invalide");
+  if (name === UNCATEGORIZED_PRODUCT_CATEGORY) {
+    return actionError("Ce nom de catégorie est réservé");
+  }
 
   const supabase = await createClient();
   const slug = getCategoryBucketSlug(name);
 
   const { data: existing } = await supabase
     .from("pos_category_cards")
-    .select("id")
+    .select("id, image_url")
     .eq("name", name)
     .maybeSingle();
 
-  if (existing) return actionError("Cette catégorie existe déjà");
+  const imageFile = formData.get("image");
+  let imageUrl: string | null = existing?.image_url ?? null;
+
+  if (imageFile instanceof File && imageFile.size > 0) {
+    const upload = await uploadPosCategoryCardImage(supabase, slug, imageFile);
+    if (upload.error) return actionError(upload.error);
+    imageUrl = upload.url ?? null;
+  }
+
+  if (existing) {
+    if (imageUrl && imageUrl !== existing.image_url) {
+      const { error } = await supabase
+        .from("pos_category_cards")
+        .update({
+          image_url: imageUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+      if (error) return actionError(error.message);
+    }
+    revalidateCategoryPaths();
+    return { success: true, id: existing.id };
+  }
 
   const { data: maxSortRow } = await supabase
     .from("pos_category_cards")
@@ -60,15 +83,6 @@ export async function createPosCategoryCard(formData: FormData): Promise<
     .maybeSingle();
 
   const sortOrder = (maxSortRow?.sort_order ?? PRODUCT_CATEGORIES.length) + 1;
-
-  const imageFile = formData.get("image");
-  let imageUrl: string | null = null;
-
-  if (imageFile instanceof File && imageFile.size > 0) {
-    const upload = await uploadPosCategoryCardImage(supabase, slug, imageFile);
-    if (upload.error) return actionError(upload.error);
-    imageUrl = upload.url ?? null;
-  }
 
   const { data, error } = await supabase
     .from("pos_category_cards")
@@ -154,7 +168,7 @@ export async function removePosCategoryCardImage(id: string): Promise<
 }
 
 export async function deletePosCategoryCard(categoryId: string): Promise<
-  { success: true; deletedProducts: number } | { error: string }
+  { success: true; reassignedProducts: number } | { error: string }
 > {
   const profile = await requireRole(["directeur", "admin"]);
   if (!profile) return actionError("Non autorisé");
@@ -171,40 +185,26 @@ export async function deletePosCategoryCard(categoryId: string): Promise<
 
   if (fetchError || !row) return actionError("Catégorie introuvable");
 
+  if (row.name === UNCATEGORIZED_PRODUCT_CATEGORY) {
+    return actionError("Impossible de supprimer la catégorie par défaut");
+  }
+
   const products = await listProductsInCategory(row.name);
-  const productIds = products.map((product) => product.id);
+  await ensureUncategorizedCategoryCard(supabase);
 
-  if (productIds.length > 0) {
-    const { count: soldLines, error: soldError } = await supabase
-      .from("sale_items")
-      .select("id", { count: "exact", head: true })
-      .in("product_id", productIds);
-
-    if (soldError) return actionError(soldError.message);
-
-    if ((soldLines ?? 0) > 0) {
-      return actionError(
-        `Impossible de supprimer : ${soldLines} ligne(s) de vente existent pour des produits de « ${row.name} ».`
-      );
+  for (const product of products) {
+    const current = getProductCategories(product as Product);
+    let next = current.filter((category) => category !== row.name);
+    if (next.length === 0) {
+      next = [UNCATEGORIZED_PRODUCT_CATEGORY];
     }
 
-    const { error: inventoryError } = await supabase
-      .from("store_inventory")
-      .delete()
-      .in("product_id", productIds);
-    if (inventoryError) return actionError(inventoryError.message);
-
-    const { error: movementsError } = await supabase
-      .from("stock_movements")
-      .delete()
-      .in("product_id", productIds);
-    if (movementsError) return actionError(movementsError.message);
-
-    const { error: productsError } = await supabase
+    const { error: updateError } = await supabase
       .from("products")
-      .delete()
-      .in("id", productIds);
-    if (productsError) return actionError(productsError.message);
+      .update({ categories: next })
+      .eq("id", product.id);
+
+    if (updateError) return actionError(updateError.message);
   }
 
   const { error: categoryError } = await supabase
@@ -214,5 +214,5 @@ export async function deletePosCategoryCard(categoryId: string): Promise<
   if (categoryError) return actionError(categoryError.message);
 
   revalidateCategoryPaths();
-  return { success: true, deletedProducts: productIds.length };
+  return { success: true, reassignedProducts: products.length };
 }

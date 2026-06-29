@@ -1,5 +1,8 @@
 export const PRODUCT_BRAND = "Natus";
 
+/** Catégorie de repli lorsqu'une catégorie POS est supprimée. */
+export const UNCATEGORIZED_PRODUCT_CATEGORY = "Produits sans catégorie";
+
 /** Catégories catalogue (alignées sur la colonne « Catégorie » du fichier Excel POS). */
 export const PRODUCT_CATEGORIES = [
   "Accueil",
