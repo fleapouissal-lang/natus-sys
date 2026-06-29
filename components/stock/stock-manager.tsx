@@ -301,17 +301,27 @@ export function StockManager({
     setLoading(false);
   }
 
-  const lowStockProducts = products.filter((p) => p.stock > 0 && p.stock < 10);
+  const lowStockProducts = useMemo(
+    () =>
+      [...products]
+        .filter((p) => p.stock > 0 && p.stock < 10)
+        .sort((a, b) => a.stock - b.stock || a.name.localeCompare(b.name, "fr")),
+    [products]
+  );
 
   const filteredInventory = useMemo(() => {
     const q = inventorySearch.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter(
-      (product) =>
-        product.name.toLowerCase().includes(q) ||
-        (product.barcode?.toLowerCase().includes(q) ?? false) ||
-        (product.product_code?.toLowerCase().includes(q) ?? false) ||
-        (product.category?.toLowerCase().includes(q) ?? false)
+    const list = !q
+      ? products
+      : products.filter(
+          (product) =>
+            product.name.toLowerCase().includes(q) ||
+            (product.barcode?.toLowerCase().includes(q) ?? false) ||
+            (product.product_code?.toLowerCase().includes(q) ?? false) ||
+            (product.category?.toLowerCase().includes(q) ?? false)
+        );
+    return [...list].sort(
+      (a, b) => a.stock - b.stock || a.name.localeCompare(b.name, "fr")
     );
   }, [products, inventorySearch]);
 

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { LoginHeroImage, LOGIN_HERO_SRC } from "@/components/auth/login-hero-image";
-import { showPwaInstallToast } from "@/components/pwa/install-prompt";
 import { Button } from "@/components/ui/button";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { signInStaff } from "@/lib/auth/sign-in";
@@ -30,18 +29,6 @@ export function LoginForm() {
     return () => {
       link.remove();
     };
-  }, []);
-
-  useEffect(() => {
-    const standalone = window.matchMedia("(display-mode: standalone)");
-    if (standalone.matches) return;
-    if (localStorage.getItem("natus-pwa-install-dismissed")) return;
-
-    const timer = window.setTimeout(() => {
-      showPwaInstallToast();
-    }, 2400);
-
-    return () => window.clearTimeout(timer);
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

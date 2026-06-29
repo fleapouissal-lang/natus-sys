@@ -180,7 +180,7 @@ function buildInvoiceBody(data: SaleDocumentData): string {
               <span>TVA (${tvaPercent} %) :</span>
               <span>${formatCurrency(tva)}</span>
             </div>
-            <div class="natus-invoice-total-bar" style="background:${NATUS_BRAND_GRADIENTS.goldStrip}">
+            <div class="natus-invoice-total-bar" style="background:#2c2418">
               <span>Total TTC :</span>
               <span class="natus-invoice-total-ttc">${formatCurrency(ttc)}</span>
             </div>
@@ -194,10 +194,6 @@ function buildInvoiceBody(data: SaleDocumentData): string {
           <p class="natus-invoice-cashier">Caissier : ${escapeHtml(data.cashierName)}</p>
           <p class="natus-invoice-legal" style="color:${NATUS_BRAND.goldDeep}">${escapeHtml(NATUS_INVOICE_COMPANY.legalMention)}</p>
         </div>
-      </div>
-
-      <div class="natus-invoice-brand-bar" style="background:${NATUS_BRAND_GRADIENTS.goldStrip}">
-        ${escapeHtml(NATUS_INVOICE_COMPANY.website)}
       </div>
     </div>
   </div>`;
@@ -372,6 +368,10 @@ const INVOICE_DOC_STYLES = `
       letter-spacing: 0.08em;
       text-transform: uppercase;
       text-align: left;
+      background: #2c2418;
+      color: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     .natus-invoice-table th:nth-child(2) { text-align: center; }
@@ -427,9 +427,12 @@ const INVOICE_DOC_STYLES = `
       align-items: center;
       justify-content: space-between;
       padding: 14px 16px;
+      background: #2c2418;
       color: #fff;
       font-weight: 600;
       font-variant-numeric: tabular-nums;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     .natus-invoice-total-bar > span:first-child {
@@ -569,8 +572,12 @@ const INVOICE_DOC_STYLES = `
       }
 
       .natus-invoice-table th {
-        border: 1px solid #000 !important;
+        border: 1px solid #2c2418 !important;
+        background: #2c2418 !important;
+        color: #fff !important;
         font-weight: 700 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
 
       .natus-invoice-table td {
@@ -599,13 +606,12 @@ const INVOICE_DOC_STYLES = `
       }
 
       .natus-invoice-total-bar {
-        border-top: 2px solid #000 !important;
+        background: #2c2418 !important;
+        color: #fff !important;
+        border-top: 2px solid #2c2418 !important;
         font-weight: 700 !important;
-      }
-
-      .natus-invoice-brand-bar {
-        border-top: 1px solid #000 !important;
-        font-weight: 600 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
 
       .export-summary {

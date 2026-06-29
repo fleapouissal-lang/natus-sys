@@ -1,10 +1,13 @@
 "use client";
 
-import { Download, Smartphone, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Download, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-const DISMISS_KEY = "natus-pwa-install-dismissed";
+const DISMISS_UNTIL_KEY = "natus-pwa-install-dismissed-until";
+const SHOWN_SESSION_KEY = "natus-pwa-install-shown-session";
 const SHOW_EVENT = "natus-pwa-install-show";
+const AUTO_SHOW_DELAY_MS = 2400;
+const DISMISS_DURATION_MS = 3 * 60 * 60 * 1000; // 3 heures
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -25,7 +28,42 @@ function isIosSafari(): boolean {
   return /iPad|iPhone|iPod/.test(ua) && !(window as Window & { MSStream?: unknown }).MSStream;
 }
 
+function getNavigationType(): PerformanceNavigationTiming["type"] | "navigate" {
+  const nav = performance.getEntriesByType("navigation")[0] as
+    | PerformanceNavigationTiming
+    | undefined;
+  return nav?.type ?? "navigate";
+}
+
+/** Afficher le toast auto : 1× / 3 h, sauf rechargement (rappel) ; jamais si PWA installée. */
+export function shouldAutoShowPwaInstallToast(): boolean {
+  if (typeof window === "undefined") return false;
+  if (isStandalonePwa()) return false;
+
+  if (getNavigationType() === "reload") return true;
+
+  const dismissedUntil = Number(localStorage.getItem(DISMISS_UNTIL_KEY) || 0);
+  if (Date.now() < dismissedUntil) return false;
+
+  if (sessionStorage.getItem(SHOWN_SESSION_KEY)) return false;
+
+  return true;
+}
+
+function markPwaInstallToastShown() {
+  sessionStorage.setItem(SHOWN_SESSION_KEY, "1");
+}
+
+function dismissPwaInstallToastFor3Hours() {
+  localStorage.setItem(
+    DISMISS_UNTIL_KEY,
+    String(Date.now() + DISMISS_DURATION_MS)
+  );
+  markPwaInstallToastShown();
+}
+
 export function showPwaInstallToast() {
+  if (isStandalonePwa()) return;
   window.dispatchEvent(new CustomEvent(SHOW_EVENT));
 }
 
@@ -34,6 +72,15 @@ export function InstallPrompt() {
   const [visible, setVisible] = useState(false);
   const [iosHint, setIosHint] = useState(false);
   const [, setPromptReady] = useState(false);
+
+  const openToast = useCallback((options?: { force?: boolean }) => {
+    if (isStandalonePwa()) return;
+    if (!options?.force && !shouldAutoShowPwaInstallToast()) return;
+
+    setIosHint(!deferredRef.current && isIosSafari());
+    setVisible(true);
+    markPwaInstallToastShown();
+  }, []);
 
   useEffect(() => {
     if (isStandalonePwa()) return;
@@ -44,32 +91,34 @@ export function InstallPrompt() {
       deferredRef.current = promptEvent;
       setPromptReady(true);
       setIosHint(false);
-      if (!localStorage.getItem(DISMISS_KEY)) {
+      if (shouldAutoShowPwaInstallToast()) {
         setVisible(true);
+        markPwaInstallToastShown();
       }
     };
 
-    const openFromButton = () => {
-      if (isStandalonePwa()) {
-        setIosHint(false);
-        setVisible(true);
-        return;
-      }
-      setIosHint(!deferredRef.current && isIosSafari());
-      setVisible(true);
+    const openFromEvent = () => {
+      openToast({ force: true });
     };
 
     window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener(SHOW_EVENT, openFromButton);
+    window.addEventListener(SHOW_EVENT, openFromEvent);
+
+    let autoTimer: ReturnType<typeof setTimeout> | undefined;
+    if (shouldAutoShowPwaInstallToast()) {
+      autoTimer = window.setTimeout(() => {
+        openToast();
+      }, AUTO_SHOW_DELAY_MS);
+    }
+
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
-      window.removeEventListener(SHOW_EVENT, openFromButton);
+      window.removeEventListener(SHOW_EVENT, openFromEvent);
+      if (autoTimer) window.clearTimeout(autoTimer);
     };
-  }, []);
+  }, [openToast]);
 
-  if (!visible) return null;
-
-  const installed = isStandalonePwa();
+  if (!visible || isStandalonePwa()) return null;
 
   const install = async () => {
     const promptEvent = deferredRef.current;
@@ -84,7 +133,12 @@ export function InstallPrompt() {
   };
 
   const dismiss = () => {
-    localStorage.setItem(DISMISS_KEY, "1");
+    dismissPwaInstallToastFor3Hours();
+    setVisible(false);
+  };
+
+  const close = () => {
+    markPwaInstallToastShown();
     setVisible(false);
   };
 
@@ -97,21 +151,11 @@ export function InstallPrompt() {
     >
       <div className="flex items-start gap-3 px-4 py-3">
         <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/10 text-black">
-          {installed ? (
-            <Smartphone className="h-5 w-5" aria-hidden />
-          ) : (
-            <Download className="h-5 w-5" aria-hidden />
-          )}
+          <Download className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-black">
-            {installed ? "Application installée" : "Télécharger l'application"}
-          </p>
-          {installed ? (
-            <p className="mt-0.5 text-sm text-black/80">
-              natus est déjà sur votre écran d&apos;accueil.
-            </p>
-          ) : iosHint || !deferredRef.current ? (
+          <p className="text-sm font-bold text-black">Télécharger l&apos;application</p>
+          {iosHint || !deferredRef.current ? (
             <p className="mt-0.5 text-sm leading-snug text-black/85">
               Sur iPhone : touche <strong>Partager</strong>, puis{" "}
               <strong>Sur l&apos;écran d&apos;accueil</strong>.
@@ -121,7 +165,7 @@ export function InstallPrompt() {
               Accédez à la caisse depuis votre écran d&apos;accueil, sur ordinateur ou mobile.
             </p>
           )}
-          {!installed && deferredRef.current && (
+          {deferredRef.current && (
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -142,7 +186,7 @@ export function InstallPrompt() {
         </div>
         <button
           type="button"
-          onClick={() => setVisible(false)}
+          onClick={close}
           className="shrink-0 rounded-md p-1 text-black/60 transition hover:bg-black/5 hover:text-black"
           aria-label="Fermer"
         >

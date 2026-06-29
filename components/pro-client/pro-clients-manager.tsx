@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BriefcaseBusiness, Eye, Search, Trash2, UserCheck, UserX } from "lucide-react";
+import { BriefcaseBusiness, Eye, Search, Trash2, UserCheck, UserPlus, UserX } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,18 +14,24 @@ import { formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import { sortProClientsByFidelity } from "@/lib/loyalty/sort-customers";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
-import type { LoyaltyCustomer } from "@/lib/types";
+import type { LoyaltyCustomer, Store } from "@/lib/types";
+import { CreateProClientModal } from "@/components/pro-client/create-pro-client-modal";
 
 export function ProClientsManager({
   customers,
   detailBasePath,
+  stores,
+  allowCreate = false,
 }: {
   customers: LoyaltyCustomer[];
   detailBasePath: string;
+  stores?: Pick<Store, "id" | "name">[];
+  allowCreate?: boolean;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const pendingCount = customers.filter((c) => !c.pro_client_active).length;
@@ -100,15 +106,23 @@ export function ProClientsManager({
         summary={`${filtered.length} résultat${filtered.length !== 1 ? "s" : ""}`}
       >
         <div className="natus-filter-bar overflow-visible p-4">
-          <div className="relative max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nom, entreprise, téléphone, carte…"
-              className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
-            />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="relative max-w-md flex-1 min-w-[200px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Nom, entreprise, téléphone, carte…"
+                className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
+              />
+            </div>
+            {allowCreate && stores && stores.length > 0 && (
+              <Button type="button" onClick={() => setShowCreate(true)} className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Nouveau client Pro
+              </Button>
+            )}
           </div>
         </div>
       </FilterTogglePanel>
@@ -256,6 +270,20 @@ export function ProClientsManager({
           />
         )}
       </Card>
+
+      {showCreate && stores && stores.length > 0 && (
+        <CreateProClientModal
+          stores={stores}
+          onClose={() => setShowCreate(false)}
+          onCreated={({ cardNumber }) => {
+            setShowCreate(false);
+            window.alert(
+              `Compte Client Pro créé (${cardNumber}).\n\nLe compte est en attente d'activation.`
+            );
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

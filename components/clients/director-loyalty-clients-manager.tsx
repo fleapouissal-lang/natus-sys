@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Search, Trash2, UserCheck, UserX } from "lucide-react";
+import { Eye, Search, Trash2, UserCheck, UserPlus, UserX } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import { formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import { sortLoyaltyCustomersByFidelity } from "@/lib/loyalty/sort-customers";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
+import { CreateLoyaltyCustomerModal } from "@/components/loyalty/create-customer-modal";
 import type { LoyaltyCustomer } from "@/lib/types";
 
 export function DirectorLoyaltyClientsManager({
@@ -31,6 +32,7 @@ export function DirectorLoyaltyClientsManager({
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const inactiveCount = clients.filter((c) => c.is_active === false).length;
@@ -87,15 +89,21 @@ export function DirectorLoyaltyClientsManager({
         summary={`${filtered.length} résultat${filtered.length !== 1 ? "s" : ""}`}
       >
         <div className="natus-filter-bar overflow-visible p-4">
-          <div className="relative max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nom, téléphone, carte FID…"
-              className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
-            />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="relative max-w-md flex-1 min-w-[200px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Nom, téléphone, carte FID…"
+                className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
+              />
+            </div>
+            <Button type="button" onClick={() => setShowCreate(true)} className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              Nouveau client
+            </Button>
           </div>
         </div>
       </FilterTogglePanel>
@@ -221,6 +229,19 @@ export function DirectorLoyaltyClientsManager({
           />
         )}
       </Card>
+
+      {showCreate && (
+        <CreateLoyaltyCustomerModal
+          onClose={() => setShowCreate(false)}
+          onCreated={(customer) => {
+            setShowCreate(false);
+            window.alert(
+              `Carte fidélité créée (${customer.card_number}).\n\n${customer.full_name} — ${customer.loyalty_points} point(s).`
+            );
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

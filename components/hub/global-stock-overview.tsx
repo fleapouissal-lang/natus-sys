@@ -30,7 +30,7 @@ export function GlobalStockOverview({
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return products.filter((product) => {
+    const list = products.filter((product) => {
       if (category && product.category !== category) return false;
       if (!q) return true;
       return (
@@ -39,6 +39,9 @@ export function GlobalStockOverview({
         (product.category?.toLowerCase().includes(q) ?? false)
       );
     });
+    return [...list].sort(
+      (a, b) => a.stock - b.stock || a.name.localeCompare(b.name, "fr")
+    );
   }, [products, search, category]);
 
   const filterToken = `${search}|${category}`;
@@ -55,6 +58,10 @@ export function GlobalStockOverview({
   const totalUnits = useMemo(
     () => products.reduce((sum, p) => sum + p.stock, 0),
     [products]
+  );
+  const filteredTotalUnits = useMemo(
+    () => filteredProducts.reduce((sum, p) => sum + p.stock, 0),
+    [filteredProducts]
   );
   const inStockCount = useMemo(
     () => products.filter((p) => p.stock > 0).length,
@@ -99,6 +106,9 @@ export function GlobalStockOverview({
           <p className="mt-1 flex items-center gap-2 text-3xl font-bold">
             <Package className="h-7 w-7 text-primary" />
             {totalUnits}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Somme de tous les magasins et dépôts actifs
           </p>
         </Card>
       </div>
@@ -182,6 +192,9 @@ export function GlobalStockOverview({
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted">
                     Stock total
+                    <span className="mt-0.5 block text-[10px] font-normal normal-case tracking-normal text-muted">
+                      magasins + dépôts
+                    </span>
                   </th>
                 </tr>
               </thead>
@@ -224,6 +237,16 @@ export function GlobalStockOverview({
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-border bg-primary-light/40 font-semibold">
+                  <td colSpan={3} className="px-4 py-3 text-right text-foreground">
+                    Total unités{hasFilters ? " (filtre actif)" : ""}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {filteredTotalUnits}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}

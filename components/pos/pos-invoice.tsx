@@ -293,7 +293,11 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
             </div>
             <div
               className="natus-invoice-total-bar flex items-center justify-between px-4 py-3.5 font-semibold text-white"
-              style={{ background: NATUS_BRAND_GRADIENTS.goldStrip }}
+              style={{
+                background: "#2c2418",
+                WebkitPrintColorAdjust: "exact",
+                printColorAdjust: "exact",
+              }}
             >
               <span className="text-sm uppercase tracking-wide">Total TTC :</span>
               <span className="text-xl font-bold tabular-nums">{formatCurrency(ttc)}</span>
@@ -319,13 +323,6 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
               {NATUS_INVOICE_COMPANY.legalMention}
             </p>
           </div>
-        </div>
-
-        <div
-          className="natus-invoice-brand-bar relative z-[1] mt-8 py-3 text-center text-sm font-medium text-white print:mt-4"
-          style={{ background: NATUS_BRAND_GRADIENTS.goldStrip }}
-        >
-          {NATUS_INVOICE_COMPANY.website}
         </div>
       </div>
     </div>

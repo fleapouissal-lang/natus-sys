@@ -1747,11 +1747,13 @@ table.natus-print-table tfoot {
 
   body[data-print-doc="invoice"] .natus-invoice-table thead tr,
   body[data-print-doc="invoice"] .natus-invoice-table thead th {
-    background: #fff !important;
-    color: #000 !important;
-    border: 1px solid #000 !important;
+    background: #2c2418 !important;
+    color: #fff !important;
+    border: 1px solid #2c2418 !important;
     border-radius: 0 !important;
     font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-table tbody tr,
@@ -1795,11 +1797,13 @@ table.natus-print-table tfoot {
 
   body[data-print-doc="invoice"] .natus-invoice-total-bar,
   body[data-print-doc="invoice"] .natus-invoice-total-bar[style] {
-    background: #fff !important;
-    color: #000 !important;
-    border-top: 2px solid #000 !important;
+    background: #2c2418 !important;
+    color: #fff !important;
+    border-top: 2px solid #2c2418 !important;
     border-radius: 0 !important;
     font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   body[data-print-doc="invoice"] .natus-invoice-footer {

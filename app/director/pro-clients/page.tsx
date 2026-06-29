@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { getAllProClients } from "@/lib/pro-client/invites";
+import { getActiveStores } from "@/lib/inventory";
 import { getManagementBasePath } from "@/lib/permissions";
 import { ProClientsManager } from "@/components/pro-client/pro-clients-manager";
 
@@ -9,7 +10,10 @@ export default async function DirectorProClientsPage() {
   const profile = await requireRole(["directeur", "admin"]);
   if (!profile) redirect("/login");
 
-  const proClients = await getAllProClients();
+  const [proClients, stores] = await Promise.all([
+    getAllProClients(),
+    getActiveStores(null),
+  ]);
   const basePath = getManagementBasePath(profile.role)!;
 
   return (
@@ -25,6 +29,8 @@ export default async function DirectorProClientsPage() {
         <ProClientsManager
           customers={proClients}
           detailBasePath={`${basePath}/loyalty`}
+          stores={stores.map((s) => ({ id: s.id, name: s.name }))}
+          allowCreate
         />
       </Suspense>
     </div>

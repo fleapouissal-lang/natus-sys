@@ -1671,6 +1671,7 @@ export async function createLoyaltyCustomer(input: {
   revalidatePath("/cashier/pro-clients");
   revalidatePath("/manager/loyalty");
   revalidatePath("/director/loyalty");
+  revalidatePath("/director/clients");
   return { success: true, customer: data as import("@/lib/types").LoyaltyCustomer };
 }
 
@@ -3928,6 +3929,75 @@ export async function getStoreProClientLink(
     storeToken: row.store_token,
     storeName: row.store_name || "Magasin",
     url: proClientStoreRegistrationUrl(row.store_token, baseUrl),
+  };
+}
+
+export async function createProClientCustomer(input: {
+  storeId: string;
+  clientType: import("@/lib/pro-client/types").ProClientType;
+  fullName?: string;
+  phone?: string;
+  email: string;
+  companyName?: string;
+  country?: string;
+  city?: string;
+  address?: string;
+  responsibleName?: string;
+  companyIce?: string;
+  companyRc?: string;
+}): Promise<
+  | { success: true; customerId: string; qrToken: string; cardNumber: string }
+  | { error: string }
+> {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+
+  if (!input.storeId) return { error: "Magasin requis" };
+
+  const store = await getStoreById(input.storeId);
+  if (!store) return { error: "Magasin introuvable" };
+
+  const supabase = await createClient();
+  const { data: linkData, error: linkError } = await supabase.rpc("get_store_pro_client_link", {
+    p_store_id: input.storeId,
+  });
+  if (linkError) return { error: linkError.message };
+
+  const storeToken = (linkData as { store_token?: string })?.store_token;
+  if (!storeToken) return { error: "QR code magasin indisponible" };
+
+  const { data, error } = await supabase.rpc("submit_pro_client_registration_by_store", {
+    p_store_token: storeToken,
+    p_client_type: input.clientType,
+    p_full_name: input.fullName?.trim() || null,
+    p_phone: input.phone?.trim() || null,
+    p_email: input.email.trim(),
+    p_company_name: input.companyName?.trim() || null,
+    p_country: input.country?.trim() || null,
+    p_city: input.city?.trim() || null,
+    p_address: input.address?.trim() || null,
+    p_responsible_name: input.responsibleName?.trim() || null,
+    p_company_ice: input.companyIce?.trim() || null,
+    p_company_rc: input.companyRc?.trim() || null,
+  });
+
+  if (error) return { error: error.message };
+
+  const row = (data || {}) as Record<string, unknown>;
+  if (String(row.status || "invalid") !== "success") {
+    return { error: "Inscription impossible. Vérifiez les informations." };
+  }
+
+  revalidatePath("/director/pro-clients");
+  revalidatePath("/director/clients");
+  revalidatePath("/cashier/pro-clients");
+  revalidatePath("/cashier/pos");
+
+  return {
+    success: true,
+    customerId: String(row.customer_id),
+    qrToken: String(row.qr_token),
+    cardNumber: String(row.card_number),
   };
 }
 

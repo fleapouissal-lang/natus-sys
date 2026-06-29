@@ -87,10 +87,28 @@ export async function getProductsWithTotalStock(
     );
   }
 
-  return (products || []).map((product) => ({
-    ...product,
-    stock: stockMap.get(product.id) ?? 0,
-  }));
+  const allProducts = products || [];
+  const parentById = new Map(
+    allProducts
+      .filter((product) => product.product_kind === "parent")
+      .map((product) => [product.id, product] as const)
+  );
+
+  return allProducts.filter(isSellableProduct).map((product) => {
+    const parent = product.parent_id ? parentById.get(product.parent_id) : null;
+    return {
+      ...product,
+      stock: stockMap.get(product.id) ?? 0,
+      parent_name: parent?.name ?? null,
+      parent_image_url: parent?.image_url ?? null,
+      parent_category: parent?.category ?? null,
+      parent_categories: parent?.categories?.length
+        ? parent.categories
+        : parent?.category
+          ? [parent.category]
+          : undefined,
+    };
+  });
 }
 
 export async function getProductCatalog(): Promise<
