@@ -104,7 +104,7 @@ export function InstallPrompt() {
     window.addEventListener("beforeinstallprompt", handler);
     window.addEventListener(SHOW_EVENT, openFromEvent);
 
-    let autoTimer: ReturnType<typeof setTimeout> | undefined;
+    let autoTimer: number | undefined;
     if (shouldAutoShowPwaInstallToast()) {
       autoTimer = window.setTimeout(() => {
         openToast();
