@@ -9,8 +9,13 @@ import { resolveAllowedDashboardStores } from "@/lib/dashboard/dashboard-store-a
 import {
   resolveAnalyticsPeriods,
   resolveCustomAnalyticsPeriods,
+  isLimitedStoreStaffPeriod,
   type DashboardReportPeriod,
 } from "@/lib/dashboard/report-period";
+import {
+  getManagerSalesHistoryDateBounds,
+  isWithinCashierHistoryDateWindow,
+} from "@/lib/sales/manager-sales-window";
 import type { DashboardAnalyticsPayload } from "@/lib/dashboard/analytics-types";
 import type { Sale } from "@/lib/types";
 
@@ -60,6 +65,28 @@ export async function fetchDashboardAnalytics(input: {
 
     const stores = access.stores;
     if (stores.length === 0) return actionError("Aucun magasin accessible");
+
+    const isStoreStaff =
+      access.profile.role === "hub" || access.profile.role === "manager";
+
+    if (isStoreStaff) {
+      if (!isLimitedStoreStaffPeriod(input.period)) {
+        return actionError("Période non autorisée");
+      }
+      if (input.period === "custom") {
+        const bounds = getManagerSalesHistoryDateBounds();
+        const from = input.customFrom?.trim() || "";
+        const to = input.customTo?.trim() || "";
+        if (!from || !to) return actionError("Dates requises");
+        if (
+          !isWithinCashierHistoryDateWindow(from, bounds) ||
+          !isWithinCashierHistoryDateWindow(to, bounds)
+        ) {
+          return actionError("Période limitée aux 3 derniers jours");
+        }
+        if (from > to) return actionError("Date de début invalide");
+      }
+    }
 
     const storeIds = stores.map((s) => s.id);
     const storeMeta = new Map(stores.map((s) => [s.id, { name: s.name, city: s.city }]));

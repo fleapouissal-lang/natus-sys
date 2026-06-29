@@ -22,9 +22,15 @@ import { fetchDashboardAnalytics } from "@/lib/dashboard/dashboard-analytics-act
 import type { DashboardAnalyticsPayload } from "@/lib/dashboard/analytics-types";
 import {
   DASHBOARD_REPORT_PERIODS,
+  LIMITED_STORE_STAFF_REPORT_PERIODS,
   type DashboardReportPeriod,
 } from "@/lib/dashboard/report-period";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, toLocalDateKey } from "@/lib/utils";
+import {
+  clampDateToManagerSalesWindow,
+  getManagerSalesHistoryDateBounds,
+} from "@/lib/sales/manager-sales-window";
+import { DateInputField } from "@/components/ui/date-input-field";
 
 function TrendBadge({
   delta,
@@ -253,6 +259,7 @@ export function DashboardAnalyticsPanel({
   title = "Analytique avancée",
   className = "",
   hidePeriodFilter = false,
+  storeStaffMode = false,
   controlledPeriod,
   controlledCustomFrom = "",
   controlledCustomTo = "",
@@ -265,12 +272,20 @@ export function DashboardAnalyticsPanel({
   className?: string;
   /** Masque le sélecteur de période interne (piloté par un filtre global). */
   hidePeriodFilter?: boolean;
+  /** Dépôt / gérant / caissier : pas de CA, aujourd'hui ou date à date (max 3 jours avant). */
+  storeStaffMode?: boolean;
   /** Période imposée depuis l'extérieur (mode contrôlé). */
   controlledPeriod?: DashboardReportPeriod | "custom";
   controlledCustomFrom?: string;
   controlledCustomTo?: string;
 }) {
-  const [internalPeriod, setInternalPeriod] = useState<DashboardReportPeriod>("week");
+  const [internalPeriod, setInternalPeriod] = useState<DashboardReportPeriod | "custom">(
+    storeStaffMode ? "today" : "week"
+  );
+  const todayKey = toLocalDateKey(new Date());
+  const historyBounds = getManagerSalesHistoryDateBounds();
+  const [internalCustomFrom, setInternalCustomFrom] = useState(todayKey);
+  const [internalCustomTo, setInternalCustomTo] = useState(todayKey);
   const [multiStore, setMultiStore] = useState(false);
   const [data, setData] = useState<DashboardAnalyticsPayload | null>(null);
   const [error, setError] = useState("");
@@ -278,8 +293,16 @@ export function DashboardAnalyticsPanel({
 
   const period: DashboardReportPeriod | "custom" =
     hidePeriodFilter && controlledPeriod ? controlledPeriod : internalPeriod;
-  const customFrom = hidePeriodFilter ? controlledCustomFrom : "";
-  const customTo = hidePeriodFilter ? controlledCustomTo : "";
+  const customFrom = hidePeriodFilter
+    ? controlledCustomFrom
+    : storeStaffMode
+      ? internalCustomFrom
+      : "";
+  const customTo = hidePeriodFilter
+    ? controlledCustomTo
+    : storeStaffMode
+      ? internalCustomTo
+      : "";
 
   const canToggleAllStores = Boolean(allStoreIds && allStoreIds.length > 1);
   const effectiveIds = useMemo(
@@ -322,6 +345,10 @@ export function DashboardAnalyticsPanel({
     data && data.current.revenue > 0
       ? (data.current.cardRevenue / data.current.revenue) * 100
       : 0;
+
+  const periodOptions = storeStaffMode
+    ? LIMITED_STORE_STAFF_REPORT_PERIODS
+    : DASHBOARD_REPORT_PERIODS;
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -366,7 +393,7 @@ export function DashboardAnalyticsPanel({
 
           {!hidePeriodFilter && (
             <div className="mt-4 flex flex-wrap gap-2">
-              {DASHBOARD_REPORT_PERIODS.map(({ id, label }) => (
+              {periodOptions.map(({ id, label }) => (
                 <button
                   key={id}
                   type="button"
@@ -377,6 +404,29 @@ export function DashboardAnalyticsPanel({
                   {label}
                 </button>
               ))}
+            </div>
+          )}
+
+          {storeStaffMode && !hidePeriodFilter && internalPeriod === "custom" && (
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:max-w-xl lg:items-end">
+              <DateInputField
+                label="Date début"
+                value={internalCustomFrom}
+                onChange={(value) =>
+                  setInternalCustomFrom(clampDateToManagerSalesWindow(value, historyBounds))
+                }
+                minDate={historyBounds.minDate}
+                maxDate={historyBounds.maxDate}
+              />
+              <DateInputField
+                label="Date fin"
+                value={internalCustomTo}
+                onChange={(value) =>
+                  setInternalCustomTo(clampDateToManagerSalesWindow(value, historyBounds))
+                }
+                minDate={historyBounds.minDate}
+                maxDate={historyBounds.maxDate}
+              />
             </div>
           )}
         </div>
@@ -390,51 +440,64 @@ export function DashboardAnalyticsPanel({
 
       {data && (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            <KpiCard
-              label="Chiffre d'affaires"
-              value={formatCurrency(data.current.revenue)}
-              subtitle={`${data.current.salesCount} vente${data.current.salesCount !== 1 ? "s" : ""}`}
-              delta={data.trend.revenueDelta}
-              previousLabel={data.previousPeriodLabel}
-              icon={TrendingUp}
-              accent
-            />
-            <KpiCard
-              label="Panier moyen"
-              value={formatCurrency(data.current.averageTicket)}
-              delta={data.trend.ticketDelta}
-              previousLabel={data.previousPeriodLabel}
-              icon={ShoppingBag}
-            />
-            <KpiCard
-              label="Espèces"
-              value={formatCurrency(data.current.cashRevenue)}
-              subtitle={`${cashShare.toFixed(0)}% du CA`}
-              icon={Banknote}
-            />
-            <KpiCard
-              label="TPE"
-              value={formatCurrency(data.current.cardRevenue)}
-              subtitle={`${cardShare.toFixed(0)}% du CA`}
-              icon={CreditCard}
-            />
-            <KpiCard
-              label="Annulations"
-              value={`${data.current.cancellationRate.toFixed(1)}%`}
-              subtitle={`${data.current.cancelledCount} vente${data.current.cancelledCount !== 1 ? "s" : ""}`}
-              delta={data.trend.salesDelta}
-              previousLabel={data.previousPeriodLabel}
-              icon={Minus}
-            />
+          <div
+            className={`grid gap-3 ${
+              storeStaffMode
+                ? "sm:grid-cols-2 lg:grid-cols-3"
+                : "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+            }`}
+          >
+            {!storeStaffMode && (
+              <>
+                <KpiCard
+                  label="Chiffre d'affaires"
+                  value={formatCurrency(data.current.revenue)}
+                  subtitle={`${data.current.salesCount} vente${data.current.salesCount !== 1 ? "s" : ""}`}
+                  delta={data.trend.revenueDelta}
+                  previousLabel={data.previousPeriodLabel}
+                  icon={TrendingUp}
+                  accent
+                />
+                <KpiCard
+                  label="Panier moyen"
+                  value={formatCurrency(data.current.averageTicket)}
+                  delta={data.trend.ticketDelta}
+                  previousLabel={data.previousPeriodLabel}
+                  icon={ShoppingBag}
+                />
+                <KpiCard
+                  label="Espèces"
+                  value={formatCurrency(data.current.cashRevenue)}
+                  subtitle={`${cashShare.toFixed(0)}% du CA`}
+                  icon={Banknote}
+                />
+                <KpiCard
+                  label="TPE"
+                  value={formatCurrency(data.current.cardRevenue)}
+                  subtitle={`${cardShare.toFixed(0)}% du CA`}
+                  icon={CreditCard}
+                />
+                <KpiCard
+                  label="Annulations"
+                  value={`${data.current.cancellationRate.toFixed(1)}%`}
+                  subtitle={`${data.current.cancelledCount} vente${data.current.cancelledCount !== 1 ? "s" : ""}`}
+                  delta={data.trend.salesDelta}
+                  previousLabel={data.previousPeriodLabel}
+                  icon={Minus}
+                />
+              </>
+            )}
             <KpiCard
               label="Stock"
               value={String(data.totalUnits)}
               subtitle={`${data.stockAlerts} alerte${data.stockAlerts !== 1 ? "s" : ""} · ${data.catalogueSize} refs`}
               icon={Package}
+              accent={storeStaffMode}
             />
           </div>
 
+          {!storeStaffMode && (
+            <>
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="p-4 sm:p-5">
               <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
@@ -581,6 +644,8 @@ export function DashboardAnalyticsPanel({
                 </table>
               </div>
             </Card>
+          )}
+            </>
           )}
         </>
       )}

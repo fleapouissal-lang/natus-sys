@@ -12,9 +12,14 @@ import {
 import { StoreOutOfStockPanel } from "@/components/dashboard/store-out-of-stock-panel";
 import { RecentActivityPanel } from "@/components/activity/recent-activity-panel";
 import { toLocalDateKey } from "@/lib/utils";
+import {
+  clampDateToManagerSalesWindow,
+  getManagerSalesHistoryDateBounds,
+} from "@/lib/sales/manager-sales-window";
 import { filterStoreSnapshot } from "@/lib/store-tracking-filter";
 import {
   resolveStoreTrackingRange,
+  LIMITED_STORE_STAFF_TRACKING_PRESETS,
   type StoreTrackingPreset,
 } from "@/lib/store-tracking-period";
 import type {
@@ -45,7 +50,8 @@ export function ManagerUnifiedDashboard({
   storesWithStats?: Array<{ id: string; productCount?: number }>;
 }) {
   const today = toLocalDateKey(new Date());
-  const [preset, setPreset] = useState<StoreTrackingPreset>("week");
+  const historyBounds = getManagerSalesHistoryDateBounds();
+  const [preset, setPreset] = useState<StoreTrackingPreset>("today");
   const [customFrom, setCustomFrom] = useState(today);
   const [customTo, setCustomTo] = useState(today);
 
@@ -114,8 +120,15 @@ export function ManagerUnifiedDashboard({
             customTo={customTo}
             periodLabel={periodLabel}
             onPresetChange={setPreset}
-            onCustomFromChange={setCustomFrom}
-            onCustomToChange={setCustomTo}
+            onCustomFromChange={(value) =>
+              setCustomFrom(clampDateToManagerSalesWindow(value, historyBounds))
+            }
+            onCustomToChange={(value) =>
+              setCustomTo(clampDateToManagerSalesWindow(value, historyBounds))
+            }
+            presets={LIMITED_STORE_STAFF_TRACKING_PRESETS}
+            minDate={historyBounds.minDate}
+            maxDate={historyBounds.maxDate}
           />
 
           <DashboardStockPanel

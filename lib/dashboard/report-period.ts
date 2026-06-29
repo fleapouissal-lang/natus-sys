@@ -1,6 +1,6 @@
 import { toLocalDateKey } from "@/lib/utils";
 
-export type DashboardReportPeriod = "today" | "week" | "month" | "all";
+export type DashboardReportPeriod = "today" | "minus3" | "week" | "month" | "all";
 
 export const DASHBOARD_REPORT_PERIODS: { id: DashboardReportPeriod; label: string }[] = [
   { id: "today", label: "Aujourd'hui" },
@@ -8,6 +8,19 @@ export const DASHBOARD_REPORT_PERIODS: { id: DashboardReportPeriod; label: strin
   { id: "month", label: "Ce mois" },
   { id: "all", label: "Tout" },
 ];
+
+/** Dépôt, gérant, caissier — pas de CA, aujourd'hui ou date à date (max 3 jours avant). */
+export const LIMITED_STORE_STAFF_REPORT_PERIODS: {
+  id: "today" | "custom";
+  label: string;
+}[] = [
+  { id: "today", label: "Aujourd'hui" },
+  { id: "custom", label: "Date à date" },
+];
+
+export function isLimitedStoreStaffPeriod(period: string): boolean {
+  return period === "today" || period === "custom";
+}
 
 function startOfDay(d: Date): Date {
   const x = new Date(d);
@@ -48,6 +61,10 @@ export function resolveDashboardReportRange(
   switch (period) {
     case "today":
       return { from: startOfDay(now), to: todayEnd, label: "Aujourd'hui" };
+    case "minus3": {
+      const day = shiftDays(now, -3);
+      return { from: startOfDay(day), to: endOfDay(day), label: "Il y a 3 jours" };
+    }
     case "week":
       return { from: startOfWeekMonday(now), to: todayEnd, label: "Cette semaine" };
     case "month":
@@ -78,6 +95,8 @@ export function resolveAnalyticsPeriods(
         },
       };
     }
+    case "minus3":
+      return { current, previous: null };
     case "week": {
       const weekStart = startOfWeekMonday(now);
       const prevEnd = endOfDay(shiftDays(weekStart, -1));

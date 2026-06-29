@@ -15,6 +15,9 @@ export function StoreTrackingPeriodFilter({
   onPresetChange,
   onCustomFromChange,
   onCustomToChange,
+  presets = STORE_TRACKING_PRESETS,
+  minDate,
+  maxDate,
 }: {
   preset: StoreTrackingPreset;
   customFrom: string;
@@ -23,6 +26,11 @@ export function StoreTrackingPeriodFilter({
   onPresetChange: (preset: StoreTrackingPreset) => void;
   onCustomFromChange: (value: string) => void;
   onCustomToChange: (value: string) => void;
+  presets?: { id: StoreTrackingPreset; label: string }[];
+  /** Borne min (ex. J-3) — dates antérieures désactivées dans le calendrier. */
+  minDate?: string;
+  /** Borne max (ex. aujourd'hui). */
+  maxDate?: string;
 }) {
   return (
     <div className="natus-filter-bar overflow-visible rounded-2xl p-4 md:rounded-lg">
@@ -32,7 +40,7 @@ export function StoreTrackingPeriodFilter({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {STORE_TRACKING_PRESETS.map(({ id, label }) => (
+        {presets.map(({ id, label }) => (
           <button
             key={id}
             type="button"
@@ -50,8 +58,16 @@ export function StoreTrackingPeriodFilter({
             label="Date début"
             value={customFrom}
             onChange={onCustomFromChange}
+            minDate={minDate}
+            maxDate={maxDate}
           />
-          <DateInputField label="Date fin" value={customTo} onChange={onCustomToChange} />
+          <DateInputField
+            label="Date fin"
+            value={customTo}
+            onChange={onCustomToChange}
+            minDate={minDate}
+            maxDate={maxDate}
+          />
         </div>
       )}
     </div>

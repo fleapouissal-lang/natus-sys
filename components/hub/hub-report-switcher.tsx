@@ -66,7 +66,8 @@ export function HubReportSwitcher({
           scopeLabel={`${selectedStore.name} — ${selectedStore.city}`}
           allStoreIds={assignedStores.map((store) => store.id)}
           allScopeLabel={`Magasins assignés · ${city} (${assignedStores.length})`}
-          title="Rapport magasin"
+          title="Suivi magasin"
+          storeStaffMode
         />
       )}
     </div>

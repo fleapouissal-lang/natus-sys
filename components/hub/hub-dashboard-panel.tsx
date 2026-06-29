@@ -11,12 +11,17 @@ import {
 } from "@/components/dashboard/dashboard-stock-panel";
 import { StoreSnapshotsPanel } from "@/components/dashboard/store-snapshots-panel";
 import { toLocalDateKey } from "@/lib/utils";
+import {
+  clampDateToManagerSalesWindow,
+  getManagerSalesHistoryDateBounds,
+} from "@/lib/sales/manager-sales-window";
 import type { Store as StoreType, StoreOverviewRow, StoreSnapshot } from "@/lib/types";
 import {
   filterStoreSnapshot,
 } from "@/lib/store-tracking-filter";
 import {
   resolveStoreTrackingRange,
+  LIMITED_STORE_STAFF_TRACKING_PRESETS,
   type StoreTrackingPreset,
 } from "@/lib/store-tracking-period";
 
@@ -40,8 +45,9 @@ export function HubDashboardPanel({
   storesWithStats?: Array<{ id: string; productCount?: number }>;
 }) {
   const today = toLocalDateKey(new Date());
+  const historyBounds = getManagerSalesHistoryDateBounds();
   const [selectedStoreId, setSelectedStoreId] = useState(retailStores[0]?.id ?? "");
-  const [preset, setPreset] = useState<StoreTrackingPreset>("week");
+  const [preset, setPreset] = useState<StoreTrackingPreset>("today");
   const [customFrom, setCustomFrom] = useState(today);
   const [customTo, setCustomTo] = useState(today);
 
@@ -141,8 +147,15 @@ export function HubDashboardPanel({
             customTo={customTo}
             periodLabel={periodLabel}
             onPresetChange={setPreset}
-            onCustomFromChange={setCustomFrom}
-            onCustomToChange={setCustomTo}
+            onCustomFromChange={(value) =>
+              setCustomFrom(clampDateToManagerSalesWindow(value, historyBounds))
+            }
+            onCustomToChange={(value) =>
+              setCustomTo(clampDateToManagerSalesWindow(value, historyBounds))
+            }
+            presets={LIMITED_STORE_STAFF_TRACKING_PRESETS}
+            minDate={historyBounds.minDate}
+            maxDate={historyBounds.maxDate}
           />
 
           <StoreSnapshotsPanel

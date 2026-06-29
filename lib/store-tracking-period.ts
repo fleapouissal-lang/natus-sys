@@ -1,6 +1,13 @@
 import { toLocalDateKey } from "@/lib/utils";
 
-export type StoreTrackingPreset = "today" | "week" | "month" | "all" | "quarter" | "custom";
+export type StoreTrackingPreset =
+  | "today"
+  | "minus3"
+  | "week"
+  | "month"
+  | "all"
+  | "quarter"
+  | "custom";
 
 export const STORE_TRACKING_PRESETS: { id: StoreTrackingPreset; label: string }[] = [
   { id: "today", label: "Aujourd'hui" },
@@ -8,6 +15,15 @@ export const STORE_TRACKING_PRESETS: { id: StoreTrackingPreset; label: string }[
   { id: "month", label: "Ce mois" },
   { id: "all", label: "Tout" },
   { id: "quarter", label: "3 mois" },
+  { id: "custom", label: "Date à date" },
+];
+
+/** Dépôt, gérant, caissier — aujourd'hui ou date à date (dates avant J-3 désactivées). */
+export const LIMITED_STORE_STAFF_TRACKING_PRESETS: {
+  id: Extract<StoreTrackingPreset, "today" | "custom">;
+  label: string;
+}[] = [
+  { id: "today", label: "Aujourd'hui" },
   { id: "custom", label: "Date à date" },
 ];
 
@@ -98,6 +114,12 @@ function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
+function shiftDays(d: Date, days: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
+}
+
 function parseDateKey(key: string): Date | null {
   if (!key) return null;
   const [y, m, day] = key.split("-").map(Number);
@@ -125,6 +147,14 @@ export function resolveStoreTrackingRange(
         to: todayEnd,
         label: "Aujourd'hui",
       };
+    case "minus3": {
+      const day = shiftDays(now, -3);
+      return {
+        from: startOfDay(day),
+        to: endOfDay(day),
+        label: "Il y a 3 jours",
+      };
+    }
     case "week":
       return {
         from: startOfWeekMonday(now),
