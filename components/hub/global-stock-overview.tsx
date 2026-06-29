@@ -39,9 +39,12 @@ export function GlobalStockOverview({
         (product.category?.toLowerCase().includes(q) ?? false)
       );
     });
-    return [...list].sort(
-      (a, b) => a.stock - b.stock || a.name.localeCompare(b.name, "fr")
-    );
+    return [...list].sort((a, b) => {
+      const aZero = a.stock === 0;
+      const bZero = b.stock === 0;
+      if (aZero !== bZero) return aZero ? 1 : -1;
+      return a.stock - b.stock || a.name.localeCompare(b.name, "fr");
+    });
   }, [products, search, category]);
 
   const filterToken = `${search}|${category}`;

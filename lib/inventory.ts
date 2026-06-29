@@ -3,6 +3,39 @@ import { getPlanningCashiersByStore } from "@/lib/scheduling/planning-cashiers";
 import type { CashierSummary, Product, Store, StoreWithStats } from "@/lib/types";
 import { isSellableProduct } from "@/lib/products/product-utils";
 
+const INVENTORY_FETCH_PAGE = 1000;
+
+/** Supabase renvoie au plus 1000 lignes par requête — pagination obligatoire. */
+async function fetchStoreInventoryRows(
+  storeIds: string[]
+): Promise<{ product_id: string; stock: number }[]> {
+  if (storeIds.length === 0) return [];
+
+  const supabase = await createClient();
+  const rows: { product_id: string; stock: number }[] = [];
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("store_inventory")
+      .select("product_id, stock")
+      .in("store_id", storeIds)
+      .range(offset, offset + INVENTORY_FETCH_PAGE - 1);
+
+    if (error) {
+      console.error("fetchStoreInventoryRows:", error.message);
+      break;
+    }
+
+    const batch = data || [];
+    rows.push(...batch);
+    if (batch.length < INVENTORY_FETCH_PAGE) break;
+    offset += INVENTORY_FETCH_PAGE;
+  }
+
+  return rows;
+}
+
 export async function getActiveStores(city?: string | null): Promise<Store[]> {
   const supabase = await createClient();
   let query = supabase.from("stores").select("*").eq("is_active", true).order("name");
@@ -69,14 +102,9 @@ export async function getProductsWithTotalStock(
   const stores = await getActiveStores(city);
   const storeIds = stores.map((s) => s.id);
 
-  const [{ data: products }, { data: inventory }] = await Promise.all([
+  const [{ data: products }, inventory] = await Promise.all([
     supabase.from("products").select("*").order("name"),
-    storeIds.length > 0
-      ? supabase
-          .from("store_inventory")
-          .select("product_id, stock")
-          .in("store_id", storeIds)
-      : Promise.resolve({ data: [] as { product_id: string; stock: number }[] }),
+    fetchStoreInventoryRows(storeIds),
   ]);
 
   const stockMap = new Map<string, number>();
