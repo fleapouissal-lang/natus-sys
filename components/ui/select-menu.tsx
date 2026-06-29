@@ -54,7 +54,7 @@ function OptionIcon({
     <span
       className={cn(
         "select-menu-icon-box flex shrink-0 items-center justify-center bg-transparent text-primary",
-        compact ? "h-6 w-6" : "h-9 w-9"
+        compact ? "h-6 w-6" : "h-8 w-8"
       )}
     >
       <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} strokeWidth={2} />
@@ -365,10 +365,8 @@ export function SelectMenu({
           "select-menu-trigger natus-field flex w-full items-center bg-surface text-left transition-all",
           "hover:border-primary focus:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-50",
-          !showIcons && size === "xs" && "h-8 gap-1.5 px-2 text-xs",
-          showIcons && size === "xs" && "h-8 gap-1.5 px-2 text-xs",
-          size === "sm" && "h-8 gap-1.5 px-2 text-sm",
-          size === "md" && "gap-3 px-3 py-2.5 text-sm",
+          (size === "xs" || size === "sm") && "select-menu-trigger--sm gap-1.5 px-2 text-sm",
+          size === "md" && "gap-2 px-3 text-sm",
           open && "ring-2 ring-primary/15",
           error && "border-danger focus:border-danger focus:ring-danger/15",
           triggerClassName

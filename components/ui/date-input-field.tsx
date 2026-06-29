@@ -219,7 +219,7 @@ export function DateInputField({
           value={formatDisplayDate(value)}
           placeholder="jj/mm/aaaa"
           onClick={() => setOpenState(!open)}
-          className="natus-field w-full cursor-pointer bg-surface py-0 pl-10 pr-8 text-sm"
+          className="natus-field w-full cursor-pointer bg-surface py-0 pl-10 pr-8 text-sm leading-none"
         />
         {value && (
           <button

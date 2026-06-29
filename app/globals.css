@@ -29,6 +29,10 @@
     var(--natus-mobile-nav-gap) +
     env(safe-area-inset-bottom, 0px)
   );
+  /** Hauteur uniforme des champs (input, select, date) */
+  --natus-control-height: 2.5rem;
+  --natus-control-height-sm: 2rem;
+  --natus-control-height-lg: 3rem;
 }
 
 @theme inline {
@@ -417,18 +421,48 @@ textarea.border-danger {
   border-color: var(--danger) !important;
 }
 
+/* Hauteur uniforme — inputs, selects, date (hors textarea) */
+input.natus-field:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+select.natus-field:not([multiple]),
+button.select-menu-trigger {
+  height: var(--natus-control-height);
+  min-height: var(--natus-control-height);
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1.25;
+}
+
+textarea.natus-field {
+  height: auto;
+  min-height: 0;
+}
+
+input.natus-field--sm:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+button.select-menu-trigger--sm {
+  height: var(--natus-control-height-sm);
+  min-height: var(--natus-control-height-sm);
+}
+
+input.natus-field--lg:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]) {
+  height: var(--natus-control-height-lg);
+  min-height: var(--natus-control-height-lg);
+}
+
 /* Barres de filtrage — sans bordure conteneur */
 .natus-filter-bar {
+  --natus-control-height: var(--natus-control-height-sm);
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
 }
 
-/* Champs barres de filtrage — hauteur uniforme input / select */
+/* Champs barres de filtrage — héritent de --natus-control-height (sm) */
 .natus-filter-bar input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not(.natus-filter-inline-input):not(.select-menu-search-input),
+.natus-filter-bar select.natus-field:not([multiple]),
 .natus-filter-bar .select-menu-trigger {
-  height: 2rem !important;
-  min-height: 2rem !important;
+  height: var(--natus-control-height) !important;
+  min-height: var(--natus-control-height) !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
 }
