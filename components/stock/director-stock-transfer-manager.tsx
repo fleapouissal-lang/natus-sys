@@ -18,6 +18,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { StoreSelect } from "@/components/stores/store-select";
 import { ProductImage } from "@/components/pos/product-image";
+import { StockTransferConfirmModal } from "@/components/stock/stock-transfer-confirm-modal";
 import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import {
@@ -173,6 +174,107 @@ export function DirectorStockTransferManager({
   }, [products, quantities]);
 
   const transferCount = transferPayload.payload.length;
+
+  const confirmSummary = useMemo(() => {
+    const items = transferPayload.payload
+      .map((item) => {
+        const product = products.find((p) => p.id === item.productId);
+        if (!product) return null;
+        return { product, quantity: item.quantity };
+      })
+      .filter(Boolean) as Array<{ product: Product; quantity: number }>;
+
+    return {
+      items,
+      totalQty: items.reduce((sum, item) => sum + item.quantity, 0),
+    };
+  }, [transferPayload.payload, products]);
+
+  const fromSite = useMemo(() => {
+    if (sourceType === "hub") {
+      const store = hubStores.find((s) => s.id === fromHubStoreId);
+      return {
+        name: store?.name || "Dépôt",
+        city: store?.city,
+        siteType: "hub" as const,
+      };
+    }
+    const store = retailStores.find((s) => s.id === fromStoreId);
+    return {
+      name: store?.name || "Magasin",
+      city: store?.city,
+      siteType: "store" as const,
+    };
+  }, [sourceType, hubStores, fromHubStoreId, retailStores, fromStoreId]);
+
+  const toSite = useMemo(() => {
+    if (destType === "hub") {
+      const store = destinationHubStores.find((s) => s.id === toHubStoreId);
+      return {
+        name: store?.name || "Dépôt",
+        city: store?.city,
+        siteType: "hub" as const,
+      };
+    }
+    const store = destinationRetailStores.find((s) => s.id === toStoreId);
+    return {
+      name: store?.name || "Magasin",
+      city: store?.city,
+      siteType: "store" as const,
+    };
+  }, [destType, destinationHubStores, toHubStoreId, destinationRetailStores, toStoreId]);
+
+  const confirmCopy = useMemo(() => {
+    if (sourceType === "hub" && destType === "store") {
+      return {
+        eyebrow: "Commande entrepôt",
+        title: "Confirmer l'envoi",
+        description:
+          "Vérifiez les produits avant de créer la commande. Le stock dépôt sera déduit lorsque le livreur prendra la commande en charge.",
+        actionLabel: "Envoi",
+        processDescription:
+          "Vous allez créer une commande entrepôt. Le dépôt prépare, le livreur transporte, le magasin valide la réception.",
+        sourceStockLabel: "Stock entrepôt",
+        confirmLabel: "Confirmer l'envoi",
+      };
+    }
+    if (sourceType === "store" && destType === "hub") {
+      return {
+        eyebrow: "Retour dépôt",
+        title: "Confirmer l'envoi",
+        description:
+          "Vérifiez les produits avant d'envoyer le stock vers le dépôt.",
+        actionLabel: "Envoi",
+        processDescription:
+          "Le stock sera déduit du magasin source et crédité au dépôt après validation.",
+        sourceStockLabel: "Stock magasin",
+        confirmLabel: "Confirmer l'envoi",
+      };
+    }
+    if (sourceType === "hub" && destType === "hub") {
+      return {
+        eyebrow: "Transfert dépôt",
+        title: "Confirmer le transfert",
+        description: "Vérifiez les produits avant d'envoyer le stock vers l'autre dépôt.",
+        actionLabel: "Transfert",
+        processDescription:
+          "Le stock sera déduit du dépôt source et crédité au dépôt destination après validation.",
+        sourceStockLabel: "Stock entrepôt",
+        confirmLabel: "Confirmer le transfert",
+      };
+    }
+    return {
+      eyebrow: "Transfert de stock",
+      title: "Confirmer le transfert",
+      description:
+        "Vérifiez les produits avant d'envoyer le stock vers l'autre magasin.",
+      actionLabel: "Transfert",
+      processDescription:
+        "Le stock sera déduit du magasin source et crédité au magasin destination après validation.",
+      sourceStockLabel: "Stock magasin",
+      confirmLabel: "Confirmer le transfert",
+    };
+  }, [sourceType, destType]);
 
   function navigate(next: {
     sourceType?: SiteType;
@@ -601,28 +703,16 @@ export function DirectorStockTransferManager({
       )}
 
       {confirmOpen && (
-        <Modal onClose={() => !loading && setConfirmOpen(false)} size="md">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Confirmer le transfert</h3>
-            <p className="text-sm text-muted">
-              {sourceLabel} → {destinationLabel} · {transferCount} produit
-              {transferCount > 1 ? "s" : ""}
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={loading}
-                onClick={() => setConfirmOpen(false)}
-              >
-                Annuler
-              </Button>
-              <Button type="button" loading={loading} onClick={() => void handleTransferConfirm()}>
-                Confirmer
-              </Button>
-            </div>
-          </div>
-        </Modal>
+        <StockTransferConfirmModal
+          onClose={() => setConfirmOpen(false)}
+          onConfirm={() => void handleTransferConfirm()}
+          loading={loading}
+          from={fromSite}
+          to={toSite}
+          items={confirmSummary.items}
+          totalQty={confirmSummary.totalQty}
+          {...confirmCopy}
+        />
       )}
     </div>
   );

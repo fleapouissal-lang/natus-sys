@@ -19,6 +19,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { StoreSelect } from "@/components/stores/store-select";
 import { ProductImage } from "@/components/pos/product-image";
+import { StockTransferConfirmModal } from "@/components/stock/stock-transfer-confirm-modal";
 import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { transferStoreStock, transferStoreStockToHub } from "@/lib/actions";
@@ -537,33 +538,39 @@ export function StoreStockTransferManager({
       </Card>
 
       {confirmOpen && fromStore && destinationName && (
-        <Modal onClose={() => setConfirmOpen(false)} size="md">
-          <h3 className="text-lg font-semibold">
-            {destinationType === "hub"
-              ? "Confirmer l'envoi au dépôt"
-              : "Confirmer la commande"}
-          </h3>
-          <p className="mt-2 text-sm text-muted">
-            {fromStore.name} → {destinationName} · {confirmSummary.totalQty} unité
-            {confirmSummary.totalQty !== 1 ? "s" : ""} · statut initial « En cours »
-          </p>
-          <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto text-sm">
-            {confirmSummary.items.map(({ product, quantity }) => (
-              <li key={product.id} className="flex justify-between gap-3">
-                <span className="truncate">{product.name}</span>
-                <span className="shrink-0 font-medium">× {quantity}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-6 flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setConfirmOpen(false)}>
-              Annuler
-            </Button>
-            <Button type="button" loading={loading} onClick={handleTransferConfirm}>
-              Confirmer
-            </Button>
-          </div>
-        </Modal>
+        <StockTransferConfirmModal
+          onClose={() => setConfirmOpen(false)}
+          onConfirm={handleTransferConfirm}
+          loading={loading}
+          from={{ name: fromStore.name, city: fromStore.city, siteType: "store" }}
+          to={{
+            name: destinationName,
+            city:
+              destinationType === "hub" ? selectedHubStore?.city : toStore?.city,
+            siteType: destinationType,
+          }}
+          items={confirmSummary.items}
+          totalQty={confirmSummary.totalQty}
+          eyebrow={destinationType === "hub" ? "Commande entrepôt" : "Transfert de stock"}
+          title={
+            destinationType === "hub" ? "Confirmer l'envoi" : "Confirmer le transfert"
+          }
+          description={
+            destinationType === "hub"
+              ? "Vérifiez les produits avant de créer la commande. Le stock magasin sera déduit à l'envoi."
+              : "Vérifiez les produits avant d'envoyer le stock vers l'autre magasin."
+          }
+          actionLabel={destinationType === "hub" ? "Envoi" : "Transfert"}
+          processDescription={
+            destinationType === "hub"
+              ? "Vous allez créer une commande entrepôt. Le dépôt prépare, le livreur transporte, le magasin valide la réception."
+              : "Le stock sera déduit du magasin source et crédité au magasin destination après validation."
+          }
+          sourceStockLabel="Stock magasin"
+          confirmLabel={
+            destinationType === "hub" ? "Confirmer l'envoi" : "Confirmer le transfert"
+          }
+        />
       )}
 
       {alertOpen && (

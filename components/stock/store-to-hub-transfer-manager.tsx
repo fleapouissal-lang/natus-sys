@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { StoreSelect } from "@/components/stores/store-select";
 import { ProductImage } from "@/components/pos/product-image";
+import { StockTransferConfirmModal } from "@/components/stock/stock-transfer-confirm-modal";
 import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { transferStoreStockToHub } from "@/lib/actions";
@@ -398,29 +399,18 @@ export function StoreToHubTransferManager({
       </Card>
 
       {confirmOpen && fromStore && hubStore && (
-        <Modal onClose={() => setConfirmOpen(false)} size="md">
-          <h3 className="text-lg font-semibold">Confirmer l&apos;envoi au dépôt</h3>
-          <p className="mt-2 text-sm text-muted">
-            {fromStore.name} → {hubStore.name} · {confirmSummary.totalQty} unité
-            {confirmSummary.totalQty !== 1 ? "s" : ""} · statut initial « En cours »
-          </p>
-          <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto text-sm">
-            {confirmSummary.items.map(({ product, quantity }) => (
-              <li key={product.id} className="flex justify-between gap-3">
-                <span className="truncate">{product.name}</span>
-                <span className="shrink-0 font-medium">× {quantity}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-6 flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setConfirmOpen(false)}>
-              Annuler
-            </Button>
-            <Button type="button" loading={loading} onClick={handleTransferConfirm}>
-              Confirmer
-            </Button>
-          </div>
-        </Modal>
+        <StockTransferConfirmModal
+          onClose={() => setConfirmOpen(false)}
+          onConfirm={handleTransferConfirm}
+          loading={loading}
+          from={{ name: fromStore.name, city: fromStore.city, siteType: "store" }}
+          to={{ name: hubStore.name, city: hubStore.city, siteType: "hub" }}
+          items={confirmSummary.items}
+          totalQty={confirmSummary.totalQty}
+          eyebrow="Commande entrepôt"
+          description="Vérifiez les produits avant de créer la commande. Le stock magasin sera déduit à l'envoi."
+          sourceStockLabel="Stock magasin"
+        />
       )}
 
       {alertOpen && (

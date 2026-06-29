@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { ProductImage } from "@/components/pos/product-image";
+import { StockTransferConfirmModal } from "@/components/stock/stock-transfer-confirm-modal";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
 import {
   fetchRestockSourceProducts,
@@ -498,33 +499,26 @@ export function CashierRestockManager({
       </Card>
 
       {confirmOpen && selectedSource && (
-        <Modal onClose={() => setConfirmOpen(false)} size="md">
-          <h3 className="text-lg font-semibold">Confirmer la commande</h3>
-          <p className="mt-2 text-sm text-muted">
-            Depuis {selectedSource.name} → {storeName} · {totalUnits} unité
-            {totalUnits !== 1 ? "s" : ""}
-          </p>
-          <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto text-sm">
-            {confirmRows.map(({ product, quantity }) => (
-              <li key={product.id} className="flex justify-between gap-3">
-                <span className="truncate">{product.name}</span>
-                <span className="shrink-0 font-medium">× {quantity}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-6 flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setConfirmOpen(false)}
-            >
-              Annuler
-            </Button>
-            <Button type="button" loading={submitting} onClick={confirmOrder}>
-              Confirmer la commande
-            </Button>
-          </div>
-        </Modal>
+        <StockTransferConfirmModal
+          onClose={() => setConfirmOpen(false)}
+          onConfirm={confirmOrder}
+          loading={submitting}
+          from={{
+            name: selectedSource.name,
+            city: selectedSource.city,
+            siteType: selectedSource.is_hub ? "hub" : "store",
+          }}
+          to={{ name: storeName, siteType: "store" }}
+          items={confirmRows}
+          totalQty={totalUnits}
+          eyebrow="Commande de stock"
+          title="Confirmer la commande"
+          description={`Vérifiez les produits avant de commander du stock pour ${storeName}.`}
+          actionLabel="Commande"
+          processDescription="La source prépare la commande. Vous validerez la réception à l'arrivée du stock."
+          sourceStockLabel={selectedSource.is_hub ? "Stock entrepôt" : "Stock magasin"}
+          confirmLabel="Confirmer la commande"
+        />
       )}
 
       {alert && (
