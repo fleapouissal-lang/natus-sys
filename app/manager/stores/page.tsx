@@ -37,6 +37,7 @@ export default async function StoresPage() {
       defaultCity={profile?.city || undefined}
       cityLabel={city || undefined}
       canCreateStore={profile ? canCreateStore(profile) : false}
+      canDeleteStore={profile ? canCreateStore(profile) : false}
     />
   );
 }

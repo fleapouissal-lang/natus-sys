@@ -12,6 +12,7 @@ import {
   Warehouse,
   Trash2,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -161,71 +162,78 @@ function StorePickerCard({
   return (
     <div
       className={cn(
-        "relative flex h-full w-full flex-col rounded-xl border transition-colors",
+        "flex h-full w-full flex-col rounded-xl border transition-colors",
         selected
           ? "border-primary bg-primary/5 ring-2 ring-primary/15"
           : "border-border bg-surface hover:border-primary/30 hover:bg-primary/5"
       )}
     >
-      {showDelete && (
+      <div className="flex items-start gap-2 p-4 pb-2">
         <button
           type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onDelete();
-          }}
-          disabled={deleting}
-          className="absolute right-2 top-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-danger/25 bg-surface/95 text-danger transition-colors hover:border-danger/50 hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label={`Supprimer ${store.name}`}
-          title="Supprimer le magasin"
+          onClick={onSelect}
+          className="min-w-0 flex-1 cursor-pointer text-left"
         >
-          <Trash2 className="h-4 w-4" />
+          <div className="flex min-w-0 items-center gap-2">
+            {store.is_hub ? (
+              <Warehouse className="h-5 w-5 shrink-0 text-primary" />
+            ) : (
+              <Store className="h-5 w-5 shrink-0 text-primary" />
+            )}
+            <h3 className="truncate font-semibold leading-tight">{store.name}</h3>
+          </div>
         </button>
-      )}
+        <div className="flex shrink-0 items-start gap-1.5">
+          <Badge>{store.city}</Badge>
+          {showDelete && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete();
+              }}
+              disabled={deleting}
+              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-danger/25 bg-surface text-danger transition-colors hover:border-danger/50 hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={`Supprimer ${store.name}`}
+              title="Supprimer le magasin"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
 
       <button
         type="button"
         onClick={onSelect}
-        className="flex h-full w-full cursor-pointer flex-col p-4 text-left"
+        className="flex flex-1 cursor-pointer flex-col px-4 pb-4 text-left"
       >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          {store.is_hub ? (
-            <Warehouse className="h-5 w-5 shrink-0 text-primary" />
-          ) : (
-            <Store className="h-5 w-5 shrink-0 text-primary" />
-          )}
-          <h3 className="truncate font-semibold leading-tight">{store.name}</h3>
-        </div>
-        <Badge className={cn("shrink-0", showDelete && "mr-9")}>{store.city}</Badge>
-      </div>
+        <p className="line-clamp-2 text-sm text-muted">{store.address || store.city}</p>
 
-      <p className="mt-2 line-clamp-2 text-sm text-muted">{store.address || store.city}</p>
-
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <div className="rounded-lg bg-page/60 px-3 py-2">
-          <p className="text-[11px] uppercase tracking-wide text-muted">Produits</p>
-          <p className="mt-0.5 text-lg font-bold tabular-nums">{store.productCount}</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="rounded-lg bg-page/60 px-3 py-2">
+            <p className="text-[11px] uppercase tracking-wide text-muted">Produits</p>
+            <p className="mt-0.5 text-lg font-bold tabular-nums">{store.productCount}</p>
+          </div>
+          <div className="rounded-lg bg-page/60 px-3 py-2">
+            <p className="text-[11px] uppercase tracking-wide text-muted">Unités</p>
+            <p className="mt-0.5 text-lg font-bold tabular-nums">{store.totalUnits}</p>
+          </div>
         </div>
-        <div className="rounded-lg bg-page/60 px-3 py-2">
-          <p className="text-[11px] uppercase tracking-wide text-muted">Unités</p>
-          <p className="mt-0.5 text-lg font-bold tabular-nums">{store.totalUnits}</p>
-        </div>
-      </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        <Badge variant={activeCashiers.length > 0 ? "success" : "danger"}>
-          <Users className="mr-1 h-3 w-3" />
-          {activeCashiers.length} caissier{activeCashiers.length !== 1 ? "s" : ""}
-        </Badge>
-        {store.lowStockCount > 0 && (
-          <Badge variant="warning">
-            <AlertTriangle className="mr-1 h-3 w-3" />
-            {store.lowStockCount} faible
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <Badge variant={activeCashiers.length > 0 ? "success" : "danger"}>
+            <Users className="mr-1 h-3 w-3" />
+            {activeCashiers.length} caissier{activeCashiers.length !== 1 ? "s" : ""}
           </Badge>
-        )}
-        {store.is_hub && <Badge variant="accent">Dépôt</Badge>}
-      </div>
+          {store.lowStockCount > 0 && (
+            <Badge variant="warning">
+              <AlertTriangle className="mr-1 h-3 w-3" />
+              {store.lowStockCount} faible
+            </Badge>
+          )}
+          {store.is_hub && <Badge variant="accent">Dépôt</Badge>}
+        </div>
       </button>
     </div>
   );
@@ -234,13 +242,20 @@ function StorePickerCard({
 function StoreDetailPanel({
   store,
   products,
+  canDelete = false,
+  onDelete,
+  deleting = false,
 }: {
   store: StoreWithStats;
   products: Product[];
+  canDelete?: boolean;
+  onDelete?: () => void;
+  deleting?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const activeCashiers = store.cashiers.filter((c) => c.is_active);
+  const showDelete = canDelete && !store.is_hub && onDelete;
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -268,17 +283,33 @@ function StoreDetailPanel({
             </div>
             <p className="mt-2 text-sm text-muted">{store.address || store.city}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge>
-              <Package className="mr-1 h-3 w-3" />
-              {store.productCount} produit{store.productCount !== 1 ? "s" : ""}
-            </Badge>
-            <Badge variant="success">{store.totalUnits} unités</Badge>
-            <Badge variant={activeCashiers.length > 0 ? "success" : "danger"}>
-              <Users className="mr-1 h-3 w-3" />
-              {activeCashiers.length} caissier{activeCashiers.length !== 1 ? "s" : ""} actif
-              {activeCashiers.length !== 1 ? "s" : ""}
-            </Badge>
+          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+            <div className="flex flex-wrap gap-2">
+              <Badge>
+                <Package className="mr-1 h-3 w-3" />
+                {store.productCount} produit{store.productCount !== 1 ? "s" : ""}
+              </Badge>
+              <Badge variant="success">{store.totalUnits} unités</Badge>
+              <Badge variant={activeCashiers.length > 0 ? "success" : "danger"}>
+                <Users className="mr-1 h-3 w-3" />
+                {activeCashiers.length} caissier{activeCashiers.length !== 1 ? "s" : ""} actif
+                {activeCashiers.length !== 1 ? "s" : ""}
+              </Badge>
+            </div>
+            {showDelete && (
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                loading={deleting}
+                disabled={deleting}
+                onClick={onDelete}
+                className="w-full sm:w-auto"
+              >
+                <Trash2 className="h-4 w-4" />
+                Supprimer le magasin
+              </Button>
+            )}
           </div>
         </div>
 
@@ -459,14 +490,14 @@ export function StoresManager({
 
       {stores.length > 0 ? (
         <>
-          <Card padding={false} className="overflow-hidden">
+          <Card padding={false}>
             <div className="border-b border-border p-6">
               <CardHeader
                 title="Sélectionner un magasin"
                 description="Choisissez un point de vente pour voir son inventaire"
               />
             </div>
-            <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 overflow-visible p-4 sm:grid-cols-2 xl:grid-cols-3">
               {paginatedStores.map((store) => (
                 <StorePickerCard
                   key={store.id}
@@ -496,6 +527,9 @@ export function StoresManager({
             <StoreDetailPanel
               store={selectedStore}
               products={inventoryByStore[selectedStore.id] || []}
+              canDelete={canDeleteStore}
+              onDelete={() => handleDeleteStore(selectedStore)}
+              deleting={deletePending && deletingStoreId === selectedStore.id}
             />
           )}
         </>
