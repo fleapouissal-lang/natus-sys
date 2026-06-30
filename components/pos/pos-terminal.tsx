@@ -1479,11 +1479,13 @@ export function PosTerminal({
                         <CountBadge count={preparableOrderCount} />
                       </Button>
                     )}
-                    <ProClientQrButton
-                      storeId={defaultStoreId}
-                      storeName={storeName}
-                      disabled={!defaultStoreId}
-                    />
+                    {role !== "cashier" && (
+                      <ProClientQrButton
+                        storeId={defaultStoreId}
+                        storeName={storeName}
+                        disabled={!defaultStoreId}
+                      />
+                    )}
                     {role === "cashier" && defaultStoreId && (
                       <Button
                         type="button"

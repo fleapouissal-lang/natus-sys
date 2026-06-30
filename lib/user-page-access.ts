@@ -81,7 +81,7 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
   ],
   manager: [
     "dashboard", "planning", "pos_closures", "sales", "stock", "transfers", "hub_orders",
-    "activity", "reclamations", "writeoffs", "invoices", "actualites", "cheques",
+    "activity", "reclamations", "loyalty", "writeoffs", "invoices", "actualites", "cheques",
   ],
   cashier: [
     "pos", "planning", "pos_closures", "actualites", "sales", "notes", "transfers",
@@ -141,6 +141,7 @@ const MANAGER_NAV_PRIORITY: UserPageKey[] = [
   "cheques",      // Chèques
   "writeoffs",    // Retour en stock
   "reclamations", // Réclamations
+  "loyalty",      // Clients Pro
   "actualites",   // Actualités
   "activity",     // Historique — replacé en pénultième via HISTORY_NAV_PRIORITY
 ];
@@ -368,6 +369,9 @@ export function getAllowedHrefsForProfile(
     if (keys.includes("pos_closures")) {
       hrefs.push("/manager/history");
     }
+    if (keys.includes("loyalty")) {
+      hrefs.push("/manager/pro-clients", "/manager/loyalty");
+    }
   }
 
   if (profile.role === "hub") {
@@ -462,6 +466,9 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
     return "loyalty";
   }
   if (href === "/director/pro-clients" && (role === "directeur" || role === "admin")) {
+    return "loyalty";
+  }
+  if (href === "/manager/pro-clients" && role === "manager") {
     return "loyalty";
   }
   if (href === "/cashier/pro-clients" && role === "cashier") {

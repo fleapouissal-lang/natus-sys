@@ -3,13 +3,13 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BriefcaseBusiness, Eye, Search, Trash2, UserCheck, UserPlus, UserX } from "lucide-react";
+import { BriefcaseBusiness, Eye, Search, UserCheck, UserPlus, UserX } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { deleteProClientCustomer, toggleProClientActive } from "@/lib/actions";
+import { toggleProClientActive } from "@/lib/actions";
 import { formatDate } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import { sortProClientsByFidelity } from "@/lib/loyalty/sort-customers";
@@ -81,17 +81,6 @@ export function ProClientsManager({
   function handleDeactivate(customerId: string, label: string) {
     if (!window.confirm(`Désactiver le compte Client Pro de ${label} ?`)) return;
     runAction(customerId, () => toggleProClientActive(customerId, false));
-  }
-
-  function handleDelete(customerId: string, label: string) {
-    if (
-      !window.confirm(
-        `Supprimer définitivement ${label} ?\n\nSi le client a de l'historique de ventes, la suppression échouera.`
-      )
-    ) {
-      return;
-    }
-    runAction(customerId, () => deleteProClientCustomer(customerId));
   }
 
   return (
@@ -236,16 +225,6 @@ export function ProClientsManager({
                             <UserX className="h-4 w-4 text-warning" />
                           </Button>
                         )}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          loading={pending && loadingId === customer.id}
-                          onClick={() => handleDelete(customer.id, label)}
-                          title="Supprimer"
-                        >
-                          <Trash2 className="h-4 w-4 text-danger" />
-                        </Button>
                       </div>
                     </td>
                   </tr>

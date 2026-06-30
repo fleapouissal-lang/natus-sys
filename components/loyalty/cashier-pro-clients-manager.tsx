@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { LoyaltyWalletCard } from "@/components/loyalty/loyalty-wallet-card";
-import { ProClientQrButton } from "@/components/pro-client/pro-client-qr-modal";
 import { Modal } from "@/components/ui/modal";
 import { PRO_CLIENT_DISCOUNT_PERCENT } from "@/lib/pro-client/discount";
 import { formatDate } from "@/lib/utils";
@@ -72,14 +71,10 @@ export function CashierProClientsManager({
         </Card>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">
-          Remise automatique de {PRO_CLIENT_DISCOUNT_PERCENT}% en caisse — pas de points fidélité
-        </p>
-        {storeId && (
-          <ProClientQrButton storeId={storeId} storeName={storeName} />
-        )}
-      </div>
+      <p className="text-sm text-muted">
+        Remise automatique de {PRO_CLIENT_DISCOUNT_PERCENT}% en caisse — pas de points fidélité.
+        Les inscriptions Pro sont gérées par le directeur.
+      </p>
 
       <FilterTogglePanel
         toggleLabel="Filtrer les clients"

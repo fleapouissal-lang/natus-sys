@@ -4025,7 +4025,7 @@ export async function getStoreProClientLink(
   | { success: true; storeToken: string; url: string; storeName: string }
   | { error: string }
 > {
-  const profile = await requireRole([...MANAGEMENT, "cashier", "hub"]);
+  const profile = await requireRole([...MANAGEMENT, "hub"]);
   if (!profile) return { error: "Non autorisé" };
 
   if (!storeId) return { error: "Magasin requis" };
@@ -4074,13 +4074,16 @@ export async function createProClientCustomer(input: {
   | { success: true; customerId: string; qrToken: string; cardNumber: string }
   | { error: string }
 > {
-  const profile = await requireRole(["directeur", "admin"]);
+  const profile = await requireRole(["directeur", "admin", "manager"]);
   if (!profile) return { error: "Non autorisé" };
 
   if (!input.storeId) return { error: "Magasin requis" };
 
   const store = await getStoreById(input.storeId);
   if (!store) return { error: "Magasin introuvable" };
+  if (!canAccessStore(profile, store)) {
+    return { error: "Vous n'avez pas accès à ce magasin" };
+  }
 
   const supabase = await createClient();
   const { data: linkData, error: linkError } = await supabase.rpc("get_store_pro_client_link", {
@@ -4115,6 +4118,7 @@ export async function createProClientCustomer(input: {
 
   revalidatePath("/director/pro-clients");
   revalidatePath("/director/clients");
+  revalidatePath("/manager/pro-clients");
   revalidatePath("/cashier/pro-clients");
   revalidatePath("/cashier/pos");
 
@@ -4130,7 +4134,7 @@ export async function toggleProClientActive(
   customerId: string,
   active: boolean
 ): Promise<{ success: true; customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
-  const profile = await requireRole(["directeur", "admin"]);
+  const profile = await requireRole(["directeur", "admin", "manager"]);
   if (!profile) return { error: "Non autorisé" };
 
   const supabase = await createClient();
@@ -4145,6 +4149,7 @@ export async function toggleProClientActive(
   revalidatePath("/director/pro-clients");
   revalidatePath("/director/loyalty");
   revalidatePath("/director/loyalty/customers");
+  revalidatePath("/manager/pro-clients");
   revalidatePath("/manager/loyalty");
   revalidatePath("/cashier/pos");
   revalidatePath("/cashier/pro-clients");
@@ -4205,32 +4210,8 @@ export async function deleteLoyaltyCustomer(
 export async function deleteProClientCustomer(
   customerId: string
 ): Promise<{ success: true } | { error: string }> {
-  const profile = await requireRole(["directeur", "admin"]);
-  if (!profile) return { error: "Non autorisé" };
-
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("delete_pro_client_customer", {
-    p_customer_id: customerId,
-  });
-
-  if (error) {
-    const message = error.message.toLowerCase();
-    if (message.includes("foreign key") || message.includes("violates")) {
-      return {
-        error:
-          "Suppression impossible : ce client a de l'historique (ventes, points…). Désactivez-le à la place.",
-      };
-    }
-    return { error: error.message };
-  }
-
-  revalidatePath("/director/clients");
-  revalidatePath("/director/pro-clients");
-  revalidatePath("/director/loyalty");
-  revalidatePath("/director/loyalty/customers");
-  revalidatePath("/cashier/pos");
-  revalidatePath("/cashier/pro-clients");
-  return { success: true };
+  void customerId;
+  return { error: "Suppression définitive des clients pro désactivée" };
 }
 
 export async function createStoreProductWriteoff(

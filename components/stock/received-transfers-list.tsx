@@ -25,7 +25,15 @@ import {
   repairHubStockTransfer,
   shipStoreStockTransfer,
 } from "@/lib/actions";
-import { hubTransferDirection } from "@/lib/hub-transfer-direction";
+import {
+  hubTransferDirection,
+  hubTransferManagedFromSourceHub,
+} from "@/lib/hub-transfer-direction";
+import {
+  filterLivreursForPickupCity,
+  mapLivreurSelectOptions,
+  pickupCityForTransferLivreur,
+} from "@/lib/transfer-livreur-assignment";
 import {
   hubTransferCashierCanValidate,
   hubTransferStatusLabel,
@@ -102,10 +110,16 @@ export function ReceivedTransfersList({
   const [message, setMessage] = useState("");
   const [detailRow, setDetailRow] = useState<ReceivedTransferRow | null>(null);
 
-  const livreurOptions = livreurs.map((livreur) => ({
-    value: livreur.id,
-    label: livreur.full_name || livreur.email,
-  }));
+  function livreurOptionsForTransfer(transfer: {
+    from_store_city?: string | null;
+  }) {
+    return mapLivreurSelectOptions(
+      filterLivreursForPickupCity(
+        livreurs,
+        pickupCityForTransferLivreur(transfer)
+      )
+    );
+  }
 
   const {
     paginated,
@@ -214,7 +228,7 @@ export function ReceivedTransfersList({
                     canManageSource: canManageStoreSource(transfer),
                     canManageDestination: canManageStoreDestination(transfer),
                     loading,
-                    livreurOptions,
+                    livreurOptions: livreurOptionsForTransfer(transfer),
                     onViewDetail,
                     onMarkReady: () =>
                       void runAction(transfer.id, () =>
@@ -275,13 +289,12 @@ export function ReceivedTransfersList({
                     : "";
                 const direction = hubTransferDirection(transfer);
                 const isStoreToDepot = direction === "store_to_depot";
-                const isDepotToStore = direction === "depot_to_store";
-                const canMarkReady =
-                  (hubManageAsStoreSource && isStoreToDepot) ||
-                  (!hubManageAsStoreSource && isDepotToStore);
-                const canManageLivreur =
-                  (hubManageAsStoreSource && isStoreToDepot) ||
-                  (!hubManageAsStoreSource && isDepotToStore);
+                const managedFromSourceHub = hubTransferManagedFromSourceHub(
+                  direction,
+                  hubManageAsStoreSource
+                );
+                const canMarkReady = managedFromSourceHub;
+                const canManageLivreur = managedFromSourceHub;
                 const actionProps = buildHubRowActions({
                   row,
                   allowManage,
@@ -295,7 +308,7 @@ export function ReceivedTransfersList({
                     : false,
                   cashierHub: Boolean(cashierHub),
                   loading,
-                  livreurOptions,
+                  livreurOptions: livreurOptionsForTransfer(transfer),
                   onViewDetail,
                   onMarkReady: () =>
                     void runAction(transfer.id, () =>

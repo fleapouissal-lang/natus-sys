@@ -1,5 +1,5 @@
 /**
- * Supprime tous les comptes livreur puis en crée 4 (2 Marrakech + 2 Casablanca).
+ * Supprime tous les comptes livreur puis en crée 2 de test (1 Marrakech + 1 Casablanca).
  *
  * Usage : node scripts/reset-livreurs.mjs
  * Mot de passe : Natus2026!
@@ -12,22 +12,12 @@ const PASSWORD = "Natus2026!";
 const NEW_LIVREURS = [
   {
     email: "livreur.marrakech.1@natus.ma",
-    full_name: "Livreur Marrakech 1",
-    city: "Marrakech",
-  },
-  {
-    email: "livreur.marrakech.2@natus.ma",
-    full_name: "Livreur Marrakech 2",
+    full_name: "Livreur test Marrakech",
     city: "Marrakech",
   },
   {
     email: "livreur.casablanca.1@natus.ma",
-    full_name: "Livreur Casablanca 1",
-    city: "Casablanca",
-  },
-  {
-    email: "livreur.casablanca.2@natus.ma",
-    full_name: "Livreur Casablanca 2",
+    full_name: "Livreur test Casablanca",
     city: "Casablanca",
   },
 ];
@@ -185,22 +175,18 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  console.log("🚚 Reset livreurs — 4 comptes par ville\n");
+  console.log("🚚 Reset livreurs — 2 comptes de test\n");
 
   await deleteLivreurs(supabase);
 
-  console.log("\n→ Création des 4 nouveaux livreurs…\n");
+  console.log("\n→ Création des 2 livreurs de test…\n");
   for (const user of NEW_LIVREURS) {
     await upsertLivreur(supabase, user);
   }
 
-  console.log(`\n✅ 4 livreurs créés — mot de passe : ${PASSWORD}`);
-  console.log("\nMarrakech :");
-  console.log("  • livreur.marrakech.1@natus.ma");
-  console.log("  • livreur.marrakech.2@natus.ma");
-  console.log("\nCasablanca :");
-  console.log("  • livreur.casablanca.1@natus.ma");
-  console.log("  • livreur.casablanca.2@natus.ma");
+  console.log(`\n✅ 2 livreurs créés — mot de passe : ${PASSWORD}`);
+  console.log("\n  • livreur.marrakech.1@natus.ma (Marrakech)");
+  console.log("  • livreur.casablanca.1@natus.ma (Casablanca)");
 }
 
 main().catch((err) => {

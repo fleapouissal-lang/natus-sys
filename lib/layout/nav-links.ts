@@ -130,8 +130,14 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       { href: "/manager/invoices", label: "Factures", icon: FileText, mobileOrder: 7 },
       { href: "/manager/writeoffs", label: "Retour en stock", icon: RotateCcw, mobileOrder: 8 },
       { href: "/manager/reclamations", label: "Réclam.", icon: AlertTriangle, mobileOrder: 9 },
-      { href: "/manager/actualites", label: "Actus", icon: Newspaper, mobileOrder: 10 },
-      { href: "/manager/history", label: "Historique", icon: ClipboardList, mobileOrder: 11 },
+      {
+        href: "/manager/pro-clients",
+        label: "Clients Pro",
+        icon: BriefcaseBusiness,
+        mobileOrder: 10,
+      },
+      { href: "/manager/actualites", label: "Actus", icon: Newspaper, mobileOrder: 11 },
+      { href: "/manager/history", label: "Historique", icon: ClipboardList, mobileOrder: 12 },
     ];
   }
 
@@ -301,6 +307,13 @@ function buildManagerNavSections(role: UserRole): NavSection[] {
         { href: "/manager/pos-closures", label: "Clôtures caisse", icon: ScrollText },
         { href: "/manager/invoices", label: "Factures", icon: FileText },
         { href: "/manager/cheques", label: "Chèques", icon: Landmark },
+      ],
+    },
+    {
+      id: "clients",
+      label: "Clients",
+      links: [
+        { href: "/manager/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness },
       ],
     },
     {
@@ -580,6 +593,13 @@ export function isNavLinkActive(pathname: string, href: string): boolean {
   }
   if (href === "/director/pro-clients") {
     if (pathname === href) return true;
+    return pathname.startsWith(`${href}/`);
+  }
+  if (href === "/manager/pro-clients") {
+    if (pathname === href) return true;
+    if (pathname.startsWith("/manager/loyalty/") && pathname !== "/manager/loyalty") {
+      return true;
+    }
     return pathname.startsWith(`${href}/`);
   }
   if (href === "/director/loyalty") {

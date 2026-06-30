@@ -68,11 +68,13 @@ export async function getCustomerTransactions(
 export async function canStaffAccessLoyaltyCustomer(
   supabase: Awaited<ReturnType<typeof createClient>>,
   profile: Profile,
-  customer: Pick<LoyaltyCustomer, "id" | "store_id">
+  customer: Pick<LoyaltyCustomer, "id" | "store_id" | "is_pro_client">
 ): Promise<boolean> {
   if (isDirector(profile)) return true;
 
   if (isManager(profile)) {
+    if (customer.is_pro_client) return true;
+
     const city = getCityFilter(profile);
     if (!city) return false;
     if (!customer.store_id) return true;

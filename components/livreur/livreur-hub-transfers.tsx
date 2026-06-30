@@ -131,7 +131,7 @@ export function LivreurHubTransfers({
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Mes transferts</h1>
         <p className="mt-1 text-muted">
-          Dépôt ↔ magasins et transferts inter-magasins (même ville)
+          Transferts assignés — magasins, dépôts, même ville ou inter-villes
         </p>
       </div>
 
