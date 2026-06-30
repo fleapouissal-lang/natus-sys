@@ -50,9 +50,25 @@ import {
 } from "@/lib/notifications/notification-counts";
 import {
   isTransferAwaitingReceipt,
+  isTransferSentEvent,
+  scopeReceivesOrderAlerts,
   scopeReceivesStockAlertsForStore,
   scopeReceivesTransferAlerts,
+  scopeReceivesTransferMovements,
 } from "@/lib/notifications/notification-audience-rules";
+import {
+  hubTransferPendingNotificationId,
+  hubTransferSentNotification,
+  hubTransferSentNotificationId,
+  hubTransferToNotification,
+  isActionableOrderStatus,
+  notificationKey,
+  orderRowToNotification,
+  orderStatusChangeNotification,
+  orderStatusNotificationId,
+  storeTransferNotificationId,
+  storeTransferToNotification,
+} from "@/lib/notifications/notification-builders";
 import { CashierNotificationToasts } from "@/components/notifications/cashier-notification-toasts";
 
 import type {
@@ -72,6 +88,7 @@ const REFRESH_PATH_PREFIXES = [
   "/manager/orders",
   "/manager/stock-transfers",
   "/director/stock-transfers",
+  "/director/orders",
   "/cashier/transfers",
   "/hub/stock-transfers",
   "/hub/orders",
@@ -96,6 +113,7 @@ interface CashierNotificationsContextValue {
   latestUnread: CashierNotification | null;
   markAllRead: () => void;
   markRead: (id: string) => void;
+  /** Ferme le panneau et déclenche la navigation sans marquer comme lu. */
   openNotification: (id: string) => void;
   dismissToast: (id: string) => void;
   dismissBar: () => void;
@@ -114,52 +132,77 @@ interface CashierNotificationsContextValue {
 const CashierNotificationsContext =
   createContext<CashierNotificationsContextValue | null>(null);
 
-function notificationKey(entityId: string, kind: CashierNotification["kind"]) {
-  return `${entityId}-${kind}`;
+async function fetchHubTransferUnitCount(
+  supabase: ReturnType<typeof createClient>,
+  transferId: string
+): Promise<number | null> {
+  try {
+    const { data } = await supabase
+      .from("hub_stock_transfer_items")
+      .select("quantity")
+      .eq("transfer_id", transferId);
+    if (!data?.length) return null;
+    return data.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  } catch {
+    return null;
+  }
 }
 
-function orderRowToNotification(
+async function fetchStoreTransferUnitCount(
+  supabase: ReturnType<typeof createClient>,
+  transferId: string
+): Promise<number | null> {
+  try {
+    const { data } = await supabase
+      .from("store_stock_transfer_items")
+      .select("quantity")
+      .eq("transfer_id", transferId);
+    if (!data?.length) return null;
+    return data.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  } catch {
+    return null;
+  }
+}
+
+function unwrapStoreName(
+  value: { name?: string } | { name?: string }[] | null | undefined
+): string | null {
+  if (!value) return null;
+  const row = Array.isArray(value) ? value[0] : value;
+  return row?.name ?? null;
+}
+
+function unwrapStoreIsHub(
+  value: { is_hub?: boolean } | { is_hub?: boolean }[] | null | undefined
+): boolean | null {
+  if (!value) return null;
+  const row = Array.isArray(value) ? value[0] : value;
+  return row?.is_hub == null ? null : Boolean(row.is_hub);
+}
+
+function resolveTransferSites(
   row: Record<string, unknown>,
-  kind: "order_new" | "order_transferred"
-): CashierNotification {
-  const entityId = row.id as string;
-  return {
-    id: notificationKey(entityId, kind),
-    kind,
-    entityId,
-    title: (row.order_number as string) || "—",
-    subtitle: (row.customer_name as string | null) ?? null,
-    amount: Number(row.total) || 0,
-    receivedAt: new Date().toISOString(),
-    read: false,
-    audience: "store",
-  };
-}
+  storeNames: Map<string, string>,
+  storeIsHub: Map<string, boolean>
+) {
+  const fromStoreId = row.from_store_id as string;
+  const toStoreId = row.to_store_id as string;
+  const fromJoin = row.from_store as
+    | { name?: string; is_hub?: boolean }
+    | { name?: string; is_hub?: boolean }[]
+    | null;
+  const toJoin = row.to_store as
+    | { name?: string; is_hub?: boolean }
+    | { name?: string; is_hub?: boolean }[]
+    | null;
 
-function hubTransferPendingNotificationId(transferId: string): string {
-  return notificationKey(`${transferId}-hub_transfer_pending`, "hub_transfer");
-}
-
-function hubTransferToNotification(
-  row: Record<string, unknown>,
-  unitCount: number | null,
-  audience: NotificationAudience,
-  toIsHub: boolean,
-  titleOverride?: string
-): CashierNotification {
-  const entityId = row.id as string;
   return {
-    id: hubTransferPendingNotificationId(entityId),
-    kind: "hub_transfer",
-    entityId,
-    title:
-      titleOverride ??
-      (toIsHub ? "Commande magasin à recevoir" : "Commande dépôt à recevoir"),
-    subtitle: (row.notes as string | null)?.trim() || null,
-    amount: unitCount,
-    receivedAt: (row.sent_at as string) || new Date().toISOString(),
-    read: false,
-    audience,
+    fromStoreName:
+      unwrapStoreName(fromJoin) ?? storeNames.get(fromStoreId) ?? null,
+    toStoreName: unwrapStoreName(toJoin) ?? storeNames.get(toStoreId) ?? null,
+    fromIsHub:
+      unwrapStoreIsHub(fromJoin) ?? storeIsHub.get(fromStoreId) ?? false,
+    toIsHub: unwrapStoreIsHub(toJoin) ?? storeIsHub.get(toStoreId) ?? false,
   };
 }
 
@@ -175,22 +218,6 @@ function scopeAudience(scope: NotificationScope): NotificationAudience {
       return "livreur";
     default:
       return "store";
-  }
-}
-
-async function fetchHubTransferUnitCount(
-  supabase: ReturnType<typeof createClient>,
-  transferId: string
-): Promise<number | null> {
-  try {
-    const { data } = await supabase
-      .from("hub_stock_transfer_items")
-      .select("quantity")
-      .eq("transfer_id", transferId);
-    if (!data?.length) return null;
-    return data.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
-  } catch {
-    return null;
   }
 }
 
@@ -339,16 +366,20 @@ export function CashierNotificationsProvider({
   );
 
   const clearTransferNotification = useCallback(
-    (transferId: string) => {
-      const id = hubTransferPendingNotificationId(transferId);
+    (transferId: string, transferKind: "hub" | "store" = "hub") => {
+      const ids =
+        transferKind === "hub"
+          ? [hubTransferPendingNotificationId(transferId)]
+          : [storeTransferNotificationId(transferId, "received")];
+
       setNotifications((prev) => {
-        const next = prev.filter((n) => n.id !== id);
+        const next = prev.filter((n) => !ids.includes(n.id));
         if (next.length === prev.length) return prev;
         persist(next);
         setBarVisible(hasNotificationAttention(next));
         return next;
       });
-      dismissToast(id);
+      for (const id of ids) dismissToast(id);
     },
     [persist, dismissToast]
   );
@@ -524,7 +555,7 @@ export function CashierNotificationsProvider({
     if (scope.mode === "store") {
       filtered = filtered.filter((n) => !isStockAlertNotification(n));
     }
-    if (scope.mode === "city" || scope.mode === "director") {
+    if (scope.mode === "city") {
       filtered = filtered.filter((n) => n.kind !== "hub_transfer");
     }
     for (const n of filtered) {
@@ -698,8 +729,15 @@ export function CashierNotificationsProvider({
             row as Record<string, unknown>,
             null,
             "livreur",
-            Boolean(toStore?.is_hub),
-            isReturn ? "Retour à transférer au dépôt" : "Commande hub à livrer"
+            {
+              toIsHub: Boolean(toStore?.is_hub),
+              titleOverride: isReturn
+                ? "Retour à transférer au dépôt"
+                : "Commande hub à livrer",
+              fromStoreName: fromStore?.name ?? null,
+              toStoreName: toStore?.name ?? null,
+              phase: "received",
+            }
           )
         );
       }
@@ -750,7 +788,9 @@ export function CashierNotificationsProvider({
 
       const { data: transfers } = await supabase
         .from("hub_stock_transfers")
-        .select("id, status, notes, sent_at, from_store_id, to_store_id")
+        .select(
+          "id, status, notes, sent_at, from_store_id, to_store_id, from_store:from_store_id(name, is_hub), to_store:to_store_id(name, is_hub)"
+        )
         .eq("to_store_id", destinationStoreId)
         .neq("status", "received");
 
@@ -765,12 +805,20 @@ export function CashierNotificationsProvider({
           row.id as string
         );
         if (cancelled) return;
+        const sites = resolveTransferSites(
+          row as Record<string, unknown>,
+          storeNamesRef.current,
+          storeIsHubRef.current
+        );
         pendingNotifications.push(
           hubTransferToNotification(
             row as Record<string, unknown>,
             unitCount,
             scope.mode === "hub" ? "hub" : "store",
-            scope.mode === "hub"
+            {
+              ...sites,
+              phase: "received",
+            }
           )
         );
       }
@@ -800,6 +848,273 @@ export function CashierNotificationsProvider({
         setBarVisible(hasNotificationAttention(next));
         return next.slice(0, 80);
       });
+    }
+
+    async function fetchStoreTransferProductIds(
+      transferId: string
+    ): Promise<string[]> {
+      const { data } = await supabase
+        .from("store_stock_transfer_items")
+        .select("product_id")
+        .eq("transfer_id", transferId);
+      return (data || []).map((r) => r.product_id as string);
+    }
+
+    function mergeBootstrappedNotifications(
+      pendingNotifications: CashierNotification[],
+      kindsToPrune: CashierNotification["kind"][]
+    ) {
+      setNotifications((prev) => {
+        const pendingIds = new Set(pendingNotifications.map((n) => n.id));
+        const withoutStale = prev.filter(
+          (n) => !kindsToPrune.includes(n.kind) || pendingIds.has(n.id)
+        );
+
+        if (pendingNotifications.length === 0) {
+          const cleared = withoutStale.filter((n) => !kindsToPrune.includes(n.kind));
+          if (cleared.length === prev.length) return prev;
+          persist(cleared);
+          setBarVisible(hasNotificationAttention(cleared));
+          return cleared;
+        }
+
+        const byId = new Map(withoutStale.map((n) => [n.id, n]));
+        for (const notification of pendingNotifications) {
+          byId.set(notification.id, notification);
+          seenEventIdsRef.current.add(notification.id);
+        }
+        const next = [...byId.values()].sort(
+          (a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+        );
+        persist(next.slice(0, 80));
+        setBarVisible(hasNotificationAttention(next));
+        return next.slice(0, 80);
+      });
+    }
+
+    async function bootstrapPendingStoreTransfers() {
+      if (!scopeReceivesTransferMovements(scope)) return;
+
+      let query = supabase
+        .from("store_stock_transfers")
+        .select(
+          "id, status, notes, sent_at, from_store_id, to_store_id, from_store:from_store_id(name, is_hub), to_store:to_store_id(name, is_hub)"
+        )
+        .neq("status", "received");
+
+      if (scope.mode === "store") {
+        query = query.or(
+          `to_store_id.eq.${scope.storeId},from_store_id.eq.${scope.storeId}`
+        );
+      }
+
+      const { data: transfers } = await query;
+      if (cancelled) return;
+
+      const audience = scopeAudience(scope);
+      const pendingNotifications: CashierNotification[] = [];
+
+      for (const row of transfers || []) {
+        const fromStoreId = row.from_store_id as string;
+        const toStoreId = row.to_store_id as string;
+
+        if (scope.mode === "city") {
+          if (
+            !cityStoreIdsRef.current.has(fromStoreId) &&
+            !cityStoreIdsRef.current.has(toStoreId)
+          ) {
+            continue;
+          }
+        }
+
+        if (scope.mode === "director") {
+          if (
+            !monitoredStoreIdsRef.current.has(fromStoreId) &&
+            !monitoredStoreIdsRef.current.has(toStoreId)
+          ) {
+            continue;
+          }
+        }
+
+        const sites = resolveTransferSites(
+          row as Record<string, unknown>,
+          storeNamesRef.current,
+          storeIsHubRef.current
+        );
+        const unitCount = await fetchStoreTransferUnitCount(
+          supabase,
+          row.id as string
+        );
+        if (cancelled) return;
+
+        const isDestination =
+          scope.mode === "store"
+            ? toStoreId === scope.storeId
+            : scope.mode === "city"
+              ? cityStoreIdsRef.current.has(toStoreId)
+              : scope.mode === "director"
+                ? monitoredStoreIdsRef.current.has(toStoreId)
+                : false;
+
+        const isOrigin =
+          scope.mode === "store"
+            ? fromStoreId === scope.storeId
+            : scope.mode === "city"
+              ? cityStoreIdsRef.current.has(fromStoreId)
+              : scope.mode === "director"
+                ? monitoredStoreIdsRef.current.has(fromStoreId)
+                : false;
+
+        if (isDestination && isTransferAwaitingReceipt(row.status as string)) {
+          pendingNotifications.push(
+            storeTransferToNotification(
+              row as Record<string, unknown>,
+              unitCount,
+              audience,
+              "received",
+              sites.fromStoreName,
+              sites.toStoreName,
+              scope.mode === "store" ? scope.storeId : toStoreId,
+              {
+                fromIsHub: sites.fromIsHub,
+                toIsHub: sites.toIsHub,
+              }
+            )
+          );
+        } else if (isOrigin && isTransferSentEvent(row.status as string)) {
+          pendingNotifications.push(
+            storeTransferToNotification(
+              row as Record<string, unknown>,
+              unitCount,
+              audience,
+              "sent",
+              sites.fromStoreName,
+              sites.toStoreName,
+              fromStoreId,
+              {
+                fromIsHub: sites.fromIsHub,
+                toIsHub: sites.toIsHub,
+              }
+            )
+          );
+        }
+      }
+
+      mergeBootstrappedNotifications(pendingNotifications, ["store_transfer"]);
+    }
+
+    async function bootstrapActionableOrders() {
+      if (!scopeReceivesOrderAlerts(scope)) return;
+
+      let query = supabase
+        .from("shopify_orders")
+        .select(
+          "id, order_number, customer_name, total, workflow_status, updated_at, store_id"
+        )
+        .in("workflow_status", [
+          "pending",
+          "preparing",
+          "ready",
+          "shipping",
+          "delivered",
+        ])
+        .order("updated_at", { ascending: false })
+        .limit(40);
+
+      if (scope.mode === "store") {
+        query = query.eq("store_id", scope.storeId);
+      } else if (scope.mode === "city") {
+        const ids = [...cityStoreIdsRef.current];
+        if (ids.length === 0) return;
+        query = query.in("store_id", ids);
+      }
+
+      const { data: orders } = await query;
+      if (cancelled || !orders?.length) return;
+
+      const audience = scopeAudience(scope);
+      const pendingNotifications: CashierNotification[] = [];
+
+      for (const row of orders) {
+        const status = row.workflow_status as string;
+        if (!isActionableOrderStatus(status)) continue;
+        const storeName =
+          storeNamesRef.current.get(row.store_id as string) ?? null;
+        pendingNotifications.push(
+          orderStatusChangeNotification(
+            row as Record<string, unknown>,
+            audience,
+            storeName
+          )
+        );
+      }
+
+      mergeBootstrappedNotifications(pendingNotifications, ["order_status"]);
+    }
+
+    async function bootstrapDirectorTransfers() {
+      if (scope.mode !== "director") return;
+
+      const { data: hubTransfers } = await supabase
+        .from("hub_stock_transfers")
+        .select(
+          "id, status, notes, sent_at, from_store_id, to_store_id, from_store:from_store_id(name, is_hub), to_store:to_store_id(name, is_hub)"
+        )
+        .neq("status", "received")
+        .order("sent_at", { ascending: false })
+        .limit(40);
+
+      if (cancelled) return;
+
+      const pendingNotifications: CashierNotification[] = [];
+
+      for (const row of hubTransfers || []) {
+        const sites = resolveTransferSites(
+          row as Record<string, unknown>,
+          storeNamesRef.current,
+          storeIsHubRef.current
+        );
+        const unitCount = await fetchHubTransferUnitCount(
+          supabase,
+          row.id as string
+        );
+        if (cancelled) return;
+
+        if (isTransferAwaitingReceipt(row.status as string)) {
+          pendingNotifications.push(
+            hubTransferToNotification(
+              row as Record<string, unknown>,
+              unitCount,
+              "director",
+              {
+                ...sites,
+                phase: "received",
+              }
+            )
+          );
+        }
+
+        if (isTransferSentEvent(row.status as string)) {
+          pendingNotifications.push(
+            hubTransferSentNotification(
+              row as Record<string, unknown>,
+              unitCount,
+              "director",
+              sites.fromStoreName,
+              sites.toStoreName,
+              {
+                fromIsHub: sites.fromIsHub,
+                toIsHub: sites.toIsHub,
+              }
+            )
+          );
+        }
+      }
+
+      mergeBootstrappedNotifications(pendingNotifications, [
+        "hub_transfer",
+        "hub_transfer_sent",
+      ]);
     }
 
     async function bootstrapInventoryBaseline() {
@@ -835,6 +1150,9 @@ export function CashierNotificationsProvider({
 
         seedLastStockFromRows(rows);
         await syncStockAlertsFromRows(rows, "director");
+        await bootstrapDirectorTransfers();
+        await bootstrapPendingStoreTransfers();
+        await bootstrapActionableOrders();
         return;
       }
 
@@ -855,6 +1173,8 @@ export function CashierNotificationsProvider({
         );
         await syncStockAlertsFromRows(alertRows, "hub");
         await bootstrapPendingTransfers();
+        await bootstrapPendingStoreTransfers();
+        await bootstrapActionableOrders();
         return;
       }
 
@@ -863,13 +1183,14 @@ export function CashierNotificationsProvider({
           .from("stores")
           .select("id, name, is_hub")
           .eq("city", scope.city)
-          .eq("is_active", true)
-          .eq("is_hub", false);
+          .eq("is_active", true);
 
         if (cancelled) return;
 
         const storeList = stores || [];
-        cityStoreIdsRef.current = new Set(storeList.map((s) => s.id as string));
+        cityStoreIdsRef.current = new Set(
+          storeList.filter((s) => !s.is_hub).map((s) => s.id as string)
+        );
         storeNamesRef.current = new Map(
           storeList.map((s) => [s.id as string, s.name as string])
         );
@@ -881,12 +1202,16 @@ export function CashierNotificationsProvider({
 
         const rows = await fetchStoreInventoryAlertRows(
           supabase,
-          storeList.map((s) => ({ id: s.id as string, is_hub: false }))
+          storeList
+            .filter((s) => !s.is_hub)
+            .map((s) => ({ id: s.id as string, is_hub: false }))
         );
         if (cancelled) return;
 
         seedLastStockFromRows(rows);
         await syncStockAlertsFromRows(rows, "city");
+        await bootstrapPendingStoreTransfers();
+        await bootstrapActionableOrders();
         return;
       }
 
@@ -908,27 +1233,43 @@ export function CashierNotificationsProvider({
       );
       await syncStockAlertsFromRows(alertRows, "store");
       await bootstrapPendingTransfers();
+      await bootstrapPendingStoreTransfers();
+      await bootstrapActionableOrders();
     }
 
-    async function handleDestinationTransfer(
+    async function handleDestinationHubTransfer(
       row: Record<string, unknown>,
-      audience: "store" | "hub"
+      audience: NotificationAudience
     ) {
       const transferId = row.id as string;
       const status = row.status as string;
-      const destinationStoreId = (row.to_store_id as string) || null;
+      const fromStoreId = row.from_store_id as string;
+      const toStoreId = row.to_store_id as string;
+      const destinationStoreId = toStoreId || null;
+
+      if (scope.mode === "director" || scope.mode === "city") {
+        const inScope =
+          scope.mode === "director"
+            ? monitoredStoreIdsRef.current.has(fromStoreId) ||
+              monitoredStoreIdsRef.current.has(toStoreId)
+            : cityStoreIdsRef.current.has(fromStoreId) ||
+              cityStoreIdsRef.current.has(toStoreId);
+        if (!inScope) return;
+      }
+      const sites = resolveTransferSites(
+        row,
+        storeNamesRef.current,
+        storeIsHubRef.current
+      );
 
       if (!isTransferAwaitingReceipt(status)) {
-        clearTransferNotification(transferId);
-        // Transfert reçu/annulé : les produits ne sont plus « en cours de réception ».
+        clearTransferNotification(transferId, "hub");
         const productIds = await fetchHubTransferProductIds(transferId);
         productIds.forEach((id) => pendingIncomingProductIdsRef.current.delete(id));
         scheduleRouterRefresh();
         return;
       }
 
-      // Transfert envoyé vers le magasin : marquer les produits « en cours » et
-      // retirer leurs alertes de rupture (ils sont déjà commandés / en route).
       const productIds = await fetchHubTransferProductIds(transferId);
       if (destinationStoreId) {
         productIds.forEach((id) => {
@@ -938,14 +1279,226 @@ export function CashierNotificationsProvider({
       }
 
       const unitCount = await fetchHubTransferUnitCount(supabase, transferId);
-      const notification = hubTransferToNotification(
-        row,
-        unitCount,
-        audience,
-        audience === "hub"
-      );
+      const notification = hubTransferToNotification(row, unitCount, audience, {
+        ...sites,
+        toIsHub: sites.toIsHub || audience === "hub",
+        phase: "received",
+      });
       seenEventIdsRef.current.add(notification.id);
       pushNotification(notification);
+      scheduleRouterRefresh();
+    }
+
+    async function handleSentHubTransfer(
+      row: Record<string, unknown>,
+      audience: NotificationAudience
+    ) {
+      const transferId = row.id as string;
+      const status = row.status as string;
+      const fromStoreId = row.from_store_id as string;
+      const toStoreId = row.to_store_id as string;
+
+      if (scope.mode === "director" || scope.mode === "city") {
+        const inScope =
+          scope.mode === "director"
+            ? monitoredStoreIdsRef.current.has(fromStoreId) ||
+              monitoredStoreIdsRef.current.has(toStoreId)
+            : cityStoreIdsRef.current.has(fromStoreId) ||
+              cityStoreIdsRef.current.has(toStoreId);
+        if (!inScope) return;
+      }
+
+      if (!isTransferSentEvent(status)) return;
+
+      const id = hubTransferSentNotificationId(transferId);
+      if (seenEventIdsRef.current.has(id)) return;
+      seenEventIdsRef.current.add(id);
+
+      const sites = resolveTransferSites(
+        row,
+        storeNamesRef.current,
+        storeIsHubRef.current
+      );
+      const unitCount = await fetchHubTransferUnitCount(supabase, transferId);
+
+      pushNotification(
+        hubTransferSentNotification(
+          row,
+          unitCount,
+          audience,
+          sites.fromStoreName,
+          sites.toStoreName,
+          {
+            fromIsHub: sites.fromIsHub,
+            toIsHub: sites.toIsHub,
+          }
+        )
+      );
+      scheduleRouterRefresh();
+    }
+
+    async function handleStoreTransfer(
+      row: Record<string, unknown>,
+      audience: NotificationAudience,
+      perspectiveStoreId?: string
+    ) {
+      const transferId = row.id as string;
+      const status = row.status as string;
+      const fromStoreId = row.from_store_id as string;
+      const toStoreId = row.to_store_id as string;
+
+      if (scope.mode === "director" || scope.mode === "city") {
+        const inScope =
+          scope.mode === "director"
+            ? monitoredStoreIdsRef.current.has(fromStoreId) ||
+              monitoredStoreIdsRef.current.has(toStoreId)
+            : cityStoreIdsRef.current.has(fromStoreId) ||
+              cityStoreIdsRef.current.has(toStoreId);
+        if (!inScope) return;
+      }
+
+      const sites = resolveTransferSites(
+        row,
+        storeNamesRef.current,
+        storeIsHubRef.current
+      );
+      const unitCount = await fetchStoreTransferUnitCount(supabase, transferId);
+
+      if (!isTransferAwaitingReceipt(status)) {
+        clearTransferNotification(transferId, "store");
+        const productIds = await fetchStoreTransferProductIds(transferId);
+        productIds.forEach((id) => pendingIncomingProductIdsRef.current.delete(id));
+        scheduleRouterRefresh();
+        return;
+      }
+
+      const isDestination =
+        perspectiveStoreId != null
+          ? toStoreId === perspectiveStoreId
+          : scope.mode === "store"
+            ? toStoreId === scope.storeId
+            : cityStoreIdsRef.current.has(toStoreId) ||
+              monitoredStoreIdsRef.current.has(toStoreId);
+
+      if (isDestination) {
+        const productIds = await fetchStoreTransferProductIds(transferId);
+        productIds.forEach((id) => {
+          pendingIncomingProductIdsRef.current.add(id);
+          clearStockAlerts(toStoreId, id);
+        });
+
+        const notification = storeTransferToNotification(
+          row,
+          unitCount,
+          audience,
+          "received",
+          sites.fromStoreName,
+          sites.toStoreName,
+          toStoreId,
+          {
+            fromIsHub: sites.fromIsHub,
+            toIsHub: sites.toIsHub,
+          }
+        );
+        seenEventIdsRef.current.add(notification.id);
+        pushNotification(notification);
+        scheduleRouterRefresh();
+        return;
+      }
+
+      const isOrigin =
+        perspectiveStoreId != null
+          ? fromStoreId === perspectiveStoreId
+          : scope.mode === "store"
+            ? fromStoreId === scope.storeId
+            : cityStoreIdsRef.current.has(fromStoreId) ||
+              monitoredStoreIdsRef.current.has(fromStoreId);
+
+      if (isOrigin && isTransferSentEvent(status)) {
+        const id = storeTransferNotificationId(transferId, "sent");
+        if (seenEventIdsRef.current.has(id)) return;
+        seenEventIdsRef.current.add(id);
+        pushNotification(
+          storeTransferToNotification(
+            row,
+            unitCount,
+            audience,
+            "sent",
+            sites.fromStoreName,
+            sites.toStoreName,
+            fromStoreId,
+            {
+              fromIsHub: sites.fromIsHub,
+              toIsHub: sites.toIsHub,
+            }
+          )
+        );
+        scheduleRouterRefresh();
+      }
+    }
+
+    function handleOrderInsert(
+      row: Record<string, unknown>,
+      audience: NotificationAudience
+    ) {
+      const storeId = row.store_id as string;
+      if (scope.mode === "city" && !cityStoreIdsRef.current.has(storeId)) return;
+      if (scope.mode === "director" && !monitoredStoreIdsRef.current.has(storeId)) {
+        return;
+      }
+
+      const id = notificationKey(row.id as string, "order_new");
+      if (seenEventIdsRef.current.has(id)) return;
+      seenEventIdsRef.current.add(id);
+      pushNotification(orderRowToNotification(row, "order_new", audience));
+      scheduleRouterRefresh();
+    }
+
+    function handleOrderUpdate(
+      row: Record<string, unknown>,
+      oldRow: Record<string, unknown> | undefined,
+      audience: NotificationAudience,
+      storeIdFilter?: string
+    ) {
+      const storeId = row.store_id as string;
+
+      if (storeIdFilter) {
+        const transferred =
+          oldRow?.store_id != null &&
+          oldRow.store_id !== storeIdFilter &&
+          storeId === storeIdFilter;
+
+        if (transferred) {
+          const id = notificationKey(row.id as string, "order_transferred");
+          if (!seenEventIdsRef.current.has(id)) {
+            seenEventIdsRef.current.add(id);
+            pushNotification(
+              orderRowToNotification(row, "order_transferred", audience)
+            );
+            scheduleRouterRefresh();
+          }
+          return;
+        }
+
+        if (storeId !== storeIdFilter) return;
+      } else {
+        if (scope.mode === "city" && !cityStoreIdsRef.current.has(storeId)) return;
+        if (scope.mode === "director" && !monitoredStoreIdsRef.current.has(storeId)) {
+          return;
+        }
+      }
+
+      const oldStatus = oldRow?.workflow_status as string | undefined;
+      const newStatus = row.workflow_status as string;
+      if (!newStatus || oldStatus === newStatus) return;
+      if (!isActionableOrderStatus(newStatus)) return;
+
+      const id = orderStatusNotificationId(row.id as string, newStatus);
+      if (seenEventIdsRef.current.has(id)) return;
+      seenEventIdsRef.current.add(id);
+
+      const storeName = storeNamesRef.current.get(storeId) ?? null;
+      pushNotification(orderStatusChangeNotification(row, audience, storeName));
       scheduleRouterRefresh();
     }
 
@@ -968,12 +1521,7 @@ export function CashierNotificationsProvider({
             filter: `store_id=eq.${storeId}`,
           },
           (payload) => {
-            const row = payload.new as Record<string, unknown>;
-            const id = notificationKey(row.id as string, "order_new");
-            if (seenEventIdsRef.current.has(id)) return;
-            seenEventIdsRef.current.add(id);
-            pushNotification(orderRowToNotification(row, "order_new"));
-            scheduleRouterRefresh();
+            handleOrderInsert(payload.new as Record<string, unknown>, "store");
           }
         )
         .on(
@@ -985,22 +1533,42 @@ export function CashierNotificationsProvider({
             filter: `store_id=eq.${storeId}`,
           },
           (payload) => {
-            const row = payload.new as Record<string, unknown>;
-            const oldRow = payload.old as Record<string, unknown>;
-
-            const transferred =
-              oldRow.store_id != null &&
-              oldRow.store_id !== storeId &&
-              row.store_id === storeId;
-
-            if (!transferred) return;
-
-            const id = notificationKey(row.id as string, "order_transferred");
-            if (seenEventIdsRef.current.has(id)) return;
-            seenEventIdsRef.current.add(id);
-
-            pushNotification(orderRowToNotification(row, "order_transferred"));
-            scheduleRouterRefresh();
+            handleOrderUpdate(
+              payload.new as Record<string, unknown>,
+              payload.old as Record<string, unknown>,
+              "store",
+              storeId
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "store_inventory",
+            filter: `store_id=eq.${storeId}`,
+          },
+          (payload) => {
+            void handleInventoryRow(
+              payload.new as Record<string, unknown>,
+              undefined
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "store_inventory",
+            filter: `store_id=eq.${storeId}`,
+          },
+          (payload) => {
+            void handleInventoryRow(
+              payload.new as Record<string, unknown>,
+              payload.old as Record<string, unknown>
+            );
           }
         )
         .on(
@@ -1014,7 +1582,7 @@ export function CashierNotificationsProvider({
           async (payload) => {
             const row = payload.new as Record<string, unknown>;
             if (!isTransferAwaitingReceipt(row.status as string)) return;
-            await handleDestinationTransfer(row, "store");
+            await handleDestinationHubTransfer(row, "store");
           }
         )
         .on(
@@ -1026,9 +1594,73 @@ export function CashierNotificationsProvider({
             filter: `to_store_id=eq.${storeId}`,
           },
           async (payload) => {
-            await handleDestinationTransfer(
+            await handleDestinationHubTransfer(
               payload.new as Record<string, unknown>,
               "store"
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "store_stock_transfers",
+            filter: `to_store_id=eq.${storeId}`,
+          },
+          async (payload) => {
+            await handleStoreTransfer(
+              payload.new as Record<string, unknown>,
+              "store",
+              storeId
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "store_stock_transfers",
+            filter: `to_store_id=eq.${storeId}`,
+          },
+          async (payload) => {
+            await handleStoreTransfer(
+              payload.new as Record<string, unknown>,
+              "store",
+              storeId
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "store_stock_transfers",
+            filter: `from_store_id=eq.${storeId}`,
+          },
+          async (payload) => {
+            await handleStoreTransfer(
+              payload.new as Record<string, unknown>,
+              "store",
+              storeId
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "store_stock_transfers",
+            filter: `from_store_id=eq.${storeId}`,
+          },
+          async (payload) => {
+            await handleStoreTransfer(
+              payload.new as Record<string, unknown>,
+              "store",
+              storeId
             );
           }
         );
@@ -1043,13 +1675,39 @@ export function CashierNotificationsProvider({
           {
             event: "INSERT",
             schema: "public",
+            table: "shopify_orders",
+          },
+          (payload) => {
+            handleOrderInsert(payload.new as Record<string, unknown>, "hub");
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "shopify_orders",
+          },
+          (payload) => {
+            handleOrderUpdate(
+              payload.new as Record<string, unknown>,
+              payload.old as Record<string, unknown>,
+              "hub"
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
             table: "hub_stock_transfers",
             filter: `to_store_id=eq.${hubStoreId}`,
           },
           async (payload) => {
             const row = payload.new as Record<string, unknown>;
             if (!isTransferAwaitingReceipt(row.status as string)) return;
-            await handleDestinationTransfer(row, "hub");
+            await handleDestinationHubTransfer(row, "hub");
           }
         )
         .on(
@@ -1061,9 +1719,101 @@ export function CashierNotificationsProvider({
             filter: `to_store_id=eq.${hubStoreId}`,
           },
           async (payload) => {
-            await handleDestinationTransfer(
+            await handleDestinationHubTransfer(
               payload.new as Record<string, unknown>,
               "hub"
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "hub_stock_transfers",
+            filter: `from_store_id=eq.${hubStoreId}`,
+          },
+          async (payload) => {
+            await handleSentHubTransfer(
+              payload.new as Record<string, unknown>,
+              "hub"
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "hub_stock_transfers",
+            filter: `from_store_id=eq.${hubStoreId}`,
+          },
+          async (payload) => {
+            await handleSentHubTransfer(
+              payload.new as Record<string, unknown>,
+              "hub"
+            );
+          }
+        );
+    }
+
+    if (scope.mode === "city" || scope.mode === "director") {
+      const audience = scopeAudience(scope);
+
+      channel
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "shopify_orders" },
+          (payload) => {
+            handleOrderInsert(payload.new as Record<string, unknown>, audience);
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "shopify_orders" },
+          (payload) => {
+            handleOrderUpdate(
+              payload.new as Record<string, unknown>,
+              payload.old as Record<string, unknown>,
+              audience
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "hub_stock_transfers" },
+          async (payload) => {
+            const row = payload.new as Record<string, unknown>;
+            await handleDestinationHubTransfer(row, audience);
+            await handleSentHubTransfer(row, audience);
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "hub_stock_transfers" },
+          async (payload) => {
+            const row = payload.new as Record<string, unknown>;
+            await handleDestinationHubTransfer(row, audience);
+            await handleSentHubTransfer(row, audience);
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "store_stock_transfers" },
+          async (payload) => {
+            await handleStoreTransfer(
+              payload.new as Record<string, unknown>,
+              audience
+            );
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "store_stock_transfers" },
+          async (payload) => {
+            await handleStoreTransfer(
+              payload.new as Record<string, unknown>,
+              audience
             );
           }
         );
@@ -1095,13 +1845,11 @@ export function CashierNotificationsProvider({
             );
 
             pushNotification(
-              hubTransferToNotification(
-                row,
-                unitCount,
-                "livreur",
-                false,
-                "Nouveau transfert assigné"
-              )
+              hubTransferToNotification(row, unitCount, "livreur", {
+                toIsHub: false,
+                titleOverride: "Nouveau transfert assigné",
+                phase: "received",
+              })
             );
             scheduleRouterRefresh();
           }
@@ -1134,13 +1882,11 @@ export function CashierNotificationsProvider({
             );
 
             pushNotification(
-              hubTransferToNotification(
-                row,
-                unitCount,
-                "livreur",
-                false,
-                "Transfert prêt à récupérer"
-              )
+              hubTransferToNotification(row, unitCount, "livreur", {
+                toIsHub: false,
+                titleOverride: "Transfert prêt à récupérer",
+                phase: "received",
+              })
             );
             scheduleRouterRefresh();
           }
@@ -1277,15 +2023,11 @@ export function CashierNotificationsProvider({
       const notification = notifications.find((n) => n.id === id);
       if (!notification) return;
 
-      if (!isPersistentNotification(notification)) {
-        markRead(id);
-      } else {
-        dismissToast(id);
-      }
+      dismissToast(id);
       setOpenPanel(false);
       openHandlerRef.current?.(notification);
     },
-    [dismissToast, markRead, notifications]
+    [dismissToast, notifications]
   );
 
   const dismissBar = useCallback(() => {

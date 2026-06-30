@@ -21,6 +21,7 @@ import { RealtimeRefresh } from "@/components/realtime/realtime-refresh";
 import { CashierNotificationsProvider } from "@/components/notifications/cashier-notifications-context";
 import { CashierNotificationBar } from "@/components/notifications/cashier-notification-bar";
 import { CashierNotificationBell } from "@/components/notifications/cashier-notification-bell";
+import { NotificationViewBanner } from "@/components/notifications/notification-view-banner";
 import type { NotificationScope } from "@/lib/notifications/notification-scope";
 import { resolveNotificationScope } from "@/lib/notifications/notification-scope";
 import { getSettingsPath } from "@/lib/layout/settings-path";
@@ -170,6 +171,7 @@ export function DashboardShell({
                   <CashierNotificationBell />
                 </div>
                 <CashierNotificationBar />
+                <NotificationViewBanner />
               </>
             )}
             {isPos && !planningOnlyActive ? (

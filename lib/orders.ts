@@ -77,6 +77,44 @@ async function attachStoreNamesToOrders(
   }));
 }
 
+async function attachLivreurNamesToOrders(
+  orders: ShopifyOrder[]
+): Promise<ShopifyOrder[]> {
+  const livreurIds = [
+    ...new Set(
+      orders.map((order) => order.assigned_livreur_id).filter(Boolean)
+    ),
+  ] as string[];
+
+  if (livreurIds.length === 0) return orders;
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { data: profiles, error } = await admin
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", livreurIds);
+
+  if (error) {
+    console.error("attachLivreurNamesToOrders:", error.message);
+    return orders;
+  }
+
+  const byId = Object.fromEntries(
+    (profiles || []).map((profile) => [
+      profile.id,
+      profile.full_name || profile.email || null,
+    ])
+  );
+
+  return orders.map((order) => ({
+    ...order,
+    assigned_livreur_name: order.assigned_livreur_id
+      ? byId[order.assigned_livreur_id] ?? null
+      : null,
+  }));
+}
+
 export async function getShopifyOrders(
   profile: Profile,
   query: OrdersQuery = {}
@@ -153,14 +191,14 @@ export async function getShopifyOrders(
   }
 
   if (isDirector(profile) || isManager(profile)) {
-    return attachStoreNamesToOrders(orders);
+    orders = await attachStoreNamesToOrders(orders);
   }
 
   if (profile.role === "livreur") {
-    return attachStoreNamesToOrders(orders);
+    orders = await attachStoreNamesToOrders(orders);
   }
 
-  return orders;
+  return attachLivreurNamesToOrders(orders);
 }
 
 export async function loadShopifyOrderForPos(

@@ -438,6 +438,7 @@ export interface ShopifyOrder {
   transferred_at: string | null;
   transferred_by: string | null;
   assigned_livreur_id: string | null;
+  assigned_livreur_name?: string | null;
   return_note: string | null;
   return_note_at: string | null;
   return_note_by: string | null;

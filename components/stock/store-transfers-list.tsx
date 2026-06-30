@@ -20,6 +20,7 @@ import {
   storeTransferStatusLabel,
   storeTransferStatusVariant,
 } from "@/lib/store-transfer-status";
+import { TransferAssignedLivreur } from "@/components/stock/transfer-assigned-livreur";
 import { formatDate } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Profile, StoreStockTransfer } from "@/lib/types";
@@ -140,8 +141,14 @@ export function StoreTransfersList({
               return (
                 <tr key={transfer.id} className="border-b border-border last:border-b-0">
                   <td className="px-6 py-4 whitespace-nowrap">{formatDate(transfer.sent_at)}</td>
-                  <td className="px-6 py-4 font-medium">{transfer.from_store_name || "—"}</td>
-                  <td className="px-6 py-4 font-medium">{transfer.to_store_name || "—"}</td>
+                  <td className="px-6 py-4">
+                    <p className="font-medium">{transfer.from_store_name || "—"}</p>
+                    <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="font-medium">{transfer.to_store_name || "—"}</p>
+                    <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
+                  </td>
                   <td className="px-6 py-4">
                     <ul className="space-y-1">
                       {transfer.items.slice(0, 3).map((item) => (
@@ -169,11 +176,6 @@ export function StoreTransfersList({
                     <Badge variant={storeTransferStatusVariant(transfer.status)}>
                       {storeTransferStatusLabel(transfer.status)}
                     </Badge>
-                    {transfer.assigned_livreur_name && (
-                      <p className="mt-1 text-xs text-muted">
-                        Livreur : {transfer.assigned_livreur_name}
-                      </p>
-                    )}
                     {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
                   </td>
                   <td className="px-6 py-4 text-right font-medium">{transfer.total_units}</td>

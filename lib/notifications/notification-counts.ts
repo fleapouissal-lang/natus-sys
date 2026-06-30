@@ -5,7 +5,10 @@ export function isStockAlertNotification(n: CashierNotification): boolean {
 }
 
 export function isPendingTransferNotification(n: CashierNotification): boolean {
-  return n.kind === "hub_transfer";
+  return (
+    n.kind === "hub_transfer" ||
+    (n.kind === "store_transfer" && n.transferPhase === "received")
+  );
 }
 
 /** Reste affichée jusqu'à résolution (stock réapprovisionné ou transfert reçu). */

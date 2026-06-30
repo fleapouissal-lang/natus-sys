@@ -19,11 +19,41 @@ export function scopeReceivesStockAlertsForStore(
     : scopeReceivesRetailStockAlerts(scope);
 }
 
-/** Transferts envoyés : magasin ou dépôt destinataire (pas gérant city, pas directeur). */
+/** Transferts entrants en attente de réception : magasin ou dépôt destinataire. */
 export function scopeReceivesTransferAlerts(scope: NotificationScope): boolean {
   return scope.mode === "store" || scope.mode === "hub";
 }
 
+/** Visibilité des mouvements de stock (envoyés + reçus) pour hub, gérant et directeur. */
+export function scopeReceivesTransferMovements(scope: NotificationScope): boolean {
+  return (
+    scope.mode === "hub" ||
+    scope.mode === "city" ||
+    scope.mode === "director" ||
+    scope.mode === "store"
+  );
+}
+
+/** Notifications commandes en ligne (hors caisse POS seule). */
+export function scopeReceivesOrderAlerts(scope: NotificationScope): boolean {
+  return (
+    scope.mode === "store" ||
+    scope.mode === "city" ||
+    scope.mode === "director" ||
+    scope.mode === "hub"
+  );
+}
+
 export function isTransferAwaitingReceipt(status: string): boolean {
   return status !== "received";
+}
+
+export function isTransferSentEvent(status: string): boolean {
+  return (
+    status === "en_cours" ||
+    status === "pret" ||
+    status === "en_livraison" ||
+    status === "livre" ||
+    status === "sent"
+  );
 }

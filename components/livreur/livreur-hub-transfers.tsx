@@ -19,7 +19,6 @@ import {
 } from "@/lib/hub-transfer-status";
 import {
   hubTransferDirection,
-  hubTransferDirectionLabel,
   hubTransferPickupHint,
   hubTransferValidationHint,
 } from "@/lib/hub-transfer-direction";
@@ -28,6 +27,12 @@ import {
   storeTransferStatusVariant,
 } from "@/lib/store-transfer-status";
 import { formatDate } from "@/lib/utils";
+import {
+  formatTransferRouteLine,
+  hubTransferRouteLabels,
+  storeTransferRouteLabels,
+} from "@/lib/transfer-route-labels";
+import { TransferRouteSummary } from "@/components/stock/transfer-route-summary";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { HubStockTransfer, StoreStockTransfer } from "@/lib/types";
 
@@ -137,14 +142,16 @@ export function LivreurHubTransfers({
         <Card className="py-12 text-center text-muted">Aucun transfert assigné</Card>
       ) : (
         <div className="space-y-4">
-          {storeTransfers.map((transfer) => (
+          {storeTransfers.map((transfer) => {
+            const route = storeTransferRouteLabels(transfer);
+            return (
             <Card key={`store-${transfer.id}`} padding={false}>
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-4">
                 <div>
                   <div className="flex items-center gap-2">
                     <Truck className="h-5 w-5 text-primary" />
                     <h2 className="text-lg font-semibold">
-                      {transfer.from_store_name} → {transfer.to_store_name}
+                      {formatTransferRouteLine(route.source, route.destination)}
                     </h2>
                     <Badge variant={storeTransferStatusVariant(transfer.status)}>
                       {storeTransferStatusLabel(transfer.status)}
@@ -156,7 +163,10 @@ export function LivreurHubTransfers({
                     {transfer.items.length} produit{transfer.items.length !== 1 ? "s" : ""},{" "}
                     {transfer.total_units} unité{transfer.total_units !== 1 ? "s" : ""}
                   </p>
-                  <p className="mt-2 text-sm text-muted">Transfert stock magasin → magasin</p>
+                  <TransferRouteSummary
+                    source={route.source}
+                    destination={route.destination}
+                  />
                 </div>
 
                 {transfer.status === "pret" && (
@@ -203,11 +213,13 @@ export function LivreurHubTransfers({
                 </table>
               </div>
             </Card>
-          ))}
+            );
+          })}
 
           {paginatedTransfers.map((transfer) => {
             const direction = hubTransferDirection(transfer);
             const validationHint = hubTransferValidationHint(direction, transfer.status);
+            const route = hubTransferRouteLabels(transfer);
 
             return (
               <Card key={transfer.id} padding={false}>
@@ -216,7 +228,7 @@ export function LivreurHubTransfers({
                     <div className="flex items-center gap-2">
                       <Truck className="h-5 w-5 text-primary" />
                       <h2 className="text-lg font-semibold">
-                        {hubTransferDirectionLabel(transfer)}
+                        {formatTransferRouteLine(route.source, route.destination)}
                       </h2>
                       <Badge variant={hubTransferStatusVariant(transfer.status)}>
                         {hubTransferStatusLabel(transfer.status)}
@@ -228,6 +240,10 @@ export function LivreurHubTransfers({
                       {transfer.items.length} produit{transfer.items.length !== 1 ? "s" : ""},{" "}
                       {transfer.total_units} unité{transfer.total_units !== 1 ? "s" : ""}
                     </p>
+                    <TransferRouteSummary
+                      source={route.source}
+                      destination={route.destination}
+                    />
                     <p className="mt-2 text-sm text-muted">{hubTransferPickupHint(direction)}</p>
                     {validationHint && (
                       <p className="mt-1 text-sm font-medium text-primary">{validationHint}</p>

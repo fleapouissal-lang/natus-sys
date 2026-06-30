@@ -2946,6 +2946,15 @@ table.natus-print-table tfoot {
   letter-spacing: 0.01em;
 }
 
+.natus-notification-panel__header {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(250, 234, 161, 0.28) 0%,
+      rgba(255, 253, 249, 0.92) 100%
+    );
+}
+
 /* ── Preloader démarrage ── */
 html.natus-is-loading {
   overflow: hidden;

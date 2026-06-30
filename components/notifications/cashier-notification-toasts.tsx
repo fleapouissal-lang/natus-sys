@@ -37,7 +37,7 @@ export function CashierNotificationToasts() {
               </span>
               <span className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-foreground">
-                  {notificationHeadline(n.kind, true)}
+                  {notificationHeadline(n, true)}
                 </p>
                 <p className="truncate text-sm text-muted">
                   {n.title}

@@ -68,6 +68,47 @@ function mapTransferRow(row: Record<string, unknown>): HubStockTransfer {
   };
 }
 
+async function enrichHubTransferNames(
+  transfers: HubStockTransfer[]
+): Promise<HubStockTransfer[]> {
+  const missingIds = new Set<string>();
+  for (const transfer of transfers) {
+    if (!transfer.from_store_name) missingIds.add(transfer.from_store_id);
+    if (!transfer.to_store_name) missingIds.add(transfer.to_store_id);
+  }
+  if (missingIds.size === 0) return transfers;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("stores")
+    .select("id, name, city, is_hub")
+    .in("id", [...missingIds]);
+
+  if (error || !data?.length) return transfers;
+
+  const storeById = new Map(
+    data.map((store) => [
+      store.id as string,
+      store as { id: string; name: string; city: string; is_hub: boolean },
+    ])
+  );
+
+  return transfers.map((transfer) => {
+    const fromStore = storeById.get(transfer.from_store_id);
+    const toStore = storeById.get(transfer.to_store_id);
+    return {
+      ...transfer,
+      from_store_name: transfer.from_store_name || fromStore?.name || null,
+      to_store_name: transfer.to_store_name || toStore?.name || null,
+      from_store_city: transfer.from_store_city || fromStore?.city || null,
+      to_store_city: transfer.to_store_city || toStore?.city || null,
+      from_store_is_hub:
+        transfer.from_store_is_hub ?? Boolean(fromStore?.is_hub),
+      to_store_is_hub: transfer.to_store_is_hub ?? Boolean(toStore?.is_hub),
+    };
+  });
+}
+
 const TRANSFER_SELECT = `
   id,
   from_store_id,
@@ -185,7 +226,9 @@ export async function getLivreurHubTransfers(livreurId: string): Promise<HubStoc
     return [];
   }
 
-  return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+  return enrichHubTransferNames(
+    (data || []).map((row) => mapTransferRow(row as Record<string, unknown>))
+  );
 }
 
 /** Transferts dépôt ↔ magasin livrés/reçus assignés au livreur (historique). */
@@ -207,7 +250,9 @@ export async function getLivreurHubTransferHistory(
     return [];
   }
 
-  return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+  return enrichHubTransferNames(
+    (data || []).map((row) => mapTransferRow(row as Record<string, unknown>))
+  );
 }
 
 export async function getHubTransferById(transferId: string): Promise<HubStockTransfer | null> {

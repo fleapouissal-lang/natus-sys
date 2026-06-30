@@ -113,7 +113,7 @@ async function enrichStoreTransferNames(
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("stores")
-    .select("id, name, city")
+    .select("id, name, city, is_hub")
     .in("id", [...missingIds]);
 
   if (error || !data?.length) return transfers;

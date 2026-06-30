@@ -18,7 +18,7 @@ export function showBrowserOrderNotification(notification: CashierNotification) 
   if (document.visibilityState === "visible") return;
 
   try {
-    const n = new Notification(`${notificationHeadline(notification.kind, true)} — Natus`, {
+    const n = new Notification(`${notificationHeadline(notification, true)} — Natus`, {
       body: formatNotificationSummary(notification),
       tag: notification.id,
       silent: true,

@@ -64,7 +64,7 @@ import { getStorePosDayState } from "@/lib/sales/store-day-closure-actions";
 import { formatDayClosureDate } from "@/lib/sales/day-closure";
 import { QuantityHoldButton } from "@/components/pos/quantity-hold-button";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
-import { notificationHref } from "@/lib/notifications/display";
+import { notificationTargetHref } from "@/lib/notifications/display";
 import { CountBadge } from "@/components/ui/count-badge";
 import { completeSale, completeShopifyOrderSale, prepareShopifyOrderForPos, lookupLoyaltyCustomerByScan } from "@/lib/actions";
 import { INVOICE_CLIENT_DIVERS } from "@/lib/constants/invoice";
@@ -261,7 +261,7 @@ export function PosTerminal({
     if (!orderNotifications) return;
     orderNotifications.setNotificationOpenHandler((notification) => {
       if (notification.kind === "hub_transfer") {
-        router.push(notificationHref(notification.kind, notification.audience));
+        router.push(notificationTargetHref(notification));
         return;
       }
       if (
@@ -1441,7 +1441,7 @@ export function PosTerminal({
                   onViewNotification={(notification) => {
                     if (notification.kind === "hub_transfer") {
                       router.push(
-                        notificationHref(notification.kind, notification.audience)
+                        notificationTargetHref(notification)
                       );
                       return;
                     }
@@ -1507,7 +1507,7 @@ export function PosTerminal({
                               onSelect={(notification) => {
                                 if (notification.kind === "hub_transfer") {
                                   router.push(
-                                    notificationHref(notification.kind, notification.audience)
+                                    notificationTargetHref(notification)
                                   );
                                   return;
                                 }
@@ -1530,7 +1530,7 @@ export function PosTerminal({
                           onSelect={(notification) => {
                             if (notification.kind === "hub_transfer") {
                               router.push(
-                                notificationHref(notification.kind, notification.audience)
+                                notificationTargetHref(notification)
                               );
                               return;
                             }

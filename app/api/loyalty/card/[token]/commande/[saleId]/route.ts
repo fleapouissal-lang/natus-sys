@@ -12,7 +12,10 @@ export async function GET(
   const order = await getPublicCustomerOrderDetail(token, saleId);
 
   if (!order) {
-    return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Facture introuvable ou en attente de validation" },
+      { status: 404 }
+    );
   }
 
   return applyPrivateCacheHeaders(NextResponse.json({ order }));

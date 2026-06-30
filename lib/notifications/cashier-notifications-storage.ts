@@ -1,7 +1,7 @@
 import type { CashierNotification } from "@/lib/notifications/types";
 
 const MAX_STORED = 50;
-const STORAGE_VERSION = 3;
+const STORAGE_VERSION = 4;
 
 function storageKey(scopeKey: string) {
   return `natus-notifications-v${STORAGE_VERSION}-${scopeKey}`;

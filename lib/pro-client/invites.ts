@@ -34,7 +34,7 @@ export async function getAllProClients(): Promise<LoyaltyCustomer[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("customers")
-    .select("*")
+    .select("*, stores:store_id(name, city)")
     .eq("is_pro_client", true)
     .order("created_at", { ascending: true });
 

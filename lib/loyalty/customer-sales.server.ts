@@ -5,6 +5,7 @@ import type { Sale } from "@/lib/types";
 import { isValidLoyaltyQrToken } from "@/lib/loyalty/public";
 import { SALE_HISTORY_SELECT } from "@/lib/sales/sale-select";
 import type { CustomerSaleDetail, CustomerSaleSummary } from "@/lib/loyalty/customer-sales";
+import { isSaleInvoiceValidated } from "@/lib/sales/invoice-validation";
 
 function mapOrderRow(row: Record<string, unknown>): CustomerSaleSummary {
   return {
@@ -109,6 +110,10 @@ export async function getPublicCustomerOrderDetail(
   }
 
   const row = data as Record<string, unknown>;
+  if (!isSaleInvoiceValidated({ invoice_validated_at: row.invoice_validated_at as string | null })) {
+    return null;
+  }
+
   return {
     id: String(row.id),
     total: Number(row.total),

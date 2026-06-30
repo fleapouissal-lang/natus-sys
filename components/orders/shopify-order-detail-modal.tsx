@@ -11,6 +11,7 @@ import {
   Store,
   CreditCard,
   ShoppingCart,
+  UserRound,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ import {
   type ProductLineLookup,
 } from "@/lib/shopify/order-cart";
 import { isConfirmationFollowUpResolved } from "@/lib/shopify/confirmation-follow-up";
+import { orderDeliveredLivreurName } from "@/lib/shopify/order-livreur";
 import type { ShopifyOrder } from "@/lib/types";
 
 function statusVariant(
@@ -65,6 +67,7 @@ export function ShopifyOrderDetailModal({
   const isCod = order.payment_type === "cod";
   const confirmationResolved = isConfirmationFollowUpResolved(order);
   const storeName = (order.stores as { name: string } | null)?.name;
+  const deliveredLivreur = orderDeliveredLivreurName(order);
   const canSendToPos =
     enablePosCheckout &&
     !isShopifyOrderFulfilled(order) &&
@@ -216,6 +219,15 @@ export function ShopifyOrderDetailModal({
                   Magasin assigné
                 </dt>
                 <dd>{storeName}</dd>
+              </div>
+            )}
+            {deliveredLivreur && (
+              <div>
+                <dt className="flex items-center gap-1 text-muted">
+                  <UserRound className="h-3.5 w-3.5" />
+                  Livré par
+                </dt>
+                <dd className="font-medium">{deliveredLivreur}</dd>
               </div>
             )}
           </dl>

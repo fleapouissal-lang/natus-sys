@@ -801,7 +801,9 @@ export function LoyaltyCardPortal({
               <div className="rounded-2xl border border-border bg-surface shadow-sm">
                 <div className="border-b border-border px-5 py-4">
                   <h2 className="text-sm font-semibold text-foreground">Mes factures</h2>
-                  <p className="mt-0.5 text-xs text-muted">Achats enregistrés en magasin</p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    Factures validées par notre équipe — visibles dès validation
+                  </p>
                 </div>
                 {loadingInvoices ? (
                   <div className="space-y-2 p-4">
@@ -816,7 +818,7 @@ export function LoyaltyCardPortal({
                   <EmptySection
                     icon={Receipt}
                     title="Aucune facture"
-                    description="Vos tickets et factures d'achat apparaîtront ici après passage en caisse."
+                    description="Vos factures apparaîtront ici une fois validées par notre équipe."
                   />
                 ) : (
                   <ul className="divide-y divide-border">

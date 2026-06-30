@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Banknote, Eye, Loader2, MessageSquare, Phone, RotateCcw, Search, ShoppingCart, Truck, Wallet, PackageCheck, ArrowRightLeft, Pencil } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { OrderMobileCard } from "@/components/orders/order-mobile-card";
+import { OrderDeliveredLivreur } from "@/components/orders/order-delivered-livreur";
+import { OrderDeliveryRoute } from "@/components/orders/order-delivery-route";
 import { MobileStatCard, MobileStatGrid } from "@/components/dashboard/mobile-stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +46,14 @@ import {
 } from "@/lib/shopify/order-status";
 import { canTransferShopifyOrder } from "@/lib/shopify/order-transfer";
 import { canLivreurEditReturnNote } from "@/lib/shopify/return-note";
+import {
+  orderDeliveredLivreurName,
+  resolveOrderLivreurName,
+} from "@/lib/shopify/order-livreur";
+import {
+  orderDeliveryDestination,
+  orderDeliverySource,
+} from "@/lib/shopify/order-delivery-route";
 import {
   confirmationFollowUpBadge,
   hasCashierConfirmationNote,
@@ -326,10 +336,12 @@ export function ShopifyOrdersManager({
   );
 
   function livreurNameForOrder(order: ShopifyOrder): string | null {
-    const id = selectedLivreur[order.id] || order.assigned_livreur_id;
-    if (!id) return null;
-    const match = livreurs.find((livreur) => livreur.id === id);
-    return match?.full_name || match?.email || null;
+    const pendingId = selectedLivreur[order.id];
+    if (pendingId) {
+      const match = livreurs.find((livreur) => livreur.id === pendingId);
+      return match?.full_name || match?.email || null;
+    }
+    return resolveOrderLivreurName(order, livreurs);
   }
 
   function handleAssignLivreur(orderId: string) {
@@ -352,7 +364,15 @@ export function ShopifyOrdersManager({
         setOrders((prev) =>
           prev.map((order) =>
             order.id === orderId
-              ? { ...order, assigned_livreur_id: livreurId }
+              ? {
+                  ...order,
+                  assigned_livreur_id: livreurId,
+                  assigned_livreur_name:
+                    livreurs.find((livreur) => livreur.id === livreurId)
+                      ?.full_name ||
+                    livreurs.find((livreur) => livreur.id === livreurId)?.email ||
+                    null,
+                }
               : order
           )
         );
@@ -437,7 +457,11 @@ export function ShopifyOrdersManager({
 
   const showReturnNotes = returnsPageMode || cashierReturnsMode;
   const colSpan =
-    (showStore ? 1 : 0) + (showTransferOrigin ? 1 : 0) + (showReturnNotes ? 1 : 0) + 8;
+    (livreurMode ? 2 : showStore ? 1 : 0) +
+    (showTransferOrigin ? 1 : 0) +
+    (showReturnNotes ? 1 : 0) +
+    7 +
+    (livreurMode ? 0 : 1);
 
   return (
     <>
@@ -599,6 +623,7 @@ export function ShopifyOrdersManager({
                 Boolean(order.whatsapp_confirmation_sent_at) &&
                 !isConfirmationFollowUpResolved(order);
               const confirmationOverdue = isConfirmationCallOverdue(order);
+              const deliveredLivreur = orderDeliveredLivreurName(order, livreurs);
 
               return (
                 <OrderMobileCard
@@ -614,6 +639,7 @@ export function ShopifyOrdersManager({
                   showCallFollowUp={canFollowUpConfirmation}
                   callOverdue={confirmationOverdue}
                   onCallFollowUp={() => setConfirmationFollowUpOrder(order)}
+                  deliveredLivreurName={deliveredLivreur}
                 />
               );
             })
@@ -627,8 +653,15 @@ export function ShopifyOrdersManager({
                 <th className="px-6 py-3 text-left font-medium text-muted">N°</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Client</th>
-                {showStore && (
-                  <th className="px-6 py-3 text-left font-medium text-muted">Magasin</th>
+                {livreurMode ? (
+                  <>
+                    <th className="px-6 py-3 text-left font-medium text-muted">Source</th>
+                    <th className="px-6 py-3 text-left font-medium text-muted">Destination</th>
+                  </>
+                ) : (
+                  showStore && (
+                    <th className="px-6 py-3 text-left font-medium text-muted">Magasin</th>
+                  )
                 )}
                 {showTransferOrigin && (
                   <th className="px-6 py-3 text-left font-medium text-muted">
@@ -637,6 +670,9 @@ export function ShopifyOrdersManager({
                 )}
                 <th className="px-6 py-3 text-left font-medium text-muted">Paiement</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
+                {!livreurMode && (
+                  <th className="px-6 py-3 text-left font-medium text-muted">Livreur</th>
+                )}
                 {showReturnNotes && (
                   <th className="px-6 py-3 text-left font-medium text-muted">Note retour</th>
                 )}
@@ -698,6 +734,7 @@ export function ShopifyOrdersManager({
                   !isConfirmationFollowUpResolved(order);
                 const confirmationOverdue = isConfirmationCallOverdue(order);
                 const orderHasFollowUpNote = hasCashierConfirmationNote(order);
+                const deliveredLivreur = orderDeliveredLivreurName(order, livreurs);
 
                 return (
                   <tr key={order.id} className="border-b border-border">
@@ -727,10 +764,25 @@ export function ShopifyOrdersManager({
                         );
                       })()}
                     </td>
-                    {showStore && (
-                      <td className="px-6 py-4">
-                        {(order.stores as { name: string } | null)?.name || "—"}
-                      </td>
+                    {livreurMode ? (
+                      <>
+                        <td className="px-6 py-4">
+                          <p className="font-medium">
+                            {orderDeliverySource(order) || "—"}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4 max-w-[240px]">
+                          <p className="line-clamp-3" title={orderDeliveryDestination(order) || ""}>
+                            {orderDeliveryDestination(order) || "—"}
+                          </p>
+                        </td>
+                      </>
+                    ) : (
+                      showStore && (
+                        <td className="px-6 py-4">
+                          {(order.stores as { name: string } | null)?.name || "—"}
+                        </td>
+                      )
                     )}
                     {showTransferOrigin && (
                       <td className="px-6 py-4">
@@ -794,6 +846,15 @@ export function ShopifyOrdersManager({
                         <OrderStatusDisplay status={order.workflow_status} />
                       )}
                     </td>
+                    {!livreurMode && (
+                      <td className="px-6 py-4 align-middle">
+                        {deliveredLivreur ? (
+                          <OrderDeliveredLivreur name={deliveredLivreur} />
+                        ) : (
+                          <span className="text-xs text-muted">—</span>
+                        )}
+                      </td>
+                    )}
                     {showReturnNotes && (
                       <td className="px-6 py-4 max-w-[220px]">
                         {order.return_note ? (

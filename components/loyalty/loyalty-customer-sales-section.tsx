@@ -154,7 +154,7 @@ export function LoyaltyCustomerPortalOrdersList({
         <div className="border-b border-border px-5 py-4">
           <h2 className="text-sm font-semibold text-foreground">Historique des achats</h2>
           <p className="mt-0.5 text-xs text-muted">
-            Tous vos achats en magasin avec ce compte Client Pro
+            Vos achats Client Pro — la facture s&apos;ouvre après validation par notre équipe
           </p>
         </div>
         {loading ? (
@@ -170,49 +170,28 @@ export function LoyaltyCustomerPortalOrdersList({
             {orders.map((order) => {
               const cancelled = Boolean(order.cancelled_at);
               const validated = Boolean(order.invoice_validated_at);
+              const canOpenInvoice = !cancelled && validated;
               return (
                 <li key={order.id}>
-                  <button
-                    type="button"
-                    disabled={cancelled || loadingDetail}
-                    onClick={() => void openOrder(order.id)}
-                    className={cn(
-                      "flex w-full items-center gap-3 px-5 py-4 text-left transition-colors",
-                      cancelled ? "cursor-not-allowed opacity-50" : "hover:bg-primary/5"
-                    )}
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Receipt className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground">
-                        Achat {saleDocumentNumber(order.id)}
-                        {cancelled && (
-                          <span className="ml-1 text-xs text-danger">· Annulé</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted">
-                        {formatDate(order.created_at)}
-                        {order.store_name ? ` · ${order.store_name}` : ""}
-                      </p>
-                      <p className="text-xs text-muted">
-                        {PAYMENT_METHOD_LABELS[
-                          order.payment_method as keyof typeof PAYMENT_METHOD_LABELS
-                        ] || order.payment_method}
-                        {!cancelled && !validated ? " · En cours de validation" : ""}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <span className="text-sm font-bold text-primary tabular-nums">
-                        {formatCurrency(Number(order.total))}
-                      </span>
-                      {order.pro_client_discount > 0 && (
-                        <span className="text-[10px] text-success">
-                          Remise Pro -{formatCurrency(order.pro_client_discount)}
-                        </span>
+                  {canOpenInvoice ? (
+                    <button
+                      type="button"
+                      disabled={loadingDetail}
+                      onClick={() => void openOrder(order.id)}
+                      className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-primary/5"
+                    >
+                      <OrderListItemContent order={order} cancelled={cancelled} validated={validated} />
+                    </button>
+                  ) : (
+                    <div
+                      className={cn(
+                        "flex w-full items-center gap-3 px-5 py-4 text-left",
+                        cancelled && "opacity-50"
                       )}
+                    >
+                      <OrderListItemContent order={order} cancelled={cancelled} validated={validated} />
                     </div>
-                  </button>
+                  )}
                 </li>
               );
             })}
@@ -220,5 +199,58 @@ export function LoyaltyCustomerPortalOrdersList({
         )}
       </div>
     </div>
+  );
+}
+
+function OrderListItemContent({
+  order,
+  cancelled,
+  validated,
+}: {
+  order: CustomerSaleSummary;
+  cancelled: boolean;
+  validated: boolean;
+}) {
+  return (
+    <>
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <Receipt className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground">
+          Achat {saleDocumentNumber(order.id)}
+          {cancelled && <span className="ml-1 text-xs text-danger">· Annulé</span>}
+        </p>
+        <p className="text-xs text-muted">
+          {formatDate(order.created_at)}
+          {order.store_name ? ` · ${order.store_name}` : ""}
+        </p>
+        <p className="text-xs text-muted">
+          {PAYMENT_METHOD_LABELS[
+            order.payment_method as keyof typeof PAYMENT_METHOD_LABELS
+          ] || order.payment_method}
+          {!cancelled && !validated
+            ? " · Facture disponible après validation"
+            : validated
+              ? " · Facture disponible"
+              : ""}
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        <span className="text-sm font-bold text-primary tabular-nums">
+          {formatCurrency(Number(order.total))}
+        </span>
+        {order.pro_client_discount > 0 && (
+          <span className="text-[10px] text-success">
+            Remise Pro -{formatCurrency(order.pro_client_discount)}
+          </span>
+        )}
+        {!cancelled && !validated && (
+          <Badge variant="warning" className="text-[10px]">
+            En validation
+          </Badge>
+        )}
+      </div>
+    </>
   );
 }

@@ -30,7 +30,7 @@ export function buildStockNotification(params: {
         ? [params.storeName, locationLabel].filter(Boolean).join(" · ")
         : params.kind === "stock_out"
           ? `Rupture — ${locationLabel.toLowerCase()}`
-          : `Seuil : moins de ${threshold} unités`,
+          : `Réapprovisionnement recommandé (< ${threshold} unités)`,
     amount: params.stock,
     receivedAt: new Date().toISOString(),
     read: false,

@@ -16,6 +16,7 @@ import {
   hubTransferStatusVariant,
   hubTransferStoreStatusHint,
 } from "@/lib/hub-transfer-status";
+import { TransferAssignedLivreur } from "@/components/stock/transfer-assigned-livreur";
 import { formatDate } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { HubStockTransfer, Product } from "@/lib/types";
@@ -241,24 +242,23 @@ export function CashierStockTransfers({
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <Truck className="h-4 w-4 shrink-0 text-primary" />
-                          <span className="font-medium">
-                            {transfer.from_store_name || "Entrepôt hub"}
-                          </span>
+                          <div>
+                            <span className="font-medium">
+                              {transfer.from_store_name || "Entrepôt hub"}
+                            </span>
+                            <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-medium">
-                        {transfer.to_store_name || storeName}
+                      <td className="px-6 py-4">
+                        <p className="font-medium">{transfer.to_store_name || storeName}</p>
+                        <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant={hubTransferStatusVariant(transfer.status)}>
                           {hubTransferStatusLabel(transfer.status)}
                         </Badge>
                         {statusHint && <p className="mt-1 text-xs text-muted">{statusHint}</p>}
-                        {transfer.assigned_livreur_name && (
-                          <p className="mt-1 text-xs text-muted">
-                            Livreur : {transfer.assigned_livreur_name}
-                          </p>
-                        )}
                         {transfer.notes && (
                           <p className="mt-1 text-xs text-muted line-clamp-2">{transfer.notes}</p>
                         )}
@@ -329,6 +329,20 @@ export function CashierStockTransfers({
                   {detailTransfer.total_units} unité
                   {detailTransfer.total_units !== 1 ? "s" : ""}
                 </p>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
+                  <span>
+                    <span className="font-medium text-foreground/80">Source :</span>{" "}
+                    {detailTransfer.from_store_name || "Entrepôt hub"}
+                  </span>
+                  <span>
+                    <span className="font-medium text-foreground/80">Destination :</span>{" "}
+                    {detailTransfer.to_store_name || storeName}
+                  </span>
+                </div>
+                <TransferAssignedLivreur
+                  name={detailTransfer.assigned_livreur_name}
+                  className="mt-2"
+                />
                 {detailTransfer.notes && (
                   <p className="mt-1 text-sm text-muted">{detailTransfer.notes}</p>
                 )}

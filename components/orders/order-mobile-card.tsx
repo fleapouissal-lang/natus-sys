@@ -8,6 +8,8 @@ import {
   Phone,
   RotateCcw,
 } from "lucide-react";
+import { OrderDeliveredLivreur } from "@/components/orders/order-delivered-livreur";
+import { OrderDeliveryRoute } from "@/components/orders/order-delivery-route";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OrderAgeBadge } from "@/components/orders/order-age-badge";
@@ -32,6 +34,7 @@ export function OrderMobileCard({
   onCallFollowUp,
   showCallFollowUp = false,
   callOverdue = false,
+  deliveredLivreurName = null,
 }: {
   order: ShopifyOrder;
   loading?: boolean;
@@ -44,6 +47,7 @@ export function OrderMobileCard({
   onCallFollowUp?: () => void;
   showCallFollowUp?: boolean;
   callOverdue?: boolean;
+  deliveredLivreurName?: string | null;
 }) {
   const isCod = order.payment_type === "cod";
   const followUpBadge = confirmationFollowUpBadge(order);
@@ -80,7 +84,9 @@ export function OrderMobileCard({
           ) : null}
         </div>
 
-        {order.shipping_address ? (
+        {livreurMode ? (
+          <OrderDeliveryRoute order={order} />
+        ) : order.shipping_address ? (
           <p className="flex items-start gap-1.5 text-xs text-muted">
             <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
             <span className="line-clamp-2">{order.shipping_address}</span>
@@ -90,7 +96,7 @@ export function OrderMobileCard({
         <div className="flex flex-wrap gap-1.5">
           <Badge variant={isCod ? "warning" : "success"}>{paymentTypeLabel(order.payment_type)}</Badge>
           <Badge variant="default">{workflowStatusLabel(order.workflow_status)}</Badge>
-          {showStore && storeName ? (
+          {showStore && !livreurMode && storeName ? (
             <Badge variant="accent">{storeName}</Badge>
           ) : null}
           {followUpBadge ? (
@@ -99,6 +105,8 @@ export function OrderMobileCard({
             </Badge>
           ) : null}
         </div>
+
+        <OrderDeliveredLivreur name={deliveredLivreurName} />
 
         {livreurMode && canLivreurClose ? (
           <div className="grid grid-cols-2 gap-2 pt-1">

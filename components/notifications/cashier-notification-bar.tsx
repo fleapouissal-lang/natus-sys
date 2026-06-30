@@ -4,10 +4,10 @@ import { Bell, ChevronRight, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCashierNotifications } from "@/components/notifications/cashier-notifications-context";
 import { CountBadge } from "@/components/ui/count-badge";
+import { navigateFromNotification } from "@/lib/notifications/navigate-from-notification";
 import {
   formatNotificationMeta,
   notificationHeadline,
-  notificationHref,
 } from "@/lib/notifications/display";
 import { formatTimeAgo } from "@/lib/notifications/format-time-ago";
 import { isPersistentNotification } from "@/lib/notifications/notification-counts";
@@ -29,14 +29,12 @@ export function CashierNotificationBar({
   const persistentAlertActive = isPersistentNotification(latestUnread);
 
   function handleView() {
-    openNotification(latestUnread.id);
     if (onViewNotification) {
+      openNotification(latestUnread.id);
       onViewNotification(latestUnread);
-    } else {
-      router.push(
-        notificationHref(latestUnread.kind, latestUnread.audience ?? "store")
-      );
+      return;
     }
+    navigateFromNotification(latestUnread, router, { openNotification });
   }
 
   return (
@@ -56,7 +54,7 @@ export function CashierNotificationBar({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <p className="natus-notification-bar__title text-sm font-semibold leading-tight text-primary-dark">
-              {notificationHeadline(latestUnread.kind)}
+              {notificationHeadline(latestUnread)}
             </p>
             {badgeCount > 1 && (
               <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/12 px-1.5 text-[10px] font-bold text-primary-dark">

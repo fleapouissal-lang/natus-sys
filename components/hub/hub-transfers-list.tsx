@@ -17,6 +17,7 @@ import {
   repairHubStockTransfer,
 } from "@/lib/actions";
 import { hubTransferDirection, hubTransferDirectionLabel } from "@/lib/hub-transfer-direction";
+import { TransferAssignedLivreur } from "@/components/stock/transfer-assigned-livreur";
 import { ProductImage } from "@/components/pos/product-image";
 import {
   hubTransferStatusLabel,
@@ -150,13 +151,12 @@ export function HubTransfersList({
                   {isStoreToDepot && transfer.from_store_city && (
                     <p className="text-xs text-muted">{transfer.from_store_city}</p>
                   )}
+                  <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
                 </td>
                 <td className="px-6 py-4">
                   <p className="font-medium">{transfer.to_store_name || "—"}</p>
                   <p className="text-xs text-muted">{hubTransferDirectionLabel(transfer)}</p>
-                  {transfer.assigned_livreur_name && (
-                    <p className="text-xs text-muted">Livreur : {transfer.assigned_livreur_name}</p>
-                  )}
+                  <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
                   {transfer.receiver_name && transfer.status === "received" && (
                     <p className="text-xs text-muted">Reçu par {transfer.receiver_name}</p>
                   )}
