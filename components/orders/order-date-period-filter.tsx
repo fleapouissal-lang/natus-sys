@@ -22,6 +22,7 @@ export function OrderDatePeriodFilter({
     open: boolean;
     dateFrom: string;
     dateTo: string;
+    minDate?: string;
     onDateFromChange: (value: string) => void;
     onDateToChange: (value: string) => void;
     onOpen: () => void;
@@ -62,6 +63,7 @@ export function OrderDatePeriodFilter({
                   label="Date début"
                   value={customRange.dateFrom}
                   onChange={customRange.onDateFromChange}
+                  minDate={customRange.minDate}
                 />
               </div>
               <div className="w-full sm:w-auto sm:min-w-[9.5rem]">

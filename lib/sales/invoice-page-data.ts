@@ -4,6 +4,11 @@ import { getCurrentProfile } from "@/lib/auth";
 import { getActiveStores } from "@/lib/inventory";
 import { getHubRetailStoresForTransfer } from "@/lib/hub";
 import { fetchInvoicesByStoreIds, fetchInvoiceById } from "@/lib/sales/fetch-invoices";
+import {
+  getStorePosInvoiceCreatedAfter,
+  isWithinStorePosInvoiceHistory,
+  STORE_POS_INVOICE_HISTORY_DAYS,
+} from "@/lib/sales/invoice-history-window";
 import { getInvoicesBasePath } from "@/lib/sales/invoice-routes";
 import {
   getCityFilter,
@@ -143,9 +148,12 @@ export async function loadInvoicesListPage(
     searchParams?.store
   );
 
+  const isStorePosAccount = profile.role === "cashier" && profile.is_store_pos === true;
+
   const supabase = await createClient();
   const { sales, error } = await fetchInvoicesByStoreIds(supabase, storeIds, {
     includePending: isDirector(profile),
+    createdAfter: isStorePosAccount ? getStorePosInvoiceCreatedAfter() : undefined,
   });
 
   return {
@@ -159,6 +167,8 @@ export async function loadInvoicesListPage(
     showStore: scope !== "cashier" && !selectedStoreId,
     showCashier: scope !== "cashier",
     canValidateInvoices: isDirector(profile),
+    isStorePosAccount,
+    invoiceHistoryDays: isStorePosAccount ? STORE_POS_INVOICE_HISTORY_DAYS : undefined,
   };
 }
 
@@ -195,6 +205,14 @@ export async function loadInvoiceDetailPage(
 
   if (!directorView && !isSaleInvoiceValidated(sale)) {
     redirect(`${basePath}?pending=1`);
+  }
+
+  if (
+    profile.role === "cashier" &&
+    profile.is_store_pos &&
+    !isWithinStorePosInvoiceHistory(sale.created_at)
+  ) {
+    notFound();
   }
 
   const { storeIds, scopeLabel } = await resolveStoreScope(

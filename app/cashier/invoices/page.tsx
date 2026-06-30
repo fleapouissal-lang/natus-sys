@@ -2,18 +2,24 @@ import { Suspense } from "react";
 import { InvoicesHistory } from "@/components/invoices/invoices-history";
 import { Card } from "@/components/ui/card";
 import { loadInvoicesListPage } from "@/lib/sales/invoice-page-data";
+import { getStorePosInvoiceHistoryDateBounds } from "@/lib/sales/invoice-history-window";
 
 export const dynamic = "force-dynamic";
 
 export default async function CashierInvoicesPage() {
-  const { sales, error, basePath, scopeLabel } = await loadInvoicesListPage("cashier");
+  const { sales, error, basePath, scopeLabel, isStorePosAccount, invoiceHistoryDays } =
+    await loadInvoicesListPage("cashier");
+
+  const historyBounds = isStorePosAccount ? getStorePosInvoiceHistoryDateBounds() : undefined;
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Factures</h1>
         <p className="mt-1 text-muted">
-          Factures validées par le directeur — visibles après validation uniquement
+          {isStorePosAccount
+            ? `Factures validées par le directeur — ${invoiceHistoryDays} derniers jours`
+            : "Factures validées par le directeur — visibles après validation uniquement"}
         </p>
       </div>
 
@@ -25,7 +31,9 @@ export default async function CashierInvoicesPage() {
 
       {!error && sales.length === 0 ? (
         <Card className="py-12 text-center text-muted">
-          Aucune facture enregistrée pour {scopeLabel}
+          {isStorePosAccount
+            ? `Aucune facture sur les ${invoiceHistoryDays} derniers jours pour ${scopeLabel}`
+            : `Aucune facture enregistrée pour ${scopeLabel}`}
         </Card>
       ) : (
         <Suspense fallback={null}>
@@ -33,7 +41,8 @@ export default async function CashierInvoicesPage() {
             sales={sales}
             detailBasePath={basePath}
             scopeLabel={scopeLabel}
-            defaultDatePreset="all"
+            defaultDatePreset={isStorePosAccount ? "month" : "all"}
+            historyMinDate={historyBounds?.minDate}
           />
         </Suspense>
       )}

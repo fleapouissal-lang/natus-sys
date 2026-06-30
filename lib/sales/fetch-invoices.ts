@@ -19,7 +19,7 @@ function isUuid(value: string): boolean {
 export async function fetchInvoicesByStoreIds(
   supabase: SupabaseClient,
   storeIds: string[],
-  options?: { includePending?: boolean }
+  options?: { includePending?: boolean; createdAfter?: string }
 ): Promise<{ sales: InvoiceSale[]; error: string | null }> {
   if (storeIds.length === 0) {
     return { sales: [], error: null };
@@ -32,6 +32,10 @@ export async function fetchInvoicesByStoreIds(
 
   if (!options?.includePending) {
     query = query.not("invoice_validated_at", "is", null);
+  }
+
+  if (options?.createdAfter) {
+    query = query.gte("created_at", options.createdAfter);
   }
 
   const { data, error } = await query

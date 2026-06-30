@@ -12,6 +12,7 @@ import {
   detectOrderDatePreset,
   orderDatePresetLabel,
   orderDatePresetToKeys,
+  ORDER_DATE_PRESETS,
   type OrderDatePreset,
 } from "@/lib/store-tracking-period";
 import { saleDocumentNumber } from "@/components/pos/sale-document-types";
@@ -34,6 +35,7 @@ export function InvoicesHistory({
   showCashier = false,
   canValidateInvoices = false,
   defaultDatePreset = "all",
+  historyMinDate,
 }: {
   sales: InvoiceSale[];
   detailBasePath: string;
@@ -44,6 +46,8 @@ export function InvoicesHistory({
   showCashier?: boolean;
   canValidateInvoices?: boolean;
   defaultDatePreset?: OrderDatePreset;
+  /** Borne basse (compte caisse magasin) — ex. 45 derniers jours */
+  historyMinDate?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -53,10 +57,20 @@ export function InvoicesHistory({
   const [actionError, setActionError] = useState("");
   const pendingAccessNotice = searchParams.get("pending") === "1";
 
-  const initialRange = useMemo(
-    () => orderDatePresetToKeys(defaultDatePreset),
-    [defaultDatePreset]
-  );
+  const initialRange = useMemo(() => {
+    if (historyMinDate) {
+      return {
+        from: historyMinDate,
+        to: toLocalDateKey(new Date()),
+      };
+    }
+    return orderDatePresetToKeys(defaultDatePreset);
+  }, [defaultDatePreset, historyMinDate]);
+
+  const datePresets = useMemo(() => {
+    if (!historyMinDate) return undefined;
+    return ORDER_DATE_PRESETS.filter(({ id }) => id !== "all").map((p) => p.id);
+  }, [historyMinDate]);
 
   const [dateFrom, setDateFrom] = useState(initialRange.from);
   const [dateTo, setDateTo] = useState(initialRange.to);
@@ -111,7 +125,7 @@ export function InvoicesHistory({
 
   function applyDatePreset(preset: OrderDatePreset) {
     const { from, to } = orderDatePresetToKeys(preset);
-    setDateFrom(from);
+    setDateFrom(historyMinDate && from && from < historyMinDate ? historyMinDate : from);
     setDateTo(to);
     setCustomDateOpen(false);
   }
@@ -120,9 +134,21 @@ export function InvoicesHistory({
     setCustomDateOpen(true);
     if (activeDatePreset !== "custom") {
       const { from, to } = orderDatePresetToKeys("month");
-      setDateFrom(from);
+      setDateFrom(historyMinDate && from < historyMinDate ? historyMinDate : from);
       setDateTo(to);
     }
+  }
+
+  function handleDateFromChange(value: string) {
+    if (historyMinDate && value && value < historyMinDate) {
+      setDateFrom(historyMinDate);
+      return;
+    }
+    setDateFrom(value);
+  }
+
+  function handleDateToChange(value: string) {
+    setDateTo(value);
   }
 
   function resetFilters() {
@@ -246,12 +272,14 @@ export function InvoicesHistory({
           <OrderDatePeriodFilter
             activePreset={activeDatePreset}
             onPresetChange={applyDatePreset}
+            presets={datePresets}
             customRange={{
               open: customDateOpen,
               dateFrom,
               dateTo,
-              onDateFromChange: setDateFrom,
-              onDateToChange: setDateTo,
+              minDate: historyMinDate,
+              onDateFromChange: handleDateFromChange,
+              onDateToChange: handleDateToChange,
               onOpen: openCustomDateRange,
             }}
           />
