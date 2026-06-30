@@ -116,7 +116,7 @@ export function WriteoffsValidationList({
                   </p>
                   {writeoff.stores?.is_hub && isPending && !canValidateItem && (
                     <p className="mt-1 text-xs text-muted">
-                      Validation réservée au directeur (annulation dépôt Hub)
+                      Validation réservée au directeur (retour en stock dépôt Hub)
                     </p>
                   )}
                   {writeoff.notes && (

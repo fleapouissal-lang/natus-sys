@@ -1,138 +1,90 @@
 "use client";
 
-import { Suspense } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowRightLeft, Store, Warehouse } from "lucide-react";
-import { StoreTransfersList } from "@/components/stock/store-transfers-list";
-import { HubTransfersList } from "@/components/hub/hub-transfers-list";
-import { cn } from "@/lib/utils";
+import { useMemo } from "react";
+import { ReceivedTransfersFilterBar } from "@/components/stock/received-transfers-filter-bar";
+import { ReceivedTransfersList } from "@/components/stock/received-transfers-list";
+import { useReceivedTransferRows } from "@/components/stock/use-received-transfer-rows";
+import {
+  filterTransfersBySentDate,
+  type ReceivedTransfersFilterScope,
+} from "@/lib/stock-transfers/received-filters";
+import type { ReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
+import type { ReceivedTransferLocationSites } from "@/lib/stock-transfers/received-location-filters";
 import type { HubStockTransfer, Profile, StoreStockTransfer } from "@/lib/types";
 
-type ReceivedTab = "store" | "hub" | "mixed";
-
-const TABS: {
-  id: ReceivedTab;
-  label: string;
-  shortLabel: string;
-  icon: React.ComponentType<{ className?: string }>;
-}[] = [
-  {
-    id: "store",
-    label: "Transferts inter-magasins",
-    shortLabel: "Magasins",
-    icon: Store,
-  },
-  {
-    id: "hub",
-    label: "Transferts entre Hubs",
-    shortLabel: "Hubs",
-    icon: Warehouse,
-  },
-  {
-    id: "mixed",
-    label: "Transferts Hub ↔ Magasin",
-    shortLabel: "Hub ↔ Mag.",
-    icon: ArrowRightLeft,
-  },
-];
-
-function DirectorReceivedOrdersTabsInner({
+export function DirectorReceivedOrdersTabs({
+  filter,
   interStoreTransfers,
   hubHubTransfers,
   hubStoreMixedTransfers,
   retailStoreIds,
+  transferSites,
   livreurs,
+  productLookup,
 }: {
+  filter: ReceivedTransfersFilterScope;
   interStoreTransfers: StoreStockTransfer[];
   hubHubTransfers: HubStockTransfer[];
   hubStoreMixedTransfers: HubStockTransfer[];
   retailStoreIds: string[];
+  transferSites: ReceivedTransferLocationSites[];
   livreurs: Profile[];
+  productLookup?: ReceivedTransferProductLookup;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const activeTab: ReceivedTab =
-    tabParam === "hub" || tabParam === "mixed" || tabParam === "store" ? tabParam : "store";
+  const interStore = useMemo(
+    () => filterTransfersBySentDate(interStoreTransfers, filter.dateFrom, filter.dateTo),
+    [interStoreTransfers, filter.dateFrom, filter.dateTo]
+  );
+  const hubHub = useMemo(
+    () => filterTransfersBySentDate(hubHubTransfers, filter.dateFrom, filter.dateTo),
+    [hubHubTransfers, filter.dateFrom, filter.dateTo]
+  );
+  const hubMixed = useMemo(
+    () => filterTransfersBySentDate(hubStoreMixedTransfers, filter.dateFrom, filter.dateTo),
+    [hubStoreMixedTransfers, filter.dateFrom, filter.dateTo]
+  );
 
-  function setTab(tab: ReceivedTab) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", tab);
-    router.push(`${pathname}?${params.toString()}`);
-  }
+  const groups = useMemo(
+    () => [
+      { kind: "store" as const, typeLabel: "Inter-magasins", storeTransfers: interStore },
+      { kind: "hub" as const, typeLabel: "Entre Hubs", hubTransfers: hubHub },
+      { kind: "mixed" as const, typeLabel: "Hub ↔ Magasin", hubTransfers: hubMixed },
+    ],
+    [interStore, hubHub, hubMixed]
+  );
+
+  const locationConfig = useMemo(
+    () => ({
+      sourceSites: transferSites,
+      destinationSites: transferSites,
+    }),
+    [transferSites]
+  );
+
+  const { rows, sourceOptions, destinationOptions } = useReceivedTransferRows(
+    groups,
+    filter,
+    productLookup,
+    locationConfig
+  );
 
   return (
     <div className="space-y-6">
-      <div className="natus-mobile-tab-bar inline-flex w-full flex-wrap rounded-2xl border border-primary/25 bg-surface/80 p-1 shadow-[0_4px_20px_rgba(179,140,74,0.08)] backdrop-blur-sm">
-        {TABS.map(({ id, label, shortLabel, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all cursor-pointer sm:flex-initial sm:gap-2 sm:px-4",
-              activeTab === id
-                ? "bg-champagne text-black shadow-sm"
-                : "text-muted hover:text-foreground"
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            <span className="sm:hidden">{shortLabel}</span>
-            <span className="hidden sm:inline">{label}</span>
-          </button>
-        ))}
-      </div>
+      <ReceivedTransfersFilterBar
+        filter={filter}
+        resultCount={rows.length}
+        sourceOptions={sourceOptions}
+        destinationOptions={destinationOptions}
+      />
 
-      {activeTab === "store" && (
-        <StoreTransfersList
-          title="Transferts inter-magasins"
-          perspective="incoming"
-          managedStoreIds={retailStoreIds}
-          transfers={interStoreTransfers}
-          actionMode="none"
-          livreurs={livreurs}
-          emptyMessage="Aucun transfert inter-magasins entrant"
-        />
-      )}
-
-      {activeTab === "hub" && (
-        <HubTransfersList
-          title="Transferts entre Hubs"
-          transfers={hubHubTransfers}
-          readOnly
-          showOrigin
-          showProductImages
-          livreurs={livreurs}
-          emptyMessage="Aucun transfert hub → hub entrant"
-        />
-      )}
-
-      {activeTab === "mixed" && (
-        <HubTransfersList
-          title="Transferts Hub ↔ Magasin"
-          transfers={hubStoreMixedTransfers}
-          readOnly
-          showOrigin
-          showProductImages
-          livreurs={livreurs}
-          emptyMessage="Aucun transfert hub ↔ magasin entrant"
-        />
-      )}
+      <ReceivedTransfersList
+        rows={rows}
+        managedStoreIds={retailStoreIds}
+        livreurs={livreurs}
+        showProductImages
+        storeActionMode="none"
+        emptyMessage="Aucun transfert reçu"
+      />
     </div>
-  );
-}
-
-export function DirectorReceivedOrdersTabs(props: {
-  interStoreTransfers: StoreStockTransfer[];
-  hubHubTransfers: HubStockTransfer[];
-  hubStoreMixedTransfers: HubStockTransfer[];
-  retailStoreIds: string[];
-  livreurs: Profile[];
-}) {
-  return (
-    <Suspense fallback={null}>
-      <DirectorReceivedOrdersTabsInner {...props} />
-    </Suspense>
   );
 }

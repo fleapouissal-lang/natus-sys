@@ -22,7 +22,6 @@ import {
   KeyRound,
   Landmark,
   ArrowRightLeft,
-  Factory,
   PackagePlus,
 } from "lucide-react";
 import { getManagementBasePath } from "@/lib/permissions";
@@ -63,7 +62,7 @@ export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/notes", label: "Notes", icon: MessageSquare, mobileOrder: 5 },
   { href: "/cashier/customers", label: "Clients fidélité", icon: Gift, mobileOrder: 6 },
   { href: "/cashier/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness, mobileOrder: 7 },
-  { href: "/cashier/returns", label: "Annulations de stock", icon: RotateCcw, mobileOrder: 8 },
+  { href: "/cashier/returns", label: "Retour en stock", icon: RotateCcw, mobileOrder: 8 },
   { href: "/cashier/invoices", label: "Factures", icon: FileText, mobileOrder: 9 },
   { href: "/cashier/cheques", label: "Chèques", icon: Landmark, mobileOrder: 10 },
   { href: "/cashier/actualites", label: "Actualités", icon: Newspaper, mobileOrder: 11 },
@@ -98,15 +97,9 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
         icon: Boxes,
         mobileOrder: 3,
       },
-      {
-        href: "/hub/fabrication-products",
-        label: "Stock des fabrications",
-        icon: Factory,
-        mobileOrder: 4,
-      },
-      { href: "/hub/writeoffs", label: "Annulations de stock", icon: RotateCcw, mobileOrder: 5 },
-      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 6 },
-      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 7 },
+      { href: "/hub/writeoffs", label: "Retour en stock", icon: RotateCcw, mobileOrder: 4 },
+      { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 5 },
+      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 6 },
     ];
   }
 
@@ -135,7 +128,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       },
       { href: "/manager/cheques", label: "Chèques", icon: Landmark, mobileOrder: 6 },
       { href: "/manager/invoices", label: "Factures", icon: FileText, mobileOrder: 7 },
-      { href: "/manager/writeoffs", label: "Annulations de stock", icon: RotateCcw, mobileOrder: 8 },
+      { href: "/manager/writeoffs", label: "Retour en stock", icon: RotateCcw, mobileOrder: 8 },
       { href: "/manager/reclamations", label: "Réclam.", icon: AlertTriangle, mobileOrder: 9 },
       { href: "/manager/actualites", label: "Actus", icon: Newspaper, mobileOrder: 10 },
       { href: "/manager/history", label: "Historique", icon: ClipboardList, mobileOrder: 11 },
@@ -167,13 +160,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
     },
     { href: `${basePath}/cheques`, label: "Chèques", icon: Landmark, mobileOrder: 7 },
     { href: `${basePath}/products`, label: "Produits", icon: Package, mobileOrder: 9 },
-    {
-      href: "/director/fabrication-products",
-      label: "Fabrication",
-      icon: Factory,
-      mobileOrder: 10,
-    },
-    { href: `${basePath}/stores`, label: "Magasins & Dépôts", icon: Store, mobileOrder: 11 },
+    { href: `${basePath}/stores`, label: "Magasins & Dépôts", icon: Store, mobileOrder: 10 },
     {
       href: "/director/clients",
       label: "Clients fidélité",
@@ -187,18 +174,18 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       mobileOrder: 13,
     },
     { href: `${basePath}/invoices`, label: "Factures", icon: FileText, mobileOrder: 14 },
-    { href: `${basePath}/writeoffs`, label: "Annulations de stock", icon: RotateCcw, mobileOrder: 15 },
-    { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 17 },
-    { href: "/director/stock-access", label: "Accès stock", icon: KeyRound, mobileOrder: 18 },
+    { href: `${basePath}/writeoffs`, label: "Retour en stock", icon: RotateCcw, mobileOrder: 15 },
+    { href: `${basePath}/reclamations`, label: "Réclam.", icon: AlertTriangle, mobileOrder: 16 },
+    { href: "/director/stock-access", label: "Accès stock", icon: KeyRound, mobileOrder: 17 },
     {
       href: "/director/categories",
       label: "Catégories des produits",
       icon: LayoutGrid,
-      mobileOrder: 19,
+      mobileOrder: 18,
     },
-    { href: `${basePath}/actualites`, label: "Actus", icon: Newspaper, mobileOrder: 20 },
-    { href: `${basePath}/users`, label: "Users", icon: Users, mobileOrder: 21 },
-    { href: `${basePath}/history`, label: "Historique", icon: ClipboardList, mobileOrder: 22 },
+    { href: `${basePath}/actualites`, label: "Actus", icon: Newspaper, mobileOrder: 19 },
+    { href: `${basePath}/users`, label: "Users", icon: Users, mobileOrder: 20 },
+    { href: `${basePath}/history`, label: "Historique", icon: ClipboardList, mobileOrder: 21 },
   ];
 }
 
@@ -243,7 +230,7 @@ function buildDirectorNavSections(role: UserRole): NavSection[] {
         { href: "/director/stock", label: "Stock", icon: Warehouse },
         { href: "/director/stock-transfers", label: "Stocks envoyés", icon: ArrowRightLeft },
         { href: "/director/stock-transfers/received", label: "Stocks reçus", icon: Boxes },
-        { href: "/director/writeoffs", label: "Annulations de stock", icon: RotateCcw },
+        { href: "/director/writeoffs", label: "Retour en stock", icon: RotateCcw },
         { href: "/director/stock-access", label: "Accès stock", icon: KeyRound },
       ],
     },
@@ -253,7 +240,6 @@ function buildDirectorNavSections(role: UserRole): NavSection[] {
       links: [
         { href: "/director/products", label: "Produits", icon: Package },
         { href: "/director/categories", label: "Catégories des produits", icon: LayoutGrid },
-        { href: "/director/fabrication-products", label: "Fabrication", icon: Factory },
       ],
     },
     {
@@ -300,7 +286,7 @@ function buildManagerNavSections(role: UserRole): NavSection[] {
         { href: "/manager/stock", label: "Stock", icon: Warehouse },
         { href: "/manager/stock-transfers", label: "Stocks envoyés", icon: ArrowRightLeft },
         { href: "/manager/stock-transfers/received", label: "Stocks reçus", icon: Boxes },
-        { href: "/manager/writeoffs", label: "Annulations de stock", icon: RotateCcw },
+        { href: "/manager/writeoffs", label: "Retour en stock", icon: RotateCcw },
       ],
     },
     {
@@ -350,7 +336,7 @@ function buildCashierNavSections(role: UserRole): NavSection[] {
         { href: "/cashier/commander", label: "Commander", icon: PackagePlus },
         { href: "/cashier/transfers/received", label: "Stocks reçus", icon: Boxes },
         { href: "/cashier/transfers/sent", label: "Stocks envoyés", icon: ArrowRightLeft },
-        { href: "/cashier/returns", label: "Annulations de stock", icon: RotateCcw },
+        { href: "/cashier/returns", label: "Retour en stock", icon: RotateCcw },
       ],
     },
     {
@@ -400,10 +386,9 @@ function buildHubNavSections(role: UserRole): NavSection[] {
       label: "Stock",
       links: [
         { href: "/hub/stock", label: "Stock des produits", icon: Warehouse },
-        { href: "/hub/fabrication-products", label: "Stock des fabrications", icon: Factory },
         { href: "/hub/stock-transfers", label: "Stocks envoyés", icon: ArrowRightLeft },
         { href: "/hub/stock-transfers/received", label: "Stocks reçus", icon: Boxes },
-        { href: "/hub/writeoffs", label: "Annulations de stock", icon: RotateCcw },
+        { href: "/hub/writeoffs", label: "Retour en stock", icon: RotateCcw },
       ],
     },
     {

@@ -1,123 +1,86 @@
 "use client";
 
-import { Suspense } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowRightLeft, Warehouse } from "lucide-react";
-import { StoreFilterBar } from "@/components/stores/store-filter-bar";
-import { HubOrdersView } from "@/components/hub/hub-orders-view";
-import { StoreTransfersList } from "@/components/stock/store-transfers-list";
-import { cn } from "@/lib/utils";
+import { useMemo } from "react";
+import { ReceivedTransfersFilterBar } from "@/components/stock/received-transfers-filter-bar";
+import { ReceivedTransfersList } from "@/components/stock/received-transfers-list";
+import { useReceivedTransferRows } from "@/components/stock/use-received-transfer-rows";
+import {
+  filterTransfersBySentDate,
+  type ReceivedTransfersFilterScope,
+} from "@/lib/stock-transfers/received-filters";
+import type { ReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
+import type { ReceivedTransferLocationSites } from "@/lib/stock-transfers/received-location-filters";
 import type { HubStockTransfer, Store, StoreStockTransfer } from "@/lib/types";
 
-type ReceivedTab = "depot" | "store";
-
-const TABS: {
-  id: ReceivedTab;
-  label: string;
-  shortLabel: string;
-  icon: React.ComponentType<{ className?: string }>;
-}[] = [
-  {
-    id: "depot",
-    label: "Commandes reçues dépôt",
-    shortLabel: "Dépôt",
-    icon: Warehouse,
-  },
-  {
-    id: "store",
-    label: "Transfert inter-magasin",
-    shortLabel: "Magasins",
-    icon: ArrowRightLeft,
-  },
-];
-
-function ManagerReceivedOrdersTabsInner({
-  stores,
-  selectedStoreId,
-  scopeLabel,
+export function ManagerReceivedOrdersTabs({
+  filter,
   hubTransfers,
   storeTransfers,
   storeIds,
+  sourceSites,
+  destinationStores,
+  productLookup,
 }: {
-  stores: Store[];
-  selectedStoreId: string;
+  filter: ReceivedTransfersFilterScope;
   scopeLabel: string;
   hubTransfers: HubStockTransfer[];
   storeTransfers: StoreStockTransfer[];
   storeIds: string[];
+  stores: Store[];
+  selectedStoreId: string;
+  sourceSites: ReceivedTransferLocationSites[];
+  destinationStores: ReceivedTransferLocationSites[];
+  productLookup?: ReceivedTransferProductLookup;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const activeTab: ReceivedTab =
-    tabParam === "store" || tabParam === "depot" ? tabParam : "depot";
+  const hub = useMemo(
+    () => filterTransfersBySentDate(hubTransfers, filter.dateFrom, filter.dateTo),
+    [hubTransfers, filter.dateFrom, filter.dateTo]
+  );
+  const store = useMemo(
+    () => filterTransfersBySentDate(storeTransfers, filter.dateFrom, filter.dateTo),
+    [storeTransfers, filter.dateFrom, filter.dateTo]
+  );
 
-  function setTab(tab: ReceivedTab) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", tab);
-    router.push(`${pathname}?${params.toString()}`);
-  }
+  const groups = useMemo(
+    () => [
+      { kind: "depot" as const, typeLabel: "Dépôt hub", hubTransfers: hub },
+      { kind: "store" as const, typeLabel: "Inter-magasin", storeTransfers: store },
+    ],
+    [hub, store]
+  );
+
+  const locationConfig = useMemo(
+    () => ({
+      sourceSites,
+      destinationSites: destinationStores,
+      strictDestinationOptions: true,
+    }),
+    [sourceSites, destinationStores]
+  );
+
+  const { rows, sourceOptions, destinationOptions } = useReceivedTransferRows(
+    groups,
+    filter,
+    productLookup,
+    locationConfig
+  );
 
   return (
     <div className="space-y-6">
-      <div className="natus-mobile-tab-bar inline-flex w-full rounded-2xl border border-primary/25 bg-surface/80 p-1 shadow-[0_4px_20px_rgba(179,140,74,0.08)] backdrop-blur-sm sm:w-auto">
-        {TABS.map(({ id, label, shortLabel, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all cursor-pointer sm:flex-initial sm:gap-2 sm:px-5",
-              activeTab === id
-                ? "bg-champagne text-black shadow-sm"
-                : "text-muted hover:text-foreground"
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            <span className="sm:hidden">{shortLabel}</span>
-            <span className="hidden sm:inline">{label}</span>
-          </button>
-        ))}
-      </div>
+      <ReceivedTransfersFilterBar
+        filter={filter}
+        resultCount={rows.length}
+        sourceOptions={sourceOptions}
+        destinationOptions={destinationOptions}
+      />
 
-      <Suspense fallback={null}>
-        <StoreFilterBar stores={stores} selectedStoreId={selectedStoreId} allowAll={stores.length > 1} />
-      </Suspense>
-
-      {activeTab === "depot" ? (
-        <HubOrdersView
-          transfers={hubTransfers}
-          title="Commandes reçues dépôt"
-          description={`Envois entrepôt vers ${scopeLabel}`}
-          readOnly
-          showOrigin
-          showProductImages
-        />
-      ) : (
-        <StoreTransfersList
-          title="Transfert inter-magasin"
-          perspective="incoming"
-          managedStoreIds={storeIds}
-          transfers={storeTransfers}
-          emptyMessage="Aucune commande reçue d'un autre magasin"
-        />
-      )}
+      <ReceivedTransfersList
+        rows={rows}
+        managedStoreIds={storeIds}
+        showProductImages
+        storeActionMode="full"
+        emptyMessage="Aucune commande reçue"
+      />
     </div>
-  );
-}
-
-export function ManagerReceivedOrdersTabs(props: {
-  stores: Store[];
-  selectedStoreId: string;
-  scopeLabel: string;
-  hubTransfers: HubStockTransfer[];
-  storeTransfers: StoreStockTransfer[];
-  storeIds: string[];
-}) {
-  return (
-    <Suspense fallback={null}>
-      <ManagerReceivedOrdersTabsInner {...props} />
-    </Suspense>
   );
 }

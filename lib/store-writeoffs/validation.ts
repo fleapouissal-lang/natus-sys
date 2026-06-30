@@ -29,9 +29,9 @@ export function writeoffValidationDeniedMessage(
   writeoff: Pick<StoreProductWriteoff, "stores">
 ): string {
   if (writeoff.stores?.is_hub) {
-    return "Seul un directeur peut valider une annulation de stock en dépôt (Hub).";
+    return "Seul un directeur peut valider un retour en stock en dépôt (Hub).";
   }
-  return "Seuls le gérant ou le directeur peuvent valider une annulation de stock en magasin.";
+  return "Seuls le gérant ou le directeur peuvent valider un retour en stock en magasin.";
 }
 
 export async function getWriteoffForValidation(
@@ -57,9 +57,9 @@ export async function assertCanValidateWriteoff(
   writeoffId: string
 ): Promise<{ ok: true; writeoff: WriteoffValidationRow } | { error: string }> {
   const writeoff = await getWriteoffForValidation(writeoffId);
-  if (!writeoff) return { error: "Annulation introuvable" };
+  if (!writeoff) return { error: "Retour en stock introuvable" };
   if (writeoff.status !== "pending") {
-    return { error: "Cette annulation a déjà été traitée" };
+    return { error: "Ce retour en stock a déjà été traité" };
   }
   if (!canValidateWriteoff(profile, writeoff)) {
     return { error: writeoffValidationDeniedMessage(profile, writeoff) };

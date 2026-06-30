@@ -33,11 +33,11 @@ export async function WriteoffsManagementPage({
   return (
     <div className="animate-fade-in space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Annulations de stock</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Retour en stock</h1>
         <p className="mt-1 text-muted">
           {isDirectorRole
-            ? "Validation des annulations caissiers (magasin) et dépôt Hub — déduction du stock à la validation. Les annulations dépôt sont réservées au directeur."
-            : "Annulations caissiers en magasin — produits périmés ou cassés. Validez pour déduire le stock du magasin."}
+            ? "Validation des retours caissiers (magasin) et dépôt Hub — déduction du stock à la validation. Les retours dépôt sont réservés au directeur."
+            : "Retours caissiers en magasin — produits périmés ou cassés. Validez pour déduire le stock du magasin."}
           {pending.length > 0 ? ` · ${pending.length} en attente` : ""}
         </p>
       </div>

@@ -20,7 +20,6 @@ import { formatPhoneDisplay } from "@/lib/loyalty/phone";
 import { sortLoyaltyCustomersByFidelity } from "@/lib/loyalty/sort-customers";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import { CreateLoyaltyCustomerModal } from "@/components/loyalty/create-customer-modal";
-import { CustomersCsvActions } from "@/components/clients/customers-csv-actions";
 import type { LoyaltyCustomer } from "@/lib/types";
 
 export function DirectorLoyaltyClientsManager({
@@ -106,11 +105,6 @@ export function DirectorLoyaltyClientsManager({
                 <UserPlus className="h-4 w-4" />
                 Nouveau client
               </Button>
-              <CustomersCsvActions
-                kind="loyalty"
-                exportRows={filtered}
-                onImported={() => router.refresh()}
-              />
             </div>
           </div>
         </div>

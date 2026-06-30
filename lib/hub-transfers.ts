@@ -305,7 +305,7 @@ async function getIncomingHubToStoreTransfers(options: {
     .select(TRANSFER_SELECT)
     .in("from_store_id", hubStoreIds)
     .order("sent_at", { ascending: false })
-    .limit(options.limit ?? 100);
+    .limit(options.limit ?? 200);
 
   if (options.toStoreId) {
     query = query.eq("to_store_id", options.toStoreId);

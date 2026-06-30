@@ -64,7 +64,7 @@ export function writeoffReasonSummary(
   if (unique.size > 1) return "Périmé et cassé";
   if (unique.size === 1) return WRITEOFF_REASON_LABELS[[...unique][0]];
   if (writeoff.reason) return WRITEOFF_REASON_LABELS[writeoff.reason];
-  return "Retour stock";
+  return "Retour en stock";
 }
 
 export function writeoffValidatorLine(

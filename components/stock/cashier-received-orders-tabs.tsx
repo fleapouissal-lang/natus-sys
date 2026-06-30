@@ -1,119 +1,92 @@
 "use client";
 
-import { Suspense } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowRightLeft, Warehouse } from "lucide-react";
-import { CashierStockTransfers } from "@/components/cashier/cashier-stock-transfers";
-import { StoreTransfersList } from "@/components/stock/store-transfers-list";
-import { cn } from "@/lib/utils";
+import { useMemo } from "react";
+import { ReceivedTransfersFilterBar } from "@/components/stock/received-transfers-filter-bar";
+import { ReceivedTransfersList } from "@/components/stock/received-transfers-list";
+import { useReceivedTransferRows } from "@/components/stock/use-received-transfer-rows";
+import {
+  filterTransfersBySentDate,
+  type ReceivedTransfersFilterScope,
+} from "@/lib/stock-transfers/received-filters";
+import type { ReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
+import type { ReceivedTransferLocationSites } from "@/lib/stock-transfers/received-location-filters";
 import type { HubStockTransfer, Product, StoreStockTransfer } from "@/lib/types";
 
-type ReceivedTab = "store" | "hub";
-
-const TABS: {
-  id: ReceivedTab;
-  label: string;
-  shortLabel: string;
-  icon: React.ComponentType<{ className?: string }>;
-}[] = [
-  {
-    id: "store",
-    label: "Transferts inter-magasins",
-    shortLabel: "Magasins",
-    icon: ArrowRightLeft,
-  },
-  {
-    id: "hub",
-    label: "Transferts Hub → Magasin",
-    shortLabel: "Hub → Mag.",
-    icon: Warehouse,
-  },
-];
-
-function CashierReceivedOrdersTabsInner({
+export function CashierReceivedOrdersTabs({
+  filter,
   storeId,
   storeName,
+  storeSite,
   interStoreTransfers,
   hubToStoreTransfers,
   productsById,
   storeStockByProductId,
+  productLookup,
 }: {
+  filter: ReceivedTransfersFilterScope;
   storeId: string;
   storeName: string;
+  storeSite: ReceivedTransferLocationSites;
   interStoreTransfers: StoreStockTransfer[];
   hubToStoreTransfers: HubStockTransfer[];
   productsById: Record<string, Pick<Product, "id" | "name" | "barcode" | "image_url" | "category">>;
   storeStockByProductId: Record<string, number>;
+  productLookup?: ReceivedTransferProductLookup;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const activeTab: ReceivedTab = tabParam === "hub" || tabParam === "store" ? tabParam : "store";
+  const interStore = useMemo(
+    () => filterTransfersBySentDate(interStoreTransfers, filter.dateFrom, filter.dateTo),
+    [interStoreTransfers, filter.dateFrom, filter.dateTo]
+  );
+  const hubToStore = useMemo(
+    () => filterTransfersBySentDate(hubToStoreTransfers, filter.dateFrom, filter.dateTo),
+    [hubToStoreTransfers, filter.dateFrom, filter.dateTo]
+  );
 
-  function setTab(tab: ReceivedTab) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", tab);
-    router.push(`${pathname}?${params.toString()}`);
-  }
+  const groups = useMemo(
+    () => [
+      { kind: "store" as const, typeLabel: "Inter-magasins", storeTransfers: interStore },
+      { kind: "mixed" as const, typeLabel: "Hub → Magasin", hubTransfers: hubToStore },
+    ],
+    [interStore, hubToStore]
+  );
+
+  const locationConfig = useMemo(
+    () => ({
+      sourceSites: [],
+      destinationSites: [storeSite],
+      lockDestination: true,
+    }),
+    [storeSite]
+  );
+
+  const { rows, sourceOptions, destinationOptions } = useReceivedTransferRows(
+    groups,
+    filter,
+    productLookup,
+    locationConfig
+  );
 
   return (
     <div className="space-y-6">
-      <div className="natus-mobile-tab-bar inline-flex w-full rounded-2xl border border-primary/25 bg-surface/80 p-1 shadow-[0_4px_20px_rgba(179,140,74,0.08)] backdrop-blur-sm sm:w-auto">
-        {TABS.map(({ id, label, shortLabel, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all cursor-pointer sm:flex-initial sm:gap-2 sm:px-5",
-              activeTab === id
-                ? "bg-champagne text-black shadow-sm"
-                : "text-muted hover:text-foreground"
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            <span className="sm:hidden">{shortLabel}</span>
-            <span className="hidden sm:inline">{label}</span>
-          </button>
-        ))}
-      </div>
+      <ReceivedTransfersFilterBar
+        filter={filter}
+        resultCount={rows.length}
+        sourceOptions={sourceOptions}
+        destinationOptions={destinationOptions}
+        lockDestination
+      />
 
-      {activeTab === "store" && (
-        <StoreTransfersList
-          title="Transferts inter-magasins"
-          perspective="incoming"
-          managedStoreIds={[storeId]}
-          transfers={interStoreTransfers}
-          actionMode="receive-only"
-          emptyMessage="Aucun transfert reçu d'un autre magasin"
-        />
-      )}
-
-      {activeTab === "hub" && (
-        <CashierStockTransfers
-          variant="section"
-          transfers={hubToStoreTransfers}
-          storeName={storeName}
-          productsById={productsById}
-          storeStockByProductId={storeStockByProductId}
-        />
-      )}
+      <ReceivedTransfersList
+        rows={rows}
+        managedStoreIds={[storeId]}
+        storeActionMode="receive-only"
+        cashierHub={{
+          storeName,
+          productsById,
+          storeStockByProductId,
+        }}
+        emptyMessage="Aucun transfert reçu"
+      />
     </div>
-  );
-}
-
-export function CashierReceivedOrdersTabs(props: {
-  storeId: string;
-  storeName: string;
-  interStoreTransfers: StoreStockTransfer[];
-  hubToStoreTransfers: HubStockTransfer[];
-  productsById: Record<string, Pick<Product, "id" | "name" | "barcode" | "image_url" | "category">>;
-  storeStockByProductId: Record<string, number>;
-}) {
-  return (
-    <Suspense fallback={null}>
-      <CashierReceivedOrdersTabsInner {...props} />
-    </Suspense>
   );
 }

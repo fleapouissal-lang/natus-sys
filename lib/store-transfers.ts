@@ -217,7 +217,7 @@ export async function getManagerStoreStockTransfers(
   storeIds: string[]
 ): Promise<StoreStockTransfer[]> {
   if (storeIds.length === 0) return [];
-  return getStoreStockTransfers({ storeIds, limit: 100 });
+  return getStoreStockTransfers({ storeIds, limit: 200 });
 }
 
 export async function getCashierStoreStockTransfers(

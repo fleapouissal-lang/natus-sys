@@ -10,7 +10,6 @@ export type UserPageKey =
   | "sales"
   | "stock"
   | "products"
-  | "fabrication_products"
   | "stores"
   | "activity"
   | "reclamations"
@@ -47,12 +46,6 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "sales", label: "Ventes", description: "Historique des ventes POS", group: "operations" },
   { key: "stock", label: "Stock", description: "Vue globale et stock par magasin ou dépôt", group: "operations" },
   { key: "products", label: "Produits", description: "Catalogue et fiches produit", group: "admin" },
-  {
-    key: "fabrication_products",
-    label: "Fabrication",
-    description: "Matières premières et stock dépôt fabrication",
-    group: "admin",
-  },
   { key: "stores", label: "Magasins", description: "Points de vente et paramètres", group: "admin" },
   { key: "activity", label: "Historique", description: "Historique des actions et mouvements", group: "admin" },
   { key: "reclamations", label: "Réclamations", description: "Suivi des réclamations clients", group: "clients" },
@@ -67,7 +60,7 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "orders", label: "Livraisons", description: "Commandes en ligne à livrer", group: "operations" },
   { key: "hub_orders", label: "Commandes dépôt", description: "Commandes entrepôt vers magasins", group: "operations" },
   { key: "returns", label: "Retours", description: "Retours produits et SAV", group: "clients" },
-  { key: "writeoffs", label: "Annulations de stock", description: "Validation annulations périmées ou cassées", group: "operations" },
+  { key: "writeoffs", label: "Retour en stock", description: "Validation retours périmés ou cassés", group: "operations" },
   { key: "stock_access", label: "Accès stock", description: "Demandes d'accès modification stock", group: "operations" },
   { key: "cheques", label: "Chèques", description: "Paiements par chèque en caisse", group: "operations" },
   { key: "customers", label: "Clients fidélité", description: "Clients fidélité en magasin", group: "clients" },
@@ -76,13 +69,13 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
 const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
   directeur: [
     "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products",
-    "fabrication_products", "stores",
+    "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
     "hub_stock", "hubs", "writeoffs", "stock_access", "cheques",
   ],
   admin: [
     "dashboard", "planning", "pos", "pos_closures", "sales", "stock", "products",
-    "fabrication_products", "stores",
+    "stores",
     "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
     "hub_stock", "hubs", "writeoffs", "stock_access", "cheques",
   ],
@@ -99,7 +92,6 @@ const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
     "dashboard",
     "stock",
     "hub_stock",
-    "fabrication_products",
     "transfers",
     "hub_orders",
     "activity",
@@ -124,7 +116,6 @@ const DIRECTOR_NAV_PRIORITY: UserPageKey[] = [
   "writeoffs",
   "reclamations",
   "products",
-  "fabrication_products",
   "stores",
   "hubs",
   "stock_access",
@@ -136,7 +127,7 @@ const DIRECTOR_NAV_PRIORITY: UserPageKey[] = [
 /**
  * Ordre sidebar gérant par priorité :
  * Accueil → Stock → Stocks envoyés → Stocks reçus → Planning → Clôtures →
- * Factures → Chèques → Annulations → Réclamations → Actualités →
+ * Factures → Chèques → Retour en stock → Réclamations → Actualités →
  * Historique (forcé avant Paramètres).
  */
 const MANAGER_NAV_PRIORITY: UserPageKey[] = [
@@ -148,7 +139,7 @@ const MANAGER_NAV_PRIORITY: UserPageKey[] = [
   "pos_closures", // Clôtures de caisse
   "invoices",     // Factures
   "cheques",      // Chèques
-  "writeoffs",    // Annulations de stock
+  "writeoffs",    // Retour en stock
   "reclamations", // Réclamations
   "actualites",   // Actualités
   "activity",     // Historique — replacé en pénultième via HISTORY_NAV_PRIORITY
@@ -160,7 +151,6 @@ const HUB_NAV_PRIORITY: UserPageKey[] = [
   "stock",
   "transfers",
   "hub_orders",
-  "fabrication_products",
   "writeoffs",
   "actualites",
   "activity",
@@ -168,7 +158,7 @@ const HUB_NAV_PRIORITY: UserPageKey[] = [
 
 /**
  * Ordre sidebar caissier par priorité d'utilisation :
- * Caisse → Stock → Stocks reçus → Stocks envoyés → Annulations → Factures →
+ * Caisse → Stock → Stocks reçus → Stocks envoyés → Retour en stock → Factures →
  * Clients fidélité → Clients Pro → Chèques → Horaires → Notes → Actualités →
  * Historique (forcé avant Paramètres).
  */
@@ -177,7 +167,7 @@ const CASHIER_NAV_PRIORITY: UserPageKey[] = [
   "stock",        // Stock
   "hub_orders",   // Stocks reçus
   "transfers",    // Stocks envoyés
-  "returns",      // Annulations de stock
+  "returns",      // Retour en stock (caissier)
   "invoices",     // Factures
   "customers",    // Clients fidélité puis Clients Pro (départage par ordre des liens)
   "cheques",      // Chèques
@@ -258,10 +248,6 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       return base === "/hub" ? "/hub/stock" : base ? `${base}/stock` : null;
     case "products":
       return base ? `${base}/products` : null;
-    case "fabrication_products":
-      if (role === "directeur" || role === "admin") return "/director/fabrication-products";
-      if (role === "hub") return "/hub/fabrication-products";
-      return null;
     case "stores":
       return base ? `${base}/stores` : null;
     case "activity":

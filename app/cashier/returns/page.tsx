@@ -11,7 +11,7 @@ export default async function CashierReturnsPage() {
   if (!profile.store_id) {
     return (
       <div className="animate-fade-in space-y-6">
-        <h1 className="text-2xl font-bold tracking-tight">Retours magasin</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Retour en stock</h1>
         <p className="text-muted">Aucun magasin assigné à votre compte.</p>
       </div>
     );
@@ -26,7 +26,7 @@ export default async function CashierReturnsPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Retours magasin</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Retour en stock</h1>
         <p className="mt-1 text-muted">
           Déclarez les produits périmés ou cassés — formulaire rapide et historique ci-dessous
           {store ? ` · ${store.name}, ${store.city}` : ""}

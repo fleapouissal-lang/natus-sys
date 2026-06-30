@@ -48,7 +48,7 @@ function TransferIconButton({
   );
 }
 
-function TransferProductsTable({
+export function TransferProductsTable({
   transfer,
   productsById,
   storeStockByProductId,

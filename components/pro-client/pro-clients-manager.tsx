@@ -16,7 +16,6 @@ import { sortProClientsByFidelity } from "@/lib/loyalty/sort-customers";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { LoyaltyCustomer, Store } from "@/lib/types";
 import { CreateProClientModal } from "@/components/pro-client/create-pro-client-modal";
-import { CustomersCsvActions } from "@/components/clients/customers-csv-actions";
 
 export function ProClientsManager({
   customers,
@@ -125,12 +124,6 @@ export function ProClientsManager({
                   Nouveau client Pro
                 </Button>
               )}
-              <CustomersCsvActions
-                kind="pro"
-                exportRows={filtered}
-                stores={stores}
-                onImported={() => router.refresh()}
-              />
             </div>
           </div>
         </div>

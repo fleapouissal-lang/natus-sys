@@ -125,20 +125,20 @@ export function HubDashboardStats({ stats }: { stats: HubDashboardStats }) {
           <p className="mt-1 text-xs text-muted">Références à 0 unité sur les magasins assignés</p>
         </Card>
         <Card>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">Annulations en attente</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Retours en stock en attente</p>
           <p className="mt-2 flex items-center gap-2 text-2xl font-bold tabular-nums">
             {stats.pendingWriteoffsCount}
             {stats.pendingWriteoffsCount > 0 && <RotateCcw className="h-5 w-5 text-warning" />}
           </p>
           <Link href="/hub/writeoffs" className="mt-1 inline-block text-xs text-primary hover:underline">
-            Voir les annulations dépôt →
+            Voir les retours en stock dépôt →
           </Link>
         </Card>
       </div>
 
       <MobileStatGrid className="md:hidden">
         <MobileStatCard
-          label="Annulations en attente"
+          label="Retours en stock en attente"
           value={String(stats.pendingWriteoffsCount)}
           icon={RotateCcw}
           variant={stats.pendingWriteoffsCount > 0 ? "warning" : "default"}
