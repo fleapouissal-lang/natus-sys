@@ -118,18 +118,20 @@ export function ProClientsManager({
                 className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
               />
             </div>
-            {allowCreate && stores && stores.length > 0 && (
-              <Button type="button" onClick={() => setShowCreate(true)} className="gap-2">
-                <UserPlus className="h-4 w-4" />
-                Nouveau client Pro
-              </Button>
-            )}
-            <CustomersCsvActions
-              kind="pro"
-              exportRows={filtered}
-              stores={stores}
-              onImported={() => router.refresh()}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              {allowCreate && stores && stores.length > 0 && (
+                <Button type="button" onClick={() => setShowCreate(true)} className="gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Nouveau client Pro
+                </Button>
+              )}
+              <CustomersCsvActions
+                kind="pro"
+                exportRows={filtered}
+                stores={stores}
+                onImported={() => router.refresh()}
+              />
+            </div>
           </div>
         </div>
       </FilterTogglePanel>

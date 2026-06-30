@@ -25,6 +25,7 @@
     "db:apply:085": "node scripts/apply-sql-file.mjs supabase/migrations/085_pro_client_particulier_name_phone.sql",
     "db:apply:086": "node scripts/apply-sql-file.mjs supabase/migrations/086_public_client_portal.sql",
     "reset:orders": "node scripts/reset-orders.mjs",
+    "purge:sales-orders": "node scripts/purge-sales-orders-data.mjs",
     "seed": "npm run db:migrate && node scripts/seed-users.mjs",
     "seed:users": "npm run db:migrate && node scripts/reset-users.mjs && node scripts/seed-users.mjs && node scripts/backfill-livreur-orders.mjs",
     "seed:orders": "npm run db:migrate && node scripts/reset-orders.mjs && node scripts/seed-shopify-orders.mjs && node scripts/backfill-livreur-orders.mjs",

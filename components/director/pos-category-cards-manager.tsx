@@ -43,6 +43,12 @@ function CategoryPreview({
   );
 }
 
+function isPersistedCategoryId(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    id
+  );
+}
+
 function PosStatusBadge({
   productCount,
 }: {
@@ -196,6 +202,7 @@ export function PosCategoryCardsManager({
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {categories.map((category) => {
           const productCount = productCounts[category.name] ?? 0;
+          const persisted = isPersistedCategoryId(category.id);
 
           return (
             <Card key={category.id} padding={false} className="overflow-hidden">
@@ -216,6 +223,12 @@ export function PosCategoryCardsManager({
                     variant="secondary"
                     onClick={() => fileInputsRef.current[category.id]?.click()}
                     loading={pending}
+                    disabled={!persisted}
+                    title={
+                      persisted
+                        ? undefined
+                        : "Synchronisez les catégories en base avant de modifier l'image"
+                    }
                   >
                     <Upload className="h-4 w-4" />
                     Changer l&apos;image
@@ -250,7 +263,10 @@ export function PosCategoryCardsManager({
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   className="hidden"
-                  onChange={(e) => handleImageChange(category.id, e.target.files?.[0] ?? null)}
+                  onChange={(e) => {
+                    handleImageChange(category.id, e.target.files?.[0] ?? null);
+                    e.target.value = "";
+                  }}
                 />
               </div>
             </Card>

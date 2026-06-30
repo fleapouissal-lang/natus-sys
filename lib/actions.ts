@@ -624,6 +624,52 @@ export async function createStore(formData: FormData) {
   return { success: true, storeId: store.id };
 }
 
+export async function deleteStore(storeId: string) {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+  if (!canCreateStore(profile)) {
+    return { error: "Seul le directeur peut supprimer un magasin" };
+  }
+
+  const id = storeId.trim();
+  if (!id) return { error: "Magasin introuvable" };
+
+  const supabase = await createClient();
+  const { data: store, error: fetchError } = await supabase
+    .from("stores")
+    .select("id, name, is_hub, is_active")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchError || !store) return { error: "Magasin introuvable" };
+  if (!store.is_active) return { error: "Ce magasin est déjà inactif" };
+  if (store.is_hub) {
+    return { error: "Les dépôts se gèrent depuis l'onglet Dépôts (Hubs)" };
+  }
+
+  const { count: activeUsers, error: usersError } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("store_id", id)
+    .eq("is_active", true);
+
+  if (usersError) return { error: usersError.message };
+  if ((activeUsers ?? 0) > 0) {
+    return {
+      error:
+        "Ce magasin a encore des utilisateurs actifs. Désactivez-les ou réassignez-les avant suppression.",
+    };
+  }
+
+  await supabase.from("hub_store_assignments").delete().eq("store_id", id);
+
+  const { error } = await supabase.from("stores").update({ is_active: false }).eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
+}
+
 export async function addStock(
   productId: string,
   quantity: number,

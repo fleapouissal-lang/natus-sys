@@ -10,6 +10,42 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_SIZE = 5 * 1024 * 1024;
 const POS_CATEGORY_CARDS_BUCKET = "pos-category-cards";
 
+const IMAGE_TYPE_BY_EXT: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+};
+
+function normalizeImageMimeType(type: string): string {
+  if (type === "image/pjpeg" || type === "image/jpg") return "image/jpeg";
+  return type;
+}
+
+function resolveImageFileType(
+  file: File
+): { contentType: string; ext: string } | { error: string } {
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  const fromType = normalizeImageMimeType(file.type);
+
+  if (ALLOWED_TYPES.includes(fromType)) {
+    const resolvedExt =
+      ext && IMAGE_TYPE_BY_EXT[ext]
+        ? ext
+        : fromType === "image/jpeg"
+          ? "jpg"
+          : fromType.replace("image/", "");
+    return { contentType: fromType, ext: resolvedExt || "jpg" };
+  }
+
+  if (ext && IMAGE_TYPE_BY_EXT[ext]) {
+    return { contentType: IMAGE_TYPE_BY_EXT[ext], ext };
+  }
+
+  return { error: "Format d'image non supporté (JPG, PNG, WebP, GIF)" };
+}
+
 function sanitizeFileName(name: string): string {
   return name
     .normalize("NFD")
@@ -184,28 +220,40 @@ export async function uploadPosCategoryCardImage(
   slug: string,
   file: File
 ): Promise<{ url?: string; error?: string }> {
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return { error: "Format d'image non supporté (JPG, PNG, WebP, GIF)" };
-  }
+  const resolved = resolveImageFileType(file);
+  if ("error" in resolved) return { error: resolved.error };
 
   if (file.size > MAX_SIZE) {
     return { error: "Image trop volumineuse (max 5 Mo)" };
   }
 
   const safeSlug = sanitizeFileName(slug || "category");
-  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-  const path = `${safeSlug}/cover.${ext}`;
+  const path = `${safeSlug}/cover-${Date.now()}.${resolved.ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error } = await supabase.storage.from(POS_CATEGORY_CARDS_BUCKET).upload(path, buffer, {
-    contentType: file.type,
-    upsert: true,
+    contentType: resolved.contentType,
+    upsert: false,
   });
 
   if (error) return { error: error.message };
 
   const { data } = supabase.storage.from(POS_CATEGORY_CARDS_BUCKET).getPublicUrl(path);
   return { url: data.publicUrl };
+}
+
+export async function deletePosCategoryCardStorageFile(
+  supabase: SupabaseClient,
+  imageUrl: string | null | undefined
+): Promise<void> {
+  if (!imageUrl) return;
+
+  const marker = `/storage/v1/object/public/${POS_CATEGORY_CARDS_BUCKET}/`;
+  const index = imageUrl.indexOf(marker);
+  if (index === -1) return;
+
+  const path = decodeURIComponent(imageUrl.slice(index + marker.length));
+  await supabase.storage.from(POS_CATEGORY_CARDS_BUCKET).remove([path]);
 }
 
 export async function uploadNewsImage(

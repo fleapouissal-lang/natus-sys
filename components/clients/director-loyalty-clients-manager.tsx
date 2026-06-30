@@ -101,15 +101,17 @@ export function DirectorLoyaltyClientsManager({
                 className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
               />
             </div>
-            <Button type="button" onClick={() => setShowCreate(true)} className="gap-2">
-              <UserPlus className="h-4 w-4" />
-              Nouveau client
-            </Button>
-            <CustomersCsvActions
-              kind="loyalty"
-              exportRows={filtered}
-              onImported={() => router.refresh()}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" onClick={() => setShowCreate(true)} className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Nouveau client
+              </Button>
+              <CustomersCsvActions
+                kind="loyalty"
+                exportRows={filtered}
+                onImported={() => router.refresh()}
+              />
+            </div>
           </div>
         </div>
       </FilterTogglePanel>

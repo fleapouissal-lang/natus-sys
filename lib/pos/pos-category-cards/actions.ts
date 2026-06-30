@@ -8,7 +8,11 @@ import {
 } from "@/lib/constants/products";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { uploadPosCategoryCardImage } from "@/lib/storage";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  deletePosCategoryCardStorageFile,
+  uploadPosCategoryCardImage,
+} from "@/lib/storage";
 import { listProductsInCategory } from "@/lib/pos/pos-category-cards/queries";
 import { POS_MIN_CATEGORY_PRODUCTS } from "@/lib/pos/pos-category-cards/types";
 import type { Product } from "@/lib/types";
@@ -55,7 +59,7 @@ export async function createPosCategoryCard(formData: FormData): Promise<
   let imageUrl: string | null = existing?.image_url ?? null;
 
   if (imageFile instanceof File && imageFile.size > 0) {
-    const upload = await uploadPosCategoryCardImage(supabase, slug, imageFile);
+    const upload = await uploadPosCategoryCardImage(createAdminClient(), slug, imageFile);
     if (upload.error) return actionError(upload.error);
     imageUrl = upload.url ?? null;
   }
@@ -121,13 +125,20 @@ export async function updatePosCategoryCardImage(formData: FormData): Promise<
   const supabase = await createClient();
   const { data: row, error: fetchError } = await supabase
     .from("pos_category_cards")
-    .select("id, slug")
+    .select("id, slug, name, image_url")
     .eq("id", id)
     .maybeSingle();
 
   if (fetchError || !row) return actionError("Catégorie introuvable");
 
-  const upload = await uploadPosCategoryCardImage(supabase, row.slug, imageFile);
+  const slug = row.slug || getCategoryBucketSlug(row.name);
+  const admin = createAdminClient();
+
+  if (row.image_url) {
+    await deletePosCategoryCardStorageFile(admin, row.image_url);
+  }
+
+  const upload = await uploadPosCategoryCardImage(admin, slug, imageFile);
   if (upload.error || !upload.url) return actionError(upload.error ?? "Upload échoué");
 
   const { error } = await supabase
@@ -153,6 +164,18 @@ export async function removePosCategoryCardImage(id: string): Promise<
   if (!id.trim()) return actionError("Catégorie introuvable");
 
   const supabase = await createClient();
+  const { data: row, error: fetchError } = await supabase
+    .from("pos_category_cards")
+    .select("id, image_url")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchError || !row) return actionError("Catégorie introuvable");
+
+  if (row.image_url) {
+    await deletePosCategoryCardStorageFile(createAdminClient(), row.image_url);
+  }
+
   const { error } = await supabase
     .from("pos_category_cards")
     .update({

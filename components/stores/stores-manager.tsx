@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   MapPin,
   Package,
@@ -9,6 +10,7 @@ import {
   Search,
   Store,
   Warehouse,
+  Trash2,
 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +19,7 @@ import { SelectMenu } from "@/components/ui/select-menu";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { ProductImage } from "@/components/pos/product-image";
 import { CreateStoreForm } from "@/components/stores/create-store-form";
+import { deleteStore } from "@/lib/actions";
 import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { formatCurrency } from "@/lib/utils";
@@ -141,24 +144,50 @@ function StorePickerCard({
   store,
   selected,
   onSelect,
+  canDelete = false,
+  onDelete,
+  deleting = false,
 }: {
   store: StoreWithStats;
   selected: boolean;
   onSelect: () => void;
+  canDelete?: boolean;
+  onDelete?: () => void;
+  deleting?: boolean;
 }) {
   const activeCashiers = store.cashiers.filter((c) => c.is_active);
+  const showDelete = canDelete && !store.is_hub && onDelete;
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <div
       className={cn(
-        "flex h-full w-full flex-col rounded-xl border p-4 text-left transition-colors cursor-pointer",
+        "relative flex h-full w-full flex-col rounded-xl border transition-colors",
         selected
           ? "border-primary bg-primary/5 ring-2 ring-primary/15"
           : "border-border bg-surface hover:border-primary/30 hover:bg-primary/5"
       )}
     >
+      {showDelete && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
+          disabled={deleting}
+          className="absolute right-2 top-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-danger/25 bg-surface/95 text-danger transition-colors hover:border-danger/50 hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label={`Supprimer ${store.name}`}
+          title="Supprimer le magasin"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={onSelect}
+        className="flex h-full w-full cursor-pointer flex-col p-4 text-left"
+      >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           {store.is_hub ? (
@@ -168,7 +197,7 @@ function StorePickerCard({
           )}
           <h3 className="truncate font-semibold leading-tight">{store.name}</h3>
         </div>
-        <Badge className="shrink-0">{store.city}</Badge>
+        <Badge className={cn("shrink-0", showDelete && "mr-9")}>{store.city}</Badge>
       </div>
 
       <p className="mt-2 line-clamp-2 text-sm text-muted">{store.address || store.city}</p>
@@ -197,7 +226,8 @@ function StorePickerCard({
         )}
         {store.is_hub && <Badge variant="accent">Dépôt</Badge>}
       </div>
-    </button>
+      </button>
+    </div>
   );
 }
 
@@ -327,6 +357,7 @@ export function StoresManager({
   defaultCity,
   cityLabel,
   canCreateStore = false,
+  canDeleteStore = false,
 }: {
   stores: StoreWithStats[];
   inventoryByStore: Record<string, Product[]>;
@@ -334,8 +365,13 @@ export function StoresManager({
   defaultCity?: string;
   cityLabel?: string;
   canCreateStore?: boolean;
+  canDeleteStore?: boolean;
 }) {
+  const router = useRouter();
   const [selectedStoreId, setSelectedStoreId] = useState(stores[0]?.id ?? "");
+  const [deletingStoreId, setDeletingStoreId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [deletePending, startDeleteTransition] = useTransition();
   const {
     paginated: paginatedStores,
     page,
@@ -353,6 +389,32 @@ export function StoresManager({
     (sum, store) => sum + store.cashiers.filter((c) => c.is_active).length,
     0
   );
+
+  function handleDeleteStore(store: StoreWithStats) {
+    const message = `Supprimer le magasin « ${store.name} » (${store.city}) ?\n\nLe magasin sera désactivé et n'apparaîtra plus dans les listes. L'historique (ventes, transferts…) est conservé.`;
+
+    if (!window.confirm(message)) return;
+
+    setDeleteError("");
+    setDeletingStoreId(store.id);
+
+    startDeleteTransition(async () => {
+      const result = await deleteStore(store.id);
+      setDeletingStoreId(null);
+
+      if ("error" in result) {
+        setDeleteError(result.error ?? "Suppression impossible");
+        return;
+      }
+
+      if (selectedStoreId === store.id) {
+        const remaining = stores.filter((item) => item.id !== store.id);
+        setSelectedStoreId(remaining[0]?.id ?? "");
+      }
+
+      router.refresh();
+    });
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -389,6 +451,12 @@ export function StoresManager({
         <CreateStoreForm allowedCities={allowedCities} defaultCity={defaultCity} />
       )}
 
+      {deleteError && (
+        <p className="rounded-lg border border-danger/20 bg-danger/5 px-3 py-2.5 text-sm text-danger">
+          {deleteError}
+        </p>
+      )}
+
       {stores.length > 0 ? (
         <>
           <Card padding={false} className="overflow-hidden">
@@ -405,6 +473,9 @@ export function StoresManager({
                   store={store}
                   selected={selectedStore?.id === store.id}
                   onSelect={() => setSelectedStoreId(store.id)}
+                  canDelete={canDeleteStore}
+                  onDelete={() => handleDeleteStore(store)}
+                  deleting={deletePending && deletingStoreId === store.id}
                 />
               ))}
             </div>

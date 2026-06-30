@@ -89,6 +89,7 @@ function DirectorStructuresTabsInner({
           defaultCity={defaultCity}
           cityLabel={cityLabel}
           canCreateStore={canCreateStore}
+          canDeleteStore={canCreateStore}
         />
       ) : (
         <HubAccountsManager
