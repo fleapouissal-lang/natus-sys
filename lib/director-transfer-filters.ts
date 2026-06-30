@@ -55,3 +55,17 @@ export function filterSentStoreTransfers(
 export function filterSentHubTransfers(transfers: HubStockTransfer[]): HubStockTransfer[] {
   return transfers.filter((transfer) => isTransferSentStatus(transfer.status));
 }
+
+/** Transferts magasin → magasin ou dépôt envoyés depuis le périmètre source. */
+export function filterOutgoingStoreTransfersFromStores(
+  transfers: StoreStockTransfer[],
+  fromStoreIds: string[]
+): StoreStockTransfer[] {
+  const ids = new Set(fromStoreIds);
+  return filterSentStoreTransfers(
+    transfers.filter(
+      (transfer) =>
+        ids.has(transfer.from_store_id) && transfer.from_store_id !== transfer.to_store_id
+    )
+  );
+}

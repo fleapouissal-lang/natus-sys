@@ -17,6 +17,11 @@ export type ReceivedTransfersSearchParams = {
   status?: string;
   source?: string;
   dest?: string;
+  /** Dates de filtrage (stocks envoyés — évite conflit avec ?from/?to magasins) */
+  sentFrom?: string;
+  sentTo?: string;
+  /** Destination filtre liste stocks envoyés (évite conflit avec ?dest= store|hub) */
+  listDest?: string;
 };
 
 export type ReceivedTransferStatusFilter =
@@ -115,6 +120,10 @@ export function resolveReceivedTransfersScope(
     defaultKind?: ReceivedTransferKind;
     /** Gérant / caissier : ignorer ?dest= hors magasins du périmètre */
     restrictDestToScopedStores?: boolean;
+    /** Gérant / caissier : ignorer ?source= hors magasins du périmètre */
+    restrictSourceToScopedStores?: boolean;
+    /** Caissier : source figée sur le magasin du compte */
+    lockSourceToScopedStore?: boolean;
   }
 ): ReceivedTransfersFilterScope {
   const cities = [...new Set(scopedStores.map((s) => s.city))].sort();
@@ -177,6 +186,18 @@ export function resolveReceivedTransfersScope(
     destStoreId = "";
   }
 
+  let sourceStoreId = params.source?.trim() || "";
+  if (
+    options?.restrictSourceToScopedStores &&
+    sourceStoreId &&
+    !scopedStores.some((store) => store.id === sourceStoreId)
+  ) {
+    sourceStoreId = "";
+  }
+  if (options?.lockSourceToScopedStore && scopedStores.length === 1) {
+    sourceStoreId = scopedStores[0].id;
+  }
+
   return {
     stores: scopedStores,
     storesInCity,
@@ -191,9 +212,33 @@ export function resolveReceivedTransfersScope(
     kind: resolveReceivedTransferKind(params, options?.defaultKind ?? "all"),
     productQuery: (params.q ?? params.product)?.trim() || "",
     status: parseReceivedTransferStatus(params.status),
-    sourceStoreId: params.source?.trim() || "",
+    sourceStoreId,
     destStoreId,
   };
+}
+
+/** Filtres liste stocks envoyés (?sentFrom/?sentTo pour les dates). */
+export function resolveSentTransfersListScope(
+  profile: Profile,
+  scopedStores: Store[],
+  params: ReceivedTransfersSearchParams,
+  options?: {
+    restrictDestToScopedStores?: boolean;
+    restrictSourceToScopedStores?: boolean;
+    lockSourceToScopedStore?: boolean;
+  }
+): ReceivedTransfersFilterScope {
+  return resolveReceivedTransfersScope(
+    profile,
+    scopedStores,
+    {
+      ...params,
+      from: params.sentFrom,
+      to: params.sentTo,
+      dest: params.listDest,
+    },
+    options
+  );
 }
 
 export function filterTransfersBySentDate<T extends { sent_at: string }>(

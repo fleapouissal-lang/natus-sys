@@ -23,6 +23,10 @@ export type ReceivedTransfersLocationConfig = {
   lockDestination?: boolean;
   /** Gérant : destination limitée aux magasins associés (sans enrichissement depuis les lignes) */
   strictDestinationOptions?: boolean;
+  /** Caissier stocks envoyés : source figée sur le magasin du compte */
+  lockSource?: boolean;
+  /** Gérant stocks envoyés : source limitée aux magasins associés */
+  strictSourceOptions?: boolean;
 };
 
 export function useReceivedTransferRows(
@@ -41,10 +45,10 @@ export function useReceivedTransferRows(
       );
     }
     const base = storesToLocationOptions(locationConfig.sourceSites);
-    return withAllLocationOption(
-      mergeLocationOptionsFromRows(base, allRows, "source"),
-      "Toutes les sources"
-    );
+    const options = locationConfig.strictSourceOptions
+      ? base
+      : mergeLocationOptionsFromRows(base, allRows, "source");
+    return withAllLocationOption(options, "Toutes les sources");
   }, [allRows, locationConfig]);
 
   const destinationOptions = useMemo((): ReceivedTransferLocationOption[] => {
@@ -79,5 +83,6 @@ export function useReceivedTransferRows(
     sourceOptions,
     destinationOptions,
     lockDestination: locationConfig?.lockDestination ?? false,
+    lockSource: locationConfig?.lockSource ?? false,
   };
 }

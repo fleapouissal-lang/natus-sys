@@ -21,6 +21,9 @@ import {
   getDirectorStoreStockTransfers,
 } from "@/lib/store-transfers";
 import { DirectorSentOrdersTabs } from "@/components/stock/director-sent-orders-tabs";
+import { getProductCatalog } from "@/lib/inventory";
+import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
+import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
 import type { Store } from "@/lib/types";
 
 type SiteType = "store" | "hub";
@@ -85,6 +88,12 @@ export default async function DirectorStockTransfersPage({
     fromHub?: string;
     to?: string;
     toHub?: string;
+    q?: string;
+    status?: string;
+    source?: string;
+    listDest?: string;
+    sentFrom?: string;
+    sentTo?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -92,9 +101,11 @@ export default async function DirectorStockTransfersPage({
   if (!profile || !isDirector(profile)) redirect("/login");
 
   const sitesAll = await getAllActiveTransferSites();
-  const retailStores = sitesAll.filter((store) => store.is_active && !store.is_hub);
-  const hubStores = sitesAll.filter((store) => store.is_active && store.is_hub);
+  const transferSites = sitesAll.filter((store) => store.is_active);
+  const retailStores = transferSites.filter((store) => !store.is_hub);
+  const hubStores = transferSites.filter((store) => store.is_hub);
   const retailStoreIds = retailStores.map((store) => store.id);
+  const filter = resolveSentTransfersListScope(profile, transferSites, params);
 
   const srcType = resolveSiteType(params.src, "store");
   const destType = resolveSiteType(params.dest, "store");
@@ -110,14 +121,17 @@ export default async function DirectorStockTransfersPage({
       toHubParam: params.toHub,
     });
 
-  const [products, storeTransfers, hubTransfers, livreurs] = await Promise.all([
-    sourceId ? getProductsWithStoreStockForTransfer(sourceId) : Promise.resolve([]),
-    getDirectorStoreStockTransfers(),
-    getDirectorHubStockTransfers(),
-    getTransferLivreurs([
-      ...new Set(sitesAll.map((store) => store.city).filter(Boolean)),
-    ] as string[]),
-  ]);
+  const [products, storeTransfers, hubTransfers, livreurs, catalogProducts] =
+    await Promise.all([
+      sourceId ? getProductsWithStoreStockForTransfer(sourceId) : Promise.resolve([]),
+      getDirectorStoreStockTransfers(),
+      getDirectorHubStockTransfers(),
+      getTransferLivreurs([
+        ...new Set(sitesAll.map((store) => store.city).filter(Boolean)),
+      ] as string[]),
+      getProductCatalog(),
+    ]);
+  const productLookup = buildReceivedTransferProductLookup(catalogProducts);
 
   const interStoreTransfers = filterDirectorSentStoreTransfers(
     filterInterStoreOutgoingTransfers(storeTransfers, retailStoreIds)
@@ -129,12 +143,10 @@ export default async function DirectorStockTransfersPage({
     filterHubStoreMixedTransfers(hubTransfers)
   );
 
-  const createdTab = params.tab || "new";
-  const tabLabels: Record<string, string> = {
-    store: "« Transferts inter-magasins »",
-    hub: "« Transferts entre Hubs »",
-    mixed: "« Transferts Hub ↔ Magasin »",
-  };
+  const successMessage =
+    params.created === "1"
+      ? "Transfert créé avec succès — consultez l'onglet « Transferts en cours »."
+      : undefined;
 
   return (
     <div className="space-y-6">
@@ -162,14 +174,11 @@ export default async function DirectorStockTransfersPage({
           hubHubTransfers={hubHubTransfers}
           hubStoreMixedTransfers={hubStoreMixedTransfers}
           retailStoreIds={retailStoreIds}
+          transferSites={transferSites}
           livreurs={livreurs}
-          successMessage={
-            params.created === "1"
-              ? `Transfert créé avec succès — consultez l'onglet ${
-                  tabLabels[createdTab] || "correspondant"
-                }.`
-              : undefined
-          }
+          filter={filter}
+          productLookup={productLookup}
+          successMessage={successMessage}
         />
       </Suspense>
     </div>

@@ -27,12 +27,18 @@ function ReceivedTransfersFilterBarInner({
   sourceOptions,
   destinationOptions,
   lockDestination = false,
+  lockSource = false,
+  variant = "received",
+  preserveTab,
 }: {
   filter: ReceivedTransfersFilterScope;
   resultCount: number;
   sourceOptions: ReceivedTransferLocationOption[];
   destinationOptions: ReceivedTransferLocationOption[];
   lockDestination?: boolean;
+  lockSource?: boolean;
+  variant?: "received" | "sent";
+  preserveTab?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -58,7 +64,9 @@ function ReceivedTransfersFilterBarInner({
       if (value) params.set(key, value);
       else params.delete(key);
     }
-    params.delete("tab");
+    if (!preserveTab) {
+      params.delete("tab");
+    }
     params.delete("type");
     params.delete("product");
     params.delete("city");
@@ -66,6 +74,12 @@ function ReceivedTransfersFilterBarInner({
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname);
   }
+
+  const dateFromKey = variant === "sent" ? "sentFrom" : "from";
+  const dateToKey = variant === "sent" ? "sentTo" : "to";
+  const destParamKey = variant === "sent" ? "listDest" : "dest";
+  const filterTitle =
+    variant === "sent" ? "Filtrer les stocks envoyés" : "Filtrer les stocks reçus";
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -83,11 +97,11 @@ function ReceivedTransfersFilterBarInner({
     setProductQuery("");
     pushParams({
       q: undefined,
-      from: undefined,
-      to: undefined,
+      [dateFromKey]: undefined,
+      [dateToKey]: undefined,
       status: undefined,
       source: undefined,
-      dest: undefined,
+      [destParamKey]: undefined,
     });
   }
 
@@ -109,6 +123,15 @@ function ReceivedTransfersFilterBarInner({
     []
   );
 
+  const sourceSelectOptions = useMemo(() => {
+    if (!lockSource) return sourceOptions;
+    return sourceOptions.filter((option) => option.value !== "");
+  }, [sourceOptions, lockSource]);
+
+  const sourceValue = lockSource
+    ? sourceSelectOptions[0]?.value ?? filter.sourceStoreId
+    : filter.sourceStoreId;
+
   const destinationSelectOptions = useMemo(() => {
     if (!lockDestination) return destinationOptions;
     return destinationOptions.filter((option) => option.value !== "");
@@ -124,7 +147,7 @@ function ReceivedTransfersFilterBarInner({
         <div className="flex items-center gap-2 text-sm">
           <CalendarRange className="h-4 w-4 shrink-0 text-primary" />
           <div>
-            <p className="font-medium">Filtrer les stocks reçus</p>
+            <p className="font-medium">{filterTitle}</p>
             <p className="text-xs text-muted">
               {resultCount} transfert{resultCount !== 1 ? "s" : ""}
             </p>
@@ -158,18 +181,19 @@ function ReceivedTransfersFilterBarInner({
 
         <SelectMenu
           label="Source"
-          value={filter.sourceStoreId}
+          value={sourceValue}
           onChange={(value) => pushParams({ source: value || undefined })}
-          options={sourceOptions}
+          options={sourceSelectOptions}
           defaultIcon={ArrowUpFromLine}
           showIcons={false}
           size="sm"
+          disabled={lockSource && sourceSelectOptions.length <= 1}
         />
 
         <SelectMenu
           label="Destination"
           value={destinationValue}
-          onChange={(value) => pushParams({ dest: value || undefined })}
+          onChange={(value) => pushParams({ [destParamKey]: value || undefined })}
           options={destinationSelectOptions}
           defaultIcon={ArrowDownToLine}
           showIcons={false}
@@ -213,12 +237,12 @@ function ReceivedTransfersFilterBarInner({
           <DateInputField
             label="Date début"
             value={filter.dateFrom}
-            onChange={(from) => pushParams({ from: from || undefined })}
+            onChange={(from) => pushParams({ [dateFromKey]: from || undefined })}
           />
           <DateInputField
             label="Date fin"
             value={filter.dateTo}
-            onChange={(to) => pushParams({ to: to || undefined })}
+            onChange={(to) => pushParams({ [dateToKey]: to || undefined })}
           />
         </div>
       )}
@@ -232,6 +256,9 @@ export function ReceivedTransfersFilterBar(props: {
   sourceOptions: ReceivedTransferLocationOption[];
   destinationOptions: ReceivedTransferLocationOption[];
   lockDestination?: boolean;
+  lockSource?: boolean;
+  variant?: "received" | "sent";
+  preserveTab?: string;
 }) {
   return (
     <Suspense fallback={null}>

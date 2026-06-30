@@ -1,15 +1,17 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowRightLeft, PackagePlus, Warehouse } from "lucide-react";
+import { ArrowRightLeft, PackagePlus } from "lucide-react";
 import { StoreStockTransferManager } from "@/components/stock/store-stock-transfer-manager";
-import { StoreTransfersList } from "@/components/stock/store-transfers-list";
-import { HubTransfersList } from "@/components/hub/hub-transfers-list";
+import { SentTransfersUnifiedView } from "@/components/stock/sent-transfers-unified-view";
 import { cn } from "@/lib/utils";
+import type { ReceivedTransfersFilterScope } from "@/lib/stock-transfers/received-filters";
+import type { ReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
+import type { ReceivedTransferLocationSites } from "@/lib/stock-transfers/received-location-filters";
 import type { HubStockTransfer, Product, Profile, Store, StoreStockTransfer } from "@/lib/types";
 
-type SentTab = "new" | "store" | "depot";
+type SentTab = "new" | "sent";
 
 const TABS: {
   id: SentTab;
@@ -24,16 +26,10 @@ const TABS: {
     icon: PackagePlus,
   },
   {
-    id: "store",
-    label: "Commandes envoyées vers un magasin",
-    shortLabel: "Magasin",
+    id: "sent",
+    label: "Transferts en cours",
+    shortLabel: "En cours",
     icon: ArrowRightLeft,
-  },
-  {
-    id: "depot",
-    label: "Commandes envoyées vers un dépôt",
-    shortLabel: "Dépôt",
-    icon: Warehouse,
   },
 ];
 
@@ -50,7 +46,11 @@ function ManagerSentOrdersTabsInner({
   storeTransfers,
   hubOutgoingTransfers,
   managedStoreIds,
+  sourceSites,
+  destinationSites,
   livreurs,
+  filter,
+  productLookup,
 }: {
   sourceStores: Store[];
   destinationStores: Store[];
@@ -64,16 +64,47 @@ function ManagerSentOrdersTabsInner({
   storeTransfers: StoreStockTransfer[];
   hubOutgoingTransfers: HubStockTransfer[];
   managedStoreIds: string[];
+  sourceSites: ReceivedTransferLocationSites[];
+  destinationSites: ReceivedTransferLocationSites[];
   livreurs: Profile[];
+  filter: ReceivedTransfersFilterScope;
+  productLookup?: ReceivedTransferProductLookup;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab: SentTab =
-    tabParam === "store" || tabParam === "depot" || tabParam === "new"
-      ? tabParam
-      : "new";
+    tabParam === "sent" || tabParam === "store" || tabParam === "depot"
+      ? "sent"
+      : tabParam === "new"
+        ? "new"
+        : "new";
+
+  const groups = useMemo(
+    () => [
+      {
+        kind: "store" as const,
+        typeLabel: "Vers magasin",
+        storeTransfers,
+      },
+      {
+        kind: "depot" as const,
+        typeLabel: "Vers dépôt",
+        hubTransfers: hubOutgoingTransfers,
+      },
+    ],
+    [storeTransfers, hubOutgoingTransfers]
+  );
+
+  const locationConfig = useMemo(
+    () => ({
+      sourceSites,
+      destinationSites,
+      strictSourceOptions: true,
+    }),
+    [sourceSites, destinationSites]
+  );
 
   function setTab(tab: SentTab) {
     const params = new URLSearchParams(searchParams.toString());
@@ -120,27 +151,18 @@ function ManagerSentOrdersTabsInner({
         />
       )}
 
-      {activeTab === "store" && (
-        <StoreTransfersList
-          title="Commandes envoyées vers un magasin"
-          perspective="outgoing"
+      {activeTab === "sent" && (
+        <SentTransfersUnifiedView
+          filter={filter}
+          groups={groups}
+          locationConfig={locationConfig}
+          productLookup={productLookup}
           managedStoreIds={managedStoreIds}
-          transfers={storeTransfers}
-          actionMode="none"
           livreurs={livreurs}
-          emptyMessage="Aucune commande envoyée vers un autre magasin"
-        />
-      )}
-
-      {activeTab === "depot" && (
-        <HubTransfersList
-          title="Commandes envoyées vers un dépôt"
-          transfers={hubOutgoingTransfers}
-          readOnly
-          showOrigin
-          showProductImages
-          livreurs={livreurs}
-          emptyMessage="Aucun envoi vers un dépôt"
+          storeActionMode="full"
+          hubReadOnly={false}
+          hubManageAsStoreSource
+          emptyMessage="Aucun transfert envoyé en cours"
         />
       )}
     </div>
@@ -160,7 +182,11 @@ export function ManagerSentOrdersTabs(props: {
   storeTransfers: StoreStockTransfer[];
   hubOutgoingTransfers: HubStockTransfer[];
   managedStoreIds: string[];
+  sourceSites: ReceivedTransferLocationSites[];
+  destinationSites: ReceivedTransferLocationSites[];
   livreurs: Profile[];
+  filter: ReceivedTransfersFilterScope;
+  productLookup?: ReceivedTransferProductLookup;
 }) {
   return (
     <Suspense fallback={null}>

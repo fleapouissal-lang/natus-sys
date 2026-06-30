@@ -46,6 +46,7 @@ import type { Product, Profile } from "@/lib/types";
 export type ReceivedTransfersListProps = {
   rows: ReceivedTransferRow[];
   managedStoreIds: string[];
+  title?: string;
   emptyMessage?: string;
   showProductImages?: boolean;
   livreurs?: Profile[];
@@ -74,6 +75,7 @@ function hubRowAllowManage(
 export function ReceivedTransfersList({
   rows,
   managedStoreIds,
+  title = "Transferts reçus",
   emptyMessage = "Aucun transfert reçu",
   showProductImages = false,
   livreurs = [],
@@ -162,7 +164,7 @@ export function ReceivedTransfersList({
     <>
       <Card padding={false}>
         <div className="border-b border-border px-6 py-4">
-          <h2 className="text-lg font-semibold">Transferts reçus</h2>
+          <h2 className="text-lg font-semibold">{title}</h2>
           <p className="mt-1 text-sm text-muted">
             {totalItems} transfert{totalItems !== 1 ? "s" : ""}
           </p>

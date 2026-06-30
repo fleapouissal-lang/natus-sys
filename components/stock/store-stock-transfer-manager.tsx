@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   ArrowRight,
   ArrowRightLeft,
-  Package,
   Search,
   Store as StoreIcon,
   Warehouse,
@@ -56,7 +55,7 @@ export function StoreStockTransferManager({
   fromStoreId: string;
   toStoreId: string;
   lockFromStore?: boolean;
-  basePath: "/manager" | "/director";
+  basePath: "/manager" | "/director" | "/cashier";
   hubStores?: Store[];
   toHubStoreId?: string;
   enableHubDestination?: boolean;
@@ -115,11 +114,6 @@ export function StoreStockTransferManager({
     totalItems,
   } = usePagination(filteredProducts, DEFAULT_PAGE_SIZE, filterToken);
 
-  const totalUnits = useMemo(
-    () => products.reduce((sum, p) => sum + p.stock, 0),
-    [products]
-  );
-
   const transferPayload = useMemo(() => {
     const items = products
       .map((product) => {
@@ -161,6 +155,13 @@ export function StoreStockTransferManager({
     };
   }, [transferPayload.payload, products]);
 
+  function sentTransfersPath(query: string) {
+    if (basePath === "/cashier") {
+      return query ? `/cashier/transfers/sent?${query}` : "/cashier/transfers/sent";
+    }
+    return query ? `${basePath}/stock-transfers?${query}` : `${basePath}/stock-transfers`;
+  }
+
   function navigateTransfer(
     nextFrom: string,
     nextTo: string,
@@ -174,7 +175,7 @@ export function StoreStockTransferManager({
       params.set("dest", nextDestination);
       if (nextDestination === "hub" && nextHubId) params.set("hub", nextHubId);
     }
-    router.push(`${basePath}/stock-transfers?${params.toString()}`);
+    router.push(sentTransfersPath(params.toString()));
     router.refresh();
   }
 
@@ -343,20 +344,6 @@ export function StoreStockTransferManager({
           </p>
         </Card>
       )}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <p className="text-sm text-muted">Produits au magasin source</p>
-          <p className="mt-1 text-3xl font-bold">{products.length}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-muted">Unités disponibles</p>
-          <p className="mt-1 flex items-center gap-2 text-3xl font-bold">
-            <Package className="h-7 w-7 text-primary" />
-            {totalUnits}
-          </p>
-        </Card>
-      </div>
 
       <Card padding={false}>
         <div className="border-b border-border p-4">
