@@ -113,12 +113,14 @@ export function ReceivedTransferDetailModal({
 
   const transfer = row.transfer;
   const isStore = row.source === "store";
-  const statusLabel = isStore
-    ? storeTransferStatusLabel(transfer.status)
-    : hubTransferStatusLabel(transfer.status);
-  const statusVariant = isStore
-    ? storeTransferStatusVariant(transfer.status)
-    : hubTransferStatusVariant(transfer.status);
+  const statusLabel =
+    row.source === "store"
+      ? storeTransferStatusLabel(row.transfer.status)
+      : hubTransferStatusLabel(row.transfer.status);
+  const statusVariant =
+    row.source === "store"
+      ? storeTransferStatusVariant(row.transfer.status)
+      : hubTransferStatusVariant(row.transfer.status);
 
   const fromName =
     transfer.from_store_name || (cashierHub && !isStore ? "Entrepôt hub" : "—");

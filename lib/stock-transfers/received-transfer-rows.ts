@@ -166,7 +166,7 @@ export function buildReceivedTransferProductLookup(
     name: string;
     barcode?: string | null;
     product_code?: string | null;
-    category?: string;
+    category?: string | null;
     categories?: string[];
   }>
 ): ReceivedTransferProductLookup {
