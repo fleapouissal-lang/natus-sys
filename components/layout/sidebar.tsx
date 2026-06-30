@@ -336,9 +336,11 @@ export function Sidebar({
         >
           <Icon
             className={cn(
-              "h-5 w-5 shrink-0",
+              "natus-icon h-5 w-5 shrink-0",
               isActive ? "text-primary" : "text-black"
             )}
+            strokeWidth={2}
+            aria-hidden
           />
           <span>{label}</span>
         </Link>
@@ -361,7 +363,7 @@ export function Sidebar({
               : "text-black hover:bg-white/40"
           )}
         >
-          <Icon className="h-5 w-5 shrink-0" />
+          <Icon className="natus-icon h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
         </Link>
       </li>
     );
@@ -442,9 +444,11 @@ export function Sidebar({
                       <span>{section.label}</span>
                       <ChevronDown
                         className={cn(
-                          "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                          "natus-icon h-3.5 w-3.5 shrink-0 transition-transform duration-200",
                           open ? "" : "-rotate-90"
                         )}
+                        strokeWidth={2}
+                        aria-hidden
                       />
                     </button>
                     {open && (

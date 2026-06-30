@@ -133,7 +133,7 @@ function SummaryStat({
   return (
     <div className={cn("rounded-xl border p-4", toneClasses[tone])}>
       <div className="flex items-center gap-2 text-sm text-muted">
-        <Icon className="h-4 w-4 shrink-0" />
+        <Icon className="natus-icon h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
         <span>{label}</span>
       </div>
       <p className="mt-2 text-2xl font-bold tabular-nums">{value}</p>
@@ -172,35 +172,18 @@ function StorePickerCard({
         <button
           type="button"
           onClick={onSelect}
-          className="min-w-0 flex-1 cursor-pointer text-left"
+          className="min-w-0 flex-1 cursor-pointer text-left text-foreground"
         >
           <div className="flex min-w-0 items-center gap-2">
             {store.is_hub ? (
-              <Warehouse className="h-5 w-5 shrink-0 text-primary" />
+              <Warehouse className="natus-icon h-5 w-5 shrink-0 text-primary" strokeWidth={2} aria-hidden />
             ) : (
-              <Store className="h-5 w-5 shrink-0 text-primary" />
+              <Store className="natus-icon h-5 w-5 shrink-0 text-primary" strokeWidth={2} aria-hidden />
             )}
             <h3 className="truncate font-semibold leading-tight">{store.name}</h3>
           </div>
         </button>
-        <div className="flex shrink-0 items-start gap-1.5">
-          <Badge>{store.city}</Badge>
-          {showDelete && (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onDelete();
-              }}
-              disabled={deleting}
-              className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-danger/25 bg-surface text-danger transition-colors hover:border-danger/50 hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label={`Supprimer ${store.name}`}
-              title="Supprimer le magasin"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+        <Badge className="shrink-0">{store.city}</Badge>
       </div>
 
       <button
@@ -223,18 +206,38 @@ function StorePickerCard({
 
         <div className="mt-3 flex flex-wrap gap-1.5">
           <Badge variant={activeCashiers.length > 0 ? "success" : "danger"}>
-            <Users className="mr-1 h-3 w-3" />
+            <Users className="natus-icon mr-1 h-3 w-3" strokeWidth={2} aria-hidden />
             {activeCashiers.length} caissier{activeCashiers.length !== 1 ? "s" : ""}
           </Badge>
           {store.lowStockCount > 0 && (
             <Badge variant="warning">
-              <AlertTriangle className="mr-1 h-3 w-3" />
+              <AlertTriangle className="natus-icon mr-1 h-3 w-3" strokeWidth={2} aria-hidden />
               {store.lowStockCount} faible
             </Badge>
           )}
           {store.is_hub && <Badge variant="accent">Dépôt</Badge>}
         </div>
       </button>
+
+      {showDelete && (
+        <div className="border-t border-border/70 px-4 py-3">
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            loading={deleting}
+            disabled={deleting}
+            className="w-full"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete();
+            }}
+          >
+            <Trash2 className="natus-icon h-4 w-4" strokeWidth={2} aria-hidden />
+            Supprimer
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -276,7 +279,7 @@ function StoreDetailPanel({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" />
+              <MapPin className="natus-icon h-5 w-5 text-primary" strokeWidth={2} aria-hidden />
               <h2 className="text-xl font-semibold">{store.name}</h2>
               <Badge>{store.city}</Badge>
               {store.is_hub && <Badge variant="accent">Dépôt</Badge>}
@@ -286,12 +289,12 @@ function StoreDetailPanel({
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <div className="flex flex-wrap gap-2">
               <Badge>
-                <Package className="mr-1 h-3 w-3" />
+                <Package className="natus-icon mr-1 h-3 w-3" strokeWidth={2} aria-hidden />
                 {store.productCount} produit{store.productCount !== 1 ? "s" : ""}
               </Badge>
               <Badge variant="success">{store.totalUnits} unités</Badge>
               <Badge variant={activeCashiers.length > 0 ? "success" : "danger"}>
-                <Users className="mr-1 h-3 w-3" />
+                <Users className="natus-icon mr-1 h-3 w-3" strokeWidth={2} aria-hidden />
                 {activeCashiers.length} caissier{activeCashiers.length !== 1 ? "s" : ""} actif
                 {activeCashiers.length !== 1 ? "s" : ""}
               </Badge>
@@ -306,7 +309,7 @@ function StoreDetailPanel({
                 onClick={onDelete}
                 className="w-full sm:w-auto"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="natus-icon h-4 w-4" strokeWidth={2} aria-hidden />
                 Supprimer le magasin
               </Button>
             )}

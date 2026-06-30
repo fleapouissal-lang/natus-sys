@@ -75,7 +75,7 @@ function DirectorStructuresTabsInner({
                 : "text-muted hover:text-foreground"
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" />
+            <Icon className="natus-icon h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
             {label}
           </button>
         ))}

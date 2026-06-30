@@ -67,6 +67,26 @@
   border-radius: var(--radius-natus) !important;
 }
 
+/* Lucide / SVG : le reset border-radius global casse le rendu des icônes */
+svg,
+svg *,
+.lucide,
+.lucide * {
+  border-radius: 0 !important;
+}
+
+svg.lucide,
+.lucide,
+.natus-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: visible !important;
+  stroke: currentColor;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* Exceptions barres mobile — coins arrondis explicites (priorité sur le reset global) */
 .natus-mobile-topbar-pill,
 .natus-mobile-topbar-pill::before {

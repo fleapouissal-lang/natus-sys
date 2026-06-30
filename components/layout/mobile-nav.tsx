@@ -200,7 +200,7 @@ export function MobileBottomNav({
                           isActive ? "bg-champagne text-black" : "bg-primary/10 text-primary"
                         )}
                       >
-                        <Icon className="h-4 w-4 shrink-0" />
+                        <Icon className="natus-icon h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
                       </span>
                       {label}
                     </Link>
@@ -230,7 +230,7 @@ export function MobileBottomNav({
                     )}
                   >
                     <span className="natus-mobile-nav-icon">
-                      <Icon className="h-[1.125rem] w-[1.125rem] shrink-0" />
+                      <Icon className="natus-icon h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
                     </span>
                     <span className="max-w-full truncate px-0.5">{label}</span>
                   </Link>
@@ -250,7 +250,7 @@ export function MobileBottomNav({
                   )}
                 >
                   <span className="natus-mobile-nav-icon">
-                    <MoreHorizontal className="h-[1.125rem] w-[1.125rem] shrink-0" />
+                    <MoreHorizontal className="natus-icon h-[1.125rem] w-[1.125rem] shrink-0" strokeWidth={2} aria-hidden />
                   </span>
                   <span>Plus</span>
                 </button>
