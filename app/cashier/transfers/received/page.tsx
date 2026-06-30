@@ -46,7 +46,7 @@ export default async function CashierTransfersReceivedPage({
           Stocks reçus
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Tous les transferts entrants dès la création — dépôt hub et autres magasins · {storeName}
+          Transferts vers {storeName} — tous statuts
         </p>
       </div>
 

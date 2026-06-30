@@ -2,48 +2,66 @@ import type { HubStockTransfer, HubStockTransferStatus, StoreStockTransfer, Stor
 
 type TransferStatus = HubStockTransferStatus | StoreStockTransferStatus;
 
-/** Stocks envoyés : masquer uniquement les transferts clôturés (reçus). */
+const DIRECTOR_SENT_STATUSES = new Set<TransferStatus>([
+  "en_cours",
+  "pret",
+  "en_livraison",
+  "livre",
+  "sent",
+]);
+
+/** Directeur — stocks envoyés : en cours → livré (hub : + sent), hors reçu. */
+export function isDirectorTransferSentStatus(status: TransferStatus): boolean {
+  return DIRECTOR_SENT_STATUSES.has(status);
+}
+
+/** Directeur — stocks reçus : uniquement les transferts clôturés (reçu). */
+export function isDirectorTransferReceivedStatus(status: TransferStatus): boolean {
+  return status === "received";
+}
+
+/** Stocks envoyés (autres rôles) : masquer uniquement les transferts clôturés (reçus). */
 export function isTransferSentStatus(status: TransferStatus): boolean {
   return status !== "received";
 }
 
-/** Stocks reçus : visible dès la création (En cours) jusqu'à clôture. */
+/** Stocks reçus (autres rôles) : visible dès la création jusqu'à clôture. */
 export function isTransferReceivedStatus(_status: TransferStatus): boolean {
   return true;
 }
 
-/** @deprecated Utiliser isTransferSentStatus */
+/** @deprecated Utiliser isDirectorTransferSentStatus ou isTransferSentStatus */
 export function isDirectorTransferInProgress(status: TransferStatus): boolean {
-  return isTransferSentStatus(status);
+  return isDirectorTransferSentStatus(status);
 }
 
-/** @deprecated Utiliser isTransferReceivedStatus */
+/** @deprecated Utiliser isDirectorTransferReceivedStatus */
 export function isDirectorTransferReceived(status: TransferStatus): boolean {
-  return isTransferReceivedStatus(status);
+  return isDirectorTransferReceivedStatus(status);
 }
 
 export function filterDirectorSentStoreTransfers(
   transfers: StoreStockTransfer[]
 ): StoreStockTransfer[] {
-  return transfers.filter((transfer) => isTransferSentStatus(transfer.status));
+  return transfers.filter((transfer) => isDirectorTransferSentStatus(transfer.status));
 }
 
 export function filterDirectorReceivedStoreTransfers(
   transfers: StoreStockTransfer[]
 ): StoreStockTransfer[] {
-  return transfers.filter((transfer) => isTransferReceivedStatus(transfer.status));
+  return transfers.filter((transfer) => isDirectorTransferReceivedStatus(transfer.status));
 }
 
 export function filterDirectorSentHubTransfers(
   transfers: HubStockTransfer[]
 ): HubStockTransfer[] {
-  return transfers.filter((transfer) => isTransferSentStatus(transfer.status));
+  return transfers.filter((transfer) => isDirectorTransferSentStatus(transfer.status));
 }
 
 export function filterDirectorReceivedHubTransfers(
   transfers: HubStockTransfer[]
 ): HubStockTransfer[] {
-  return transfers.filter((transfer) => isTransferReceivedStatus(transfer.status));
+  return transfers.filter((transfer) => isDirectorTransferReceivedStatus(transfer.status));
 }
 
 export function filterSentStoreTransfers(
@@ -54,18 +72,4 @@ export function filterSentStoreTransfers(
 
 export function filterSentHubTransfers(transfers: HubStockTransfer[]): HubStockTransfer[] {
   return transfers.filter((transfer) => isTransferSentStatus(transfer.status));
-}
-
-/** Transferts magasin → magasin ou dépôt envoyés depuis le périmètre source. */
-export function filterOutgoingStoreTransfersFromStores(
-  transfers: StoreStockTransfer[],
-  fromStoreIds: string[]
-): StoreStockTransfer[] {
-  const ids = new Set(fromStoreIds);
-  return filterSentStoreTransfers(
-    transfers.filter(
-      (transfer) =>
-        ids.has(transfer.from_store_id) && transfer.from_store_id !== transfer.to_store_id
-    )
-  );
 }

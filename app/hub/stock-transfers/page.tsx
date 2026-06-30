@@ -2,18 +2,17 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { getHubStoresByCity } from "@/lib/hub";
-import {
-  getHubOutgoingTransfersToHubs,
-  getHubOutgoingTransfersToStores,
-} from "@/lib/hub-transfers";
-import { filterSentHubTransfers } from "@/lib/director-transfer-filters";
+import { getHubOutgoingTransfers } from "@/lib/hub-transfers";
 import {
   getAllActiveTransferSites,
   getProductsWithStoreStockForTransfer,
   getTransferLivreurs,
 } from "@/lib/transfer-sites.server";
 import { resolveSelectedStoreId } from "@/lib/management-store";
+import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
+import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
 import { HubSentOrdersTabs } from "@/components/stock/hub-sent-orders-tabs";
+import { getProductCatalog } from "@/lib/inventory";
 
 function resolveHubStoreId(hubStores: { id: string }[], hubParam?: string | null): string {
   if (hubParam && hubStores.some((hub) => hub.id === hubParam)) {
@@ -47,10 +46,15 @@ export default async function HubStockTransfersSentPage({
     to?: string;
     hub?: string;
     dest?: string;
+    q?: string;
+    status?: string;
+    source?: string;
+    listDest?: string;
+    sentFrom?: string;
+    sentTo?: string;
   }>;
 }) {
-  const { store: storeParam, created, to: toParam, hub: hubParam, dest: destParam } =
-    await searchParams;
+  const params = await searchParams;
   const profile = await requireRole(["hub"]);
   if (!profile?.city) redirect("/login");
 
@@ -64,31 +68,40 @@ export default async function HubStockTransfersSentPage({
     );
   }
 
-  const selectedHubStoreId = resolveSelectedStoreId(hubStores, storeParam);
+  const selectedHubStoreId = resolveSelectedStoreId(hubStores, params.store);
   const hubStore = hubStores.find((store) => store.id === selectedHubStoreId) || hubStores[0];
-  const scopeHubIds = [selectedHubStoreId];
+  const scopeHubIds = hubStores.map((store) => store.id);
 
   const sitesAll = await getAllActiveTransferSites();
+  const destinationSites = sitesAll.filter((store) => store.is_active);
+  const sourceSites = hubStores.map((store) => ({
+    id: store.id,
+    name: store.name,
+    city: store.city,
+    is_hub: true,
+  }));
   const retailStores = sitesAll.filter((store) => store.is_active && !store.is_hub);
   const allHubStores = sitesAll.filter((store) => store.is_active && store.is_hub);
   const destinationHubStores = allHubStores.filter((store) => store.id !== selectedHubStoreId);
-  const initialDestination = destParam === "hub" ? "hub" : "store";
+  const initialDestination = params.dest === "hub" ? "hub" : "store";
+  const filter = resolveSentTransfersListScope(profile, hubStores, params, {
+    restrictSourceToScopedStores: true,
+  });
   const { toStoreId, toHubStoreId } = resolveTransferStoreIds(
     retailStores,
     allHubStores,
     selectedHubStoreId,
-    toParam,
-    hubParam
+    params.to,
+    params.hub
   );
 
-  const [products, outgoingToStores, outgoingToHubs, livreurs] = await Promise.all([
+  const [products, outgoingTransfers, livreurs, catalogProducts] = await Promise.all([
     getProductsWithStoreStockForTransfer(selectedHubStoreId),
-    getHubOutgoingTransfersToStores(scopeHubIds),
-    getHubOutgoingTransfersToHubs(scopeHubIds),
+    getHubOutgoingTransfers(scopeHubIds),
     getTransferLivreurs([profile.city, ...allHubStores.map((store) => store.city)]),
+    getProductCatalog(),
   ]);
-
-  const createdTab = destParam === "hub" ? "depot" : "store";
+  const productLookup = buildReceivedTransferProductLookup(catalogProducts);
 
   return (
     <div className="space-y-6">
@@ -97,8 +110,8 @@ export default async function HubStockTransfersSentPage({
           Commandes envoyées
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Nouveau transfert et suivi des envois depuis {hubStore.name}
-          {hubStores.length > 1 ? ` — ${profile.city}` : ""}
+          Transferts dont la source est le dépôt — tous statuts
+          {hubStores.length > 1 ? ` — ${profile.city}` : ` — ${hubStore.name}`}
         </p>
       </div>
 
@@ -110,17 +123,19 @@ export default async function HubStockTransfersSentPage({
           products={products}
           retailStores={retailStores}
           destinationHubStores={destinationHubStores}
-          outgoingToStores={filterSentHubTransfers(outgoingToStores)}
-          outgoingToHubs={filterSentHubTransfers(outgoingToHubs)}
+          outgoingTransfers={outgoingTransfers}
+          sourceSites={sourceSites}
+          destinationSites={destinationSites}
+          scopeHubIds={scopeHubIds}
           livreurs={livreurs}
           initialDestination={initialDestination}
           toStoreId={toStoreId}
           toHubStoreId={toHubStoreId}
+          filter={filter}
+          productLookup={productLookup}
           successMessage={
-            created === "1"
-              ? `Commande créée avec succès — consultez l'onglet ${
-                  createdTab === "depot" ? "« Dépôt »" : "« Magasin »"
-                }. Marquez-la prête dès que le colis est préparé.`
+            params.created === "1"
+              ? "Transfert créé avec succès — consultez l'onglet « Stock envoyé »."
               : undefined
           }
         />

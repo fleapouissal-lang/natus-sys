@@ -3,6 +3,7 @@ import { getActiveStores, getProductCatalog } from "@/lib/inventory";
 import { filterRetailStoresByProfile, getCityFilter } from "@/lib/permissions";
 import { getManagerIncomingHubToStoreTransfers } from "@/lib/hub-transfers";
 import { getManagerStoreStockTransfers } from "@/lib/store-transfers";
+import { filterIncomingStoreTransfersToStores } from "@/lib/stock-transfers/role-transfer-filters";
 import { resolveReceivedTransfersScope } from "@/lib/stock-transfers/received-filters";
 import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
 import { ManagerReceivedOrdersTabs } from "@/components/stock/manager-received-orders-tabs";
@@ -37,11 +38,12 @@ export default async function ManagerStockTransfersReceivedPage({
   const sourceSites = storesAll.filter((store) => store.is_active);
   const destinationStores = stores;
 
-  const [hubTransfers, storeTransfers, products] = await Promise.all([
+  const [hubTransfers, storeTransfersRaw, products] = await Promise.all([
     getManagerIncomingHubToStoreTransfers(storeIds),
     getManagerStoreStockTransfers(storeIds),
     getProductCatalog(),
   ]);
+  const storeTransfers = filterIncomingStoreTransfersToStores(storeTransfersRaw, storeIds);
   const productLookup = buildReceivedTransferProductLookup(products);
 
   const scopeLabel =
@@ -58,8 +60,7 @@ export default async function ManagerStockTransfersReceivedPage({
           Stocks reçus
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Tous les transferts entrants dès la création — réceptions dépôt hub et transferts
-          inter-magasins — {scopeLabel}
+          Transferts vers vos magasins associés — tous statuts — {scopeLabel}
         </p>
       </div>
 

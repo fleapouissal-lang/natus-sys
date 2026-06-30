@@ -1,15 +1,18 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowRightLeft, PackagePlus, Warehouse } from "lucide-react";
+import { ArrowRightLeft, PackagePlus } from "lucide-react";
 import { HubWarehouseManager } from "@/components/hub/hub-warehouse-manager";
-import { HubTransfersList } from "@/components/hub/hub-transfers-list";
+import { SentTransfersUnifiedView } from "@/components/stock/sent-transfers-unified-view";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { cn } from "@/lib/utils";
+import type { ReceivedTransfersFilterScope } from "@/lib/stock-transfers/received-filters";
+import type { ReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
+import type { ReceivedTransferLocationSites } from "@/lib/stock-transfers/received-location-filters";
 import type { HubStockTransfer, Product, Profile, Store } from "@/lib/types";
 
-type SentTab = "new" | "store" | "depot";
+type SentTab = "new" | "sent";
 
 const TABS: {
   id: SentTab;
@@ -19,21 +22,15 @@ const TABS: {
 }[] = [
   {
     id: "new",
-    label: "Entrepôt (nouveau transfert)",
-    shortLabel: "Entrepôt",
+    label: "Nouveau transfert",
+    shortLabel: "Nouveau",
     icon: PackagePlus,
   },
   {
-    id: "store",
-    label: "Commandes envoyées vers un magasin",
-    shortLabel: "Magasin",
+    id: "sent",
+    label: "Stock envoyé",
+    shortLabel: "Envoyé",
     icon: ArrowRightLeft,
-  },
-  {
-    id: "depot",
-    label: "Commandes envoyées vers un dépôt",
-    shortLabel: "Dépôt",
-    icon: Warehouse,
   },
 ];
 
@@ -44,12 +41,16 @@ function HubSentOrdersTabsInner({
   products,
   retailStores,
   destinationHubStores,
-  outgoingToStores,
-  outgoingToHubs,
+  outgoingTransfers,
+  sourceSites,
+  destinationSites,
+  scopeHubIds,
   livreurs,
   initialDestination,
   toStoreId,
   toHubStoreId,
+  filter,
+  productLookup,
   successMessage,
 }: {
   hubStores: Store[];
@@ -58,12 +59,16 @@ function HubSentOrdersTabsInner({
   products: Product[];
   retailStores: Store[];
   destinationHubStores: Store[];
-  outgoingToStores: HubStockTransfer[];
-  outgoingToHubs: HubStockTransfer[];
+  outgoingTransfers: HubStockTransfer[];
+  sourceSites: ReceivedTransferLocationSites[];
+  destinationSites: ReceivedTransferLocationSites[];
+  scopeHubIds: string[];
   livreurs: Profile[];
   initialDestination: "store" | "hub";
   toStoreId: string;
   toHubStoreId: string;
+  filter: ReceivedTransfersFilterScope;
+  productLookup?: ReceivedTransferProductLookup;
   successMessage?: string;
 }) {
   const router = useRouter();
@@ -71,7 +76,38 @@ function HubSentOrdersTabsInner({
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab: SentTab =
-    tabParam === "store" || tabParam === "depot" || tabParam === "new" ? tabParam : "new";
+    tabParam === "sent" || tabParam === "store" || tabParam === "depot"
+      ? "sent"
+      : tabParam === "new"
+        ? "new"
+        : "new";
+
+  const outgoingToStores = useMemo(
+    () => outgoingTransfers.filter((transfer) => !transfer.to_store_is_hub),
+    [outgoingTransfers]
+  );
+
+  const outgoingToHubs = useMemo(
+    () => outgoingTransfers.filter((transfer) => transfer.to_store_is_hub),
+    [outgoingTransfers]
+  );
+
+  const groups = useMemo(
+    () => [
+      { kind: "store" as const, typeLabel: "Vers magasin", hubTransfers: outgoingToStores },
+      { kind: "hub" as const, typeLabel: "Vers dépôt", hubTransfers: outgoingToHubs },
+    ],
+    [outgoingToStores, outgoingToHubs]
+  );
+
+  const locationConfig = useMemo(
+    () => ({
+      sourceSites,
+      destinationSites,
+      strictSourceOptions: true,
+    }),
+    [sourceSites, destinationSites]
+  );
 
   function setTab(tab: SentTab) {
     const params = new URLSearchParams(searchParams.toString());
@@ -112,7 +148,7 @@ function HubSentOrdersTabsInner({
           <StoreFilterBar
             stores={hubStores}
             selectedStoreId={selectedHubStoreId}
-            title="Dépôt source"
+            title="Dépôt source (nouveau transfert)"
             allowAll={false}
           />
         </Suspense>
@@ -131,29 +167,17 @@ function HubSentOrdersTabsInner({
         />
       )}
 
-      {activeTab === "store" && (
-        <HubTransfersList
-          title="Commandes envoyées vers un magasin"
-          transfers={outgoingToStores}
-          allowManage
-          allowRepair
-          showOrigin
-          showProductImages
+      {activeTab === "sent" && (
+        <SentTransfersUnifiedView
+          filter={filter}
+          groups={groups}
+          locationConfig={locationConfig}
+          productLookup={productLookup}
+          managedStoreIds={scopeHubIds}
           livreurs={livreurs}
-          emptyMessage={`Aucun envoi vers un magasin depuis ${hubStore.name}`}
-        />
-      )}
-
-      {activeTab === "depot" && (
-        <HubTransfersList
-          title="Commandes envoyées vers un dépôt"
-          transfers={outgoingToHubs}
-          allowManage
-          allowRepair
-          showOrigin
-          showProductImages
-          livreurs={livreurs}
-          emptyMessage={`Aucun envoi vers un autre dépôt depuis ${hubStore.name}`}
+          hubReadOnly={false}
+          hubManageOutgoing
+          emptyMessage={`Aucun transfert envoyé depuis le dépôt — ${hubStore.name}`}
         />
       )}
     </div>
@@ -167,12 +191,16 @@ export function HubSentOrdersTabs(props: {
   products: Product[];
   retailStores: Store[];
   destinationHubStores: Store[];
-  outgoingToStores: HubStockTransfer[];
-  outgoingToHubs: HubStockTransfer[];
+  outgoingTransfers: HubStockTransfer[];
+  sourceSites: ReceivedTransferLocationSites[];
+  destinationSites: ReceivedTransferLocationSites[];
+  scopeHubIds: string[];
   livreurs: Profile[];
   initialDestination: "store" | "hub";
   toStoreId: string;
   toHubStoreId: string;
+  filter: ReceivedTransfersFilterScope;
+  productLookup?: ReceivedTransferProductLookup;
   successMessage?: string;
 }) {
   return (

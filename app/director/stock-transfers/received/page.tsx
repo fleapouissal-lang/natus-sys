@@ -11,12 +11,9 @@ import {
   filterDirectorReceivedStoreTransfers,
 } from "@/lib/director-transfer-filters";
 import {
-  filterHubStoreMixedTransfers,
-  filterHubToHubTransfers,
   getDirectorHubStockTransfers,
 } from "@/lib/hub-transfers";
 import {
-  filterInterStoreIncomingTransfers,
   getDirectorStoreStockTransfers,
 } from "@/lib/store-transfers";
 import { resolveReceivedTransfersScope } from "@/lib/stock-transfers/received-filters";
@@ -36,11 +33,8 @@ export default async function DirectorStockTransfersReceivedPage({
   const sitesAll = await getAllActiveTransferSites();
   const transferSites = sitesAll.filter((store) => store.is_active);
   const retailStores = transferSites.filter((store) => !store.is_hub);
-  const hubSites = transferSites.filter((store) => store.is_hub);
   const filter = resolveReceivedTransfersScope(profile, retailStores, params);
   const retailStoreIds = retailStores.map((store) => store.id);
-  const allSiteIds = transferSites.map((store) => store.id);
-  const hubSiteIds = hubSites.map((store) => store.id);
 
   const [storeTransfers, hubTransfers, livreurs, products] = await Promise.all([
     getDirectorStoreStockTransfers(),
@@ -52,19 +46,17 @@ export default async function DirectorStockTransfersReceivedPage({
   ]);
   const productLookup = buildReceivedTransferProductLookup(products);
 
-  const interStoreTransfers = filterDirectorReceivedStoreTransfers(
-    filterInterStoreIncomingTransfers(storeTransfers, retailStoreIds)
-  );
+  const interStoreTransfers = filterDirectorReceivedStoreTransfers(storeTransfers);
   const hubHubTransfers = filterDirectorReceivedHubTransfers(
-    filterHubToHubTransfers(hubTransfers).filter((transfer) =>
-      hubSiteIds.includes(transfer.to_store_id)
+    hubTransfers.filter(
+      (transfer) => transfer.from_store_is_hub && transfer.to_store_is_hub
     )
   );
   const hubStoreMixedTransfers = filterDirectorReceivedHubTransfers(
-    filterHubStoreMixedTransfers(hubTransfers).filter(
+    hubTransfers.filter(
       (transfer) =>
-        allSiteIds.includes(transfer.to_store_id) ||
-        allSiteIds.includes(transfer.from_store_id)
+        (transfer.from_store_is_hub && !transfer.to_store_is_hub) ||
+        (!transfer.from_store_is_hub && transfer.to_store_is_hub)
     )
   );
 
@@ -75,7 +67,7 @@ export default async function DirectorStockTransfersReceivedPage({
           Stocks reçus
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Tous les transferts entrants dès la création — magasins et dépôts hub
+          Transferts clôturés (statut reçu) — magasins et dépôts hub
         </p>
       </div>
 

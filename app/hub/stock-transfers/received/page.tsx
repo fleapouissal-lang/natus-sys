@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { getHubStoresByCity } from "@/lib/hub";
-import {
-  getHubIncomingTransfers,
-  getHubOutgoingTransfersToStores,
-} from "@/lib/hub-transfers";
+import { getHubIncomingTransfers } from "@/lib/hub-transfers";
 import { getAllActiveTransferSites, getTransferLivreurs } from "@/lib/transfer-sites.server";
 import { resolveReceivedTransfersScope } from "@/lib/stock-transfers/received-filters";
 import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
@@ -40,10 +37,15 @@ export default async function HubStockTransfersReceivedPage({
     (store) => store.is_active && store.is_hub
   );
   const citySites = (await getActiveStores(profile.city)).filter((store) => store.is_active);
-  const locationSites = citySites;
 
-  const [incomingToStores, incomingToDepot, livreurs, products] = await Promise.all([
-    getHubOutgoingTransfersToStores(scopeHubIds),
+  const destinationSites = hubStores.map((store) => ({
+    id: store.id,
+    name: store.name,
+    city: store.city,
+    is_hub: true,
+  }));
+
+  const [incomingTransfers, livreurs, products] = await Promise.all([
     getHubIncomingTransfers(scopeHubIds),
     getTransferLivreurs([profile.city, ...allHubStores.map((store) => store.city)]),
     getProductCatalog(),
@@ -57,8 +59,7 @@ export default async function HubStockTransfersReceivedPage({
           Stocks reçus
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Tous les transferts entrants dès la création — livraisons dépôt → magasin et réceptions
-          magasin → dépôt — {scopeLabel}
+          Transferts dont la destination est le dépôt — tous statuts — {scopeLabel}
         </p>
       </div>
 
@@ -67,9 +68,9 @@ export default async function HubStockTransfersReceivedPage({
         hubStores={hubStores}
         selectedHubStoreId=""
         scopeLabel={scopeLabel}
-        locationSites={locationSites}
-        incomingToStores={incomingToStores}
-        incomingToDepot={incomingToDepot}
+        locationSites={citySites}
+        destinationSites={destinationSites}
+        incomingTransfers={incomingTransfers}
         livreurs={livreurs}
         productLookup={productLookup}
       />

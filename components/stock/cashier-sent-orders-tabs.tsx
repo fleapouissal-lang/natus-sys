@@ -27,8 +27,8 @@ const TABS: {
   },
   {
     id: "sent",
-    label: "Transferts en cours",
-    shortLabel: "En cours",
+    label: "Stock envoyé",
+    shortLabel: "Envoyé",
     icon: ArrowRightLeft,
   },
 ];

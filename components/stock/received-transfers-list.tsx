@@ -54,6 +54,8 @@ export type ReceivedTransfersListProps = {
   hubReadOnly?: boolean;
   hubAllowRepair?: boolean;
   hubManageAsStoreSource?: boolean;
+  /** Hub opérateur : gère les envois depuis le dépôt source */
+  hubManageOutgoing?: boolean;
   cashierHub?: {
     storeName: string;
     productsById: Record<
@@ -66,9 +68,18 @@ export type ReceivedTransfersListProps = {
 
 function hubRowAllowManage(
   row: ReceivedTransferRow & { source: "hub" },
-  hubReadOnly: boolean
+  hubReadOnly: boolean,
+  hubManageOutgoing: boolean,
+  managedStoreIds: string[]
 ): boolean {
   if (hubReadOnly) return false;
+  if (
+    hubManageOutgoing &&
+    row.transfer.from_store_is_hub &&
+    managedStoreIds.includes(row.transfer.from_store_id)
+  ) {
+    return true;
+  }
   return row.filterKind === "depot";
 }
 
@@ -83,6 +94,7 @@ export function ReceivedTransfersList({
   hubReadOnly = true,
   hubAllowRepair = false,
   hubManageAsStoreSource = false,
+  hubManageOutgoing = false,
   cashierHub,
 }: ReceivedTransfersListProps) {
   const router = useRouter();
@@ -251,7 +263,12 @@ export function ReceivedTransfersList({
                 }
 
                 const transfer = row.transfer;
-                const allowManage = hubRowAllowManage(row, hubReadOnly);
+                const allowManage = hubRowAllowManage(
+                  row,
+                  hubReadOnly,
+                  hubManageOutgoing,
+                  managedStoreIds
+                );
                 const statusHint =
                   hubReadOnly || cashierHub
                     ? hubTransferStoreStatusHint(transfer.status)

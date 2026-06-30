@@ -262,10 +262,9 @@ export function HubWarehouseManager({
     }
 
     resetTransfer();
-    const tab = destinationType === "hub" ? "depot" : "store";
     const params = new URLSearchParams(searchParams.toString());
     params.set("created", "1");
-    params.set("tab", tab);
+    params.set("tab", "sent");
     params.set("dest", destinationType);
     if (destinationType === "store" && toStoreId) params.set("to", toStoreId);
     if (destinationType === "hub" && toHubStoreId) params.set("hub", toHubStoreId);

@@ -17,44 +17,38 @@ export function HubReceivedOrdersTabs({
   scopeLabel,
   hubStores,
   locationSites,
-  incomingToStores,
-  incomingToDepot,
+  destinationSites,
+  incomingTransfers,
   livreurs,
   productLookup,
 }: {
   filter: ReceivedTransfersFilterScope;
   scopeLabel: string;
-  hubStores: { id: string }[];
+  hubStores: { id: string; name?: string; city?: string }[];
   locationSites: ReceivedTransferLocationSites[];
+  destinationSites: ReceivedTransferLocationSites[];
   selectedHubStoreId: string;
-  incomingToStores: HubStockTransfer[];
-  incomingToDepot: HubStockTransfer[];
+  incomingTransfers: HubStockTransfer[];
   livreurs: Profile[];
   productLookup?: ReceivedTransferProductLookup;
 }) {
-  const toStores = useMemo(
-    () => filterTransfersBySentDate(incomingToStores, filter.dateFrom, filter.dateTo),
-    [incomingToStores, filter.dateFrom, filter.dateTo]
-  );
-  const toDepot = useMemo(
-    () => filterTransfersBySentDate(incomingToDepot, filter.dateFrom, filter.dateTo),
-    [incomingToDepot, filter.dateFrom, filter.dateTo]
+  const incoming = useMemo(
+    () => filterTransfersBySentDate(incomingTransfers, filter.dateFrom, filter.dateTo),
+    [incomingTransfers, filter.dateFrom, filter.dateTo]
   );
 
   const groups = useMemo(
-    () => [
-      { kind: "store" as const, typeLabel: "Vers magasin", hubTransfers: toStores },
-      { kind: "depot" as const, typeLabel: "Au dépôt", hubTransfers: toDepot },
-    ],
-    [toStores, toDepot]
+    () => [{ kind: "depot" as const, typeLabel: "Réceptions dépôt", hubTransfers: incoming }],
+    [incoming]
   );
 
   const locationConfig = useMemo(
     () => ({
       sourceSites: locationSites,
-      destinationSites: locationSites,
+      destinationSites,
+      strictDestinationOptions: true,
     }),
-    [locationSites]
+    [locationSites, destinationSites]
   );
 
   const { rows, sourceOptions, destinationOptions } = useReceivedTransferRows(
@@ -74,12 +68,13 @@ export function HubReceivedOrdersTabs({
       />
 
       <ReceivedTransfersList
+        title="Stocks reçus"
         rows={rows}
         managedStoreIds={hubStores.map((s) => s.id)}
         livreurs={livreurs}
         showProductImages
         hubReadOnly={false}
-        emptyMessage={`Aucun transfert reçu pour ${scopeLabel}`}
+        emptyMessage={`Aucun transfert reçu au dépôt pour ${scopeLabel}`}
       />
     </div>
   );

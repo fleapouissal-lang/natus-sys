@@ -139,9 +139,10 @@ async function assertStoreTransferAccess(
   }
 
   const fromStore = await getStoreById(fromStoreId);
-  const toStore = isManager(profile)
-    ? await getTransferStoreById(toStoreId)
-    : await getStoreById(toStoreId);
+  const toStore =
+    isManager(profile) || profile.role === "cashier"
+      ? await getTransferStoreById(toStoreId)
+      : await getStoreById(toStoreId);
 
   if (!fromStore || !toStore) {
     return { error: "Magasin introuvable" };
@@ -162,6 +163,13 @@ async function assertStoreTransferAccess(
   if (isManager(profile)) {
     if (!canManageStore(profile, fromStore)) {
       return { error: "Vous n'avez pas accès à ce magasin source" };
+    }
+    return { fromStore, toStore };
+  }
+
+  if (profile.role === "cashier") {
+    if (profile.store_id !== fromStoreId) {
+      return { error: "La source doit être votre magasin connecté" };
     }
     return { fromStore, toStore };
   }
@@ -196,6 +204,13 @@ async function assertStoreTransferToHubAccess(
   if (isManager(profile)) {
     if (!canManageStore(profile, fromStore)) {
       return { error: "Vous n'avez pas accès à ce magasin source" };
+    }
+    return { fromStore, hubStore };
+  }
+
+  if (profile.role === "cashier") {
+    if (profile.store_id !== fromStoreId) {
+      return { error: "La source doit être votre magasin connecté" };
     }
     return { fromStore, hubStore };
   }
@@ -1012,7 +1027,7 @@ export async function transferStoreStock(
 ): Promise<
   { success: true; transferId: string; toStoreName: string } | { error: string }
 > {
-  const profile = await requireRole(["directeur", "admin", "manager"]);
+  const profile = await requireRole(["directeur", "admin", "manager", "cashier"]);
   if (!profile) return { error: "Non autorisé" };
 
   if (!fromStoreId || !toStoreId) {
@@ -1088,7 +1103,18 @@ export async function transferStoreStockToHub(
     return { error: "Indiquez au moins une quantité à transférer" };
   }
 
-  if (toHubStoreId && (profile.role === "directeur" || profile.role === "admin" || profile.role === "manager")) {
+  if (profile.role === "cashier") {
+    if (profile.store_id !== fromStoreId) {
+      return { error: "La source doit être votre magasin connecté" };
+    }
+    if (toHubStoreId) {
+      const access = await assertStoreTransferToHubAccess(profile, fromStoreId, toHubStoreId);
+      if ("error" in access && access.error) return { error: access.error };
+    }
+  } else if (
+    toHubStoreId &&
+    (profile.role === "directeur" || profile.role === "admin" || profile.role === "manager")
+  ) {
     const access = await assertStoreTransferToHubAccess(profile, fromStoreId, toHubStoreId);
     if ("error" in access && access.error) return { error: access.error };
   }

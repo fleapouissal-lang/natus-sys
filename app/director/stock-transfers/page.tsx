@@ -12,12 +12,9 @@ import {
   filterDirectorSentStoreTransfers,
 } from "@/lib/director-transfer-filters";
 import {
-  filterHubStoreMixedTransfers,
-  filterHubToHubTransfers,
   getDirectorHubStockTransfers,
 } from "@/lib/hub-transfers";
 import {
-  filterInterStoreOutgoingTransfers,
   getDirectorStoreStockTransfers,
 } from "@/lib/store-transfers";
 import { DirectorSentOrdersTabs } from "@/components/stock/director-sent-orders-tabs";
@@ -133,19 +130,23 @@ export default async function DirectorStockTransfersPage({
     ]);
   const productLookup = buildReceivedTransferProductLookup(catalogProducts);
 
-  const interStoreTransfers = filterDirectorSentStoreTransfers(
-    filterInterStoreOutgoingTransfers(storeTransfers, retailStoreIds)
-  );
+  const interStoreTransfers = filterDirectorSentStoreTransfers(storeTransfers);
   const hubHubTransfers = filterDirectorSentHubTransfers(
-    filterHubToHubTransfers(hubTransfers)
+    hubTransfers.filter(
+      (transfer) => transfer.from_store_is_hub && transfer.to_store_is_hub
+    )
   );
   const hubStoreMixedTransfers = filterDirectorSentHubTransfers(
-    filterHubStoreMixedTransfers(hubTransfers)
+    hubTransfers.filter(
+      (transfer) =>
+        (transfer.from_store_is_hub && !transfer.to_store_is_hub) ||
+        (!transfer.from_store_is_hub && transfer.to_store_is_hub)
+    )
   );
 
   const successMessage =
     params.created === "1"
-      ? "Transfert créé avec succès — consultez l'onglet « Transferts en cours »."
+      ? "Transfert créé avec succès — consultez l'onglet « Stock envoyé »."
       : undefined;
 
   return (
@@ -155,7 +156,7 @@ export default async function DirectorStockTransfersPage({
           Stocks envoyés
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Création et suivi des transferts en cours — magasins et dépôts hub
+          Transferts en cours, prêts, en livraison ou livrés — magasins et dépôts hub
         </p>
       </div>
 

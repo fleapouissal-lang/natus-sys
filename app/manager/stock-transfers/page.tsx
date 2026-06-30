@@ -12,11 +12,8 @@ import {
 } from "@/lib/permissions";
 import { resolveSelectedStoreId, getProfileLockedStoreId } from "@/lib/management-store";
 import { getManagerOutgoingHubTransfers } from "@/lib/hub-transfers";
-import { getManagerStoreStockTransfers } from "@/lib/store-transfers";
-import {
-  filterOutgoingStoreTransfersFromStores,
-  filterSentHubTransfers,
-} from "@/lib/director-transfer-filters";
+import { getManagerStoreStockTransfers, getOutgoingStoreStockTransfers } from "@/lib/store-transfers";
+import { filterIncomingStoreTransfersToStores } from "@/lib/stock-transfers/role-transfer-filters";
 import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
 import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
 import { ManagerSentOrdersTabs } from "@/components/stock/manager-sent-orders-tabs";
@@ -101,19 +98,14 @@ export default async function ManagerStockTransfersPage({
   const toHubStoreId = resolveHubStoreId(hubStores, params.hub);
   const initialDestination = params.dest === "hub" ? "hub" : "store";
 
-  const [products, storeTransfersRaw, hubOutgoingTransfers, livreurs, catalogProducts] =
+  const [products, storeTransfers, hubOutgoingTransfers, livreurs, catalogProducts] =
     await Promise.all([
       fromStoreId ? getProductsWithStoreStockForTransfer(fromStoreId) : Promise.resolve([]),
-      getManagerStoreStockTransfers(managedStoreIds),
+      getOutgoingStoreStockTransfers(managedStoreIds),
       getManagerOutgoingHubTransfers(managedStoreIds),
       getTransferLivreurs(collectTransferLivreurCities(sourceStores, hubStores)),
       getProductCatalog(),
     ]);
-
-  const storeTransfers = filterOutgoingStoreTransfersFromStores(
-    storeTransfersRaw,
-    managedStoreIds
-  );
   const productLookup = buildReceivedTransferProductLookup(catalogProducts);
 
   const scopeLabel = city ? `Vos magasins — ${city}` : "Vos magasins";
@@ -125,7 +117,7 @@ export default async function ManagerStockTransfersPage({
           Commandes envoyées
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Nouveau transfert et suivi des envois vers magasins et dépôts — {scopeLabel}
+          Envoi depuis vos magasins associés — tous statuts — {scopeLabel}
         </p>
       </div>
 
@@ -141,7 +133,7 @@ export default async function ManagerStockTransfersPage({
           toHubStoreId={toHubStoreId}
           initialDestination={initialDestination}
           storeTransfers={storeTransfers}
-          hubOutgoingTransfers={filterSentHubTransfers(hubOutgoingTransfers)}
+          hubOutgoingTransfers={hubOutgoingTransfers}
           managedStoreIds={managedStoreIds}
           sourceSites={sourceStores}
           destinationSites={destinationSites}

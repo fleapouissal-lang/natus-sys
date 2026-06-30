@@ -8,10 +8,6 @@ import {
   filterCashierOutgoingStoreToHub,
 } from "@/lib/cashier-transfer-filters";
 import {
-  filterSentHubTransfers,
-  filterSentStoreTransfers,
-} from "@/lib/director-transfer-filters";
-import {
   getAllActiveTransferSites,
   getProductsWithStoreStockForTransfer,
 } from "@/lib/transfer-sites.server";
@@ -91,12 +87,8 @@ export default async function CashierTransfersSentPage({
     getProductCatalog(),
   ]);
 
-  const interStoreTransfers = filterSentStoreTransfers(
-    filterCashierOutgoingInterStore(storeTransfers, storeId)
-  );
-  const storeToHubTransfers = filterSentHubTransfers(
-    filterCashierOutgoingStoreToHub(hubTransfers, storeId)
-  );
+  const interStoreTransfers = filterCashierOutgoingInterStore(storeTransfers, storeId);
+  const storeToHubTransfers = filterCashierOutgoingStoreToHub(hubTransfers, storeId);
   const productLookup = buildReceivedTransferProductLookup(catalogProducts);
 
   const storeSite = store
@@ -122,7 +114,7 @@ export default async function CashierTransfersSentPage({
           Stocks envoyés
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Transferts sortants depuis {storeName} — préparation et expédition
+          Transferts sortants depuis {storeName} — tous statuts
         </p>
       </div>
 

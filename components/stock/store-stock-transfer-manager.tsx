@@ -321,7 +321,9 @@ export function StoreStockTransferManager({
         <p className="mt-1 text-muted">
           {enableHubDestination
             ? showAllDestinations
-              ? "Choisissez votre magasin source, puis envoyez le stock vers n'importe quel autre magasin ou dépôt hub actif."
+              ? lockFromStore
+                ? "Envoyez le stock depuis votre magasin vers n'importe quel autre magasin ou dépôt hub actif."
+                : "Choisissez un magasin source associé, puis envoyez le stock vers n'importe quel autre magasin ou dépôt hub actif."
               : "Envoyez du stock d'un magasin vers un autre magasin ou vers un dépôt hub."
             : "Déplacez du stock d'un magasin vers un autre magasin de vente."}
         </p>

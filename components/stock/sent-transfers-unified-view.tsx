@@ -28,6 +28,7 @@ export function SentTransfersUnifiedView({
   storeActionMode = "none",
   hubReadOnly = true,
   hubManageAsStoreSource = false,
+  hubManageOutgoing = false,
   showProductImages = true,
 }: {
   filter: ReceivedTransfersFilterScope;
@@ -40,6 +41,7 @@ export function SentTransfersUnifiedView({
   storeActionMode?: "none" | "receive-only" | "full";
   hubReadOnly?: boolean;
   hubManageAsStoreSource?: boolean;
+  hubManageOutgoing?: boolean;
   showProductImages?: boolean;
 }) {
   const datedGroups = useMemo(() => {
@@ -75,7 +77,7 @@ export function SentTransfersUnifiedView({
       />
 
       <ReceivedTransfersList
-        title="Transferts envoyés"
+        title="Stock envoyé"
         rows={rows}
         managedStoreIds={managedStoreIds}
         livreurs={livreurs}
@@ -83,6 +85,7 @@ export function SentTransfersUnifiedView({
         storeActionMode={storeActionMode}
         hubReadOnly={hubReadOnly}
         hubManageAsStoreSource={hubManageAsStoreSource}
+        hubManageOutgoing={hubManageOutgoing}
         emptyMessage={emptyMessage}
       />
     </div>
