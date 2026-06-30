@@ -624,6 +624,76 @@ export async function createStore(formData: FormData) {
   return { success: true, storeId: store.id };
 }
 
+export async function updateStore(storeId: string, formData: FormData) {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+  if (!canCreateStore(profile)) {
+    return { error: "Seul le directeur peut modifier un magasin" };
+  }
+
+  const id = storeId.trim();
+  if (!id) return { error: "Magasin introuvable" };
+
+  const name = (formData.get("name") as string)?.trim();
+  const city = (formData.get("city") as string)?.trim();
+  const address = ((formData.get("address") as string) || "").trim() || null;
+
+  if (!name) return { error: "Nom du magasin requis" };
+  if (!city) return { error: "Ville requise" };
+  if (!NATUS_CITIES.includes(city as (typeof NATUS_CITIES)[number])) {
+    return { error: "Ville invalide" };
+  }
+
+  const supabase = await createClient();
+  const { data: store, error: fetchError } = await supabase
+    .from("stores")
+    .select("id, is_active")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchError || !store) return { error: "Magasin introuvable" };
+  if (!store.is_active) return { error: "Ce magasin est inactif" };
+
+  const { error } = await supabase
+    .from("stores")
+    .update({ name, city, address })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidateManagement();
+  return { success: true };
+}
+
+export async function deactivateStorePosAccount(storeId: string) {
+  const profile = await requireRole(["directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+  if (!canCreateStore(profile)) {
+    return { error: "Seul le directeur peut désactiver un compte caisse magasin" };
+  }
+
+  const id = storeId.trim();
+  if (!id) return { error: "Magasin introuvable" };
+
+  const supabase = await createClient();
+  const { data: posAccount, error: fetchError } = await supabase
+    .from("profiles")
+    .select("id, is_active, is_store_pos, store_id")
+    .eq("store_id", id)
+    .eq("is_store_pos", true)
+    .maybeSingle();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!posAccount) {
+    return { error: "Aucun compte caisse magasin pour ce point de vente" };
+  }
+  if (!posAccount.is_active) {
+    return { error: "Le compte caisse magasin est déjà désactivé" };
+  }
+
+  return toggleUserActive(posAccount.id, false);
+}
+
 export async function deleteStore(storeId: string) {
   const profile = await requireRole(["directeur", "admin"]);
   if (!profile) return { error: "Non autorisé" };

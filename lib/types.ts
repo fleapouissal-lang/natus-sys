@@ -35,11 +35,19 @@ export interface StoreInventoryRow {
   products?: Pick<Product, "name" | "barcode" | "category" | "price" | "image_url">;
 }
 
+export interface StorePosAccountSummary {
+  id: string;
+  email: string;
+  full_name: string | null;
+  is_active: boolean;
+}
+
 export interface StoreWithStats extends Store {
   productCount: number;
   totalUnits: number;
   lowStockCount: number;
   cashiers: CashierSummary[];
+  posAccount?: StorePosAccountSummary | null;
 }
 
 export interface CashierSummary {

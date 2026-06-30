@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { ProductImage } from "@/components/pos/product-image";
-import { CreateStoreForm } from "@/components/stores/create-store-form";
+import { StoresAdminSection } from "@/components/stores/stores-admin-section";
 import { deleteStore } from "@/lib/actions";
 import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
@@ -145,19 +145,12 @@ function StorePickerCard({
   store,
   selected,
   onSelect,
-  canDelete = false,
-  onDelete,
-  deleting = false,
 }: {
   store: StoreWithStats;
   selected: boolean;
   onSelect: () => void;
-  canDelete?: boolean;
-  onDelete?: () => void;
-  deleting?: boolean;
 }) {
   const activeCashiers = store.cashiers.filter((c) => c.is_active);
-  const showDelete = canDelete && !store.is_hub && onDelete;
 
   return (
     <div
@@ -218,26 +211,6 @@ function StorePickerCard({
           {store.is_hub && <Badge variant="accent">Dépôt</Badge>}
         </div>
       </button>
-
-      {showDelete && (
-        <div className="border-t border-border/70 px-4 py-3">
-          <Button
-            type="button"
-            variant="danger"
-            size="sm"
-            loading={deleting}
-            disabled={deleting}
-            className="w-full"
-            onClick={(event) => {
-              event.stopPropagation();
-              onDelete();
-            }}
-          >
-            <Trash2 className="natus-icon h-4 w-4" strokeWidth={2} aria-hidden />
-            Supprimer
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
@@ -482,7 +455,11 @@ export function StoresManager({
       )}
 
       {canCreateStore && (
-        <CreateStoreForm allowedCities={allowedCities} defaultCity={defaultCity} />
+        <StoresAdminSection
+          stores={stores}
+          allowedCities={allowedCities}
+          defaultCity={defaultCity}
+        />
       )}
 
       {deleteError && (
@@ -496,7 +473,7 @@ export function StoresManager({
           <Card padding={false}>
             <div className="border-b border-border p-6">
               <CardHeader
-                title="Sélectionner un magasin"
+                title="Sélectionner magasin ou dépôt"
                 description="Choisissez un point de vente pour voir son inventaire"
               />
             </div>
@@ -507,9 +484,6 @@ export function StoresManager({
                   store={store}
                   selected={selectedStore?.id === store.id}
                   onSelect={() => setSelectedStoreId(store.id)}
-                  canDelete={canDeleteStore}
-                  onDelete={() => handleDeleteStore(store)}
-                  deleting={deletePending && deletingStoreId === store.id}
                 />
               ))}
             </div>

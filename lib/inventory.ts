@@ -207,9 +207,35 @@ export async function getStoresWithStats(city?: string | null): Promise<StoreWit
         totalUnits,
         lowStockCount,
         cashiers: cashiersByStore[store.id] || [],
+        posAccount: null as StoreWithStats["posAccount"],
       };
     })
   );
+
+  const storeIds = stores.map((store) => store.id);
+  if (storeIds.length > 0) {
+    const { data: posProfiles } = await supabase
+      .from("profiles")
+      .select("id, email, full_name, is_active, store_id")
+      .eq("is_store_pos", true)
+      .in("store_id", storeIds);
+
+    const posByStore = Object.fromEntries(
+      (posProfiles || []).map((profile) => [profile.store_id as string, profile])
+    );
+
+    for (const store of stats) {
+      const pos = posByStore[store.id];
+      store.posAccount = pos
+        ? {
+            id: pos.id,
+            email: pos.email,
+            full_name: pos.full_name,
+            is_active: pos.is_active,
+          }
+        : null;
+    }
+  }
 
   return stats;
 }
