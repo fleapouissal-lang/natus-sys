@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Store as StoreIcon, Warehouse } from "lucide-react";
+import { Store as StoreIcon, Warehouse, type LucideIcon } from "lucide-react";
 import { StoresManager } from "@/components/stores/stores-manager";
 import { HubAccountsManager } from "@/components/hub/hub-accounts-manager";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,7 @@ type StructuresTab = "stores" | "hubs";
 const TABS: {
   id: StructuresTab;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
 }[] = [
   { id: "stores", label: "Magasins", icon: StoreIcon },
   { id: "hubs", label: "Dépôts (Hubs)", icon: Warehouse },
