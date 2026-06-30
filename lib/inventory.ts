@@ -36,6 +36,56 @@ async function fetchStoreInventoryRows(
   return rows;
 }
 
+/** Inventaire détaillé par magasin (pagination Supabase). */
+async function fetchStoreInventoryDetailed(
+  storeIds: string[]
+): Promise<{ store_id: string; product_id: string; stock: number }[]> {
+  if (storeIds.length === 0) return [];
+
+  const supabase = await createClient();
+  const rows: { store_id: string; product_id: string; stock: number }[] = [];
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("store_inventory")
+      .select("store_id, product_id, stock")
+      .in("store_id", storeIds)
+      .range(offset, offset + INVENTORY_FETCH_PAGE - 1);
+
+    if (error) {
+      console.error("fetchStoreInventoryDetailed:", error.message);
+      break;
+    }
+
+    const batch = data || [];
+    rows.push(
+      ...batch.map((row) => ({
+        store_id: row.store_id as string,
+        product_id: row.product_id as string,
+        stock: row.stock as number,
+      }))
+    );
+    if (batch.length < INVENTORY_FETCH_PAGE) break;
+    offset += INVENTORY_FETCH_PAGE;
+  }
+
+  return rows;
+}
+
+/** Matrice productId → storeId → quantité (vue globale gérant / directeur). */
+export async function getStockMatrixByStore(
+  storeIds: string[]
+): Promise<Record<string, Record<string, number>>> {
+  const rows = await fetchStoreInventoryDetailed(storeIds);
+  const matrix: Record<string, Record<string, number>> = {};
+  for (const row of rows) {
+    if (!matrix[row.product_id]) matrix[row.product_id] = {};
+    matrix[row.product_id][row.store_id] = row.stock;
+  }
+  return matrix;
+}
+
 export async function getActiveStores(city?: string | null): Promise<Store[]> {
   const supabase = await createClient();
   let query = supabase.from("stores").select("*").eq("is_active", true).order("name");

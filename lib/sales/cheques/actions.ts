@@ -72,7 +72,7 @@ export async function updateSaleChequeDetails(
 export async function deleteSaleCheque(
   chequeId: string
 ): Promise<{ success: true } | { error: string }> {
-  const profile = await requireRole(["cashier", "directeur", "admin"]);
+  const profile = await requireRole(["manager", "directeur", "admin"]);
   if (!profile) return { error: "Non autorisé" };
 
   const supabase = await createClient();

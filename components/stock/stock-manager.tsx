@@ -8,10 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { StoreSelect } from "@/components/stores/store-select";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { AddStockCard } from "@/components/stock/add-stock-card";
 import { useStockAdjustment } from "@/components/stock/stock-adjustment-fields";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { addStock, registerStoreProductStock, setProductStock } from "@/lib/actions";
+import { categoryOptions } from "@/lib/select-options";
+import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { INVENTORY_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, Store } from "@/lib/types";
 
@@ -72,6 +75,7 @@ export function StockManager({
   const [scanHint, setScanHint] = useState("");
   const [scanQuery, setScanQuery] = useState("");
   const [inventorySearch, setInventorySearch] = useState("");
+  const [inventoryCategory, setInventoryCategory] = useState("");
 
   const selectedStore = stores.find((s) => s.id === storeId);
   const singleProduct =
@@ -311,21 +315,28 @@ export function StockManager({
 
   const filteredInventory = useMemo(() => {
     const q = inventorySearch.trim().toLowerCase();
-    const list = !q
-      ? products
-      : products.filter(
-          (product) =>
-            product.name.toLowerCase().includes(q) ||
-            (product.barcode?.toLowerCase().includes(q) ?? false) ||
-            (product.product_code?.toLowerCase().includes(q) ?? false) ||
-            (product.category?.toLowerCase().includes(q) ?? false)
-        );
+    const list = products.filter((product) => {
+      if (
+        inventoryCategory &&
+        product.category !== inventoryCategory &&
+        !(product.categories?.includes(inventoryCategory) ?? false)
+      ) {
+        return false;
+      }
+      if (!q) return true;
+      return (
+        product.name.toLowerCase().includes(q) ||
+        (product.barcode?.toLowerCase().includes(q) ?? false) ||
+        (product.product_code?.toLowerCase().includes(q) ?? false) ||
+        (product.category?.toLowerCase().includes(q) ?? false)
+      );
+    });
     return [...list].sort(
       (a, b) => a.stock - b.stock || a.name.localeCompare(b.name, "fr")
     );
-  }, [products, inventorySearch]);
+  }, [products, inventorySearch, inventoryCategory]);
 
-  const inventoryFilterToken = `${storeId}|${inventorySearch}`;
+  const inventoryFilterToken = `${storeId}|${inventorySearch}|${inventoryCategory}`;
   const {
     paginated: paginatedProducts,
     page,
@@ -371,6 +382,7 @@ export function StockManager({
               setPerProductTotals({});
               setPerProductAdds({});
               setInventorySearch("");
+              setInventoryCategory("");
               router.push(`${basePath}/stock?store=${id}`);
             }}
           />
@@ -463,8 +475,16 @@ export function StockManager({
           summary={`${filteredInventory.length} produit${filteredInventory.length !== 1 ? "s" : ""}`}
         >
           <div className="natus-filter-bar border-b border-border p-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div className="min-w-[min(100%,20rem)] flex-1">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:items-end">
+              <SelectMenu
+                label="Catégorie"
+                value={inventoryCategory}
+                onChange={setInventoryCategory}
+                options={categoryOptions(PRODUCT_CATEGORIES)}
+                size="sm"
+                showIcons={false}
+              />
+              <div>
                 <label className="mb-1.5 block text-sm font-medium">Rechercher</label>
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
@@ -472,21 +492,24 @@ export function StockManager({
                     type="text"
                     value={inventorySearch}
                     onChange={(e) => setInventorySearch(e.target.value)}
-                    placeholder="Nom, code-barres, code produit, catégorie…"
+                    placeholder="Nom, code-barres, code produit…"
                     className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
                   />
                 </div>
               </div>
-              {inventorySearch.trim() && (
-                <button
-                  type="button"
-                  onClick={() => setInventorySearch("")}
-                  className="cursor-pointer text-xs font-medium text-primary underline-offset-2 hover:underline"
-                >
-                  Effacer
-                </button>
-              )}
             </div>
+            {(inventorySearch.trim() || inventoryCategory) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setInventorySearch("");
+                  setInventoryCategory("");
+                }}
+                className="mt-3 cursor-pointer text-xs font-medium text-primary underline-offset-2 hover:underline"
+              >
+                Effacer les filtres
+              </button>
+            )}
           </div>
         </FilterTogglePanel>
 

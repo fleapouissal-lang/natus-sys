@@ -13,7 +13,6 @@ import type { NavLinkItem } from "@/lib/layout/nav-links";
 import {
   LogOut,
   PanelLeftClose,
-  Clock,
   ScrollText,
   ChevronDown,
 } from "lucide-react";
@@ -25,51 +24,6 @@ import { getRoleLabel } from "@/lib/permissions";
 import { getSettingsPath } from "@/lib/layout/settings-path";
 import type { UserRole } from "@/lib/types";
 import { UserAvatar } from "@/components/ui/user-avatar";
-
-function formatSidebarClock(date: Date): string {
-  return date.toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-function SidebarCashierClock({ collapsed }: { collapsed: boolean }) {
-  const [timeLabel, setTimeLabel] = useState<string | null>(null);
-
-  useEffect(() => {
-    const update = () => setTimeLabel(formatSidebarClock(new Date()));
-    update();
-    const timer = window.setInterval(update, 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const displayTime = timeLabel ?? "--:--:--";
-  const clockTitle = timeLabel ? `Heure actuelle · ${timeLabel}` : "Heure actuelle";
-
-  if (collapsed) {
-    return (
-      <div
-        className="flex justify-center border-b border-black/10 px-2 py-2"
-        title={clockTitle}
-      >
-        <Clock className="h-4 w-4 text-black/70" aria-hidden />
-      </div>
-    );
-  }
-
-  return (
-    <div className="mb-3 flex items-start gap-2 px-4 py-1">
-      <Clock className="mt-0.5 h-4 w-4 shrink-0 text-black/70" aria-hidden />
-      <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-black/55">
-          Heure actuelle
-        </p>
-        <p className="truncate text-sm font-semibold tabular-nums text-black/85">{displayTime}</p>
-      </div>
-    </div>
-  );
-}
 
 function SidebarBrand({ collapsed }: { collapsed?: boolean }) {
   return (
@@ -409,8 +363,6 @@ export function Sidebar({
         onSwitchCashier={operatorActive ? handleSwitchCashier : undefined}
         switchingCashier={switchingCashier}
       />
-
-      {role === "cashier" && <SidebarCashierClock collapsed={collapsed} />}
 
       <nav
         className={cn(

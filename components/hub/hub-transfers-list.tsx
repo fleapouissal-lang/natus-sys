@@ -18,6 +18,7 @@ import {
 } from "@/lib/actions";
 import { hubTransferDirection, hubTransferDirectionLabel } from "@/lib/hub-transfer-direction";
 import { TransferAssignedLivreur } from "@/components/stock/transfer-assigned-livreur";
+import { resolveTransferLivreurName } from "@/lib/transfer-livreur-assignment";
 import { ProductImage } from "@/components/pos/product-image";
 import {
   hubTransferStatusLabel,
@@ -121,6 +122,7 @@ export function HubTransfersList({
               <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Source</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Destination</th>
+              <th className="px-6 py-3 text-left font-medium text-muted">Livreur</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Produits</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
               <th className="px-6 py-3 text-right font-medium text-muted">Unités</th>
@@ -151,15 +153,20 @@ export function HubTransfersList({
                   {isStoreToDepot && transfer.from_store_city && (
                     <p className="text-xs text-muted">{transfer.from_store_city}</p>
                   )}
-                  <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
                 </td>
                 <td className="px-6 py-4">
                   <p className="font-medium">{transfer.to_store_name || "—"}</p>
                   <p className="text-xs text-muted">{hubTransferDirectionLabel(transfer)}</p>
-                  <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
                   {transfer.receiver_name && transfer.status === "received" && (
                     <p className="text-xs text-muted">Reçu par {transfer.receiver_name}</p>
                   )}
+                </td>
+                <td className="px-6 py-4">
+                  <TransferAssignedLivreur
+                    name={resolveTransferLivreurName(transfer, livreurs)}
+                    compact
+                    className=""
+                  />
                 </td>
                 <td className="px-6 py-4">
                   <ul className="space-y-2">

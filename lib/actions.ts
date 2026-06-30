@@ -1682,7 +1682,7 @@ export async function completeSale(
 export async function cancelSale(
   saleId: string
 ): Promise<{ success: true } | { error: string }> {
-  const profile = await requireRole([...MANAGEMENT, "cashier"]);
+  const profile = await requireRole([...MANAGEMENT]);
   if (!profile) return { error: "Non autorisé" };
 
   const supabase = await createClient();

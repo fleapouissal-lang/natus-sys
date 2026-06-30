@@ -1,37 +1,75 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Package, Search, Store } from "lucide-react";
+import { Package, Search, Store as StoreIcon, Warehouse } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { Badge } from "@/components/ui/badge";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { ProductImage } from "@/components/pos/product-image";
-import { categoryOptions } from "@/lib/select-options";
+import { categoryOptions, productPickOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { formatCurrency } from "@/lib/utils";
 import { INVENTORY_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
-import type { Product } from "@/lib/types";
+import type { Product, Store } from "@/lib/types";
+
+function productMatchesCategory(product: Product, category: string): boolean {
+  if (!category) return true;
+  if (product.category === category) return true;
+  if (product.categories?.includes(category)) return true;
+  if (product.parent_category === category) return true;
+  if (product.parent_categories?.includes(category)) return true;
+  return false;
+}
 
 export function GlobalStockOverview({
   products,
+  stores = [],
+  stockByProductAndStore,
   storeCount,
   retailStoreCount,
   hubStoreCount = 0,
 }: {
   products: Product[];
+  stores?: Store[];
+  stockByProductAndStore?: Record<string, Record<string, number>>;
   storeCount: number;
   retailStoreCount?: number;
   hubStoreCount?: number;
 }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
+  const [selectedProductId, setSelectedProductId] = useState("");
+
+  const sortedStores = useMemo(
+    () =>
+      [...stores].sort((a, b) => {
+        if (a.is_hub !== b.is_hub) return a.is_hub ? 1 : -1;
+        return a.name.localeCompare(b.name, "fr");
+      }),
+    [stores]
+  );
+
+  const selectedProduct = useMemo(
+    () => products.find((product) => product.id === selectedProductId),
+    [products, selectedProductId]
+  );
+
+  const productOptions = useMemo(() => {
+    const list = category
+      ? products.filter((product) => productMatchesCategory(product, category))
+      : products;
+    return productPickOptions(
+      [...list].sort((a, b) => a.name.localeCompare(b.name, "fr"))
+    );
+  }, [products, category]);
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = products.filter((product) => {
-      if (category && product.category !== category) return false;
+      if (selectedProductId && product.id !== selectedProductId) return false;
+      if (!productMatchesCategory(product, category)) return false;
       if (!q) return true;
       return (
         product.name.toLowerCase().includes(q) ||
@@ -45,9 +83,25 @@ export function GlobalStockOverview({
       if (aZero !== bZero) return aZero ? 1 : -1;
       return a.stock - b.stock || a.name.localeCompare(b.name, "fr");
     });
-  }, [products, search, category]);
+  }, [products, search, category, selectedProductId]);
 
-  const filterToken = `${search}|${category}`;
+  const siteBreakdown = useMemo(() => {
+    if (!selectedProductId || !stockByProductAndStore || sortedStores.length === 0) {
+      return [];
+    }
+    const byStore = stockByProductAndStore[selectedProductId] ?? {};
+    return sortedStores.map((store) => ({
+      store,
+      stock: byStore[store.id] ?? 0,
+    }));
+  }, [selectedProductId, stockByProductAndStore, sortedStores]);
+
+  const siteBreakdownTotal = useMemo(
+    () => siteBreakdown.reduce((sum, row) => sum + row.stock, 0),
+    [siteBreakdown]
+  );
+
+  const filterToken = `${search}|${category}|${selectedProductId}`;
   const {
     paginated: paginatedProducts,
     page,
@@ -71,10 +125,27 @@ export function GlobalStockOverview({
     [products]
   );
 
-  const hasFilters = Boolean(search || category);
+  const hasFilters = Boolean(search || category || selectedProductId);
+  const showSiteBreakdown = Boolean(selectedProductId && selectedProduct);
 
   const retailCount = retailStoreCount ?? storeCount;
   const depotCount = hubStoreCount;
+
+  function clearFilters() {
+    setSearch("");
+    setCategory("");
+    setSelectedProductId("");
+  }
+
+  function handleCategoryChange(value: string) {
+    setCategory(value);
+    if (selectedProductId) {
+      const product = products.find((item) => item.id === selectedProductId);
+      if (product && value && !productMatchesCategory(product, value)) {
+        setSelectedProductId("");
+      }
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -82,7 +153,7 @@ export function GlobalStockOverview({
         <Card>
           <p className="text-sm text-muted">Magasins retail</p>
           <p className="mt-1 flex items-center gap-2 text-3xl font-bold">
-            <Store className="h-7 w-7 text-primary" />
+            <StoreIcon className="h-7 w-7 text-primary" />
             {retailCount}
           </p>
         </Card>
@@ -118,64 +189,143 @@ export function GlobalStockOverview({
 
       <Card padding={false}>
         <FilterTogglePanel
-          toggleLabel="Stock global"
-          summary={`${filteredProducts.length} produit${filteredProducts.length !== 1 ? "s" : ""}`}
+          toggleLabel="Filtres stock"
+          summary={
+            showSiteBreakdown
+              ? `Produit : ${selectedProduct?.name}`
+              : `${filteredProducts.length} produit${filteredProducts.length !== 1 ? "s" : ""}`
+          }
         >
-        <div className="natus-filter-bar overflow-visible border-b border-border p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-medium text-primary">
-              Stock global — magasins + dépôts
-            </p>
-            <div className="flex items-center gap-3">
-              {hasFilters && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setCategory("");
-                  }}
-                  className="cursor-pointer text-xs font-medium text-primary underline-offset-2 hover:underline"
-                >
-                  Tout effacer
-                </button>
-              )}
-              <p className="text-sm text-muted">
-                <span className="font-semibold text-foreground">
-                  {filteredProducts.length}
-                </span>{" "}
-                produit{filteredProducts.length !== 1 ? "s" : ""}
+          <div className="natus-filter-bar overflow-visible border-b border-border p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-medium text-primary">
+                Tous les sites — filtrer par catégorie ou par produit
               </p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:items-end">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium">
-                Nom ou code-barres
-              </label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Nom, code-barres..."
-                  className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
-                />
+              <div className="flex items-center gap-3">
+                {hasFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="cursor-pointer text-xs font-medium text-primary underline-offset-2 hover:underline"
+                  >
+                    Tout effacer
+                  </button>
+                )}
               </div>
             </div>
-            <SelectMenu
-              label="Catégorie"
-              value={category}
-              onChange={setCategory}
-              options={categoryOptions(PRODUCT_CATEGORIES)}
-              size="sm"
-              showIcons={false}
-            />
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-end">
+              <SelectMenu
+                label="Catégorie"
+                value={category}
+                onChange={handleCategoryChange}
+                options={categoryOptions(PRODUCT_CATEGORIES)}
+                size="sm"
+                showIcons={false}
+              />
+              <SelectMenu
+                label="Produit"
+                value={selectedProductId}
+                onChange={setSelectedProductId}
+                options={productOptions}
+                size="sm"
+                searchable
+              />
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">
+                  Recherche libre
+                </label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Nom, code-barres…"
+                    className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
         </FilterTogglePanel>
 
-        {filteredProducts.length === 0 ? (
+        {showSiteBreakdown ? (
+          <div className="p-6 space-y-4">
+            <div className="flex flex-wrap items-start gap-4">
+              <ProductImage product={selectedProduct!} size="md" />
+              <div>
+                <p className="text-lg font-semibold">{selectedProduct!.name}</p>
+                <p className="font-mono text-xs text-muted">
+                  {selectedProduct!.barcode || "—"}
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  {selectedProduct!.category || "Sans catégorie"} · Stock total réseau :{" "}
+                  <span className="font-semibold text-foreground">
+                    {selectedProduct!.stock}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {siteBreakdown.length === 0 ? (
+              <p className="text-sm text-muted">
+                Répartition par site indisponible pour ce produit.
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-primary-light/30">
+                      <th className="px-4 py-3 text-left font-medium text-muted">Site</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted">Type</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted">Ville</th>
+                      <th className="px-4 py-3 text-right font-medium text-muted">Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {siteBreakdown.map(({ store, stock }) => (
+                      <tr key={store.id} className="border-b border-border last:border-b-0">
+                        <td className="px-4 py-3 font-medium">{store.name}</td>
+                        <td className="px-4 py-3 text-muted">
+                          {store.is_hub ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Warehouse className="h-3.5 w-3.5" />
+                              Dépôt
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              <StoreIcon className="h-3.5 w-3.5" />
+                              Magasin
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-muted">{store.city}</td>
+                        <td className="px-4 py-3 text-right">
+                          <Badge
+                            variant={
+                              stock === 0 ? "danger" : stock < 10 ? "warning" : "success"
+                            }
+                          >
+                            {stock}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-border bg-primary-light/40 font-semibold">
+                      <td colSpan={3} className="px-4 py-3 text-right">
+                        Total ({siteBreakdown.length} site
+                        {siteBreakdown.length !== 1 ? "s" : ""})
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums">{siteBreakdownTotal}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <p className="px-6 py-12 text-center text-sm text-muted">
             Aucun produit ne correspond à votre recherche
           </p>
@@ -184,15 +334,9 @@ export function GlobalStockOverview({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-primary-light/50">
-                  <th className="px-4 py-3 text-left font-medium text-muted">
-                    Produit
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted">
-                    Catégorie
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium text-muted">
-                    Prix
-                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted">Produit</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted">Catégorie</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted">Prix</th>
                   <th className="px-4 py-3 text-right font-medium text-muted">
                     Stock total
                     <span className="mt-0.5 block text-[10px] font-normal normal-case tracking-normal text-muted">
@@ -212,18 +356,12 @@ export function GlobalStockOverview({
                         <ProductImage product={product} size="sm" />
                         <div>
                           <p className="font-medium">{product.name}</p>
-                          <p className="font-mono text-xs text-muted">
-                            {product.barcode}
-                          </p>
+                          <p className="font-mono text-xs text-muted">{product.barcode}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-muted">
-                      {product.category || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {formatCurrency(product.price)}
-                    </td>
+                    <td className="px-4 py-3 text-muted">{product.category || "—"}</td>
+                    <td className="px-4 py-3 text-right">{formatCurrency(product.price)}</td>
                     <td className="px-4 py-3 text-right">
                       <Badge
                         variant={
@@ -245,15 +383,13 @@ export function GlobalStockOverview({
                   <td colSpan={3} className="px-4 py-3 text-right text-foreground">
                     Total unités{hasFilters ? " (filtre actif)" : ""}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {filteredTotalUnits}
-                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums">{filteredTotalUnits}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
         )}
-        {filteredProducts.length > 0 && (
+        {!showSiteBreakdown && filteredProducts.length > 0 && (
           <PaginationBar
             page={page}
             totalPages={totalPages}

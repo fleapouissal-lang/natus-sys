@@ -21,6 +21,7 @@ import {
   storeTransferStatusVariant,
 } from "@/lib/store-transfer-status";
 import { TransferAssignedLivreur } from "@/components/stock/transfer-assigned-livreur";
+import { resolveTransferLivreurName } from "@/lib/transfer-livreur-assignment";
 import { formatDate } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Profile, StoreStockTransfer } from "@/lib/types";
@@ -120,6 +121,7 @@ export function StoreTransfersList({
               <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Source</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Destination</th>
+              <th className="px-6 py-3 text-left font-medium text-muted">Livreur</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Produits</th>
               <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
               <th className="px-6 py-3 text-right font-medium text-muted">Unités</th>
@@ -143,11 +145,16 @@ export function StoreTransfersList({
                   <td className="px-6 py-4 whitespace-nowrap">{formatDate(transfer.sent_at)}</td>
                   <td className="px-6 py-4">
                     <p className="font-medium">{transfer.from_store_name || "—"}</p>
-                    <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
                   </td>
                   <td className="px-6 py-4">
                     <p className="font-medium">{transfer.to_store_name || "—"}</p>
-                    <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
+                  </td>
+                  <td className="px-6 py-4">
+                    <TransferAssignedLivreur
+                      name={resolveTransferLivreurName(transfer, livreurs)}
+                      compact
+                      className=""
+                    />
                   </td>
                   <td className="px-6 py-4">
                     <ul className="space-y-1">

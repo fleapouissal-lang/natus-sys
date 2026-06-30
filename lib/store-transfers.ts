@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { enrichTransferLivreurNames } from "@/lib/transfer-livreur-assignment";
 import type { StoreStockTransfer } from "@/lib/types";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
@@ -135,6 +136,13 @@ async function enrichStoreTransferNames(
   });
 }
 
+async function finalizeStoreTransfers(
+  transfers: StoreStockTransfer[]
+): Promise<StoreStockTransfer[]> {
+  const withStores = await enrichStoreTransferNames(transfers);
+  return enrichTransferLivreurNames(withStores);
+}
+
 export async function getStoreStockTransfers(options: {
   fromStoreId?: string;
   fromStoreIds?: string[];
@@ -171,7 +179,7 @@ export async function getStoreStockTransfers(options: {
   }
 
   const transfers = (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
-  return enrichStoreTransferNames(transfers);
+  return finalizeStoreTransfers(transfers);
 }
 
 /** Commandes inter-magasins envoyées par des magasins sources (lecture dépôt). */
@@ -262,7 +270,7 @@ export async function getLivreurStoreStockTransfers(
   }
 
   const transfers = (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
-  return enrichStoreTransferNames(transfers);
+  return finalizeStoreTransfers(transfers);
 }
 
 /** Transferts inter-magasins livrés/reçus assignés au livreur (historique). */
@@ -285,5 +293,5 @@ export async function getLivreurStoreTransferHistory(
   }
 
   const transfers = (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
-  return enrichStoreTransferNames(transfers);
+  return finalizeStoreTransfers(transfers);
 }

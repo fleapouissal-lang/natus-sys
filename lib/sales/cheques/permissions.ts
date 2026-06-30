@@ -42,9 +42,13 @@ export function canEditChequeDetails(
 export function canDeleteCheque(
   cheque: SaleChequeRow,
   profile: Pick<Profile, "id" | "role">,
-  now = Date.now()
+  _now = Date.now()
 ): boolean {
-  return canEditChequeDetails(cheque, profile, now);
+  if (cheque.sale?.cancelled_at) return false;
+  if (profile.role === "cashier") return false;
+  if (canDirectorEditCheque(profile)) return true;
+  if (profile.role === "manager") return true;
+  return false;
 }
 
 export function canUpdateChequeStatus(profile: Pick<Profile, "role">): boolean {

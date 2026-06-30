@@ -1,10 +1,15 @@
 import { getCurrentProfile } from "@/lib/auth";
-import { getCityFilter, filterRetailStoresByProfile } from "@/lib/permissions";
-import { getActiveStores } from "@/lib/inventory";
-import { getProfileLockedStoreId, resolveSelectedStoreId } from "@/lib/management-store";
+import { getCityFilter, filterStoresByProfile } from "@/lib/permissions";
+import {
+  getActiveStores,
+  getProductsWithStoreStock,
+  getProductsWithTotalStock,
+  getStockMatrixByStore,
+} from "@/lib/inventory";
+import { getProfileLockedStoreId } from "@/lib/management-store";
 import { resolveStockPermissions } from "@/lib/stock-modify-access/permissions";
 import { listStockModifyAccessRequests } from "@/lib/stock-modify-access/queries";
-import { StockManager } from "@/components/stock/stock-manager";
+import { ManagementStockView } from "@/components/stock/management-stock-view";
 import { StockModifyAccessRequestButton } from "@/components/stock-modify-access/stock-modify-access-request-button";
 
 export default async function StockPage({
@@ -20,19 +25,27 @@ export default async function StockPage({
 
   const city = getCityFilter(profile);
   const storesAll = await getActiveStores(city);
-  const stores = filterRetailStoresByProfile(storesAll, profile);
-  const defaultStoreId = resolveSelectedStoreId(
-    stores,
-    storeParam,
-    getProfileLockedStoreId(profile)
-  );
+  const stores = filterStoresByProfile(storesAll, profile);
+  const lockedStoreId = getProfileLockedStoreId(profile);
 
-  const { getProductsWithStoreStock } = await import("@/lib/inventory");
-  const products = defaultStoreId
-    ? await getProductsWithStoreStock(defaultStoreId)
-    : [];
+  const selectedStoreId = lockedStoreId
+    ? lockedStoreId
+    : storeParam && stores.some((store) => store.id === storeParam)
+      ? storeParam
+      : null;
 
-  const selectedStore = stores.find((s) => s.id === defaultStoreId);
+  const [products, stockByProductAndStore] = await Promise.all([
+    selectedStoreId
+      ? getProductsWithStoreStock(selectedStoreId)
+      : getProductsWithTotalStock(city),
+    selectedStoreId
+      ? Promise.resolve(undefined)
+      : getStockMatrixByStore(stores.map((store) => store.id)),
+  ]);
+
+  const selectedStore = selectedStoreId
+    ? stores.find((store) => store.id === selectedStoreId)
+    : null;
   const permissions = await resolveStockPermissions(profile, selectedStore ?? null);
   const myRequests = await listStockModifyAccessRequests({ requesterId: profile.id });
 
@@ -42,12 +55,14 @@ export default async function StockPage({
         role="manager"
         stores={stores.map((s) => ({ id: s.id, name: s.name, city: s.city }))}
         myRequests={myRequests}
-        selectedStoreId={defaultStoreId || undefined}
+        selectedStoreId={selectedStoreId || undefined}
       />
-      <StockManager
+      <ManagementStockView
+        basePath="/manager"
         stores={stores}
         products={products}
-        defaultStoreId={defaultStoreId}
+        stockByProductAndStore={stockByProductAndStore}
+        selectedStoreId={selectedStoreId}
         cityLabel={city || undefined}
         canModifyStock={permissions.canModifyStock}
         canEditTotal={permissions.canEditTotal}

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { enrichTransferLivreurNames } from "@/lib/transfer-livreur-assignment";
 import type { HubStockTransfer } from "@/lib/types";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
@@ -109,6 +110,13 @@ async function enrichHubTransferNames(
   });
 }
 
+async function finalizeHubTransfers(
+  transfers: HubStockTransfer[]
+): Promise<HubStockTransfer[]> {
+  const withStores = await enrichHubTransferNames(transfers);
+  return enrichTransferLivreurNames(withStores);
+}
+
 const TRANSFER_SELECT = `
   id,
   from_store_id,
@@ -174,7 +182,9 @@ export async function getHubStockTransfers(options: {
     return [];
   }
 
-  return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+  return finalizeHubTransfers(
+    (data || []).map((row) => mapTransferRow(row as Record<string, unknown>))
+  );
 }
 
 export async function getCashierPendingTransfers(storeId: string): Promise<HubStockTransfer[]> {
@@ -192,7 +202,9 @@ export async function getCashierPendingTransfers(storeId: string): Promise<HubSt
     return [];
   }
 
-  return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+  return finalizeHubTransfers(
+    (data || []).map((row) => mapTransferRow(row as Record<string, unknown>))
+  );
 }
 
 /** Transferts magasin → hub envoyés par le magasin caissier. */
@@ -226,7 +238,7 @@ export async function getLivreurHubTransfers(livreurId: string): Promise<HubStoc
     return [];
   }
 
-  return enrichHubTransferNames(
+  return finalizeHubTransfers(
     (data || []).map((row) => mapTransferRow(row as Record<string, unknown>))
   );
 }
@@ -250,7 +262,7 @@ export async function getLivreurHubTransferHistory(
     return [];
   }
 
-  return enrichHubTransferNames(
+  return finalizeHubTransfers(
     (data || []).map((row) => mapTransferRow(row as Record<string, unknown>))
   );
 }
@@ -264,7 +276,10 @@ export async function getHubTransferById(transferId: string): Promise<HubStockTr
     .maybeSingle();
 
   if (!data) return null;
-  return mapTransferRow(data as Record<string, unknown>);
+  const [transfer] = await finalizeHubTransfers([
+    mapTransferRow(data as Record<string, unknown>),
+  ]);
+  return transfer ?? null;
 }
 
 /** Commandes dépôt → magasins visibles par le gérant (lecture seule). */
@@ -333,7 +348,8 @@ async function getIncomingHubToStoreTransfers(options: {
     };
   });
 
-  return transfers.filter((transfer) => !hubIdSet.has(transfer.to_store_id));
+  const filtered = transfers.filter((transfer) => !hubIdSet.has(transfer.to_store_id));
+  return finalizeHubTransfers(filtered);
 }
 
 /** Commandes magasin → dépôt envoyées par le gérant. */
@@ -359,7 +375,9 @@ export async function getManagerOutgoingHubTransfers(
     return [];
   }
 
-  return (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
+  return finalizeHubTransfers(
+    (data || []).map((row) => mapTransferRow(row as Record<string, unknown>))
+  );
 }
 
 /** Tous les transferts hub visibles par le directeur. */

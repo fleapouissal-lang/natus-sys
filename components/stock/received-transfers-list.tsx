@@ -33,6 +33,7 @@ import {
   filterLivreursForPickupCity,
   mapLivreurSelectOptions,
   pickupCityForTransferLivreur,
+  resolveTransferLivreurName,
 } from "@/lib/transfer-livreur-assignment";
 import {
   hubTransferCashierCanValidate,
@@ -121,6 +122,10 @@ export function ReceivedTransfersList({
     );
   }
 
+  function livreurNameFor(transfer: ReceivedTransferRow["transfer"]) {
+    return resolveTransferLivreurName(transfer, livreurs);
+  }
+
   const {
     paginated,
     page,
@@ -203,6 +208,7 @@ export function ReceivedTransfersList({
                 <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Source</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Destination</th>
+                <th className="px-6 py-3 text-left font-medium text-muted">Livreur</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">Unités</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
@@ -255,10 +261,16 @@ export function ReceivedTransfersList({
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-medium">{transfer.from_store_name || "—"}</p>
-                        <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-medium">{transfer.to_store_name || "—"}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <TransferAssignedLivreur
+                          name={livreurNameFor(transfer)}
+                          compact
+                          className=""
+                        />
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant={storeTransferStatusVariant(transfer.status)}>
@@ -351,7 +363,6 @@ export function ReceivedTransfersList({
                       {isStoreToDepot && transfer.from_store_city && (
                         <p className="text-xs text-muted">{transfer.from_store_city}</p>
                       )}
-                      <TransferAssignedLivreur name={transfer.assigned_livreur_name} />
                     </td>
                     <td className="px-6 py-4">
                       <p className="font-medium">
@@ -360,6 +371,13 @@ export function ReceivedTransfersList({
                       {transfer.receiver_name && transfer.status === "received" && (
                         <p className="text-xs text-muted">Reçu par {transfer.receiver_name}</p>
                       )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <TransferAssignedLivreur
+                        name={livreurNameFor(transfer)}
+                        compact
+                        className=""
+                      />
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant={hubTransferStatusVariant(transfer.status)}>

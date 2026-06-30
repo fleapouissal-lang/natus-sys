@@ -24,7 +24,6 @@ import {
 } from "@/lib/store-tracking-period";
 import { formatCurrency, toLocalDateKey } from "@/lib/utils";
 import {
-  canCancelSaleAsCashier,
   cashierSaleCancelBlockedMessage,
 } from "@/lib/sales/sale-cancel";
 import { DEFAULT_PAGE_SIZE } from "@/lib/use-pagination";
@@ -364,11 +363,9 @@ export function CashierSalesHistory({
         <SaleDetailModal
           sale={detailSale}
           onClose={() => setDetailSale(null)}
-          canCancel={canCancelSaleAsCashier(detailSale)}
+          canCancel={false}
           cancelBlockedHint={
-            !canCancelSaleAsCashier(detailSale) && !detailSale.cancelled_at
-              ? cashierSaleCancelBlockedMessage()
-              : undefined
+            !detailSale.cancelled_at ? cashierSaleCancelBlockedMessage() : undefined
           }
           onCancelled={() => router.refresh()}
         />

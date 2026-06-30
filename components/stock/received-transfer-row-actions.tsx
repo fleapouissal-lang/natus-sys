@@ -169,9 +169,12 @@ export function ReceivedTransferRowActions({
 
             {livreurAssign.livreurOptions.length === 0 && (
               <p className="text-sm text-muted">
-                Aucun livreur actif disponible pour ce magasin.
+                Aucun livreur actif disponible pour la ville de prise en charge.
               </p>
             )}
+            <p className="text-xs text-muted">
+              Un même livreur peut être assigné à plusieurs transferts en parallèle.
+            </p>
 
             <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
               <Button
