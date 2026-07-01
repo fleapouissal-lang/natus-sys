@@ -114,7 +114,8 @@ export default async function CashierTransfersSentPage({
           Stocks envoyés
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Transferts sortants depuis {storeName} — tous statuts
+          Préparation et expédition depuis {storeName} — marquez prête ici, puis suivez livraison
+          et réception
         </p>
       </div>
 

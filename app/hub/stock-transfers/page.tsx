@@ -110,7 +110,7 @@ export default async function HubStockTransfersSentPage({
           Commandes envoyées
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Transferts dont la source est le dépôt — tous statuts
+          Préparation et expédition depuis le dépôt — marquez prête ici, puis suivez livraison
           {hubStores.length > 1 ? ` — ${profile.city}` : ` — ${hubStore.name}`}
         </p>
       </div>
@@ -135,7 +135,7 @@ export default async function HubStockTransfersSentPage({
           productLookup={productLookup}
           successMessage={
             params.created === "1"
-              ? "Transfert créé avec succès — consultez l'onglet « Stock envoyé »."
+              ? "Transfert créé — consultez Mes commandes tant qu'il est en préparation."
               : undefined
           }
         />

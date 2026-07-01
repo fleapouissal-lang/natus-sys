@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { ReceivedTransferDetailModal } from "@/components/stock/received-transfer-detail-modal";
+import {
+  ReceivedTransferDetailModal,
+  type TransferDetailVariant,
+} from "@/components/stock/received-transfer-detail-modal";
 import {
   ReceivedTransferRowActions,
   buildHubRowActions,
@@ -48,6 +51,11 @@ import {
   storeTransferStatusVariant,
 } from "@/lib/store-transfer-status";
 import type { ReceivedTransferRow } from "@/lib/stock-transfers/received-transfer-rows";
+import {
+  applyMesCommandesRowActions,
+  type CommanderRole,
+  type MesCommandesActionMode,
+} from "@/lib/stock-transfers/pending-order-actions";
 import { formatDate } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, Profile } from "@/lib/types";
@@ -65,6 +73,9 @@ export type ReceivedTransfersListProps = {
   hubManageAsStoreSource?: boolean;
   /** Hub opérateur : gère les envois depuis le dépôt source */
   hubManageOutgoing?: boolean;
+  mesCommandesActionMode?: MesCommandesActionMode;
+  commanderRole?: CommanderRole;
+  detailVariant?: TransferDetailVariant;
   cashierHub?: {
     storeName: string;
     productsById: Record<
@@ -104,6 +115,9 @@ export function ReceivedTransfersList({
   hubAllowRepair = false,
   hubManageAsStoreSource = false,
   hubManageOutgoing = false,
+  mesCommandesActionMode,
+  commanderRole,
+  detailVariant = "reception",
   cashierHub,
 }: ReceivedTransfersListProps) {
   const router = useRouter();
@@ -221,38 +235,50 @@ export function ReceivedTransfersList({
 
                 if (row.source === "store") {
                   const transfer = row.transfer;
-                  const sourceHint = canManageStoreSource(transfer)
-                    ? storeTransferSourceHint(transfer.status)
-                    : "";
-                  const destHint = canManageStoreDestination(transfer)
-                    ? storeTransferDestinationHint(transfer.status)
-                    : "";
+                  const sourceHint =
+                    detailVariant === "order"
+                      ? ""
+                      : canManageStoreSource(transfer)
+                        ? storeTransferSourceHint(transfer.status)
+                        : "";
+                  const destHint =
+                    detailVariant === "order"
+                      ? ""
+                      : canManageStoreDestination(transfer)
+                        ? storeTransferDestinationHint(transfer.status)
+                        : "";
                   const hint = sourceHint || destHint;
-                  const actionProps = buildStoreRowActions({
+                  const actionProps = applyMesCommandesRowActions(
+                    mesCommandesActionMode,
+                    commanderRole,
                     row,
-                    storeActionMode,
-                    canManageSource: canManageStoreSource(transfer),
-                    canManageDestination: canManageStoreDestination(transfer),
-                    loading,
-                    livreurOptions: livreurOptionsForTransfer(transfer),
-                    onViewDetail,
-                    onMarkReady: () =>
-                      void runAction(transfer.id, () =>
-                        markStoreTransferReady(transfer.id)
-                      ),
-                    onAssignLivreur: (livreurId) =>
-                      runAction(transfer.id, () =>
-                        assignStoreTransferLivreur(transfer.id, livreurId)
-                      ),
-                    onShip: () =>
-                      runAction(transfer.id, () =>
-                        shipStoreStockTransfer(transfer.id)
-                      ),
-                    onConfirmReceive: () =>
-                      void runAction(transfer.id, () =>
-                        confirmStoreStockTransfer(transfer.id)
-                      ),
-                  });
+                    buildStoreRowActions({
+                      row,
+                      storeActionMode,
+                      canManageSource: canManageStoreSource(transfer),
+                      canManageDestination: canManageStoreDestination(transfer),
+                      loading,
+                      livreurOptions: livreurOptionsForTransfer(transfer),
+                      onViewDetail,
+                      onMarkReady: () =>
+                        void runAction(transfer.id, () =>
+                          markStoreTransferReady(transfer.id)
+                        ),
+                      onAssignLivreur: (livreurId) =>
+                        runAction(transfer.id, () =>
+                          assignStoreTransferLivreur(transfer.id, livreurId)
+                        ),
+                      onShip: () =>
+                        runAction(transfer.id, () =>
+                          shipStoreStockTransfer(transfer.id)
+                        ),
+                      onConfirmReceive: () =>
+                        void runAction(transfer.id, () =>
+                          confirmStoreStockTransfer(transfer.id)
+                        ),
+                    }),
+                    (url) => router.push(url)
+                  );
 
                   return (
                     <tr key={row.id} className="border-b border-border last:border-b-0">
@@ -296,9 +322,11 @@ export function ReceivedTransfersList({
                   managedStoreIds
                 );
                 const statusHint =
-                  hubReadOnly || cashierHub
-                    ? hubTransferStoreStatusHint(transfer.status)
-                    : "";
+                  detailVariant === "order"
+                    ? ""
+                    : hubReadOnly || cashierHub
+                      ? hubTransferStoreStatusHint(transfer.status)
+                      : "";
                 const direction = hubTransferDirection(transfer);
                 const isStoreToDepot = direction === "store_to_depot";
                 const managedFromSourceHub = hubTransferManagedFromSourceHub(
@@ -307,48 +335,54 @@ export function ReceivedTransfersList({
                 );
                 const canMarkReady = managedFromSourceHub;
                 const canManageLivreur = managedFromSourceHub;
-                const actionProps = buildHubRowActions({
+                const actionProps = applyMesCommandesRowActions(
+                  mesCommandesActionMode,
+                  commanderRole,
                   row,
-                  allowManage,
-                  canMarkReady,
-                  canManageLivreur,
-                  isStoreToDepot,
-                  hubManageAsStoreSource,
-                  hubAllowRepair,
-                  cashierCanValidate: cashierHub
-                    ? hubTransferCashierCanValidate(transfer.status)
-                    : false,
-                  cashierHub: Boolean(cashierHub),
-                  loading,
-                  livreurOptions: livreurOptionsForTransfer(transfer),
-                  onViewDetail,
-                  onMarkReady: () =>
-                    void runAction(transfer.id, () =>
-                      hubManageAsStoreSource && isStoreToDepot
-                        ? markStoreToHubTransferReady(transfer.id)
-                        : markHubTransferReady(transfer.id)
-                    ),
-                  onAssignLivreur: (livreurId) =>
-                    runAction(transfer.id, () =>
-                      hubManageAsStoreSource && isStoreToDepot
-                        ? assignStoreToHubTransferLivreur(transfer.id, livreurId)
-                        : assignHubTransferLivreur(transfer.id, livreurId)
-                    ),
-                  onShip: () =>
-                    runAction(transfer.id, () => pickupHubTransfer(transfer.id)),
-                  onConfirmReceive: () =>
-                    void runAction(transfer.id, () =>
-                      confirmHubStockTransfer(transfer.id)
-                    ),
-                  onRepair: () =>
-                    void runAction(transfer.id, () =>
-                      repairHubStockTransfer(transfer.id)
-                    ),
-                  onCashierValidate: () =>
-                    void runAction(transfer.id, () =>
-                      confirmHubStockTransfer(transfer.id)
-                    ),
-                });
+                  buildHubRowActions({
+                    row,
+                    allowManage,
+                    canMarkReady,
+                    canManageLivreur,
+                    isStoreToDepot,
+                    hubManageAsStoreSource,
+                    hubAllowRepair,
+                    cashierCanValidate: cashierHub
+                      ? hubTransferCashierCanValidate(transfer.status)
+                      : false,
+                    cashierHub: Boolean(cashierHub),
+                    loading,
+                    livreurOptions: livreurOptionsForTransfer(transfer),
+                    onViewDetail,
+                    onMarkReady: () =>
+                      void runAction(transfer.id, () =>
+                        hubManageAsStoreSource && isStoreToDepot
+                          ? markStoreToHubTransferReady(transfer.id)
+                          : markHubTransferReady(transfer.id)
+                      ),
+                    onAssignLivreur: (livreurId) =>
+                      runAction(transfer.id, () =>
+                        hubManageAsStoreSource && isStoreToDepot
+                          ? assignStoreToHubTransferLivreur(transfer.id, livreurId)
+                          : assignHubTransferLivreur(transfer.id, livreurId)
+                      ),
+                    onShip: () =>
+                      runAction(transfer.id, () => pickupHubTransfer(transfer.id)),
+                    onConfirmReceive: () =>
+                      void runAction(transfer.id, () =>
+                        confirmHubStockTransfer(transfer.id)
+                      ),
+                    onRepair: () =>
+                      void runAction(transfer.id, () =>
+                        repairHubStockTransfer(transfer.id)
+                      ),
+                    onCashierValidate: () =>
+                      void runAction(transfer.id, () =>
+                        confirmHubStockTransfer(transfer.id)
+                      ),
+                  }),
+                  (url) => router.push(url)
+                );
 
                 return (
                   <tr key={row.id} className="border-b border-border last:border-b-0">
@@ -411,7 +445,8 @@ export function ReceivedTransfersList({
         row={detailRow}
         onClose={() => setDetailRow(null)}
         showProductImages={showProductImages}
-        cashierHub={cashierHub}
+        detailVariant={detailVariant}
+        cashierHub={detailVariant === "order" ? undefined : cashierHub}
         canValidate={Boolean(detailCanValidate)}
         validateLoading={detailRow ? loadingId === detailRow.transfer.id : false}
         onValidate={

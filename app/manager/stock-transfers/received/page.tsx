@@ -60,7 +60,7 @@ export default async function ManagerStockTransfersReceivedPage({
           Stocks reçus
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Transferts vers vos magasins associés — tous statuts — {scopeLabel}
+          Transferts reçus vers vos magasins associés — consultation uniquement — {scopeLabel}
         </p>
       </div>
 

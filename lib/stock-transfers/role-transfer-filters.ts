@@ -45,3 +45,21 @@ export function filterHubIncomingToHubs(
     (transfer) => ids.has(transfer.to_store_id) && transfer.to_store_is_hub
   );
 }
+
+/** Gérant — réceptions dépôt → magasins associés (tous statuts). */
+export function filterIncomingHubTransfersToStores(
+  transfers: HubStockTransfer[],
+  toStoreIds: string[]
+): HubStockTransfer[] {
+  const ids = new Set(toStoreIds);
+  return transfers.filter((transfer) => ids.has(transfer.to_store_id));
+}
+
+/** Gérant — envois magasin → dépôt depuis les magasins sources. */
+export function filterOutgoingHubTransfersFromStores(
+  transfers: HubStockTransfer[],
+  fromStoreIds: string[]
+): HubStockTransfer[] {
+  const ids = new Set(fromStoreIds);
+  return transfers.filter((transfer) => ids.has(transfer.from_store_id));
+}

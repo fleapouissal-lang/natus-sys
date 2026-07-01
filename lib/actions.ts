@@ -77,6 +77,10 @@ function mapCreateUserAuthError(message: string): string {
 }
 
 function revalidateManagement() {
+  revalidatePath("/manager/orders");
+  revalidatePath("/director/orders");
+  revalidatePath("/cashier/orders");
+  revalidatePath("/livreur/orders");
   revalidatePath("/manager/products");
   revalidatePath("/manager/stock");
   revalidatePath("/manager/stock-transfers");

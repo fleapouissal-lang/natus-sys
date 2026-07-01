@@ -420,8 +420,7 @@ export function DirectorStockTransferManager({
 
     const params = new URLSearchParams(searchParams.toString());
     params.set("created", "1");
-    params.set("tab", "sent");
-    router.push(`${pathname}?${params.toString()}`);
+    router.push("/director/orders?created=1");
     router.refresh();
   }
 

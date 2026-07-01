@@ -12,8 +12,7 @@ import {
 } from "@/lib/permissions";
 import { resolveSelectedStoreId, getProfileLockedStoreId } from "@/lib/management-store";
 import { getManagerOutgoingHubTransfers } from "@/lib/hub-transfers";
-import { getManagerStoreStockTransfers, getOutgoingStoreStockTransfers } from "@/lib/store-transfers";
-import { filterIncomingStoreTransfersToStores } from "@/lib/stock-transfers/role-transfer-filters";
+import { getOutgoingStoreStockTransfers } from "@/lib/store-transfers";
 import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
 import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
 import { ManagerSentOrdersTabs } from "@/components/stock/manager-sent-orders-tabs";
@@ -117,7 +116,8 @@ export default async function ManagerStockTransfersPage({
           Commandes envoyées
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Envoi depuis vos magasins associés — tous statuts — {scopeLabel}
+          Transferts envoyés depuis vos magasins associés — préparation, livraison et suivi —{" "}
+          {scopeLabel}
         </p>
       </div>
 

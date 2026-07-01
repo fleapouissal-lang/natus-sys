@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Eye,
   PackageCheck,
+  PackagePlus,
   Truck,
   UserCheck,
   Wrench,
@@ -69,6 +70,7 @@ export function ReceivedTransferRowActions({
   loading,
   primaryAction,
   livreurAssign,
+  commanderAction,
 }: {
   onViewDetail: () => void;
   loading?: boolean;
@@ -79,6 +81,10 @@ export function ReceivedTransferRowActions({
     variant?: "primary" | "success";
   } | null;
   livreurAssign?: LivreurAssignConfig | null;
+  commanderAction?: {
+    label: string;
+    onClick: () => void;
+  };
 }) {
   const [livreurOpen, setLivreurOpen] = useState(false);
   const [selectedLivreur, setSelectedLivreur] = useState("");
@@ -118,6 +124,17 @@ export function ReceivedTransferRowActions({
         <ActionIconButton label="Voir le détail" onClick={onViewDetail}>
           <Eye className="h-4 w-4" />
         </ActionIconButton>
+
+        {commanderAction && (
+          <ActionIconButton
+            label={commanderAction.label}
+            onClick={commanderAction.onClick}
+            loading={loading}
+            variant="primary"
+          >
+            <PackagePlus className="h-4 w-4" />
+          </ActionIconButton>
+        )}
 
         {livreurAssign && (
           <ActionIconButton

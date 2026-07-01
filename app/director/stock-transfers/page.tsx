@@ -156,7 +156,7 @@ export default async function DirectorStockTransfersPage({
           Stocks envoyés
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Transferts en cours, prêts, en livraison ou livrés — magasins et dépôts hub
+          Transferts prêts, en livraison ou livrés — magasins et dépôts hub
         </p>
       </div>
 

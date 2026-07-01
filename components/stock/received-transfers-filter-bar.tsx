@@ -37,7 +37,7 @@ function ReceivedTransfersFilterBarInner({
   destinationOptions: ReceivedTransferLocationOption[];
   lockDestination?: boolean;
   lockSource?: boolean;
-  variant?: "received" | "sent";
+  variant?: "received" | "sent" | "pending";
   preserveTab?: string;
 }) {
   const router = useRouter();
@@ -79,7 +79,11 @@ function ReceivedTransfersFilterBarInner({
   const dateToKey = variant === "sent" ? "sentTo" : "to";
   const destParamKey = variant === "sent" ? "listDest" : "dest";
   const filterTitle =
-    variant === "sent" ? "Filtrer les stocks envoyés" : "Filtrer les stocks reçus";
+    variant === "pending"
+      ? "Filtrer mes commandes"
+      : variant === "sent"
+        ? "Filtrer les stocks envoyés"
+        : "Filtrer les stocks reçus";
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -109,18 +113,20 @@ function ReceivedTransfersFilterBarInner({
     filter.productQuery ||
       filter.dateFrom ||
       filter.dateTo ||
-      filter.status !== "all" ||
+      (variant !== "pending" && filter.status !== "all") ||
       filter.sourceStoreId ||
       filter.destStoreId
   );
 
   const statusSelectOptions = useMemo(
     () =>
-      RECEIVED_TRANSFER_STATUS_OPTIONS.map(({ id, label }) => ({
+      RECEIVED_TRANSFER_STATUS_OPTIONS.filter(
+        (option) => variant !== "sent" || option.id !== "en_cours"
+      ).map(({ id, label }) => ({
         value: id,
         label,
       })),
-    []
+    [variant]
   );
 
   const sourceSelectOptions = useMemo(() => {
@@ -149,7 +155,8 @@ function ReceivedTransfersFilterBarInner({
           <div>
             <p className="font-medium">{filterTitle}</p>
             <p className="text-xs text-muted">
-              {resultCount} transfert{resultCount !== 1 ? "s" : ""}
+              {resultCount} {variant === "pending" ? "commande" : "transfert"}
+              {resultCount !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
@@ -201,15 +208,17 @@ function ReceivedTransfersFilterBarInner({
           disabled={lockDestination && destinationSelectOptions.length <= 1}
         />
 
-        <SelectMenu
-          label="Statut"
-          value={filter.status}
-          onChange={(value) => setStatus(value as ReceivedTransferStatusFilter)}
-          options={statusSelectOptions}
-          defaultIcon={CircleDot}
-          showIcons={false}
-          size="sm"
-        />
+        {variant !== "pending" && (
+          <SelectMenu
+            label="Statut"
+            value={filter.status}
+            onChange={(value) => setStatus(value as ReceivedTransferStatusFilter)}
+            options={statusSelectOptions}
+            defaultIcon={CircleDot}
+            showIcons={false}
+            size="sm"
+          />
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -257,7 +266,7 @@ export function ReceivedTransfersFilterBar(props: {
   destinationOptions: ReceivedTransferLocationOption[];
   lockDestination?: boolean;
   lockSource?: boolean;
-  variant?: "received" | "sent";
+  variant?: "received" | "sent" | "pending";
   preserveTab?: string;
 }) {
   return (

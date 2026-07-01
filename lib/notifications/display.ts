@@ -88,9 +88,9 @@ export function notificationHref(
     default:
       if (audience === "director") return "/director/orders";
       if (audience === "livreur") return "/livreur/orders";
-      if (audience === "city") return "/manager/orders";
-      if (audience === "hub") return "/hub/orders";
-      return "/cashier/orders";
+      if (audience === "city") return "/manager/shopify-orders";
+      if (audience === "hub") return "/hub/stock-transfers";
+      return "/cashier/shopify-orders";
   }
 }
 

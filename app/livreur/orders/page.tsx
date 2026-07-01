@@ -36,7 +36,7 @@ export default async function LivreurOrdersPage() {
     <div className="animate-fade-in space-y-4 md:space-y-6">
       <div className="rounded-2xl border border-primary/20 bg-surface p-4 md:border-0 md:bg-transparent md:p-0">
         <h1 className="font-heading text-xl font-bold tracking-tight text-primary md:text-2xl">
-          Mes livraisons
+          Mes commandes
         </h1>
         <p className="mt-1 text-sm text-muted">
           Commandes qui vous sont assignées. Marquez « Livré » ou « Retour » (note

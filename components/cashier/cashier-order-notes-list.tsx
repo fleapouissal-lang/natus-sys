@@ -47,7 +47,7 @@ export function CashierOrderNotesList({ orders }: { orders: ShopifyOrder[] }) {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
-                      href="/cashier/orders"
+                      href="/cashier/shopify-orders"
                       className="font-heading text-base font-semibold text-primary hover:underline"
                     >
                       {order.order_number}

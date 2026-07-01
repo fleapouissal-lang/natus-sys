@@ -617,7 +617,7 @@ export function PosTerminal({
       setMissingShopifyProducts([]);
       setLoading(false);
       setLastAddedProduct(null);
-      router.replace("/cashier/orders");
+      router.replace("/cashier/shopify-orders");
       router.refresh();
       return;
     }
@@ -718,7 +718,7 @@ export function PosTerminal({
   function closeReceipt() {
     setReceipt(null);
     if (initialShopifyOrder || shopifyOrders.length > 0) {
-      router.replace("/cashier/orders");
+      router.replace("/cashier/shopify-orders");
     } else {
       inputRef.current?.focus();
     }

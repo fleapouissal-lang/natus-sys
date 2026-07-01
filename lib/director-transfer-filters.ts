@@ -3,14 +3,13 @@ import type { HubStockTransfer, HubStockTransferStatus, StoreStockTransfer, Stor
 type TransferStatus = HubStockTransferStatus | StoreStockTransferStatus;
 
 const DIRECTOR_SENT_STATUSES = new Set<TransferStatus>([
-  "en_cours",
   "pret",
   "en_livraison",
   "livre",
   "sent",
 ]);
 
-/** Directeur — stocks envoyés : en cours → livré (hub : + sent), hors reçu. */
+/** Directeur — stocks envoyés : prêt → livré (hub : + sent), hors en cours et reçu. */
 export function isDirectorTransferSentStatus(status: TransferStatus): boolean {
   return DIRECTOR_SENT_STATUSES.has(status);
 }
@@ -20,9 +19,9 @@ export function isDirectorTransferReceivedStatus(status: TransferStatus): boolea
   return status === "received";
 }
 
-/** Stocks envoyés (autres rôles) : masquer uniquement les transferts clôturés (reçus). */
+/** Stocks envoyés (autres rôles) : hors en cours et reçu. */
 export function isTransferSentStatus(status: TransferStatus): boolean {
-  return status !== "received";
+  return status !== "received" && status !== "en_cours";
 }
 
 /** Stocks reçus (autres rôles) : visible dès la création jusqu'à clôture. */

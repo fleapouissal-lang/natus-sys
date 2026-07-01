@@ -10,6 +10,10 @@ import {
 } from "@/lib/stock-transfers/received-filters";
 import type { ReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
 import type { ReceivedTransferLocationSites } from "@/lib/stock-transfers/received-location-filters";
+import {
+  filterIncomingHubTransfersToStores,
+  filterIncomingStoreTransfersToStores,
+} from "@/lib/stock-transfers/role-transfer-filters";
 import type { HubStockTransfer, Store, StoreStockTransfer } from "@/lib/types";
 
 export function ManagerReceivedOrdersTabs({
@@ -33,12 +37,22 @@ export function ManagerReceivedOrdersTabs({
   productLookup?: ReceivedTransferProductLookup;
 }) {
   const hub = useMemo(
-    () => filterTransfersBySentDate(hubTransfers, filter.dateFrom, filter.dateTo),
-    [hubTransfers, filter.dateFrom, filter.dateTo]
+    () =>
+      filterTransfersBySentDate(
+        filterIncomingHubTransfersToStores(hubTransfers, storeIds),
+        filter.dateFrom,
+        filter.dateTo
+      ),
+    [hubTransfers, storeIds, filter.dateFrom, filter.dateTo]
   );
   const store = useMemo(
-    () => filterTransfersBySentDate(storeTransfers, filter.dateFrom, filter.dateTo),
-    [storeTransfers, filter.dateFrom, filter.dateTo]
+    () =>
+      filterTransfersBySentDate(
+        filterIncomingStoreTransfersToStores(storeTransfers, storeIds),
+        filter.dateFrom,
+        filter.dateTo
+      ),
+    [storeTransfers, storeIds, filter.dateFrom, filter.dateTo]
   );
 
   const groups = useMemo(
@@ -78,7 +92,9 @@ export function ManagerReceivedOrdersTabs({
         rows={rows}
         managedStoreIds={storeIds}
         showProductImages
-        storeActionMode="full"
+        storeActionMode="none"
+        hubReadOnly
+        detailVariant="reception"
         emptyMessage="Aucune commande reçue"
       />
     </div>

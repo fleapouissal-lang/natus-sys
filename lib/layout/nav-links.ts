@@ -23,6 +23,7 @@ import {
   Landmark,
   ArrowRightLeft,
   PackagePlus,
+  ShoppingBag,
 } from "lucide-react";
 import { getManagementBasePath } from "@/lib/permissions";
 import { getSettingsPath } from "@/lib/layout/settings-path";
@@ -44,9 +45,10 @@ export const personalCashierLinks: NavLinkItem[] = [
 /** Ordre de repli — le tri final est appliqué par sortNavLinksByPriority. */
 export const cashierLinks: NavLinkItem[] = [
   { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 0 },
-  { href: "/cashier/stock", label: "Stock", icon: Warehouse, mobileOrder: 1 },
-  { href: "/cashier/commander", label: "Commander", icon: PackagePlus, mobileOrder: 2 },
-  { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 2 },
+  { href: "/cashier/orders", label: "Mes commandes", icon: ShoppingBag, mobileOrder: 1 },
+  { href: "/cashier/stock", label: "Stock", icon: Warehouse, mobileOrder: 2 },
+  { href: "/cashier/commander", label: "Commander", icon: PackagePlus, mobileOrder: 3 },
+  { href: "/cashier/planning", label: "Horaires", icon: CalendarClock, mobileOrder: 4 },
   {
     href: "/cashier/transfers/received",
     label: "Stocks reçus",
@@ -70,7 +72,7 @@ export const cashierLinks: NavLinkItem[] = [
 ];
 
 export const livreurLinks: NavLinkItem[] = [
-  { href: "/livreur/orders", label: "Livraisons", icon: Package, mobileOrder: 0 },
+  { href: "/livreur/orders", label: "Mes commandes", icon: ShoppingBag, mobileOrder: 0 },
   {
     href: "/livreur/history",
     label: "Historique des livraisons",
@@ -84,7 +86,8 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   if (basePath === "/hub") {
     return [
       { href: "/hub", label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
-      { href: "/hub/stock", label: "Stock des produits", icon: Warehouse, mobileOrder: 1 },
+      { href: "/hub/orders", label: "Mes commandes", icon: ShoppingBag, mobileOrder: 1 },
+      { href: "/hub/stock", label: "Stock des produits", icon: Warehouse, mobileOrder: 2 },
       {
         href: "/hub/stock-transfers",
         label: "Stocks envoyés",
@@ -106,8 +109,9 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   if (basePath === "/manager") {
     return [
       { href: "/manager", label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
-      { href: "/manager/stock", label: "Stock", icon: Warehouse, mobileOrder: 1 },
-      { href: "/manager/planning", label: "Planning", icon: CalendarClock, mobileOrder: 2 },
+      { href: "/manager/orders", label: "Mes commandes", icon: ShoppingBag, mobileOrder: 1 },
+      { href: "/manager/stock", label: "Stock", icon: Warehouse, mobileOrder: 2 },
+      { href: "/manager/planning", label: "Planning", icon: CalendarClock, mobileOrder: 3 },
       {
         href: "/manager/stock-transfers",
         label: "Stocks envoyés",
@@ -144,7 +148,8 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
   return [
     { href: basePath, label: "Accueil", icon: LayoutDashboard, mobileOrder: 0 },
     { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart, mobileOrder: 1 },
-    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 2 },
+    { href: `${basePath}/orders`, label: "Mes commandes", icon: ShoppingBag, mobileOrder: 2 },
+    { href: `${basePath}/stock`, label: "Stock", icon: Warehouse, mobileOrder: 3 },
     {
       href: `${basePath}/stock-transfers`,
       label: "Stocks envoyés",
@@ -223,6 +228,7 @@ function buildDirectorNavSections(role: UserRole): NavSection[] {
       label: "Ventes",
       links: [
         { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
+        { href: "/director/orders", label: "Mes commandes", icon: ShoppingBag },
         { href: "/director/pos-closures", label: "Clôtures caisse", icon: ScrollText },
         { href: "/director/cheques", label: "Chèques", icon: Landmark },
         { href: "/director/invoices", label: "Factures", icon: FileText },
@@ -289,6 +295,7 @@ function buildManagerNavSections(role: UserRole): NavSection[] {
       id: "stock",
       label: "Stock",
       links: [
+        { href: "/manager/orders", label: "Mes commandes", icon: ShoppingBag },
         { href: "/manager/stock", label: "Stock", icon: Warehouse },
         { href: "/manager/stock-transfers", label: "Stocks envoyés", icon: ArrowRightLeft },
         { href: "/manager/stock-transfers/received", label: "Stocks reçus", icon: Boxes },
@@ -339,7 +346,10 @@ function buildCashierNavSections(role: UserRole): NavSection[] {
     {
       id: "caisse",
       label: "Caisse",
-      links: [{ href: "/cashier/pos", label: "Caisse", icon: ShoppingCart }],
+      links: [
+        { href: "/cashier/pos", label: "Caisse", icon: ShoppingCart },
+        { href: "/cashier/orders", label: "Mes commandes", icon: ShoppingBag },
+      ],
     },
     {
       id: "stock",
@@ -398,6 +408,7 @@ function buildHubNavSections(role: UserRole): NavSection[] {
       id: "stock",
       label: "Stock",
       links: [
+        { href: "/hub/orders", label: "Mes commandes", icon: ShoppingBag },
         { href: "/hub/stock", label: "Stock des produits", icon: Warehouse },
         { href: "/hub/stock-transfers", label: "Stocks envoyés", icon: ArrowRightLeft },
         { href: "/hub/stock-transfers/received", label: "Stocks reçus", icon: Boxes },
@@ -425,9 +436,9 @@ function buildLivreurNavSections(role: UserRole): NavSection[] {
   return [
     {
       id: "livraisons",
-      label: "Livraisons",
+      label: "Commandes",
       links: [
-        { href: "/livreur/orders", label: "Livraisons", icon: Package },
+        { href: "/livreur/orders", label: "Mes commandes", icon: ShoppingBag },
         {
           href: "/livreur/history",
           label: "Historique des livraisons",

@@ -1,60 +1,117 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { getCurrentProfile } from "@/lib/auth";
-import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
-import { getStoreById, getProductCatalog, getOrderTransferTargets } from "@/lib/inventory";
-import { getOrderAssignmentLivreurs } from "@/lib/hub";
-import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
+import { requireRole } from "@/lib/auth";
+import { getStoreById, getProductCatalog } from "@/lib/inventory";
+import { getHubCityLivreurs } from "@/lib/hub";
+import {
+  filterCashierOutgoingInterStore,
+  filterCashierOutgoingStoreToHub,
+} from "@/lib/cashier-transfer-filters";
+import { getAllActiveTransferSites } from "@/lib/transfer-sites.server";
+import { getCashierOutgoingStoreToHubTransfers } from "@/lib/hub-transfers";
+import { getCashierOutgoingStoreTransfers } from "@/lib/store-transfers";
+import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
+import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
+import { PendingTransfersUnifiedView } from "@/components/stock/pending-transfers-unified-view";
 
-export default async function CashierOrdersPage() {
-  const profile = await getCurrentProfile();
-  if (!profile) redirect("/login");
+export default async function CashierOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    source?: string;
+    listDest?: string;
+    sentFrom?: string;
+    sentTo?: string;
+  }>;
+}) {
+  const params = await searchParams;
+  const profile = await requireRole(["cashier"]);
+  if (!profile?.store_id) redirect("/login");
 
-  if (!profile.store_id) {
-    return (
-      <div className="animate-fade-in space-y-6">
-        <h1 className="text-2xl font-bold tracking-tight">Commandes en ligne</h1>
-        <p className="text-muted">Aucun magasin assigné à votre compte.</p>
-      </div>
-    );
-  }
+  const storeId = profile.store_id;
+  const store = await getStoreById(storeId);
+  const city = store?.city || profile.city;
+  const storeName = store?.name || "votre magasin";
 
-  const store = await getStoreById(profile.store_id);
-  const [orders, products, transferTargets, livreurs] = await Promise.all([
-    getShopifyOrders(profile),
+  const sitesAll = await getAllActiveTransferSites();
+  const destinationSites = sitesAll.filter((site) => site.is_active);
+
+  const filter = resolveSentTransfersListScope(
+    profile,
+    store ? [store] : [],
+    params,
+    { lockSourceToScopedStore: true }
+  );
+
+  const [storeTransfers, hubTransfers, livreurs, catalogProducts] = await Promise.all([
+    getCashierOutgoingStoreTransfers(storeId),
+    getCashierOutgoingStoreToHubTransfers(storeId),
+    city ? getHubCityLivreurs(city) : Promise.resolve([]),
     getProductCatalog(),
-    getOrderTransferTargets(profile.store_id),
-    getOrderAssignmentLivreurs(profile),
   ]);
-  const scopeLabel = getOrdersScopeLabel(profile, { storeName: store?.name });
+
+  const interStoreTransfers = filterCashierOutgoingInterStore(storeTransfers, storeId);
+  const storeToHubTransfers = filterCashierOutgoingStoreToHub(hubTransfers, storeId);
+  const productLookup = buildReceivedTransferProductLookup(catalogProducts);
+
+  const storeSite = store
+    ? {
+        id: store.id,
+        name: store.name,
+        city: store.city,
+        is_hub: store.is_hub,
+      }
+    : {
+        id: storeId,
+        name: storeName,
+        city: city || "",
+        is_hub: false,
+      };
+
+  const groups = [
+    {
+      kind: "store" as const,
+      typeLabel: "Vers magasin",
+      storeTransfers: interStoreTransfers,
+    },
+    {
+      kind: "depot" as const,
+      typeLabel: "Vers dépôt",
+      hubTransfers: storeToHubTransfers,
+    },
+  ];
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Commandes en ligne</h1>
-        <p className="mt-1 text-muted">
-          Commandes en ligne affectées à votre magasin
-          {store ? ` — ${store.name}, ${store.city}` : ""}
-          {transferTargets.length > 0
-            ? ` — transfert possible vers ${transferTargets.map((s) => s.name).join(", ")}`
-            : " — aucun magasin de transfert configuré"}
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-primary-dark">
+          Mes commandes
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          Transferts en cours de préparation depuis {storeName} — statut « En cours » uniquement.
+          Une fois prête, la commande passe dans Stocks envoyés.
         </p>
       </div>
 
-      <ShopifyOrdersManager
-        orders={orders}
-        scopeLabel={scopeLabel}
-        showStore={false}
-        editable
-        enablePosCheckout
-        products={products}
-        defaultDateThisWeek
-        enableLivreurHandoff
-        livreurs={livreurs}
-        enableOrderTransfer
-        transferTargets={transferTargets}
-        transferProfile={profile}
-        enableConfirmationFollowUp
-      />
+      <Suspense fallback={null}>
+        <PendingTransfersUnifiedView
+          filter={filter}
+          groups={groups}
+          locationConfig={{
+            sourceSites: [storeSite],
+            destinationSites,
+            lockSource: true,
+          }}
+          productLookup={productLookup}
+          managedStoreIds={[storeId]}
+          livreurs={livreurs}
+          mesCommandesActionMode="view-and-commander"
+          commanderRole="cashier"
+          emptyMessage={`Aucune commande en cours depuis ${storeName}`}
+        />
+      </Suspense>
     </div>
   );
 }

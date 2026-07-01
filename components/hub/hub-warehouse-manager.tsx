@@ -262,13 +262,9 @@ export function HubWarehouseManager({
     }
 
     resetTransfer();
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams();
     params.set("created", "1");
-    params.set("tab", "sent");
-    params.set("dest", destinationType);
-    if (destinationType === "store" && toStoreId) params.set("to", toStoreId);
-    if (destinationType === "hub" && toHubStoreId) params.set("hub", toHubStoreId);
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`/hub/orders?${params.toString()}`);
     router.refresh();
   }
 

@@ -85,7 +85,9 @@ const REFRESH_MIN_INTERVAL_MS = 15_000;
 
 const REFRESH_PATH_PREFIXES = [
   "/cashier/orders",
+  "/cashier/shopify-orders",
   "/manager/orders",
+  "/manager/shopify-orders",
   "/manager/stock-transfers",
   "/director/stock-transfers",
   "/director/orders",

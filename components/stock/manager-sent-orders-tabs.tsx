@@ -9,6 +9,10 @@ import { cn } from "@/lib/utils";
 import type { ReceivedTransfersFilterScope } from "@/lib/stock-transfers/received-filters";
 import type { ReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
 import type { ReceivedTransferLocationSites } from "@/lib/stock-transfers/received-location-filters";
+import {
+  filterOutgoingHubTransfersFromStores,
+  filterOutgoingStoreTransfersFromStores,
+} from "@/lib/stock-transfers/role-transfer-filters";
 import type { HubStockTransfer, Product, Profile, Store, StoreStockTransfer } from "@/lib/types";
 
 type SentTab = "new" | "sent";
@@ -86,15 +90,21 @@ function ManagerSentOrdersTabsInner({
       {
         kind: "store" as const,
         typeLabel: "Vers magasin",
-        storeTransfers,
+        storeTransfers: filterOutgoingStoreTransfersFromStores(
+          storeTransfers,
+          managedStoreIds
+        ),
       },
       {
         kind: "depot" as const,
         typeLabel: "Vers dépôt",
-        hubTransfers: hubOutgoingTransfers,
+        hubTransfers: filterOutgoingHubTransfersFromStores(
+          hubOutgoingTransfers,
+          managedStoreIds
+        ),
       },
     ],
-    [storeTransfers, hubOutgoingTransfers]
+    [storeTransfers, hubOutgoingTransfers, managedStoreIds]
   );
 
   const locationConfig = useMemo(
@@ -159,6 +169,7 @@ function ManagerSentOrdersTabsInner({
           productLookup={productLookup}
           managedStoreIds={managedStoreIds}
           livreurs={livreurs}
+          workflowSplit="sent-source"
           storeActionMode="full"
           hubReadOnly={false}
           hubManageAsStoreSource

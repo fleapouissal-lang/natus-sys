@@ -1,99 +1,117 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { autoRoutePendingShopifyOrders } from "@/lib/shopify/auto-route-order";
 import { isDirector } from "@/lib/permissions";
-import { getActiveStores, getProductCatalog, getHubStore } from "@/lib/inventory";
-import { getShopifyOrders, getOrdersScopeLabel } from "@/lib/orders";
-import { getSelectedStore } from "@/lib/management-store";
-import { getOrderAssignmentLivreurs } from "@/lib/hub";
-import { CityStoreFilterBar } from "@/components/stores/city-store-filter-bar";
-import { ShopifyOrdersManager } from "@/components/orders/shopify-orders-manager";
-import { ShopifySyncButton } from "@/components/orders/shopify-sync-button";
+import {
+  getAllActiveTransferSites,
+  getTransferLivreurs,
+} from "@/lib/transfer-sites.server";
+import {
+  getDirectorHubStockTransfers,
+} from "@/lib/hub-transfers";
+import {
+  getDirectorStoreStockTransfers,
+} from "@/lib/store-transfers";
+import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
+import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
+import { PendingTransfersUnifiedView } from "@/components/stock/pending-transfers-unified-view";
+import { getProductCatalog } from "@/lib/inventory";
 
 export default async function DirectorOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ city?: string; store?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    source?: string;
+    listDest?: string;
+    sentFrom?: string;
+    sentTo?: string;
+    created?: string;
+  }>;
 }) {
-  const { city: cityParam, store: storeParam } = await searchParams;
+  const params = await searchParams;
   const profile = await getCurrentProfile();
   if (!profile || !isDirector(profile)) redirect("/login");
 
-  const admin = createAdminClient();
-  const selectedCityForRoute =
-    cityParam || null;
-  await autoRoutePendingShopifyOrders(admin, {
-    city: selectedCityForRoute,
-    limit: selectedCityForRoute ? 25 : 40,
-  });
+  const sitesAll = await getAllActiveTransferSites();
+  const transferSites = sitesAll.filter((store) => store.is_active);
+  const filter = resolveSentTransfersListScope(profile, transferSites, params);
 
-  const stores = await getActiveStores(null);
-  const hubStore = selectedCityForRoute
-    ? await getHubStore(selectedCityForRoute)
-    : null;
-  const retailStores = stores.filter((s) => !s.is_hub);
-  const transferTargets = hubStore
-    ? [...retailStores.filter((s) => !s.is_hub), hubStore]
-    : stores;
-  const selectedCity =
-    cityParam && retailStores.some((s) => s.city === cityParam) ? cityParam : "";
-  const selectedStoreId =
-    storeParam && retailStores.some((s) => s.id === storeParam) ? storeParam : "";
-  const selectedStore = selectedStoreId
-    ? getSelectedStore(retailStores, selectedStoreId)
-    : undefined;
-
-  const [orders, products, livreurs] = await Promise.all([
-    getShopifyOrders(profile, {
-      city: selectedCity || null,
-      storeId: selectedStoreId || null,
-      excludeStoreId: hubStore?.id ?? null,
-    }),
+  const [storeTransfers, hubTransfers, livreurs, catalogProducts] = await Promise.all([
+    getDirectorStoreStockTransfers(),
+    getDirectorHubStockTransfers(),
+    getTransferLivreurs([
+      ...new Set(sitesAll.map((store) => store.city).filter(Boolean)),
+    ] as string[]),
     getProductCatalog(),
-    getOrderAssignmentLivreurs(profile, {
-      city: selectedCity || null,
-      storeId: selectedStoreId || null,
-    }),
   ]);
+  const productLookup = buildReceivedTransferProductLookup(catalogProducts);
 
-  const scopeLabel = getOrdersScopeLabel(profile, {
-    city: selectedCity || selectedStore?.city,
-    storeName: selectedStore?.name,
-  });
+  const hubHubTransfers = hubTransfers.filter(
+    (transfer) => transfer.from_store_is_hub && transfer.to_store_is_hub
+  );
+  const hubStoreMixedTransfers = hubTransfers.filter(
+    (transfer) =>
+      (transfer.from_store_is_hub && !transfer.to_store_is_hub) ||
+      (!transfer.from_store_is_hub && transfer.to_store_is_hub)
+  );
+
+  const groups = [
+    {
+      kind: "store" as const,
+      typeLabel: "Vers magasin",
+      storeTransfers,
+    },
+    {
+      kind: "depot" as const,
+      typeLabel: "Vers dépôt",
+      hubTransfers: hubStoreMixedTransfers.filter(
+        (transfer) => !transfer.from_store_is_hub && transfer.to_store_is_hub
+      ),
+    },
+    {
+      kind: "hub" as const,
+      typeLabel: "Depuis dépôt",
+      hubTransfers: [
+        ...hubHubTransfers,
+        ...hubStoreMixedTransfers.filter((transfer) => transfer.from_store_is_hub),
+      ],
+    },
+  ];
 
   return (
     <div className="animate-fade-in space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Commandes en ligne</h1>
-          <p className="mt-1 text-muted">
-            Commandes magasins — le hub stock a sa propre page
+      <div>
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-primary-dark">
+          Mes commandes
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          Transferts en cours de préparation — statut « En cours » — réseau complet. Une fois
+          prête, consultez Stocks envoyés ; les transferts clôturés sont dans Stocks reçus.
+        </p>
+        {params.created === "1" && (
+          <p className="mt-2 text-sm text-success">
+            Commande créée — elle apparaît ici tant qu&apos;elle est en préparation.
           </p>
-        </div>
-        <ShopifySyncButton />
+        )}
       </div>
 
       <Suspense fallback={null}>
-        <CityStoreFilterBar
-          stores={retailStores}
-          selectedCity={selectedCity}
-          selectedStoreId={selectedStoreId}
+        <PendingTransfersUnifiedView
+          filter={filter}
+          groups={groups}
+          locationConfig={{
+            sourceSites: transferSites,
+            destinationSites: transferSites,
+          }}
+          productLookup={productLookup}
+          managedStoreIds={transferSites.map((store) => store.id)}
+          livreurs={livreurs}
+          mesCommandesActionMode="view-only"
+          emptyMessage="Aucune commande en cours de préparation"
         />
       </Suspense>
-
-      <ShopifyOrdersManager
-        orders={orders}
-        scopeLabel={scopeLabel}
-        editable
-        products={products}
-        enableLivreurHandoff
-        livreurs={livreurs}
-        enableOrderTransfer
-        transferTargets={transferTargets}
-        transferProfile={profile}
-      />
     </div>
   );
 }

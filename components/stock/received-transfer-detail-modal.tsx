@@ -19,6 +19,8 @@ import type { ReceivedTransferRow } from "@/lib/stock-transfers/received-transfe
 import { formatDate } from "@/lib/utils";
 import type { HubStockTransfer, Product } from "@/lib/types";
 
+export type TransferDetailVariant = "order" | "reception";
+
 function TransferItemsTable({
   row,
   showImages,
@@ -35,7 +37,7 @@ function TransferItemsTable({
           <tr className="border-b border-border bg-primary-light/30">
             <th className="px-4 py-3 text-left font-medium text-muted">Produit</th>
             <th className="px-4 py-3 text-left font-medium text-muted">Code-barres</th>
-            <th className="px-4 py-3 text-right font-medium text-muted">Quantité</th>
+            <th className="px-4 py-3 text-right font-medium text-muted">Quantité envoyée</th>
           </tr>
         </thead>
         <tbody>
@@ -73,7 +75,7 @@ function TransferItemsTable({
         <tfoot>
           <tr className="border-t border-border bg-champagne/20 font-semibold">
             <td className="px-4 py-3" colSpan={2}>
-              Total
+              Total commande
             </td>
             <td className="px-4 py-3 text-right tabular-nums">
               {row.transfer.total_units}
@@ -85,10 +87,36 @@ function TransferItemsTable({
   );
 }
 
+function OrderTimeline({ transfer }: { transfer: ReceivedTransferRow["transfer"] }) {
+  const shippedAt = "shipped_at" in transfer ? transfer.shipped_at : null;
+  const steps: { label: string; value: string | null | undefined }[] = [
+    { label: "Commande créée", value: transfer.sent_at },
+    { label: "Marquée prête", value: transfer.ready_at },
+    { label: "Expédiée", value: shippedAt },
+    { label: "Prise en charge livreur", value: transfer.picked_up_at },
+    { label: "Livrée", value: transfer.delivered_at },
+    { label: "Réception validée", value: transfer.received_at },
+  ].filter((step) => step.value);
+
+  if (steps.length === 0) return null;
+
+  return (
+    <dl className="mb-4 grid gap-2 rounded-xl border border-border bg-page/60 p-4 sm:grid-cols-2">
+      {steps.map((step) => (
+        <div key={step.label}>
+          <dt className="text-xs font-medium text-muted">{step.label}</dt>
+          <dd className="text-sm font-medium">{formatDate(step.value!)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 export function ReceivedTransferDetailModal({
   row,
   onClose,
   showProductImages = false,
+  detailVariant = "reception",
   cashierHub,
   canValidate,
   validateLoading,
@@ -97,6 +125,8 @@ export function ReceivedTransferDetailModal({
   row: ReceivedTransferRow | null;
   onClose: () => void;
   showProductImages?: boolean;
+  /** order = compte source (commande envoyée) · reception = magasin destination */
+  detailVariant?: TransferDetailVariant;
   cashierHub?: {
     storeName: string;
     productsById: Record<
@@ -113,6 +143,7 @@ export function ReceivedTransferDetailModal({
 
   const transfer = row.transfer;
   const isStore = row.source === "store";
+  const isOrderView = detailVariant === "order";
   const statusLabel =
     row.source === "store"
       ? storeTransferStatusLabel(row.transfer.status)
@@ -122,14 +153,13 @@ export function ReceivedTransferDetailModal({
       ? storeTransferStatusVariant(row.transfer.status)
       : hubTransferStatusVariant(row.transfer.status);
 
-  const fromName =
-    transfer.from_store_name || (cashierHub && !isStore ? "Entrepôt hub" : "—");
+  const fromName = transfer.from_store_name || "—";
   const toName =
     transfer.to_store_name ||
-    (cashierHub && !isStore ? cashierHub.storeName : "—");
+    (cashierHub && !isStore && !isOrderView ? cashierHub.storeName : "—");
 
-  const useCashierProducts =
-    !isStore && cashierHub && row.transfer;
+  const useReceptionProducts =
+    !isOrderView && !isStore && cashierHub && row.transfer;
 
   return (
     <Modal
@@ -142,7 +172,7 @@ export function ReceivedTransferDetailModal({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-md bg-primary-light/60 px-2 py-0.5 text-xs font-medium text-primary">
-                {row.typeLabel}
+                {isOrderView ? "Commande envoyée" : row.typeLabel}
               </span>
               <Badge variant={statusVariant}>{statusLabel}</Badge>
             </div>
@@ -186,7 +216,8 @@ export function ReceivedTransferDetailModal({
       </div>
 
       <div className="max-h-[min(60vh,520px)] overflow-y-auto p-4 scrollbar-natus">
-        {useCashierProducts ? (
+        {isOrderView && <OrderTimeline transfer={transfer} />}
+        {useReceptionProducts ? (
           <TransferProductsTable
             transfer={transfer as HubStockTransfer}
             productsById={cashierHub.productsById}

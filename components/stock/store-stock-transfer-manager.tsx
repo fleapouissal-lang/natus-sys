@@ -155,6 +155,11 @@ export function StoreStockTransferManager({
     };
   }, [transferPayload.payload, products]);
 
+  function pendingOrdersPath() {
+    if (basePath === "/cashier") return "/cashier/orders";
+    return `${basePath}/orders`;
+  }
+
   function sentTransfersPath(query: string) {
     if (basePath === "/cashier") {
       return query ? `/cashier/transfers/sent?${query}` : "/cashier/transfers/sent";
@@ -300,9 +305,10 @@ export function StoreStockTransferManager({
     resetTransfer();
     setSuccess(
       destinationType === "hub"
-        ? `Commande créée vers ${"hubStoreName" in result ? result.hubStoreName : "dépôt"} — statut « En cours ». Marquez-la prête puis assignez un livreur.`
-        : `Commande créée vers ${"toStoreName" in result ? result.toStoreName : "magasin"} — statut « En cours ». Validez l'expédition depuis la liste ci-dessous.`
+        ? `Commande créée vers ${"hubStoreName" in result ? result.hubStoreName : "dépôt"} — statut « En cours ». Consultez Mes commandes pour la préparer.`
+        : `Commande créée vers ${"toStoreName" in result ? result.toStoreName : "magasin"} — statut « En cours ». Consultez Mes commandes pour la préparer.`
     );
+    router.push(pendingOrdersPath());
     router.refresh();
   }
 

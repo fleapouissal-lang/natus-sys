@@ -11,11 +11,20 @@ import {
   filterTransfersBySentDate,
   type ReceivedTransfersFilterScope,
 } from "@/lib/stock-transfers/received-filters";
+import {
+  filterTransfersByWorkflowSplit,
+  type TransferWorkflowSplit,
+} from "@/lib/stock-transfers/workflow-split";
 import type {
   ReceivedTransferProductLookup,
   ReceivedTransferRowGroup,
 } from "@/lib/stock-transfers/received-transfer-rows";
 import type { Profile } from "@/lib/types";
+import type { TransferDetailVariant } from "@/components/stock/received-transfer-detail-modal";
+import type {
+  CommanderRole,
+  MesCommandesActionMode,
+} from "@/lib/stock-transfers/pending-order-actions";
 
 export function SentTransfersUnifiedView({
   filter,
@@ -30,6 +39,11 @@ export function SentTransfersUnifiedView({
   hubManageAsStoreSource = false,
   hubManageOutgoing = false,
   showProductImages = true,
+  workflowSplit = "sent",
+  listTitle = "Stock envoyé",
+  mesCommandesActionMode,
+  commanderRole,
+  detailVariant = "order",
 }: {
   filter: ReceivedTransfersFilterScope;
   groups: ReceivedTransferRowGroup[];
@@ -43,22 +57,33 @@ export function SentTransfersUnifiedView({
   hubManageAsStoreSource?: boolean;
   hubManageOutgoing?: boolean;
   showProductImages?: boolean;
+  workflowSplit?: TransferWorkflowSplit;
+  listTitle?: string;
+  mesCommandesActionMode?: MesCommandesActionMode;
+  commanderRole?: CommanderRole;
+  detailVariant?: TransferDetailVariant;
 }) {
   const datedGroups = useMemo(() => {
     return groups.map((group) => ({
       ...group,
       storeTransfers: group.storeTransfers
-        ? filterTransfersBySentDate(
-            group.storeTransfers,
-            filter.dateFrom,
-            filter.dateTo
+        ? filterTransfersByWorkflowSplit(
+            filterTransfersBySentDate(
+              group.storeTransfers,
+              filter.dateFrom,
+              filter.dateTo
+            ),
+            workflowSplit
           )
         : undefined,
       hubTransfers: group.hubTransfers
-        ? filterTransfersBySentDate(group.hubTransfers, filter.dateFrom, filter.dateTo)
+        ? filterTransfersByWorkflowSplit(
+            filterTransfersBySentDate(group.hubTransfers, filter.dateFrom, filter.dateTo),
+            workflowSplit
+          )
         : undefined,
     }));
-  }, [groups, filter.dateFrom, filter.dateTo]);
+  }, [groups, filter.dateFrom, filter.dateTo, workflowSplit]);
 
   const { rows, sourceOptions, destinationOptions, lockDestination, lockSource } =
     useReceivedTransferRows(datedGroups, filter, productLookup, locationConfig);
@@ -66,8 +91,16 @@ export function SentTransfersUnifiedView({
   return (
     <div className="space-y-6">
       <ReceivedTransfersFilterBar
-        variant="sent"
-        preserveTab="sent"
+        variant={
+          workflowSplit === "pending"
+            ? "pending"
+            : workflowSplit === "history"
+              ? "sent"
+              : "sent"
+        }
+        preserveTab={
+          workflowSplit === "sent" || workflowSplit === "sent-source" ? "sent" : undefined
+        }
         filter={filter}
         resultCount={rows.length}
         sourceOptions={sourceOptions}
@@ -77,7 +110,7 @@ export function SentTransfersUnifiedView({
       />
 
       <ReceivedTransfersList
-        title="Stock envoyé"
+        title={listTitle}
         rows={rows}
         managedStoreIds={managedStoreIds}
         livreurs={livreurs}
@@ -86,6 +119,9 @@ export function SentTransfersUnifiedView({
         hubReadOnly={hubReadOnly}
         hubManageAsStoreSource={hubManageAsStoreSource}
         hubManageOutgoing={hubManageOutgoing}
+        mesCommandesActionMode={mesCommandesActionMode}
+        commanderRole={commanderRole}
+        detailVariant={detailVariant}
         emptyMessage={emptyMessage}
       />
     </div>

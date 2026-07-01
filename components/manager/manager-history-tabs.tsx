@@ -10,7 +10,14 @@ import { StoreDayClosureReportsList } from "@/components/sales/store-day-closure
 import { cn } from "@/lib/utils";
 import type { getManagerSalesHistoryDateBounds } from "@/lib/sales/manager-sales-window";
 import type { StoreDayClosureReportRow } from "@/lib/sales/store-day-closure";
-import type { ActivityEntry, Sale, Store } from "@/lib/types";
+import { ManagerSourceTransferHistory } from "@/components/stock/manager-source-transfer-history";
+import type { ReceivedTransfersFilterScope } from "@/lib/stock-transfers/received-filters";
+import type {
+  ReceivedTransferProductLookup,
+  ReceivedTransferRowGroup,
+} from "@/lib/stock-transfers/received-transfer-rows";
+import type { ReceivedTransferLocationSites } from "@/lib/stock-transfers/received-location-filters";
+import type { ActivityEntry, Profile, Sale, Store } from "@/lib/types";
 
 type HistoryTab = "activity" | "sales" | "closures";
 
@@ -22,8 +29,8 @@ const TABS: {
 }[] = [
   {
     id: "activity",
-    label: "Journal d'activité",
-    shortLabel: "Activité",
+    label: "Commandes envoyées",
+    shortLabel: "Commandes",
     icon: ClipboardList,
   },
   {
@@ -53,6 +60,13 @@ function ManagerHistoryTabsInner({
   showSalesTab,
   showClosuresTab,
   closureSettingsHint,
+  transferFilter,
+  transferGroups,
+  transferLocationConfig,
+  transferProductLookup,
+  transferManagedStoreIds,
+  transferLivreurs,
+  transferScopeLabel,
 }: {
   activities: ActivityEntry[];
   activityScopeLabel: string;
@@ -66,6 +80,18 @@ function ManagerHistoryTabsInner({
   showSalesTab: boolean;
   showClosuresTab: boolean;
   closureSettingsHint: string;
+  transferFilter?: ReceivedTransfersFilterScope;
+  transferGroups?: ReceivedTransferRowGroup[];
+  transferLocationConfig?: {
+    sourceSites: ReceivedTransferLocationSites[];
+    destinationSites: ReceivedTransferLocationSites[];
+    strictSourceOptions?: boolean;
+    strictDestinationOptions?: boolean;
+  };
+  transferProductLookup?: ReceivedTransferProductLookup;
+  transferManagedStoreIds?: string[];
+  transferLivreurs?: Profile[];
+  transferScopeLabel?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -125,11 +151,26 @@ function ManagerHistoryTabsInner({
       )}
 
       {activeTab === "activity" && showActivityTab && (
-        <ManagerActivityPanel
-          activities={activities}
-          scopeLabel={activityScopeLabel}
-          showStoreColumn={showStoreColumn}
-        />
+        transferFilter &&
+        transferGroups &&
+        transferLocationConfig &&
+        transferManagedStoreIds ? (
+          <ManagerSourceTransferHistory
+            filter={transferFilter}
+            groups={transferGroups}
+            locationConfig={transferLocationConfig}
+            productLookup={transferProductLookup}
+            managedStoreIds={transferManagedStoreIds}
+            livreurs={transferLivreurs}
+            scopeLabel={transferScopeLabel || activityScopeLabel}
+          />
+        ) : (
+          <ManagerActivityPanel
+            activities={activities}
+            scopeLabel={activityScopeLabel}
+            showStoreColumn={showStoreColumn}
+          />
+        )
       )}
 
       {activeTab === "sales" && showSalesTab && (
@@ -176,6 +217,18 @@ export function ManagerHistoryTabs(props: {
   showSalesTab: boolean;
   showClosuresTab: boolean;
   closureSettingsHint: string;
+  transferFilter?: ReceivedTransfersFilterScope;
+  transferGroups?: ReceivedTransferRowGroup[];
+  transferLocationConfig?: {
+    sourceSites: ReceivedTransferLocationSites[];
+    destinationSites: ReceivedTransferLocationSites[];
+    strictSourceOptions?: boolean;
+    strictDestinationOptions?: boolean;
+  };
+  transferProductLookup?: ReceivedTransferProductLookup;
+  transferManagedStoreIds?: string[];
+  transferLivreurs?: Profile[];
+  transferScopeLabel?: string;
 }) {
   return (
     <Suspense fallback={null}>

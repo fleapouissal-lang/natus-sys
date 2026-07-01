@@ -159,6 +159,7 @@ function CashierSentOrdersTabsInner({
           productLookup={productLookup}
           managedStoreIds={[storeId]}
           livreurs={livreurs}
+          workflowSplit="sent-source"
           storeActionMode="full"
           hubReadOnly={false}
           hubManageAsStoreSource

@@ -175,6 +175,7 @@ function HubSentOrdersTabsInner({
           productLookup={productLookup}
           managedStoreIds={scopeHubIds}
           livreurs={livreurs}
+          workflowSplit="sent-source"
           hubReadOnly={false}
           hubManageOutgoing
           emptyMessage={`Aucun transfert envoyé depuis le dépôt — ${hubStore.name}`}
