@@ -156,6 +156,7 @@ function CashierSentOrdersTabsInner({
           storeActionMode="full"
           hubReadOnly={false}
           hubManageAsStoreSource
+          allowEditItems
           emptyMessage={`Aucun transfert envoyé depuis ${storeName}`}
         />
       )}

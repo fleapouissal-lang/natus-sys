@@ -83,6 +83,7 @@ export function DirectorReceivedOrdersTabs({
         livreurs={livreurs}
         showProductImages
         storeActionMode="none"
+        documentOnView="livraison"
         emptyMessage="Aucun transfert reçu"
       />
     </div>

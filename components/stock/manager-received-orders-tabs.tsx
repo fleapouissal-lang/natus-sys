@@ -95,6 +95,7 @@ export function ManagerReceivedOrdersTabs({
         storeActionMode="none"
         hubReadOnly
         detailVariant="reception"
+        documentOnView="livraison"
         emptyMessage="Aucune commande reçue"
       />
     </div>

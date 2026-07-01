@@ -80,6 +80,7 @@ export function CashierReceivedOrdersTabs({
         rows={rows}
         managedStoreIds={[storeId]}
         storeActionMode="receive-only"
+        documentOnView="livraison"
         cashierHub={{
           storeName,
           productsById,

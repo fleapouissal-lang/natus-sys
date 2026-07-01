@@ -74,6 +74,7 @@ export function HubReceivedOrdersTabs({
         livreurs={livreurs}
         showProductImages
         hubReadOnly={false}
+        documentOnView="livraison"
         emptyMessage={`Aucun transfert reçu au dépôt pour ${scopeLabel}`}
       />
     </div>

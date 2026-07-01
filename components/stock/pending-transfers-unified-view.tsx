@@ -19,6 +19,7 @@ export function PendingTransfersUnifiedView({
   mesCommandesActionMode = "view-only",
   commanderRole,
   detailVariant = "order",
+  documentOnView = "commande",
   storeActionMode = "none",
   hubReadOnly = true,
   hubManageAsStoreSource = false,
@@ -40,6 +41,7 @@ export function PendingTransfersUnifiedView({
   mesCommandesActionMode?: MesCommandesActionMode;
   commanderRole?: CommanderRole;
   detailVariant?: TransferDetailVariant;
+  documentOnView?: import("@/lib/stock-transfers/download-bon-commande").TransferDocumentKind;
   workflowSplit?: import("@/lib/stock-transfers/workflow-split").TransferWorkflowSplit | "pending";
 }) {
   return (
@@ -54,6 +56,7 @@ export function PendingTransfersUnifiedView({
       mesCommandesActionMode={mesCommandesActionMode}
       commanderRole={commanderRole}
       detailVariant={detailVariant}
+      documentOnView={documentOnView}
     />
   );
 }

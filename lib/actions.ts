@@ -25,6 +25,7 @@ import {
 } from "@/lib/loyalty/lookup-result";
 import { getWeekWorkDays, normalizeWeekStart } from "@/lib/scheduling/week";
 import { assertCanValidateWriteoff } from "@/lib/store-writeoffs/validation";
+import type { TransferEditProduct } from "@/lib/stock-transfers/transfer-edit-types";
 
 const MANAGEMENT = ["directeur", "admin", "manager"] as const;
 const STOCK_READ = ["directeur", "admin", "manager", "hub"] as const;
@@ -1181,6 +1182,114 @@ export async function confirmPendingHubStockTransfer(
     transferId: String(payload.transfer_id || transferId),
     hubStoreName: String(payload.store || ""),
   };
+}
+
+/** Produits disponibles (stock > 0) au magasin source, pour ajouter un produit à une commande. */
+export async function getStoreProductsForTransfer(
+  storeId: string
+): Promise<{ products: TransferEditProduct[] } | { error: string }> {
+  const profile = await requireRole(["cashier", "hub", "manager", "directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+  if (!storeId) return { error: "Magasin introuvable" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("store_inventory")
+    .select("stock, product:products(id, name, barcode, image_url, category)")
+    .eq("store_id", storeId)
+    .gt("stock", 0);
+
+  if (error) return { error: error.message };
+
+  const products: TransferEditProduct[] = (data ?? [])
+    .map((row) => {
+      const product = (row as { product: unknown }).product as
+        | {
+            id: string;
+            name: string;
+            barcode: string | null;
+            image_url: string | null;
+            category: string | null;
+          }
+        | null;
+      if (!product) return null;
+      return {
+        id: product.id,
+        name: product.name,
+        barcode: product.barcode ?? null,
+        image_url: product.image_url ?? null,
+        category: product.category ?? null,
+        stock: (row as { stock: number }).stock ?? 0,
+      };
+    })
+    .filter((p): p is TransferEditProduct => p !== null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return { products };
+}
+
+async function editTransferItems(
+  rpc: "edit_store_stock_transfer_items" | "edit_hub_stock_transfer_items",
+  transferId: string,
+  items: HubStockTransferItem[]
+): Promise<{ success: true; transferId: string } | { error: string }> {
+  const profile = await requireRole(["cashier", "hub", "directeur", "admin"]);
+  if (!profile) return { error: "Non autorisé" };
+  if (!transferId) return { error: "Commande introuvable" };
+
+  const cleaned = items
+    .map((item) => ({
+      product_id: item.productId,
+      quantity: Math.floor(item.quantity),
+    }))
+    .filter((item) => item.product_id && item.quantity > 0);
+
+  if (cleaned.length === 0) {
+    return { error: "Indiquez au moins une quantité à transférer" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(rpc, {
+    p_transfer_id: transferId,
+    p_items: cleaned,
+  });
+
+  if (error) {
+    const msg = error.message;
+    if (msg.includes("Stock insuffisant")) {
+      return { error: "Stock insuffisant à la source pour un ou plusieurs produits" };
+    }
+    if (msg.includes("remise au livreur")) {
+      return { error: "Commande déjà remise au livreur : modification impossible" };
+    }
+    if (msg.includes("ne peut plus être modifiée")) {
+      return { error: "Cette commande ne peut plus être modifiée" };
+    }
+    return { error: msg };
+  }
+
+  revalidateManagement();
+
+  const payload =
+    typeof data === "object" && data !== null
+      ? (data as { transfer_id?: string })
+      : {};
+
+  return { success: true, transferId: String(payload.transfer_id || transferId) };
+}
+
+export async function editStoreStockTransferItems(
+  transferId: string,
+  items: HubStockTransferItem[]
+): Promise<{ success: true; transferId: string } | { error: string }> {
+  return editTransferItems("edit_store_stock_transfer_items", transferId, items);
+}
+
+export async function editHubStockTransferItems(
+  transferId: string,
+  items: HubStockTransferItem[]
+): Promise<{ success: true; transferId: string } | { error: string }> {
+  return editTransferItems("edit_hub_stock_transfer_items", transferId, items);
 }
 
 export async function transferStoreStockToHub(

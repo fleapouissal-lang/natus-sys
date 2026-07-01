@@ -1,9 +1,14 @@
 "use client";
 
-import { ArrowRight, X } from "lucide-react";
+import { ArrowRight, Download, Printer, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import {
+  buildBonCommandeData,
+  downloadBonCommandeHtml,
+  printBonCommandeHtml,
+} from "@/lib/stock-transfers/download-bon-commande";
 import { ProductImage } from "@/components/pos/product-image";
 import { TransferProductsTable } from "@/components/cashier/cashier-stock-transfers";
 import { TransferAssignedLivreur } from "@/components/stock/transfer-assigned-livreur";
@@ -253,6 +258,27 @@ export function ReceivedTransferDetailModal({
           <TransferItemsTable row={row} showImages={showProductImages} />
         )}
       </div>
+
+      {isOrderView && (
+        <div className="flex flex-wrap justify-end gap-2 border-t border-border px-5 py-4">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => printBonCommandeHtml(buildBonCommandeData(row, statusLabel))}
+          >
+            <Printer className="h-4 w-4" />
+            Imprimer le bon de commande
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => downloadBonCommandeHtml(buildBonCommandeData(row, statusLabel))}
+          >
+            <Download className="h-4 w-4" />
+            Télécharger
+          </Button>
+        </div>
+      )}
 
       {canValidate && onValidate && (
         <div className="flex justify-end border-t border-border px-5 py-4">

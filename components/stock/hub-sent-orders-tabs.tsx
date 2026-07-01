@@ -168,6 +168,7 @@ function HubSentOrdersTabsInner({
           workflowSplit="sent-source"
           hubReadOnly={false}
           hubManageOutgoing
+          allowEditItems
           emptyMessage={`Aucun transfert envoyé depuis le dépôt — ${hubStore.name}`}
         />
       )}

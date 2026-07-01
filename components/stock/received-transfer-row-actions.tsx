@@ -7,6 +7,7 @@ import {
   Eye,
   PackageCheck,
   PackagePlus,
+  Pencil,
   Truck,
   UserCheck,
   Wrench,
@@ -68,12 +69,14 @@ type LivreurAssignConfig = {
 
 export function ReceivedTransferRowActions({
   onViewDetail,
+  onEditItems,
   loading,
   primaryAction,
   livreurAssign,
   commanderAction,
 }: {
   onViewDetail: () => void;
+  onEditItems?: () => void;
   loading?: boolean;
   primaryAction?: {
     label: string;
@@ -125,6 +128,17 @@ export function ReceivedTransferRowActions({
         <ActionIconButton label="Voir le détail" onClick={onViewDetail}>
           <Eye className="h-4 w-4" />
         </ActionIconButton>
+
+        {onEditItems && (
+          <ActionIconButton
+            label="Modifier les produits"
+            onClick={onEditItems}
+            loading={loading}
+            variant="primary"
+          >
+            <Pencil className="h-4 w-4" />
+          </ActionIconButton>
+        )}
 
         {commanderAction && (
           <ActionIconButton

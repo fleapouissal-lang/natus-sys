@@ -44,6 +44,8 @@ export function SentTransfersUnifiedView({
   mesCommandesActionMode,
   commanderRole,
   detailVariant = "order",
+  documentOnView,
+  allowEditItems = false,
 }: {
   filter: ReceivedTransfersFilterScope;
   groups: ReceivedTransferRowGroup[];
@@ -62,6 +64,8 @@ export function SentTransfersUnifiedView({
   mesCommandesActionMode?: MesCommandesActionMode;
   commanderRole?: CommanderRole;
   detailVariant?: TransferDetailVariant;
+  documentOnView?: import("@/lib/stock-transfers/download-bon-commande").TransferDocumentKind;
+  allowEditItems?: boolean;
 }) {
   const datedGroups = useMemo(() => {
     return groups.map((group) => ({
@@ -124,6 +128,8 @@ export function SentTransfersUnifiedView({
         mesCommandesActionMode={mesCommandesActionMode}
         commanderRole={commanderRole}
         detailVariant={detailVariant}
+        documentOnView={documentOnView}
+        allowEditItems={allowEditItems}
         emptyMessage={emptyMessage}
       />
     </div>

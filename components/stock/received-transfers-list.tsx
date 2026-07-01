@@ -56,6 +56,13 @@ import {
   type CommanderRole,
   type MesCommandesActionMode,
 } from "@/lib/stock-transfers/pending-order-actions";
+import {
+  buildBonCommandeData,
+  printBonCommandeHtml,
+  printBonLivraisonHtml,
+  type TransferDocumentKind,
+} from "@/lib/stock-transfers/download-bon-commande";
+import { TransferEditItemsModal } from "@/components/stock/transfer-edit-items-modal";
 import { formatDate } from "@/lib/utils";
 import { formatTransferOrderNumber } from "@/lib/stock-transfers/source-order-history";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
@@ -77,6 +84,10 @@ export type ReceivedTransfersListProps = {
   mesCommandesActionMode?: MesCommandesActionMode;
   commanderRole?: CommanderRole;
   detailVariant?: TransferDetailVariant;
+  /** Si défini, l'œil ouvre directement le PDF (bon de commande / livraison) au lieu du modal. */
+  documentOnView?: TransferDocumentKind;
+  /** Autorise la modification des produits d'une commande non encore remise au livreur. */
+  allowEditItems?: boolean;
   cashierHub?: {
     storeName: string;
     productsById: Record<
@@ -119,12 +130,15 @@ export function ReceivedTransfersList({
   mesCommandesActionMode,
   commanderRole,
   detailVariant = "reception",
+  documentOnView,
+  allowEditItems = false,
   cashierHub,
 }: ReceivedTransfersListProps) {
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [detailRow, setDetailRow] = useState<ReceivedTransferRow | null>(null);
+  const [editRow, setEditRow] = useState<ReceivedTransferRow | null>(null);
 
   function livreurOptionsForTransfer(transfer: {
     from_store_city?: string | null;
@@ -247,7 +261,24 @@ export function ReceivedTransfersList({
             <tbody>
               {paginated.map((row) => {
                 const loading = loadingId === row.transfer.id;
-                const onViewDetail = () => setDetailRow(row);
+                const rowStatusLabel =
+                  row.source === "store"
+                    ? storeTransferStatusLabel(row.transfer.status)
+                    : hubTransferStatusLabel(row.transfer.status);
+                // Bon de commande : toujours en PDF sur l'œil.
+                // Bon de livraison : PDF seulement quand la commande est bien livrée
+                // (statut « received »), sinon on affiche le détail dans le modal.
+                const openLivraisonPdf =
+                  documentOnView === "livraison" &&
+                  row.transfer.status === "received";
+                const openCommandePdf = documentOnView === "commande";
+                const onViewDetail = openLivraisonPdf
+                  ? () =>
+                      printBonLivraisonHtml(buildBonCommandeData(row, rowStatusLabel))
+                  : openCommandePdf
+                    ? () =>
+                        printBonCommandeHtml(buildBonCommandeData(row, rowStatusLabel))
+                    : () => setDetailRow(row);
 
                 if (row.source === "store") {
                   const transfer = row.transfer;
@@ -296,6 +327,13 @@ export function ReceivedTransfersList({
                     (url) => router.push(url)
                   );
 
+                  const canEditStore =
+                    allowEditItems &&
+                    canManageStoreSource(transfer) &&
+                    (transfer.status === "en_cours" || transfer.status === "pret") &&
+                    !transfer.shipped_at &&
+                    !transfer.picked_up_at;
+
                   return (
                     <tr key={row.id} className="border-b border-border last:border-b-0">
                       {isOrderView && (
@@ -340,7 +378,10 @@ export function ReceivedTransfersList({
                         {transfer.total_units}
                       </td>
                       <td className="px-6 py-4">
-                        <ReceivedTransferRowActions {...actionProps} />
+                        <ReceivedTransferRowActions
+                          {...actionProps}
+                          onEditItems={canEditStore ? () => setEditRow(row) : undefined}
+                        />
                       </td>
                     </tr>
                   );
@@ -416,6 +457,12 @@ export function ReceivedTransfersList({
                   (url) => router.push(url)
                 );
 
+                const canEditHub =
+                  allowEditItems &&
+                  allowManage &&
+                  (transfer.status === "en_cours" || transfer.status === "pret") &&
+                  !transfer.picked_up_at;
+
                 return (
                   <tr key={row.id} className="border-b border-border last:border-b-0">
                     {isOrderView && (
@@ -471,7 +518,10 @@ export function ReceivedTransfersList({
                       {transfer.total_units}
                     </td>
                     <td className="px-6 py-4">
-                      <ReceivedTransferRowActions {...actionProps} />
+                      <ReceivedTransferRowActions
+                        {...actionProps}
+                        onEditItems={canEditHub ? () => setEditRow(row) : undefined}
+                      />
                     </td>
                   </tr>
                 );
@@ -510,6 +560,17 @@ export function ReceivedTransfersList({
             : undefined
         }
       />
+
+      {editRow && (
+        <TransferEditItemsModal
+          row={editRow}
+          onClose={() => setEditRow(null)}
+          onSaved={() => {
+            setMessage("Commande modifiée");
+            router.refresh();
+          }}
+        />
+      )}
     </>
   );
 }
