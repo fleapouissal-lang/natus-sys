@@ -7,18 +7,10 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { loadEnv } from "./lib/env.mjs";
+import { caisseEmailForStore } from "./lib/store-caisse-emails.mjs";
 
 const PASSWORD = "Natus2026!";
 const ALLOWED_CITIES = ["Marrakech", "Casablanca"];
-
-function storeEmailSlug(name) {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, ".")
-    .replace(/^\.+|\.+$/g, "");
-}
 
 function citySlug(city) {
   return city
@@ -94,10 +86,8 @@ function buildUsers(stores) {
   }
 
   for (const store of stores) {
-    const slug = storeEmailSlug(store.name);
-
     users.push({
-      email: `caisse.${slug}@natus.ma`,
+      email: caisseEmailForStore(store.name),
       password: PASSWORD,
       full_name: `Caisse ${store.name}`,
       role: "cashier",
@@ -280,12 +270,13 @@ async function main() {
   console.log("\nMarrakech :");
   console.log("  • manager.marrakech@natus.ma");
   console.log("  • hub.marrakech@natus.ma");
-  console.log("  • caisse.natus.gueliz@natus.ma");
-  console.log("  • caisse.natus.medina@natus.ma");
+  console.log("  • caisse.gueliz@natus.ma");
+  console.log("  • caisse.medina@natus.ma");
+  console.log("  • caisse.sidi-ghanem@natus.ma");
   console.log("\nCasablanca :");
   console.log("  • manager.casablanca@natus.ma");
   console.log("  • hub.casablanca@natus.ma");
-  console.log("  • caisse.natus.casablanca.anfa@natus.ma");
+  console.log("  • caisse.casablanca@natus.ma");
   console.log("\nDirection : directeur@natus.ma | Admin : admin@natus.ma");
 }
 

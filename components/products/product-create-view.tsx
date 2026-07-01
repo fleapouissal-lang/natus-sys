@@ -15,7 +15,7 @@ export function ProductCreateView({
 }: {
   stores: Store[];
   existingProducts: Product[];
-  storeId: string;
+  storeId?: string;
   canEditBarcode?: boolean;
   assignableCategories?: readonly string[];
 }) {

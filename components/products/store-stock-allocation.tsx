@@ -1,11 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { Store } from "@/lib/types";
 
-export function StoreStockAllocation({ stores }: { stores: Store[] }) {
+export function StoreStockAllocation({
+  stores,
+  topSlot,
+}: {
+  stores: Store[];
+  topSlot?: ReactNode;
+}) {
   const [quantities, setQuantities] = useState<Record<string, string>>({});
 
   const cities = useMemo(
@@ -24,14 +30,6 @@ export function StoreStockAllocation({ stores }: { stores: Store[] }) {
     [stores, quantities]
   );
 
-  if (stores.length === 0) {
-    return (
-      <p className="text-sm text-danger">
-        Aucun magasin disponible — créez un magasin avant d&apos;ajouter un produit
-      </p>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <input type="hidden" name="store_stocks" value={JSON.stringify(payload)} />
@@ -42,7 +40,14 @@ export function StoreStockAllocation({ stores }: { stores: Store[] }) {
         </p>
       </div>
 
-      {cities.map((city) => (
+      {topSlot}
+
+      {stores.length === 0 ? (
+        <p className="text-sm text-danger">
+          Aucun magasin disponible — créez un magasin avant d&apos;ajouter un produit
+        </p>
+      ) : (
+        cities.map((city) => (
         <div key={city} className="border border-border bg-background/50 p-4">
           <div className="mb-3 flex items-center gap-2">
             <MapPin className="h-4 w-4 text-primary" />
@@ -76,7 +81,8 @@ export function StoreStockAllocation({ stores }: { stores: Store[] }) {
               ))}
           </div>
         </div>
-      ))}
+        ))
+      )}
 
       {payload.length > 0 && (
         <p className="text-xs text-success">

@@ -33,7 +33,7 @@ function appOrigin(host: string): string {
   return `https://os.${baseDomainOf(host)}`;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const host = hostnameOf(request);
   const { pathname, search } = request.nextUrl;
 

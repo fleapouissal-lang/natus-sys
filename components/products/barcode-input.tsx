@@ -23,6 +23,7 @@ interface BarcodeInputProps {
   scannerKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   scannerChange?: React.ChangeEventHandler<HTMLInputElement>;
   helperText?: string;
+  error?: string;
 }
 
 export function BarcodeInput({
@@ -40,6 +41,7 @@ export function BarcodeInput({
   scannerKeyDown,
   scannerChange,
   helperText,
+  error,
 }: BarcodeInputProps) {
   const internalRef = useRef<HTMLInputElement>(null);
   const inputRef = externalRef ?? internalRef;
@@ -142,13 +144,18 @@ export function BarcodeInput({
           readOnly={disabled}
           disabled={disabled}
           className={cn(
-            "natus-field w-full bg-surface py-2 pl-10 pr-3 text-sm font-mono transition-colors",
+            "natus-field w-full bg-surface pl-10 pr-3 text-sm font-mono transition-colors",
             "placeholder:font-sans placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20",
+            error && "border-danger focus:border-danger focus:ring-danger/20",
             disabled && "cursor-not-allowed opacity-70"
           )}
         />
       </div>
-      {helperText && <p className="text-xs text-muted">{helperText}</p>}
+      {error ? (
+        <p className="text-xs text-danger">{error}</p>
+      ) : (
+        helperText && <p className="text-xs text-muted">{helperText}</p>
+      )}
     </div>
   );
 }

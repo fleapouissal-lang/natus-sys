@@ -28,6 +28,7 @@ import type { Profile, Store, UserRole } from "@/lib/types";
 const DIRECTOR_ROLE_FILTERS: { value: UserRole | ""; label: string }[] = [
   { value: "", label: "Tous les rôles" },
   { value: "directeur", label: "Directeur" },
+  { value: "responsable_financier", label: "Responsable financier" },
   { value: "admin", label: "Administrateur" },
   { value: "manager", label: "Gérant" },
   { value: "cashier", label: "Caissier" },
@@ -36,14 +37,14 @@ const DIRECTOR_ROLE_FILTERS: { value: UserRole | ""; label: string }[] = [
 ];
 
 function roleBadgeVariant(role: UserRole) {
-  if (role === "directeur" || role === "admin") return "accent";
+  if (role === "directeur" || role === "admin" || role === "responsable_financier") return "accent";
   if (role === "manager") return "default";
   if (role === "livreur") return "warning";
   return "success";
 }
 
 function resolveUserCity(user: Profile, storeMap: Record<string, Store>): string | null {
-  if (user.role === "directeur" || user.role === "admin") return null;
+  if (hasDirectorAccess(user.role)) return null;
   return user.city || storeMap[user.store_id || ""]?.city || null;
 }
 

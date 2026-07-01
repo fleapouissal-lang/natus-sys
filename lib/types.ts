@@ -1,6 +1,13 @@
 export type PaymentMethod = "cash" | "card" | "cheque";
 
-export type UserRole = "directeur" | "admin" | "manager" | "cashier" | "livreur" | "hub";
+export type UserRole =
+  | "directeur"
+  | "admin"
+  | "responsable_financier"
+  | "manager"
+  | "cashier"
+  | "livreur"
+  | "hub";
 
 export type ShopifyPaymentType = "online" | "cod";
 

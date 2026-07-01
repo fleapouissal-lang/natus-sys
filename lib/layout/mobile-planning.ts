@@ -1,5 +1,5 @@
 import type { UserRole } from "@/lib/types";
-import { getHomePath, getManagementBasePath } from "@/lib/permissions";
+import { getHomePath, getManagementBasePath, hasDirectorAccess } from "@/lib/permissions";
 
 /** Mobile : compte caisse magasin ou caissier perso → planning seul */
 export function isMobilePlanningOnlyMode(input: {
@@ -11,7 +11,7 @@ export function isMobilePlanningOnlyMode(input: {
 
 /** Caisse POS réservée au desktop pour direction et hub inventaire */
 export function isMobilePosDesktopOnlyRole(role: UserRole): boolean {
-  return role === "directeur" || role === "admin" || role === "hub";
+  return hasDirectorAccess(role) || role === "hub";
 }
 
 export function getMobilePosRedirectPath(role: UserRole): string {

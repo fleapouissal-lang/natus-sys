@@ -2,10 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { getCityFilter, canCreateStore, isManager } from "@/lib/permissions";
 import { NATUS_CITIES } from "@/lib/constants/cities";
-import {
-  getProductsWithStoreStock,
-  getStoresWithStats,
-} from "@/lib/inventory";
+import { getStoresWithStats } from "@/lib/inventory";
 import { StoresManager } from "@/components/stores/stores-manager";
 
 export default async function StoresPage() {
@@ -15,13 +12,6 @@ export default async function StoresPage() {
   }
   const city = profile ? getCityFilter(profile) : null;
   const stores = await getStoresWithStats(city);
-  const inventoryByStore: Record<string, Awaited<ReturnType<typeof getProductsWithStoreStock>>> = {};
-
-  await Promise.all(
-    stores.map(async (store) => {
-      inventoryByStore[store.id] = await getProductsWithStoreStock(store.id);
-    })
-  );
 
   const allowedCities = profile && canCreateStore(profile)
     ? [...NATUS_CITIES]
@@ -32,7 +22,6 @@ export default async function StoresPage() {
   return (
     <StoresManager
       stores={stores}
-      inventoryByStore={inventoryByStore}
       allowedCities={allowedCities}
       defaultCity={profile?.city || undefined}
       cityLabel={city || undefined}

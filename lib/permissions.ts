@@ -1,14 +1,43 @@
 import type { Profile, Store, UserRole } from "@/lib/types";
 import { getCustomHomePath, isStoreScopedManager } from "@/lib/user-page-access";
 
-export const MANAGEMENT_ROLES = ["directeur", "admin", "manager"] as const;
+export const DIRECTOR_ACCESS_ROLES = [
+  "directeur",
+  "admin",
+  "responsable_financier",
+] as const satisfies readonly UserRole[];
+
+export const MANAGEMENT_ROLES = ["directeur", "admin", "responsable_financier", "manager"] as const;
 export type ManagementRole = (typeof MANAGEMENT_ROLES)[number];
 
-export const STOCK_MANAGEMENT_ROLES = ["directeur", "admin", "hub"] as const;
-export const STOCK_READ_ROLES = ["directeur", "admin", "manager", "hub"] as const;
+export const STOCK_MANAGEMENT_ROLES = [
+  "directeur",
+  "admin",
+  "responsable_financier",
+  "hub",
+] as const;
+export const STOCK_READ_ROLES = [
+  "directeur",
+  "admin",
+  "responsable_financier",
+  "manager",
+  "hub",
+] as const;
+
+export function hasDirectorAccess(role: UserRole): boolean {
+  return DIRECTOR_ACCESS_ROLES.includes(role as (typeof DIRECTOR_ACCESS_ROLES)[number]);
+}
+
+export function expandDirectorRoles(allowedRoles: UserRole[]): UserRole[] {
+  const set = new Set(allowedRoles);
+  if (allowedRoles.some((role) => hasDirectorAccess(role))) {
+    for (const role of DIRECTOR_ACCESS_ROLES) set.add(role);
+  }
+  return [...set];
+}
 
 export function isDirector(profile: Pick<Profile, "role">): boolean {
-  return profile.role === "directeur" || profile.role === "admin";
+  return hasDirectorAccess(profile.role);
 }
 
 export function isAdmin(profile: Pick<Profile, "role">): boolean {
@@ -35,6 +64,8 @@ export function getRoleLabel(role: UserRole): string {
   switch (role) {
     case "directeur":
       return "Directeur";
+    case "responsable_financier":
+      return "Responsable financier";
     case "admin":
       return "Administrateur";
     case "manager":
@@ -55,7 +86,7 @@ export function getHomePath(
   const customHome = profile ? getCustomHomePath(profile) : null;
   if (customHome) return customHome;
 
-  if (role === "directeur" || role === "admin") return "/director";
+  if (hasDirectorAccess(role)) return "/director";
   if (role === "manager") return "/manager";
   if (role === "hub") return "/hub";
   if (role === "livreur") return "/livreur/actualites";
@@ -65,7 +96,7 @@ export function getHomePath(
 export function getManagementBasePath(
   role: UserRole
 ): "/director" | "/manager" | "/hub" | null {
-  if (role === "directeur" || role === "admin") return "/director";
+  if (hasDirectorAccess(role)) return "/director";
   if (role === "manager") return "/manager";
   if (role === "hub") return "/hub";
   return null;

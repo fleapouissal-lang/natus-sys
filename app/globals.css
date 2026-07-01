@@ -598,6 +598,16 @@ h1, h2, h3, h4, h5, h6,
   color: var(--primary);
 }
 
+.natus-card.natus-filter-bar {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.natus-card.natus-filter-bar:hover {
+  box-shadow: none !important;
+}
+
 .natus-card {
   border: 1px solid var(--primary) !important;
   background: var(--surface) !important;

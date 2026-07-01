@@ -230,13 +230,24 @@ export function HubAccountsManager({
   hubAccounts,
   retailStores,
   assignmentsByHub,
+  showCreate: controlledShowCreate,
+  onShowCreateChange,
+  hideHeaderButton = false,
 }: {
   hubAccounts: Profile[];
   retailStores: Store[];
   assignmentsByHub: Record<string, string[]>;
+  showCreate?: boolean;
+  onShowCreateChange?: (open: boolean) => void;
+  hideHeaderButton?: boolean;
 }) {
   const router = useRouter();
-  const [showCreate, setShowCreate] = useState(false);
+  const [internalShowCreate, setInternalShowCreate] = useState(false);
+  const showCreate = controlledShowCreate ?? internalShowCreate;
+  const setShowCreate = (open: boolean) => {
+    if (onShowCreateChange) onShowCreateChange(open);
+    else setInternalShowCreate(open);
+  };
   const [editHub, setEditHub] = useState<Profile | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -279,13 +290,15 @@ export function HubAccountsManager({
             d&apos;autres villes
           </p>
         </div>
-        <Button type="button" onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4" />
-          Nouveau compte dépôt
-        </Button>
+        {!hideHeaderButton && (
+          <Button type="button" onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4" />
+            Nouveau compte dépôt
+          </Button>
+        )}
       </div>
 
-      <Card padding={false}>
+      <Card padding={false} className="natus-card">
         {hubAccounts.length === 0 ? (
           <p className="px-6 py-12 text-center text-sm text-muted">Aucun compte dépôt</p>
         ) : (
@@ -343,37 +356,44 @@ export function HubAccountsManager({
                         </Badge>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5">
                           <Button
                             type="button"
                             size="sm"
-                            variant="secondary"
+                            variant="ghost"
+                            className="!bg-transparent !p-2 text-primary hover:text-primary-dark"
                             onClick={() => setEditHub(hub)}
                             title="Modifier le dépôt"
+                            aria-label="Modifier le dépôt"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
                             type="button"
                             size="sm"
-                            variant="secondary"
-                            loading={deletingId === hub.id}
-                            onClick={() => void handleDelete(hub)}
-                            title="Supprimer le dépôt"
-                          >
-                            <Trash2 className="h-4 w-4 text-danger" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
+                            variant="ghost"
+                            className="!bg-transparent !p-2 text-primary hover:text-primary-dark"
                             onClick={() => void toggleActive(hub.id, hub.is_active)}
+                            title={hub.is_active ? "Désactiver le dépôt" : "Activer le dépôt"}
+                            aria-label={hub.is_active ? "Désactiver le dépôt" : "Activer le dépôt"}
                           >
                             {hub.is_active ? (
                               <UserX className="h-4 w-4" />
                             ) : (
                               <UserCheck className="h-4 w-4" />
                             )}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="!bg-transparent !p-2 text-danger hover:text-danger"
+                            loading={deletingId === hub.id}
+                            onClick={() => void handleDelete(hub)}
+                            title="Supprimer le dépôt"
+                            aria-label="Supprimer le dépôt"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                         <p className="mt-1 text-right text-xs text-muted">

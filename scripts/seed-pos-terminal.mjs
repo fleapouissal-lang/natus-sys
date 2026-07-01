@@ -31,7 +31,7 @@ async function main() {
     process.exit(1);
   }
 
-  const email = "caisse.natus.gueliz@natus.ma";
+  const email = "caisse.gueliz@natus.ma";
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, email, full_name, is_store_pos, store_id")

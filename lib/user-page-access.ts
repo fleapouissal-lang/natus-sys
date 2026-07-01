@@ -1,5 +1,6 @@
 import { getSettingsPath } from "@/lib/layout/settings-path";
 import type { NavLinkItem } from "@/lib/layout/nav-links";
+import { hasDirectorAccess } from "@/lib/permissions";
 import type { Profile, UserRole } from "@/lib/types";
 
 export type UserPageKey =
@@ -66,19 +67,17 @@ export const USER_PAGE_DEFINITIONS: UserPageDefinition[] = [
   { key: "customers", label: "Clients fidélité", description: "Clients fidélité en magasin", group: "clients" },
 ];
 
+const DIRECTOR_PAGE_KEYS: UserPageKey[] = [
+  "dashboard", "planning", "pos", "pos_closures", "sales", "orders", "stock", "products",
+  "stores", "transfers", "hub_orders",
+  "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
+  "hub_stock", "hubs", "writeoffs", "stock_access", "cheques",
+];
+
 const ROLE_PAGE_KEYS: Record<UserRole, UserPageKey[]> = {
-  directeur: [
-    "dashboard", "planning", "pos", "pos_closures", "sales", "orders", "stock", "products",
-    "stores", "transfers", "hub_orders",
-    "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
-    "hub_stock", "hubs", "writeoffs", "stock_access", "cheques",
-  ],
-  admin: [
-    "dashboard", "planning", "pos", "pos_closures", "sales", "orders", "stock", "products",
-    "stores", "transfers", "hub_orders",
-    "activity", "reclamations", "loyalty", "invoices", "actualites", "users",
-    "hub_stock", "hubs", "writeoffs", "stock_access", "cheques",
-  ],
+  directeur: DIRECTOR_PAGE_KEYS,
+  admin: DIRECTOR_PAGE_KEYS,
+  responsable_financier: DIRECTOR_PAGE_KEYS,
   manager: [
     "dashboard", "planning", "pos_closures", "sales", "orders", "stock", "transfers", "hub_orders",
     "activity", "reclamations", "loyalty", "writeoffs", "invoices", "actualites", "cheques",
@@ -201,7 +200,7 @@ const PAGE_GROUP_LABELS: Record<UserPageGroup, string> = {
 };
 
 function managementBase(role: UserRole): "/director" | "/manager" | "/hub" | null {
-  if (role === "directeur" || role === "admin") return "/director";
+  if (hasDirectorAccess(role)) return "/director";
   if (role === "manager") return "/manager";
   if (role === "hub") return "/hub";
   return null;
@@ -243,7 +242,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
     case "pos_closures":
       if (role === "cashier") return "/cashier/history";
       if (role === "manager") return "/manager/pos-closures";
-      if (role === "directeur" || role === "admin") return "/director/pos-closures";
+      if (hasDirectorAccess(role)) return "/director/pos-closures";
       return null;
     case "sales":
       if (role === "cashier") return "/cashier/history";
@@ -258,12 +257,12 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       return base ? `${base}/stores` : null;
     case "activity":
       if (role === "manager") return "/manager/history";
-      if (role === "directeur" || role === "admin") return "/director/history";
+      if (hasDirectorAccess(role)) return "/director/history";
       return base === "/hub" ? "/hub/activity" : base ? `${base}/activity` : null;
     case "reclamations":
       return base ? `${base}/reclamations` : null;
     case "loyalty":
-      if (role === "directeur" || role === "admin") return "/director/clients";
+      if (hasDirectorAccess(role)) return "/director/clients";
       if (role === "manager") return "/manager/clients";
       return base ? `${base}/loyalty` : null;
     case "invoices":
@@ -275,13 +274,13 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
     case "users":
       return base ? `${base}/users` : null;
     case "hub_stock":
-      return role === "directeur" || role === "admin"
+      return hasDirectorAccess(role)
         ? "/director/stock"
         : base === "/hub"
           ? "/hub/stock-transfers"
           : null;
     case "hubs":
-      return role === "directeur" || role === "admin" ? "/director/stores" : null;
+      return hasDirectorAccess(role) ? "/director/stores" : null;
     case "notes":
       return "/cashier/notes";
     case "transfers":
@@ -289,19 +288,19 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       if (role === "cashier") return "/cashier/transfers/received";
       if (role === "manager") return "/manager/stock-transfers";
       if (role === "hub") return "/hub/stock-transfers";
-      if (role === "directeur" || role === "admin") return "/director/stock-transfers";
+      if (hasDirectorAccess(role)) return "/director/stock-transfers";
       return null;
     case "orders":
       if (role === "livreur") return "/livreur/orders";
       if (role === "cashier") return "/cashier/orders";
       if (role === "manager") return "/manager/orders";
-      if (role === "directeur" || role === "admin") return "/director/orders";
+      if (hasDirectorAccess(role)) return "/director/orders";
       if (role === "hub") return "/hub/orders";
       return null;
     case "hub_orders":
       if (role === "hub") return "/hub/stock-transfers/received";
       if (role === "manager") return "/manager/stock-transfers/received";
-      if (role === "directeur" || role === "admin") return "/director/stock-transfers/received";
+      if (hasDirectorAccess(role)) return "/director/stock-transfers/received";
       return null;
     case "returns":
       return role === "livreur" ? "/livreur/orders" : "/cashier/returns";
@@ -312,7 +311,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
     case "cheques":
       if (role === "cashier") return "/cashier/cheques";
       if (role === "manager") return "/manager/cheques";
-      if (role === "directeur" || role === "admin") return "/director/cheques";
+      if (hasDirectorAccess(role)) return "/director/cheques";
       return null;
     case "customers":
       return "/cashier/customers";
@@ -358,7 +357,7 @@ export function getAllowedHrefsForProfile(
     .filter((href): href is string => Boolean(href));
 
   if (
-    (profile.role === "directeur" || profile.role === "admin") &&
+    hasDirectorAccess(profile.role) &&
     keys.includes("loyalty")
   ) {
     hrefs.push("/director/loyalty", "/director/pro-clients");
@@ -394,21 +393,21 @@ export function getAllowedHrefsForProfile(
   }
 
   if (
-    (profile.role === "directeur" || profile.role === "admin") &&
+    hasDirectorAccess(profile.role) &&
     (keys.includes("transfers") || keys.includes("hub_orders"))
   ) {
     hrefs.push("/director/stock-transfers", "/director/stock-transfers/received");
   }
 
   if (
-    (profile.role === "directeur" || profile.role === "admin") &&
+    hasDirectorAccess(profile.role) &&
     (keys.includes("stock") || keys.includes("hub_stock"))
   ) {
     hrefs.push("/director/hub");
   }
 
   if (
-    (profile.role === "directeur" || profile.role === "admin") &&
+    hasDirectorAccess(profile.role) &&
     (keys.includes("sales") || keys.includes("pos_closures"))
   ) {
     hrefs.push("/director/history");
@@ -453,7 +452,7 @@ export function isRouteAllowedForProfile(
     }
   }
 
-  if (profile.role === "directeur" || profile.role === "admin") {
+  if (hasDirectorAccess(profile.role)) {
     if (
       pathname === "/director/activity" ||
       pathname.startsWith("/director/activity/") ||
@@ -482,10 +481,10 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
   for (const key of getDefaultPageKeysForRole(role)) {
     if (resolvePageHref(key, role) === href) return key;
   }
-  if (href === "/director/loyalty" && (role === "directeur" || role === "admin")) {
+  if (href === "/director/loyalty" && (hasDirectorAccess(role))) {
     return "loyalty";
   }
-  if (href === "/director/pro-clients" && (role === "directeur" || role === "admin")) {
+  if (href === "/director/pro-clients" && (hasDirectorAccess(role))) {
     return "loyalty";
   }
   if (href === "/manager/pro-clients" && role === "manager") {
@@ -500,7 +499,7 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
   if (href === "/cashier/pro-clients" && role === "cashier") {
     return "customers";
   }
-  if (href === "/director/hub" && (role === "directeur" || role === "admin")) {
+  if (href === "/director/hub" && (hasDirectorAccess(role))) {
     return "hub_stock";
   }
   if (href === "/cashier/history" && role === "cashier") {
@@ -512,7 +511,7 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
   if (href === "/manager/pos-closures" && role === "manager") {
     return "pos_closures";
   }
-  if (href === "/director/pos-closures" && (role === "directeur" || role === "admin")) {
+  if (href === "/director/pos-closures" && (hasDirectorAccess(role))) {
     return "pos_closures";
   }
   if (
@@ -524,7 +523,7 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
   if (href === "/manager/stock-transfers" && role === "manager") {
     return "transfers";
   }
-  if (href === "/director/stock-transfers" && (role === "directeur" || role === "admin")) {
+  if (href === "/director/stock-transfers" && (hasDirectorAccess(role))) {
     return "transfers";
   }
   if (href === "/manager/stock-transfers/received" && role === "manager") {
@@ -532,14 +531,14 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
   }
   if (
     href === "/director/stock-transfers/received" &&
-    (role === "directeur" || role === "admin")
+    (hasDirectorAccess(role))
   ) {
     return "hub_orders";
   }
-  if (href === "/director/categories" && (role === "directeur" || role === "admin")) {
+  if (href === "/director/categories" && (hasDirectorAccess(role))) {
     return "products";
   }
-  if (href === "/director/stock-access" && (role === "directeur" || role === "admin")) {
+  if (href === "/director/stock-access" && (hasDirectorAccess(role))) {
     return "stock_access";
   }
   if (href === "/hub/stock-transfers" && role === "hub") {
@@ -554,7 +553,7 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
   if (href === "/manager/orders" && role === "manager") {
     return "orders";
   }
-  if (href === "/director/orders" && (role === "directeur" || role === "admin")) {
+  if (href === "/director/orders" && (hasDirectorAccess(role))) {
     return "orders";
   }
   if (href === "/hub/orders" && role === "hub") {
@@ -577,7 +576,7 @@ function navLinkPriorityIndex(key: UserPageKey | null, role: UserRole): number {
           ? CASHIER_NAV_PRIORITY
           : role === "livreur"
             ? LIVREUR_NAV_PRIORITY
-            : role === "directeur" || role === "admin"
+            : hasDirectorAccess(role)
               ? DIRECTOR_NAV_PRIORITY
               : PAGE_HOME_PRIORITY;
   const idx = order.indexOf(key);

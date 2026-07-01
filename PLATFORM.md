@@ -41,7 +41,7 @@ Application de caisse, fidélité, commandes Shopify et marketing WhatsApp pour 
 
 | Fichier | Rôle |
 |---------|------|
-| `middleware.ts` | Délègue à `lib/supabase/middleware.ts` (auth, guards par rôle) |
+| `proxy.ts` | Proxy Next.js (ex-`middleware.ts`) — délègue à `lib/supabase/middleware.ts` (auth, guards par rôle) |
 | `next.config.ts` | Headers sécurité, config Turbopack |
 | `vercel.json` | Planification des crons Vercel |
 | `app/globals.css` | Tokens couleur, composants Natus (`.natus-card`, `.natus-field`) |

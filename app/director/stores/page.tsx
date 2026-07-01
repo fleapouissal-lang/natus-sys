@@ -2,10 +2,9 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { canCreateStore, getCityFilter } from "@/lib/permissions";
 import { NATUS_CITIES } from "@/lib/constants/cities";
-import { getProductsWithStoreStock, getStoresWithStats, getActiveStores } from "@/lib/inventory";
+import { getStoresWithStats, getActiveStores } from "@/lib/inventory";
 import { getHubAccounts, getHubStoreAssignmentsMap } from "@/lib/hub";
 import { DirectorStructuresTabs } from "@/components/structures/director-structures-tabs";
-import type { Product } from "@/lib/types";
 
 export default async function DirectorStructuresPage() {
   const profile = await requireRole(["directeur", "admin"]);
@@ -20,13 +19,6 @@ export default async function DirectorStructuresPage() {
     getHubStoreAssignmentsMap(),
   ]);
 
-  const inventoryByStore: Record<string, Product[]> = {};
-  await Promise.all(
-    stores.map(async (store) => {
-      inventoryByStore[store.id] = await getProductsWithStoreStock(store.id);
-    })
-  );
-
   const allowedCities = canCreateStore(profile)
     ? [...NATUS_CITIES]
     : profile.city
@@ -36,7 +28,6 @@ export default async function DirectorStructuresPage() {
   return (
     <DirectorStructuresTabs
       stores={stores}
-      inventoryByStore={inventoryByStore}
       allowedCities={allowedCities}
       defaultCity={profile.city || undefined}
       cityLabel={city || undefined}

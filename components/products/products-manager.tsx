@@ -531,22 +531,22 @@ export function ProductsManager({
   return (
     <>
       <FilterTogglePanel toggleLabel="Scanner un produit" summary="Recherche & scan">
-      <Card className="natus-filter-bar mb-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-          <div className="flex-1">
+      <div className="natus-filter-bar mb-4">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="min-w-0">
             <label className="mb-1.5 block text-sm font-medium">Scanner un produit</label>
             <div
               role="button"
               tabIndex={-1}
               onClick={() => focusInput()}
               className={cn(
-                "flex cursor-text items-center gap-2 rounded-full border bg-page px-4 py-2",
-                scannerActive ? "border-primary" : "border-border"
+                "relative cursor-text",
+                scannerActive && "[&_input]:border-primary [&_svg]:text-primary"
               )}
             >
               <ScanBarcode
                 className={cn(
-                  "h-4 w-4 shrink-0",
+                  "pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 shrink-0",
                   scannerActive ? "text-primary" : "text-muted"
                 )}
               />
@@ -562,12 +562,12 @@ export function ProductsManager({
                     ? "Passez le code-barres devant le lecteur…"
                     : "Scanner indisponible"
                 }
-                className="natus-filter-inline-input w-full min-w-0 cursor-default border-0 bg-transparent py-0 text-sm font-mono outline-none placeholder:text-muted"
+                className="natus-field w-full bg-surface pl-10 pr-3 text-sm font-mono"
                 autoComplete="off"
               />
             </div>
           </div>
-          <div className="flex-1">
+          <div className="min-w-0">
             <label className="mb-1.5 block text-sm font-medium">Rechercher par nom</label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -586,13 +586,13 @@ export function ProductsManager({
                   }
                 }}
                 placeholder="Nom du produit..."
-                className="natus-field w-full bg-surface py-0 pl-10 pr-3 text-sm"
+                className="natus-field w-full bg-surface pl-10 pr-3 text-sm"
                 autoComplete="off"
                 data-field="product-name-search"
               />
             </div>
           </div>
-          <div className="w-full lg:w-48">
+          <div className="min-w-0">
             <SelectMenu
               label="Catégorie"
               value={categoryFilter}
@@ -691,7 +691,7 @@ export function ProductsManager({
             {filteredProducts.length !== 1 ? "s" : ""}
           </p>
         )}
-      </Card>
+      </div>
       </FilterTogglePanel>
 
       <Card padding={false}>

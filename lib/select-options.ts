@@ -176,6 +176,7 @@ export function activityRoleOptions(
   const icons: Record<string, LucideIcon> = {
     "": Users,
     directeur: Shield,
+    responsable_financier: Shield,
     admin: Shield,
     hub: Store,
     manager: User,

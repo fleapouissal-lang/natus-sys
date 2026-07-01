@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, UserRole } from "@/lib/types";
+import { expandDirectorRoles } from "@/lib/permissions";
 
 const getAuthContext = cache(async () => {
   const supabase = await createClient();
@@ -36,6 +37,7 @@ export async function getCurrentProfile(): Promise<Profile | null> {
 export async function requireRole(allowedRoles: UserRole[]) {
   const profile = await getCurrentProfile();
   if (!profile || !profile.is_active) return null;
-  if (!allowedRoles.includes(profile.role)) return null;
+  const expanded = expandDirectorRoles(allowedRoles);
+  if (!expanded.includes(profile.role)) return null;
   return profile;
 }

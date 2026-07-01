@@ -44,6 +44,7 @@ export function ProductForm({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [barcode, setBarcode] = useState(product?.barcode || initialBarcode);
   const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url || null);
   const [productKind, setProductKind] = useState<ProductKind>(
@@ -84,24 +85,44 @@ export function ProductForm({
     }
   }, [isEdit, canEditBarcode, product]);
 
+  function clearFieldError(key: string) {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function setImageError(message: string) {
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (message) next.image = message;
+      else delete next.image;
+      return next;
+    });
+  }
+
+  // Rattache un message d'erreur serveur au bon champ quand c'est possible.
+  function mapServerError(message: string): { field?: string; message: string } {
+    const lower = message.toLowerCase();
+    if (lower.includes("code produit")) return { field: "product_code", message };
+    if (lower.includes("code-barres") || lower.includes("code-barre"))
+      return { field: "barcode", message };
+    if (lower.includes("prix")) return { field: "price", message };
+    if (lower.includes("image")) return { field: "image", message };
+    if (lower.includes("nom")) return { field: "name", message };
+    if (lower.includes("catégorie") || lower.includes("categorie"))
+      return { field: "categories", message };
+    return { message };
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
+    const form = e.currentTarget;
     setError("");
 
-    if (categories.length === 0) {
-      setError("Sélectionnez au moins une catégorie");
-      setLoading(false);
-      return;
-    }
-
-    if (duplicateProduct) {
-      setError("Ce produit est déjà ajouté dans le catalogue");
-      setLoading(false);
-      return;
-    }
-
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(form);
     formData.set("product_kind", isParent ? "parent" : "simple");
 
     if (!isParent) {
@@ -111,21 +132,66 @@ export function ProductForm({
       );
     }
 
+    // Validation côté client, champ par champ.
+    const nextErrors: Record<string, string> = {};
+
+    const name = ((formData.get("name") as string) || "").trim();
+    if (!name) nextErrors.name = "Le nom du produit est obligatoire";
+
+    if (!isParent) {
+      const priceRaw = ((formData.get("price") as string) || "").trim();
+      const priceNum = Number(priceRaw);
+      if (!priceRaw) {
+        nextErrors.price = "Le prix est obligatoire";
+      } else if (!Number.isFinite(priceNum) || priceNum < 0) {
+        nextErrors.price = "Saisissez un prix valide (nombre positif)";
+      }
+
+      const code = ((formData.get("barcode") as string) || "").trim();
+      if (barcodeEditable && !code) {
+        nextErrors.barcode = "Le code-barres est obligatoire";
+      } else if (duplicateProduct) {
+        nextErrors.barcode = "Ce code-barres est déjà utilisé par un autre produit";
+      }
+    }
+
+    if (categories.length === 0) {
+      nextErrors.categories = "Sélectionnez au moins une catégorie";
+    }
+
     if (!product) {
       const imageFile = formData.get("image") as File | null;
       if (!imageFile || imageFile.size === 0) {
-        setError("L'image du produit est obligatoire");
-        setLoading(false);
-        return;
+        nextErrors.image = "L'image du produit est obligatoire";
       }
     }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      const focusOrder = ["name", "product_code", "barcode", "price"];
+      const firstField = focusOrder.find((key) => nextErrors[key]);
+      if (firstField) {
+        const el = form.querySelector<HTMLElement>(`[name="${firstField}"]`);
+        el?.focus();
+        el?.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+      return;
+    }
+
+    setFieldErrors({});
+    setLoading(true);
 
     const result = product
       ? await updateProduct(product.id, formData)
       : await createProduct(formData);
 
     if (result.error) {
-      setError(result.error);
+      const mapped = mapServerError(result.error);
+      if (mapped.field) {
+        setFieldErrors((prev) => ({ ...prev, [mapped.field as string]: mapped.message }));
+      } else {
+        setError(mapped.message);
+      }
       if ("existingProduct" in result && result.existingProduct) {
         onExistingProduct?.(result.existingProduct as Product);
       }
@@ -150,9 +216,28 @@ export function ProductForm({
       ? "Nouveau produit parent"
       : "Nouveau produit";
 
+  const showStockSection = !product && !isParent;
+
+  const imageField = (
+    <div>
+      <ImageUploadInput
+        label={product ? "Nouvelle image" : "Joindre une photo"}
+        required={!product}
+        optional={!!product}
+        previewUrl={imagePreview}
+        onPreviewChange={(url) => {
+          setImagePreview(url);
+          if (url) setImageError("");
+        }}
+        onError={setImageError}
+      />
+      {fieldErrors.image && <p className="mt-1.5 text-sm text-danger">{fieldErrors.image}</p>}
+    </div>
+  );
+
   const body = (
     <>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-5 flex items-center justify-between">
         <h3 className="text-lg font-semibold">{title}</h3>
         {layout === "modal" && (
           <button onClick={onClose} className="text-muted hover:text-foreground cursor-pointer">
@@ -167,7 +252,7 @@ export function ProductForm({
         </p>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6" noValidate>
         {!isEdit && !isVariant && (
           <div>
             <p className="mb-2 text-sm font-medium">Type de produit</p>
@@ -196,34 +281,6 @@ export function ProductForm({
           </div>
         )}
 
-        {!isParent && (
-          <Input
-            label="Code produit (COM)"
-            name="product_code"
-            defaultValue={product?.product_code || ""}
-            placeholder="Ex. NAT-001"
-          />
-        )}
-
-        {!isParent && (
-          <BarcodeInput
-            value={barcode}
-            onChange={setBarcode}
-            onScan={handleBarcodeScan}
-            autoFocus={barcodeEditable}
-            required
-            disabled={isEdit && !canEditBarcode}
-            replaceOnScan={isEdit && canEditBarcode}
-            helperText={
-              isEdit && !canEditBarcode
-                ? "Modification du code-barres réservée au directeur"
-                : isEdit && canEditBarcode
-                  ? "Chaque scan remplace le code-barres"
-                  : "Passez le code-barres devant le lecteur"
-            }
-          />
-        )}
-
         {duplicateProduct && (
           <div className="rounded-lg border border-warning/40 bg-warning/5 p-4">
             <p className="mb-3 text-sm font-medium text-warning">
@@ -242,57 +299,117 @@ export function ProductForm({
           </div>
         )}
 
-        <Input
-          label={isVariant ? "Nom de la variante" : "Nom"}
-          name="name"
-          defaultValue={product?.name}
-          required
-          placeholder={isVariant ? "Ex. 50 ml, Rouge, Taille M…" : undefined}
-        />
+        {/* Informations produit — grille alignée */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {!isParent && (
+            <>
+              <Input
+                label="Code produit (COM)"
+                name="product_code"
+                defaultValue={product?.product_code || ""}
+                placeholder="Ex. NAT-001"
+                error={fieldErrors.product_code}
+                onChange={() => clearFieldError("product_code")}
+              />
+              <BarcodeInput
+                value={barcode}
+                onChange={(v) => {
+                  setBarcode(v);
+                  clearFieldError("barcode");
+                }}
+                onScan={handleBarcodeScan}
+                autoFocus={barcodeEditable}
+                required
+                disabled={isEdit && !canEditBarcode}
+                replaceOnScan={isEdit && canEditBarcode}
+                error={fieldErrors.barcode}
+                helperText={
+                  isEdit && !canEditBarcode
+                    ? "Modification du code-barres réservée au directeur"
+                    : isEdit && canEditBarcode
+                      ? "Chaque scan remplace le code-barres"
+                      : "Passez le code-barres devant le lecteur"
+                }
+              />
+            </>
+          )}
 
-        {!isParent && (
-          <Input
-            label="Prix (DH)"
-            name="price"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={product?.price}
-            required
-          />
+          <div className="sm:col-span-2">
+            <Input
+              label={isVariant ? "Nom de la variante" : "Nom"}
+              name="name"
+              defaultValue={product?.name}
+              required
+              placeholder={isVariant ? "Ex. 50 ml, Rouge, Taille M…" : undefined}
+              error={fieldErrors.name}
+              onChange={() => clearFieldError("name")}
+            />
+          </div>
+
+          {!isParent && (
+            <Input
+              label="Prix (DH)"
+              name="price"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={product?.price}
+              required
+              error={fieldErrors.price}
+              onChange={() => clearFieldError("price")}
+            />
+          )}
+
+          <div className={isParent ? "sm:col-span-2" : undefined}>
+            <CategoryMultiSelect
+              value={categories}
+              onChange={(next) => {
+                setCategories(next);
+                clearFieldError("categories");
+              }}
+              required
+              allowCreate
+              categories={assignableCategories}
+              createHint="Choisissez une catégorie existante ou créez-en une nouvelle si besoin."
+              error={fieldErrors.categories}
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <Input
+              label="Description"
+              name="description"
+              defaultValue={product?.description || ""}
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <p className="mb-1.5 text-sm font-medium text-foreground">
+              Photo du produit
+              {!product && <span className="text-danger"> *</span>}
+            </p>
+            {imageField}
+          </div>
+
+          <p className="text-sm text-muted sm:col-span-2">
+            Marque : <span className="font-medium text-foreground">{PRODUCT_BRAND}</span>
+          </p>
+        </div>
+
+        {showStockSection && (
+          <div className="rounded-xl border border-border p-4 sm:p-5">
+            <StoreStockAllocation stores={stores} />
+          </div>
         )}
 
-        {!product && !isParent && <StoreStockAllocation stores={stores} />}
-
-        <CategoryMultiSelect
-          value={categories}
-          onChange={setCategories}
-          required
-          allowCreate
-          categories={assignableCategories}
-          createHint="Choisissez une catégorie existante ou créez-en une nouvelle si besoin."
-        />
-
-        <p className="text-sm text-muted">
-          Marque : <span className="font-medium text-foreground">{PRODUCT_BRAND}</span>
-        </p>
-
-        <Input
-          label="Description"
-          name="description"
-          defaultValue={product?.description || ""}
-        />
-
-        <ImageUploadInput
-          label={product ? "Nouvelle image" : "Joindre une photo"}
-          required={!product}
-          optional={!!product}
-          previewUrl={imagePreview}
-          onPreviewChange={setImagePreview}
-          onError={setError}
-        />
-
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && (
+          <div
+            role="alert"
+            className="rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger"
+          >
+            {error}
+          </div>
+        )}
 
         <div className="flex justify-end gap-3">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -307,7 +424,7 @@ export function ProductForm({
   );
 
   if (layout === "page") {
-    return <Card className="mx-auto w-full max-w-2xl">{body}</Card>;
+    return <Card className="w-full">{body}</Card>;
   }
 
   return (

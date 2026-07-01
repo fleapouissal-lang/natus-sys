@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { getHomePath } from "@/lib/permissions";
+import { getHomePath, hasDirectorAccess } from "@/lib/permissions";
 import { isRouteAllowedForProfile } from "@/lib/access-presets";
 import { applySecurityHeaders } from "@/lib/security/headers";
 import { asSessionCookieOptions } from "@/lib/supabase/session-cookies";
@@ -14,7 +14,14 @@ import { isCashierPosRoute } from "@/lib/layout/sidebar-state";
 import { resolveStaffHomePath } from "@/lib/cashier/access";
 import type { UserRole } from "@/lib/types";
 
-const STAFF_ROLES: UserRole[] = ["cashier", "manager", "directeur", "admin", "hub"];
+const STAFF_ROLES: UserRole[] = [
+  "cashier",
+  "manager",
+  "directeur",
+  "admin",
+  "responsable_financier",
+  "hub",
+];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -88,7 +95,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     if (pathname.startsWith("/director")) {
-      if ((role !== "directeur" && role !== "admin") || !profile?.is_active) {
+      if (!role || !hasDirectorAccess(role) || !profile?.is_active) {
         const url = request.nextUrl.clone();
         url.pathname = role ? homePath : "/login";
         return applySecurityHeaders(NextResponse.redirect(url));

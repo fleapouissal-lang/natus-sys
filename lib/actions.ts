@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { canCreateRole, canCreateStore, canCreateStoreInCity, canAccessStore, canManageStore, isDirector, isHub, isManager } from "@/lib/permissions";
+import { canCreateRole, canCreateStore, canCreateStoreInCity, canAccessStore, canManageStore, hasDirectorAccess, isDirector, isHub, isManager } from "@/lib/permissions";
 import { getActiveStockModifyGrant } from "@/lib/stock-modify-access/queries";
 import {
   parseAllowedPagesInput,
@@ -1722,7 +1722,7 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
     .maybeSingle();
 
   if (targetError || !target) return { error: "Utilisateur introuvable" };
-  if (target.role === "directeur" || target.role === "admin") {
+  if (hasDirectorAccess(target.role)) {
     return { error: "Impossible de modifier ce compte" };
   }
   if (!isDirector(profile) && target.role === "manager") {
@@ -1756,7 +1756,7 @@ export async function deleteUser(userId: string) {
     .maybeSingle();
 
   if (targetError || !target) return { error: "Utilisateur introuvable" };
-  if (target.role === "directeur" || target.role === "admin") {
+  if (hasDirectorAccess(target.role)) {
     return { error: "Impossible de supprimer ce compte" };
   }
 
@@ -2527,7 +2527,7 @@ export async function updateUser(formData: FormData) {
     .maybeSingle();
 
   if (targetError || !target) return { error: "Utilisateur introuvable" };
-  if (target.role === "directeur" || target.role === "admin") {
+  if (hasDirectorAccess(target.role)) {
     return { error: "Impossible de modifier ce compte" };
   }
 
