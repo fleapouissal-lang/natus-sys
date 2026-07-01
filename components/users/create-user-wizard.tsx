@@ -15,6 +15,7 @@ import { Input, PasswordInput } from "@/components/ui/input";
 import { CardHeader } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { StoreSelect } from "@/components/stores/store-select";
+import { HubStorePicker } from "@/components/hub/hub-store-picker";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { CountryCitySelect } from "@/components/ui/country-city-select";
 import { roleOptions } from "@/lib/select-options";
@@ -24,11 +25,23 @@ import {
   getGroupedPageDefinitionsForRole,
   type UserPageKey,
 } from "@/lib/user-page-access";
-import { isDirector, isManager } from "@/lib/permissions";
+import { getRoleLabel, hasDirectorAccess, isDirector, isManager } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
-import type { Profile, Store } from "@/lib/types";
+import type { Profile, Store, UserRole } from "@/lib/types";
 
-type CreateRole = "manager" | "cashier" | "livreur";
+const DIRECTOR_CREATE_ROLES: UserRole[] = [
+  "directeur",
+  "responsable_financier",
+  "admin",
+  "hub",
+  "manager",
+  "cashier",
+  "livreur",
+];
+
+function isGlobalRole(role: UserRole) {
+  return hasDirectorAccess(role);
+}
 
 function StepIndicator({ step }: { step: 1 | 2 }) {
   const steps = [
@@ -99,21 +112,27 @@ export function CreateUserWizard({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<CreateRole>("cashier");
+  const [role, setRole] = useState<UserRole>("cashier");
   const [countryCode, setCountryCode] = useState("MA");
   const [city, setCity] = useState(
     isDirector(viewer) ? cities[0] || "" : viewer.city || ""
   );
   const [storeId, setStoreId] = useState(defaultStoreId || "");
+  const [hubStoreIds, setHubStoreIds] = useState<string[]>([]);
   const [limitManagerToStore, setLimitManagerToStore] = useState(false);
   const [useCustomPages, setUseCustomPages] = useState(false);
   const [selectedPages, setSelectedPages] = useState<UserPageKey[]>(() =>
     getDefaultPageKeysForRole("cashier")
   );
 
+  const retailStores = useMemo(
+    () => stores.filter((store) => !store.is_hub),
+    [stores]
+  );
+
   const storesForCity = useMemo(
-    () => stores.filter((s) => s.city === city),
-    [stores, city]
+    () => retailStores.filter((s) => s.city === city),
+    [retailStores, city]
   );
 
   const pageSections = useMemo(
@@ -131,10 +150,14 @@ export function CreateUserWizard({
   const needsStore =
     role === "cashier" || (role === "manager" && limitManagerToStore);
 
-  function handleRoleChange(nextRole: CreateRole) {
+  function handleRoleChange(nextRole: UserRole) {
     setRole(nextRole);
     setSelectedPages(getDefaultPageKeysForRole(nextRole));
     if (nextRole !== "manager") setLimitManagerToStore(false);
+    if (nextRole !== "hub") setHubStoreIds([]);
+    if (nextRole !== "cashier" && !(nextRole === "manager" && limitManagerToStore)) {
+      setStoreId("");
+    }
   }
 
   function togglePage(key: UserPageKey) {
@@ -151,6 +174,10 @@ export function CreateUserWizard({
 
   function canContinueStep1() {
     if (!fullName.trim() || !email.trim() || password.length < 6) return false;
+    if (isGlobalRole(role)) return true;
+    if (role === "hub") {
+      return Boolean(city) && hubStoreIds.length > 0;
+    }
     if ((role === "manager" || role === "cashier" || role === "livreur") && !city) {
       return false;
     }
@@ -168,11 +195,14 @@ export function CreateUserWizard({
     formData.set("email", email.trim());
     formData.set("password", password);
     formData.set("role", role);
-    formData.set("city", city);
+    if (city) formData.set("city", city);
     if (storeId) formData.set("store_id", storeId);
     if (role === "cashier") formData.set("is_store_pos", "on");
     if (role === "manager" && limitManagerToStore) {
       formData.set("limit_to_store", "on");
+    }
+    if (role === "hub") {
+      hubStoreIds.forEach((storeId) => formData.append("hub_store_ids", storeId));
     }
     if (isDirector(viewer) && useCustomPages) {
       formData.set("use_custom_pages", "on");
@@ -190,14 +220,13 @@ export function CreateUserWizard({
     onClose();
   }
 
-  const roleOptionsList: { value: CreateRole; label: string }[] = cashierOnly
+  const roleOptionsList: { value: UserRole; label: string }[] = cashierOnly
     ? [{ value: "cashier", label: "Caissier" }]
     : isDirector(viewer)
-      ? [
-          { value: "cashier", label: "Caissier" },
-          { value: "livreur", label: "Livreur" },
-          { value: "manager", label: "Gérant" },
-        ]
+      ? DIRECTOR_CREATE_ROLES.map((value) => ({
+          value,
+          label: getRoleLabel(value),
+        }))
       : [{ value: "cashier", label: "Caissier" }];
 
   return (
@@ -225,14 +254,16 @@ export function CreateUserWizard({
         {!skipPageStep && <StepIndicator step={step} />}
 
         {step === 1 ? (
-          <div className="space-y-4">
-            <Input
-              label="Nom complet"
-              name="full_name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Input
+                label="Nom complet"
+                name="full_name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+            </div>
             <Input
               label="Email"
               name="email"
@@ -251,64 +282,105 @@ export function CreateUserWizard({
             />
 
             {!cashierOnly && (
-              <SelectMenu
-                label="Rôle"
-                value={role}
-                onChange={(v) => handleRoleChange(v as CreateRole)}
-                options={roleOptions(roleOptionsList)}
-              />
+              <div className="sm:col-span-2">
+                <SelectMenu
+                  label="Rôle"
+                  value={role}
+                  onChange={(v) => handleRoleChange(v as UserRole)}
+                  options={roleOptions(roleOptionsList)}
+                />
+              </div>
+            )}
+
+            {isGlobalRole(role) && (
+              <div className="sm:col-span-2 rounded-2xl border border-primary/20 bg-champagne/20 p-4 text-sm">
+                <p className="font-medium">Accès global Natus</p>
+                <p className="mt-1 text-xs text-muted">
+                  Ce compte voit toutes les villes et magasins. Aucune ville ni magasin à assigner.
+                </p>
+              </div>
+            )}
+
+            {role === "hub" && (
+              <>
+                <SelectMenu
+                  label="Ville du dépôt"
+                  value={city}
+                  onChange={(value) => {
+                    setCity(value);
+                    setHubStoreIds([]);
+                  }}
+                  options={cities.map((value) => ({ value, label: value }))}
+                  required
+                />
+                <div className="sm:col-span-2">
+                  <HubStorePicker
+                    hubCity={city}
+                    retailStores={retailStores}
+                    value={hubStoreIds}
+                    onChange={setHubStoreIds}
+                    autoSelectCityStores
+                  />
+                </div>
+              </>
             )}
 
             {(role === "manager" || role === "cashier" || role === "livreur") && (
-              <CountryCitySelect
-                countryCode={countryCode}
-                city={city}
-                onCountryChange={(iso) => {
-                  setCountryCode(iso);
-                  setStoreId("");
-                }}
-                onCityChange={(value) => {
-                  setCity(value);
-                  setStoreId("");
-                }}
-                required
-                disabled={isManager(viewer)}
-                priorityCities={cities}
-                priorityCountryCode="MA"
-              />
+              <div className="sm:col-span-2">
+                <CountryCitySelect
+                  countryCode={countryCode}
+                  city={city}
+                  onCountryChange={(iso) => {
+                    setCountryCode(iso);
+                    setStoreId("");
+                  }}
+                  onCityChange={(value) => {
+                    setCity(value);
+                    setStoreId("");
+                  }}
+                  required
+                  disabled={isManager(viewer)}
+                  priorityCities={cities}
+                  priorityCountryCode="MA"
+                />
+              </div>
             )}
 
             {role === "manager" && isDirector(viewer) && (
-              <label className="flex items-start gap-3 rounded-2xl border border-border bg-surface-2 p-4 text-sm">
-                <input
-                  type="checkbox"
-                  checked={limitManagerToStore}
-                  onChange={(e) => {
-                    setLimitManagerToStore(e.target.checked);
-                    if (!e.target.checked) setStoreId("");
-                  }}
-                  className="mt-1"
-                />
-                <span>
-                  <span className="font-medium">Limiter à un seul magasin</span>
-                  <span className="mt-1 block text-xs text-muted">
-                    Sinon, le gérant voit tous les magasins de la ville.
+              <div className="sm:col-span-2">
+                <label className="flex items-start gap-3 rounded-2xl border border-border bg-surface-2 p-4 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={limitManagerToStore}
+                    onChange={(e) => {
+                      setLimitManagerToStore(e.target.checked);
+                      if (!e.target.checked) setStoreId("");
+                    }}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="font-medium">Limiter à un seul magasin</span>
+                    <span className="mt-1 block text-xs text-muted">
+                      Sinon, le gérant voit tous les magasins de la ville.
+                    </span>
                   </span>
-                </span>
-              </label>
+                </label>
+              </div>
             )}
 
             {needsStore && storesForCity.length > 0 && (
-              <StoreSelect
-                stores={storesForCity}
-                label="Magasin assigné"
-                value={storeId}
-                onChange={setStoreId}
-              />
+              <div className="sm:col-span-2">
+                <StoreSelect
+                  stores={storesForCity}
+                  label="Magasin assigné"
+                  value={storeId}
+                  onChange={setStoreId}
+                />
+              </div>
             )}
 
             {role === "cashier" && (
-              <div className="rounded-2xl border border-primary/20 bg-champagne/20 p-4 text-sm">
+              <div className="sm:col-span-2 rounded-2xl border border-primary/20 bg-champagne/20 p-4 text-sm">
                 <p className="font-medium">Compte caisse partagé du magasin</p>
                 <p className="mt-1 text-xs text-muted">
                   Un seul compte de connexion par magasin. Les noms des caissiers se gèrent
@@ -318,7 +390,7 @@ export function CreateUserWizard({
             )}
 
             {needsStore && storesForCity.length === 0 && (
-              <p className="text-sm text-danger">
+              <p className="sm:col-span-2 text-sm text-danger">
                 Aucun magasin dans cette ville — créez-en un d&apos;abord.
               </p>
             )}
@@ -327,7 +399,7 @@ export function CreateUserWizard({
           <div className="space-y-5">
             <div className="rounded-2xl border border-primary/15 bg-champagne/20 p-4">
               <p className="font-heading text-base font-semibold">
-                Pages visibles pour {getRolePreviewLabel(role)}
+                Pages visibles pour {getRoleLabel(role).toLowerCase()}
               </p>
               <p className="mt-1 text-sm text-muted">
                 Par défaut, toutes les pages du rôle sont cochées. Décochez celles que vous
@@ -436,7 +508,7 @@ export function CreateUserWizard({
             ) : (
               <p className="rounded-2xl border border-border bg-surface-2 p-4 text-sm text-muted">
                 Seul le directeur peut personnaliser les pages. Ce compte aura l&apos;accès
-                complet du rôle {getRolePreviewLabel(role)}.
+                complet du rôle {getRoleLabel(role).toLowerCase()}.
               </p>
             )}
           </div>
@@ -492,10 +564,4 @@ export function CreateUserWizard({
       </div>
     </Modal>
   );
-}
-
-function getRolePreviewLabel(role: CreateRole): string {
-  if (role === "manager") return "gérant";
-  if (role === "livreur") return "livreur";
-  return "caissier";
 }

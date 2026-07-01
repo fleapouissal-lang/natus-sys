@@ -2,17 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, UserCheck, UserX } from "lucide-react";
+import { Plus, Pencil, Trash2, UserCheck, UserX, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FilterTogglePanel } from "@/components/ui/filter-toggle-panel";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { CashierNfcField } from "@/components/users/cashier-nfc-field";
 import { CreateUserWizard } from "@/components/users/create-user-wizard";
 import { EditUserWizard } from "@/components/users/edit-user-wizard";
-import { cityOptions, storeOptions } from "@/lib/select-options";
+import { storeOptions } from "@/lib/select-options";
 import {
   deleteUser,
   toggleUserActive,
@@ -20,10 +19,16 @@ import {
 } from "@/lib/actions";
 import { NATUS_CITIES } from "@/lib/constants/cities";
 import { hasCustomPageAccess, summarizePageAccess } from "@/lib/user-page-access";
-import { getRoleLabel, isDirector } from "@/lib/permissions";
+import { getRoleLabel, hasDirectorAccess, isDirector } from "@/lib/permissions";
 import { formatDate } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Profile, Store, UserRole } from "@/lib/types";
+
+const STATUS_FILTERS: { value: "" | "active" | "inactive"; label: string }[] = [
+  { value: "", label: "Tous les statuts" },
+  { value: "active", label: "Actif" },
+  { value: "inactive", label: "Inactif" },
+];
 
 const DIRECTOR_ROLE_FILTERS: { value: UserRole | ""; label: string }[] = [
   { value: "", label: "Tous les rôles" },
@@ -43,11 +48,6 @@ function roleBadgeVariant(role: UserRole) {
   return "success";
 }
 
-function resolveUserCity(user: Profile, storeMap: Record<string, Store>): string | null {
-  if (hasDirectorAccess(user.role)) return null;
-  return user.city || storeMap[user.store_id || ""]?.city || null;
-}
-
 export function UsersManager({
   users,
   stores,
@@ -63,8 +63,9 @@ export function UsersManager({
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
-  const [cityFilter, setCityFilter] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState<UserRole | "">("");
+  const [statusFilter, setStatusFilter] = useState<"" | "active" | "inactive">("");
 
   const directorView = isDirector(viewer);
 
@@ -82,20 +83,25 @@ export function UsersManager({
   const filteredUsers = useMemo(() => {
     if (!directorView) return users;
 
+    const query = nameFilter.trim().toLowerCase();
+
     return users.filter((user) => {
+      if (query) {
+        const name = (user.full_name || "").toLowerCase();
+        const email = user.email.toLowerCase();
+        if (!name.includes(query) && !email.includes(query)) return false;
+      }
+
       if (roleFilter && user.role !== roleFilter) return false;
 
-      if (cityFilter) {
-        if (user.role === "directeur" || user.role === "admin") return false;
-        const userCity = resolveUserCity(user, storeMap);
-        if (userCity !== cityFilter) return false;
-      }
+      if (statusFilter === "active" && !user.is_active) return false;
+      if (statusFilter === "inactive" && user.is_active) return false;
 
       return true;
     });
-  }, [users, directorView, cityFilter, roleFilter, storeMap]);
+  }, [users, directorView, nameFilter, roleFilter, statusFilter]);
 
-  const filterToken = `${cityFilter}|${roleFilter}`;
+  const filterToken = `${nameFilter}|${roleFilter}|${statusFilter}`;
   const {
     paginated: paginatedUsers,
     page,
@@ -146,9 +152,9 @@ export function UsersManager({
             title="Utilisateurs"
             description={
               directorView
-                ? cityFilter || roleFilter
+                ? nameFilter || roleFilter || statusFilter
                   ? `${filteredUsers.length} utilisateur${filteredUsers.length !== 1 ? "s" : ""} sur ${users.length}`
-                  : `${users.length} utilisateur${users.length !== 1 ? "s" : ""} — toutes villes`
+                  : `${users.length} utilisateur${users.length !== 1 ? "s" : ""} — tous rôles`
                 : `${users.length} utilisateur${users.length !== 1 ? "s" : ""} — ${viewer.city}`
             }
             action={
@@ -161,19 +167,22 @@ export function UsersManager({
         </div>
 
         {directorView && (
-          <FilterTogglePanel
-            toggleLabel="Filtrer les utilisateurs"
-            summary={`${filteredUsers.length} résultat${filteredUsers.length !== 1 ? "s" : ""}`}
-            className="border-t border-border"
-          >
-            <div className="natus-filter-bar grid gap-4 p-4 sm:grid-cols-2 lg:max-w-2xl">
-              <SelectMenu
-                label="Ville"
-                value={cityFilter}
-                onChange={setCityFilter}
-                options={cityOptions(NATUS_CITIES)}
-                size="sm"
-              />
+          <div className="natus-filter-bar border-t border-border px-6 py-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="min-w-0">
+                <label className="mb-1.5 block text-sm font-medium">Nom ou email</label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                  <input
+                    type="search"
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
+                    placeholder="Rechercher un utilisateur…"
+                    className="natus-field w-full bg-surface pl-10 pr-3 text-sm"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
               <SelectMenu
                 label="Rôle"
                 value={roleFilter}
@@ -184,8 +193,18 @@ export function UsersManager({
                 }))}
                 size="sm"
               />
+              <SelectMenu
+                label="Statut"
+                value={statusFilter}
+                onChange={(value) => setStatusFilter(value as "" | "active" | "inactive")}
+                options={STATUS_FILTERS.map((option) => ({
+                  value: option.value,
+                  label: option.label,
+                }))}
+                size="sm"
+              />
             </div>
-          </FilterTogglePanel>
+          </div>
         )}
 
         <div className="overflow-x-auto">
@@ -246,7 +265,7 @@ export function UsersManager({
                     )}
                   </td>
                   <td className="px-6 py-4 text-muted">
-                    {user.role === "directeur" || user.role === "admin"
+                    {hasDirectorAccess(user.role)
                       ? "Toutes"
                       : user.city || storeMap[user.store_id || ""]?.city || "—"}
                   </td>

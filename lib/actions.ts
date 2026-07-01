@@ -18,7 +18,7 @@ import { PRODUCT_BRAND, PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { parseAssignableCategoriesFromForm } from "@/lib/products/assignable-categories";
 import { buildParentBarcode } from "@/lib/products/product-utils";
 import { uploadProductImage } from "@/lib/storage";
-import type { PaymentMethod, Profile } from "@/lib/types";
+import type { PaymentMethod, Profile, UserRole } from "@/lib/types";
 import {
   resolveLoyaltyLookupResult,
   type LoyaltyLookupResult,
@@ -2340,7 +2340,7 @@ export async function createUser(formData: FormData) {
   const email = normalizeUserEmail((formData.get("email") as string) || "");
   const password = formData.get("password") as string;
   const fullName = ((formData.get("full_name") as string) || "").trim();
-  const role = formData.get("role") as "manager" | "cashier" | "livreur" | "hub";
+  const role = formData.get("role") as UserRole;
   const city = ((formData.get("city") as string) || "").trim() || null;
   const storeId = (formData.get("store_id") as string) || null;
   const isStorePos = formData.get("is_store_pos") === "on";
@@ -2367,6 +2367,16 @@ export async function createUser(formData: FormData) {
 
   if (!canCreateRole(profile, role)) {
     return { error: "Vous n'êtes pas autorisé à créer ce type de compte" };
+  }
+
+  if (
+    role === "directeur" ||
+    role === "admin" ||
+    role === "responsable_financier"
+  ) {
+    if (!isDirector(profile)) {
+      return { error: "Seul un directeur peut créer ce type de compte" };
+    }
   }
 
   if (role === "manager" || role === "hub") {
@@ -2443,7 +2453,10 @@ export async function createUser(formData: FormData) {
     user_metadata: {
       full_name: fullName,
       role,
-      city: role === "manager" || role === "hub" || role === "livreur" ? city : undefined,
+      city:
+        role === "manager" || role === "hub" || role === "livreur"
+          ? city
+          : undefined,
     },
     app_metadata: { provider: "email", providers: ["email"] },
   });
@@ -2456,6 +2469,12 @@ export async function createUser(formData: FormData) {
       role,
       is_active: true,
     };
+
+    if (role === "directeur" || role === "admin" || role === "responsable_financier") {
+      updates.city = null;
+      updates.store_id = null;
+      updates.is_store_pos = false;
+    }
 
     if (role === "manager" || role === "hub") {
       if (role === "manager" && limitToStore && storeId) {

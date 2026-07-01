@@ -8,10 +8,12 @@ import { loadEnv } from "./lib/env.mjs";
 import {
   caisseEmailForStore,
   LEGACY_CAISSE_EMAILS,
+  managerEmailForStore,
   STORE_CAISSE_EMAILS,
 } from "./lib/store-caisse-emails.mjs";
 
 const PASSWORD = "Natus2026!";
+const MANAGER_PASSWORD = "Natus2026!";
 
 const STORES = [
   {
@@ -127,6 +129,66 @@ async function upsertPosAccount(supabase, store) {
   return email;
 }
 
+async function upsertManagerAccount(supabase, store) {
+  const email = managerEmailForStore(store.name);
+  if (!email) {
+    console.warn(`⚠  Pas d'email gérant pour ${store.name}`);
+    return null;
+  }
+
+  const fullName = `Gérant ${store.name.replace(/^Natus\s+/i, "")}`;
+
+  let userId;
+  const existing = await findUserByEmail(supabase, email);
+
+  if (existing) {
+    const { error } = await supabase.auth.admin.updateUserById(existing.id, {
+      password: MANAGER_PASSWORD,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        role: "manager",
+        city: store.city,
+      },
+    });
+    if (error) throw error;
+    userId = existing.id;
+  } else {
+    const { data, error } = await supabase.auth.admin.createUser({
+      email,
+      password: MANAGER_PASSWORD,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        role: "manager",
+        city: store.city,
+      },
+      app_metadata: { provider: "email", providers: ["email"] },
+    });
+    if (error) throw error;
+    userId = data.user?.id;
+  }
+
+  if (!userId) return email;
+
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      id: userId,
+      email,
+      full_name: fullName,
+      role: "manager",
+      is_active: true,
+      city: store.city,
+      store_id: store.id,
+      is_store_pos: false,
+    },
+    { onConflict: "id" }
+  );
+
+  if (profileError) throw profileError;
+  return email;
+}
+
 async function upsertStore(supabase, input) {
   const { data: existing } = await supabase
     .from("stores")
@@ -195,13 +257,26 @@ async function main() {
 
   for (const store of createdStores) {
     const email = await upsertPosAccount(supabase, store);
-    console.log(`✓  ${store.name} → ${email}`);
+    console.log(`✓  Caisse  ${store.name} → ${email}`);
   }
 
-  console.log(`\n✅ ${createdStores.length} magasin(s) — mot de passe caisse : ${PASSWORD}`);
-  console.log("\nEmails caisse :");
-  for (const [name, mail] of Object.entries(STORE_CAISSE_EMAILS)) {
-    console.log(`  • ${mail.padEnd(32)} ${name}`);
+  console.log("\n👤 Comptes gérant (1 par magasin)\n");
+
+  for (const store of createdStores) {
+    const email = await upsertManagerAccount(supabase, store);
+    if (email) console.log(`✓  Gérant  ${store.name} → ${email}`);
+  }
+
+  console.log(`\n✅ ${createdStores.length} magasin(s)`);
+  console.log(`   Mot de passe caisse  : ${PASSWORD}`);
+  console.log(`   Mot de passe gérant  : ${MANAGER_PASSWORD}`);
+  console.log("\nRécapitulatif :");
+  console.log("Magasin".padEnd(38) + "Caisse".padEnd(34) + "Gérant");
+  console.log("-".repeat(100));
+  for (const store of createdStores) {
+    const caisse = caisseEmailForStore(store.name);
+    const gerant = managerEmailForStore(store.name) || "—";
+    console.log(store.name.padEnd(38) + caisse.padEnd(34) + gerant);
   }
   console.log("");
 }

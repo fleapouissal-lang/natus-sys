@@ -31,3 +31,17 @@ export function caisseEmailForStore(storeName) {
 
   return `caisse.${slug}@natus.ma`;
 }
+
+/** Un gérant par magasin — limité au point de vente. */
+export const STORE_MANAGER_EMAILS = {
+  "Natus Rabat": "gerant.rabat@natus.ma",
+  "Natus Triangle d'or Casablanca": "gerant.casablanca@natus.ma",
+  "Natus Gueliz Marrakech": "gerant.gueliz@natus.ma",
+  "Natus Socco Alto Tanger": "gerant.tanger@natus.ma",
+  "Natus Medina Mall": "gerant.medina@natus.ma",
+  "Natus Sidi Ghanem": "gerant.sidi-ghanem@natus.ma",
+};
+
+export function managerEmailForStore(storeName) {
+  return STORE_MANAGER_EMAILS[storeName] ?? null;
+}

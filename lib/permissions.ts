@@ -132,6 +132,9 @@ export function filterRetailStoresByProfile<T extends Pick<Store, "city" | "id" 
 export function canCreateRole(creator: Profile, targetRole: UserRole): boolean {
   if (isDirector(creator)) {
     return (
+      targetRole === "directeur" ||
+      targetRole === "responsable_financier" ||
+      targetRole === "admin" ||
       targetRole === "manager" ||
       targetRole === "cashier" ||
       targetRole === "livreur" ||
