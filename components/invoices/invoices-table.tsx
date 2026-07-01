@@ -189,7 +189,7 @@ export function InvoicesTable({
                       type="button"
                       role="checkbox"
                       aria-checked={selected}
-                      aria-label={`Sélectionner ${saleDocumentNumber(sale.id)}`}
+                      aria-label={`Sélectionner ${saleDocumentNumber(sale.id, sale.invoice_number)}`}
                       disabled={!exportable}
                       title={
                         exportable
@@ -234,7 +234,7 @@ export function InvoicesTable({
                   </td>
                   <td className="px-6 py-4 font-mono text-xs">
                     <Link href={href} className="hover:underline">
-                      {saleDocumentNumber(sale.id)}
+                      {saleDocumentNumber(sale.id, sale.invoice_number)}
                     </Link>
                   </td>
                   <td className="px-6 py-4">

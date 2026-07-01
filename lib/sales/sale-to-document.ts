@@ -45,5 +45,6 @@ export function saleToDocumentData(sale: InvoiceSale): SaleDocumentData {
     customerEmail: saleInvoiceCustomerEmail(sale) || undefined,
     customerIce: saleInvoiceCustomerIce(sale) || undefined,
     storeName: sale.stores?.name || undefined,
+    invoiceNumber: sale.invoice_number ?? null,
   };
 }

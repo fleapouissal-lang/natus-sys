@@ -26,8 +26,24 @@ export interface SaleDocumentData {
   customerIce?: string;
   paymentLabel?: string;
   storeName?: string;
+  invoiceNumber?: number | null;
 }
 
-export function saleDocumentNumber(saleId: string): string {
+/** Numero de facture sequentiel formate sur 6 chiffres (ex: 000123). */
+export function formatInvoiceNumber(invoiceNumber: number): string {
+  return String(invoiceNumber).padStart(6, "0");
+}
+
+/**
+ * Numero de document affiche : numero de facture sequentiel si la facture est
+ * validee, sinon repli sur le prefixe de l'UUID de la vente (ticket non valide).
+ */
+export function saleDocumentNumber(
+  saleId: string,
+  invoiceNumber?: number | null
+): string {
+  if (invoiceNumber != null) {
+    return formatInvoiceNumber(invoiceNumber);
+  }
   return saleId.slice(0, 8).toUpperCase();
 }

@@ -97,7 +97,7 @@ export function InvoicesHistory({
       if (dateTo && saleDay > dateTo) return false;
 
       if (query) {
-        const invoiceNo = saleDocumentNumber(sale.id).toLowerCase();
+        const invoiceNo = saleDocumentNumber(sale.id, sale.invoice_number).toLowerCase();
         const customer = saleInvoiceCustomerName(sale).toLowerCase();
         const orderNo = sale.shopify_orders?.order_number?.toLowerCase() || "";
         if (

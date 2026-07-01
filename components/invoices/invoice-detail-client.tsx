@@ -41,7 +41,7 @@ export function InvoiceDetailClient({
     draftFromSale(sale)
   );
   const validated = isSaleInvoiceValidated(sale);
-  const invoiceNo = saleDocumentNumber(sale.id);
+  const invoiceNo = saleDocumentNumber(sale.id, sale.invoice_number);
 
   useEffect(() => {
     setCustomerDraft(draftFromSale(sale));

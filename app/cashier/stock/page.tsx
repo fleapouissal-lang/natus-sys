@@ -13,8 +13,8 @@ export default async function CashierStockPage({
   const profile = await requireRole(["cashier"]);
   if (!profile) redirect("/login");
 
-  // Tous les magasins et dépôts (Hubs) actifs, toutes villes confondues.
-  const stores = await getActiveStores(null);
+  // Magasins et dépôts (Hubs) actifs de la ville du caissier uniquement.
+  const stores = await getActiveStores(profile.city);
 
   // Défaut : magasin rattaché au caissier ; sinon magasin sélectionné ; sinon premier.
   const defaultStoreId = resolveSelectedStoreId(

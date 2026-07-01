@@ -54,7 +54,7 @@ export function PosInvoice({ data }: { data: SaleDocumentData }) {
   const { ht, tva, ttc } = computeTvaBreakdown(data.total);
   const tvaPercent = Math.round(TVA_RATE * 100);
   const clientName = data.customerName?.trim() || INVOICE_CLIENT_DIVERS;
-  const invoiceNo = saleDocumentNumber(data.saleId);
+  const invoiceNo = saleDocumentNumber(data.saleId, data.invoiceNumber);
   const paymentLabel =
     data.paymentLabel ??
     invoicePaymentModeLabel(data.paymentMethod, PAYMENT_METHOD_LABELS[data.paymentMethod]);

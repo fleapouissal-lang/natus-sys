@@ -31,7 +31,7 @@ function lineUnitHt(unitPriceTtc: number): number {
 }
 
 function buildInvoiceBody(data: SaleDocumentData): string {
-  const invoiceNo = saleDocumentNumber(data.saleId);
+  const invoiceNo = saleDocumentNumber(data.saleId, data.invoiceNumber);
   const { ht, tva, ttc } = computeTvaBreakdown(data.total);
   const tvaPercent = Math.round(TVA_RATE * 100);
   const clientName = escapeHtml(data.customerName?.trim() || INVOICE_CLIENT_DIVERS);
@@ -623,7 +623,7 @@ const INVOICE_DOC_STYLES = `
     ${PRINT_A4_MEDIA_CSS}`;
 
 export function buildInvoiceHtml(data: SaleDocumentData): string {
-  const invoiceNo = saleDocumentNumber(data.saleId);
+  const invoiceNo = saleDocumentNumber(data.saleId, data.invoiceNumber);
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -700,7 +700,7 @@ export function printInvoiceHtml(data: SaleDocumentData): void {
 }
 
 export function downloadInvoiceHtml(data: SaleDocumentData): void {
-  const invoiceNo = saleDocumentNumber(data.saleId);
+  const invoiceNo = saleDocumentNumber(data.saleId, data.invoiceNumber);
   downloadHtmlFile(buildInvoiceHtml(data), `facture-${invoiceNo}.html`);
 }
 

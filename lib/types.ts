@@ -122,6 +122,7 @@ export interface Sale {
   cancelled_by: string | null;
   invoice_validated_at: string | null;
   invoice_validated_by: string | null;
+  invoice_number: number | null;
   business_date?: string;
   created_at: string;
   profiles?: Pick<Profile, "full_name" | "email">;

@@ -13,15 +13,12 @@ import {
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { DayClosureTicket } from "@/components/pos/day-closure-ticket";
-import { CashierSalesReport } from "@/components/sales/cashier-sales-report";
 import { createClient } from "@/lib/supabase/client";
-import { formatSalesReportPeriodLabel } from "@/lib/sales/cashier-report";
 import { fetchCashierSales, fetchStoreSales } from "@/lib/sales/fetch-cashier-sales";
 import {
   computeDayClosureStats,
   filterSalesForDateKey,
   formatDayClosureDate,
-  printDayClosureReport,
   printDayClosureTicket,
   uniqueCashierLabels,
 } from "@/lib/sales/day-closure";
@@ -265,7 +262,7 @@ export function PosDayClosureModal({
       setPrintUnlocked(false);
       setBusinessDate(result.businessDate);
       setClosureMessage(
-        "Demande envoyée au gérant. Demandez le code au gérant pour débloquer l'impression du rapport."
+        "Demande envoyée au gérant. Demandez le code au gérant pour débloquer l'impression du ticket."
       );
     });
   }
@@ -284,7 +281,7 @@ export function PosDayClosureModal({
       setPrintUnlocked(true);
       setPendingClosure(true);
       setCodeInput("");
-      setClosureMessage("Code accepté. Vous pouvez imprimer le rapport du jour.");
+      setClosureMessage("Code accepté. Vous pouvez imprimer le ticket du jour.");
       await refreshClosureState();
     });
   }
@@ -302,7 +299,7 @@ export function PosDayClosureModal({
               </span>
               <div>
                 <h2 className="font-heading text-xl font-semibold text-primary-dark">
-                  Rapport du jour
+                  Clôture du jour
                 </h2>
                 <p className="mt-0.5 text-sm capitalize text-muted">
                   {dateKey ? formatDayClosureDate(dateKey) : "Chargement…"}
@@ -380,7 +377,7 @@ export function PosDayClosureModal({
                       </div>
                       <p className="mt-2 text-sm text-muted">
                         Le gérant a reçu un code valide 2 h. Saisissez-le ici pour débloquer
-                        l&apos;impression du rapport.
+                        l&apos;impression du ticket.
                       </p>
                       <input
                         inputMode="numeric"
@@ -411,8 +408,8 @@ export function PosDayClosureModal({
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-success/35 bg-success/10 px-4 py-3">
                   <p className="text-sm font-medium text-success">
                     {requireManagerCode
-                      ? "Code confirmé — ticket et rapport prêts à imprimer."
-                      : "Clôture validée — ticket et rapport prêts à imprimer."}
+                      ? "Code confirmé — ticket prêt à imprimer."
+                      : "Clôture validée — ticket prêt à imprimer."}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -423,15 +420,6 @@ export function PosDayClosureModal({
                     >
                       <Printer className="h-4 w-4" />
                       Imprimer le ticket
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={printDayClosureReport}
-                      disabled={loading || !!error}
-                    >
-                      <Printer className="h-4 w-4" />
-                      Imprimer le rapport
                     </Button>
                   </div>
                 </div>
@@ -502,25 +490,6 @@ export function PosDayClosureModal({
                     printId={null}
                   />
                 </div>
-                <div className="overflow-x-auto border border-primary/15 bg-white p-2 print:hidden">
-                  <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                    Aperçu rapport — toutes les ventes du jour
-                  </p>
-                  <CashierSalesReport
-                    sales={daySales}
-                    stats={stats}
-                    dateFrom={dateKey}
-                    dateTo={dateKey}
-                    periodLabel={formatSalesReportPeriodLabel(
-                      dateKey,
-                      dateKey,
-                      formatDayClosureDate(dateKey)
-                    )}
-                    cashierName={closureCashierLabel}
-                    variant="day-closure"
-                    printId={null}
-                  />
-                </div>
               </div>
             </>
           )}
@@ -529,26 +498,15 @@ export function PosDayClosureModal({
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4">
           <div className="flex flex-wrap gap-2">
             {printUnlocked && (
-              <>
-                <Button
-                  type="button"
-                  onClick={printDayClosureTicket}
-                  disabled={loading || !!error}
-                  className="bg-champagne text-black hover:opacity-90"
-                >
-                  <Printer className="h-4 w-4" />
-                  Imprimer le ticket
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={printDayClosureReport}
-                  disabled={loading || !!error}
-                >
-                  <Printer className="h-4 w-4" />
-                  Imprimer le rapport
-                </Button>
-              </>
+              <Button
+                type="button"
+                onClick={printDayClosureTicket}
+                disabled={loading || !!error}
+                className="bg-champagne text-black hover:opacity-90"
+              >
+                <Printer className="h-4 w-4" />
+                Imprimer le ticket
+              </Button>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -582,35 +540,16 @@ export function PosDayClosureModal({
         dateKey &&
         printUnlocked &&
         createPortal(
-          <>
-            <div className="natus-day-closure-print-only" aria-hidden>
-              <DayClosureTicket
-                key={`ticket|${dateKey}|${daySales.length}`}
-                sales={daySales}
-                stats={stats}
-                dateKey={dateKey}
-                storeName={storeName}
-                cashierLabel={closureCashierLabel}
-              />
-            </div>
-            <div className="natus-sales-report-print-only" aria-hidden>
-              <CashierSalesReport
-                key={`report|${dateKey}|${daySales.length}`}
-                sales={daySales}
-                stats={stats}
-                dateFrom={dateKey}
-                dateTo={dateKey}
-                periodLabel={formatSalesReportPeriodLabel(
-                  dateKey,
-                  dateKey,
-                  formatDayClosureDate(dateKey)
-                )}
-                cashierName={closureCashierLabel}
-                variant="day-closure"
-                printId="cashier-sales-report-print"
-              />
-            </div>
-          </>,
+          <div className="natus-day-closure-print-only" aria-hidden>
+            <DayClosureTicket
+              key={`ticket|${dateKey}|${daySales.length}`}
+              sales={daySales}
+              stats={stats}
+              dateKey={dateKey}
+              storeName={storeName}
+              cashierLabel={closureCashierLabel}
+            />
+          </div>,
           document.body
         )}
     </>

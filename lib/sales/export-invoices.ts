@@ -45,7 +45,7 @@ export function downloadInvoicesCsv(
 
   const rows = sales.map((sale) => {
     const cells = [
-      saleDocumentNumber(sale.id),
+      saleDocumentNumber(sale.id, sale.invoice_number),
       formatDate(sale.created_at),
       invoiceTypeLabel(sale),
       saleInvoiceCustomerName(sale),
