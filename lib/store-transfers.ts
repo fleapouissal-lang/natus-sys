@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { enrichTransferLivreurNames } from "@/lib/transfer-livreur-assignment";
-import { SOURCE_ORDER_HISTORY_LIMIT } from "@/lib/stock-transfers/source-order-history";
+import { TRANSFER_LIST_EXTENDED_LIMIT } from "@/lib/stock-transfers/source-order-history";
 import type { StoreStockTransfer } from "@/lib/types";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
@@ -185,17 +185,6 @@ export async function getStoreStockTransfers(options: {
   return finalizeStoreTransfers(transfers);
 }
 
-/** Journal permanent — commandes envoyées depuis des magasins sources. */
-export async function getSourceOrderHistoryStoreTransfers(
-  fromStoreIds: string[]
-): Promise<StoreStockTransfer[]> {
-  if (fromStoreIds.length === 0) return [];
-  return getStoreStockTransfers({
-    fromStoreIds,
-    limit: SOURCE_ORDER_HISTORY_LIMIT,
-  });
-}
-
 /** Commandes inter-magasins envoyées par des magasins sources (lecture dépôt). */
 export async function getOutgoingStoreStockTransfers(
   fromStoreIds: string[]
@@ -205,7 +194,7 @@ export async function getOutgoingStoreStockTransfers(
 }
 
 export async function getDirectorStoreStockTransfers(): Promise<StoreStockTransfer[]> {
-  return getStoreStockTransfers({ limit: SOURCE_ORDER_HISTORY_LIMIT });
+  return getStoreStockTransfers({ limit: TRANSFER_LIST_EXTENDED_LIMIT });
 }
 
 export function filterInterStoreOutgoingTransfers(

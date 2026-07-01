@@ -94,9 +94,7 @@ export function SentTransfersUnifiedView({
         variant={
           workflowSplit === "pending-attente" || workflowSplit === "pending-cours" || workflowSplit === "pending"
             ? "pending"
-            : workflowSplit === "history"
-              ? "sent"
-              : "sent"
+            : "sent"
         }
         preserveTab={
           workflowSplit === "sent" ||

@@ -250,7 +250,7 @@ export function CashierRestockManager({
     setAddedIds([]);
     setNotes("");
     setSuccess(
-      `Commande créée depuis ${result.sourceName || "la source"} — visible en « Stocks envoyés » côté source et « Stocks reçus » dans votre magasin.`
+      `Commande créée depuis ${result.sourceName || "la source"} — en attente de préparation côté source. Visible dans Stocks reçus après expédition.`
     );
     router.refresh();
   }
@@ -515,7 +515,8 @@ export function CashierRestockManager({
           title="Confirmer la commande"
           description={`Vérifiez les produits avant de commander du stock pour ${storeName}.`}
           actionLabel="Commande"
-          processDescription="La source prépare la commande. Vous validerez la réception à l'arrivée du stock."
+          processDescription="La commande est créée en attente côté source. Après préparation et expédition, vous validerez la réception à l'arrivée du stock."
+          initialStatus="en_attente"
           sourceStockLabel={selectedSource.is_hub ? "Stock entrepôt" : "Stock magasin"}
           confirmLabel="Confirmer la commande"
         />

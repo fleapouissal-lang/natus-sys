@@ -11,27 +11,8 @@ import { listStoreDayClosures } from "@/lib/sales/store-day-closure-actions";
 import { getPosClosureSettings } from "@/lib/sales/pos-closure-settings.server";
 import { SALE_HISTORY_SELECT } from "@/lib/sales/sale-select";
 import { resolveEffectivePageKeys } from "@/lib/user-page-access";
-import { getManagerOutgoingHubTransfers } from "@/lib/hub-transfers";
-import { getSourceOrderHistoryStoreTransfers } from "@/lib/store-transfers";
-import { SOURCE_ORDER_HISTORY_LIMIT } from "@/lib/stock-transfers/source-order-history";
-import { buildManagerSourceHistoryGroups } from "@/lib/stock-transfers/build-source-history-groups";
-import {
-  getAllActiveTransferSites,
-  getTransferLivreurs,
-} from "@/lib/transfer-sites.server";
-import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
-import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
-import { getProductCatalog } from "@/lib/inventory";
-import type { Sale, Store } from "@/lib/types";
+import type { Sale } from "@/lib/types";
 import type { StoreDayClosureReportRow } from "@/lib/sales/store-day-closure";
-
-function collectTransferLivreurCities(sourceStores: Store[], hubStores: Store[]) {
-  return [
-    ...new Set(
-      [...sourceStores, ...hubStores].map((store) => store.city).filter(Boolean)
-    ),
-  ] as string[];
-}
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +56,7 @@ export default async function ManagerHistoryPage() {
   const showStoreColumn = stores.length > 1;
   const historyBounds = getManagerSalesHistoryDateBounds();
 
-  const [activities, salesResult, closuresResult, closureSettings, transferData] =
+  const [activities, salesResult, closuresResult, closureSettings] =
     await Promise.all([
     showActivityTab && storeIds.length > 0
       ? getActivityLog(storeIds, 200)
@@ -94,39 +75,6 @@ export default async function ManagerHistoryPage() {
     })(),
     showClosuresTab ? listStoreDayClosures() : Promise.resolve({ closures: [] as StoreDayClosureReportRow[] }),
     showClosuresTab ? getPosClosureSettings() : Promise.resolve({ requireManagerCode: true }),
-    (async () => {
-      if (!showActivityTab || storeIds.length === 0) return null;
-      const sitesAll = await getAllActiveTransferSites();
-      const destinationSites = sitesAll.filter((site) => site.is_active);
-      const hubStores = sitesAll.filter((site) => site.is_active && site.is_hub);
-      const filter = resolveSentTransfersListScope(profile, stores, {}, {
-        restrictSourceToScopedStores: true,
-      });
-      const [storeTransfers, hubOutgoingTransfers, livreurs, catalogProducts] =
-        await Promise.all([
-          getSourceOrderHistoryStoreTransfers(storeIds),
-          getManagerOutgoingHubTransfers(storeIds, SOURCE_ORDER_HISTORY_LIMIT),
-          getTransferLivreurs(collectTransferLivreurCities(stores, hubStores)),
-          getProductCatalog(),
-        ]);
-      return {
-        filter,
-        groups: buildManagerSourceHistoryGroups(
-          storeTransfers,
-          hubOutgoingTransfers,
-          storeIds
-        ),
-        locationConfig: {
-          sourceSites: stores,
-          destinationSites,
-          strictSourceOptions: true,
-          strictDestinationOptions: true,
-        },
-        productLookup: buildReceivedTransferProductLookup(catalogProducts),
-        managedStoreIds: storeIds,
-        livreurs,
-      };
-    })(),
   ]);
 
   const closures =
@@ -145,7 +93,7 @@ export default async function ManagerHistoryPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Historique</h1>
         <p className="mt-1 text-muted">
-          Historique des commandes envoyées, ventes et clôtures — {scopeLabel.toLowerCase()}
+          Activité, ventes et clôtures — {scopeLabel.toLowerCase()}
         </p>
       </div>
 
@@ -165,13 +113,6 @@ export default async function ManagerHistoryPage() {
           showSalesTab={showSalesTab}
           showClosuresTab={showClosuresTab}
           closureSettingsHint={closureSettingsHint}
-          transferFilter={transferData?.filter}
-          transferGroups={transferData?.groups}
-          transferLocationConfig={transferData?.locationConfig}
-          transferProductLookup={transferData?.productLookup}
-          transferManagedStoreIds={transferData?.managedStoreIds}
-          transferLivreurs={transferData?.livreurs}
-          transferScopeLabel={scopeLabel}
         />
       )}
     </div>

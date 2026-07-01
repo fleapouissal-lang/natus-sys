@@ -71,6 +71,7 @@ export async function submitCashierRestockOrder(
   }
 
   revalidatePath("/cashier/commander");
+  revalidatePath("/cashier/orders");
   revalidatePath("/cashier/transfers/received");
   revalidatePath("/cashier/transfers/sent");
   revalidatePath("/cashier/pos");

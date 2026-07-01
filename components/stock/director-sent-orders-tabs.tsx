@@ -4,7 +4,6 @@ import { Suspense, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { DirectorStockTransferManager } from "@/components/stock/director-stock-transfer-manager";
 import { SentTransfersUnifiedView } from "@/components/stock/sent-transfers-unified-view";
-import { SourceOrderHistoryView } from "@/components/stock/source-order-history-view";
 import { cn } from "@/lib/utils";
 import {
   resolveSentOrdersTab,
@@ -39,7 +38,6 @@ function DirectorSentOrdersTabsInner({
   filter,
   productLookup,
   successMessage,
-  historyGroups,
 }: {
   retailStores: StoreType[];
   hubStores: StoreType[];
@@ -59,12 +57,6 @@ function DirectorSentOrdersTabsInner({
   filter: ReceivedTransfersFilterScope;
   productLookup?: ReceivedTransferProductLookup;
   successMessage?: string;
-  historyGroups?: {
-    kind: "store" | "hub" | "mixed";
-    typeLabel: string;
-    storeTransfers?: StoreStockTransfer[];
-    hubTransfers?: HubStockTransfer[];
-  }[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -157,21 +149,10 @@ function DirectorSentOrdersTabsInner({
           productLookup={productLookup}
           managedStoreIds={retailStoreIds}
           livreurs={livreurs}
+          workflowSplit="sent-source"
           storeActionMode="none"
           hubReadOnly
-          emptyMessage="Aucun transfert envoyé en cours"
-        />
-      )}
-
-      {activeTab === "history" && (
-        <SourceOrderHistoryView
-          filter={filter}
-          groups={historyGroups ?? groups}
-          locationConfig={locationConfig}
-          productLookup={productLookup}
-          managedStoreIds={retailStoreIds}
-          livreurs={livreurs}
-          scopeLabel="réseau complet"
+          emptyMessage="Aucune commande envoyée (hors « En attente » et « Reçu »)"
         />
       )}
     </div>
@@ -197,12 +178,6 @@ export function DirectorSentOrdersTabs(props: {
   filter: ReceivedTransfersFilterScope;
   productLookup?: ReceivedTransferProductLookup;
   successMessage?: string;
-  historyGroups?: {
-    kind: "store" | "hub" | "mixed";
-    typeLabel: string;
-    storeTransfers?: StoreStockTransfer[];
-    hubTransfers?: HubStockTransfer[];
-  }[];
 }) {
   return (
     <Suspense fallback={null}>

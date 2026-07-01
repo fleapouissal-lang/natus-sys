@@ -24,6 +24,7 @@ export default async function CashierOrdersPage({
     listDest?: string;
     sentFrom?: string;
     sentTo?: string;
+    created?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -93,6 +94,11 @@ export default async function CashierOrdersPage({
           Commandes « En attente » depuis {storeName}. Préparez via l&apos;icône dédiée : transfert
           prérempli (produits, quantités, remarques), puis « En cours » à la confirmation.
         </p>
+        {params.created === "1" && (
+          <p className="mt-2 text-sm text-success">
+            Commande créée — elle apparaît ici en statut « En attente ». Préparez-la pour passer en « En cours ».
+          </p>
+        )}
       </div>
 
       <Suspense fallback={null}>

@@ -81,7 +81,7 @@ export default async function HubOrdersPage({
         </p>
         {params.created === "1" && (
           <p className="mt-2 text-sm text-success">
-            Commande préparée — elle apparaît dans Stock envoyé en statut « En cours ».
+            Commande créée — elle apparaît ici en statut « En attente ». Préparez-la pour passer en « En cours ».
           </p>
         )}
       </div>

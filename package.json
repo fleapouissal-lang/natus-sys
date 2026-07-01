@@ -27,6 +27,7 @@
     "reset:orders": "node scripts/reset-orders.mjs",
     "purge:sales-orders": "node scripts/purge-sales-orders-data.mjs",
     "purge:sales-transfers": "node scripts/purge-sales-and-transfers-data.mjs",
+    "purge:transfers": "node scripts/purge-stock-transfer-orders.mjs",
     "seed": "npm run db:migrate && node scripts/seed-users.mjs",
     "seed:users": "npm run db:migrate && node scripts/reset-users.mjs && node scripts/seed-users.mjs && node scripts/backfill-livreur-orders.mjs",
     "seed:orders": "npm run db:migrate && node scripts/reset-orders.mjs && node scripts/seed-shopify-orders.mjs && node scripts/backfill-livreur-orders.mjs",

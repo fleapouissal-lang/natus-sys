@@ -1,6 +1,6 @@
-import { ArrowRightLeft, ClipboardList, PackagePlus } from "lucide-react";
+import { ArrowRightLeft, PackagePlus } from "lucide-react";
 
-export type SentOrdersTabId = "new" | "sent" | "history";
+export type SentOrdersTabId = "new" | "sent";
 
 export const SENT_ORDERS_TAB_CONFIG: {
   id: SentOrdersTabId;
@@ -20,19 +20,12 @@ export const SENT_ORDERS_TAB_CONFIG: {
     shortLabel: "Envoyé",
     icon: ArrowRightLeft,
   },
-  {
-    id: "history",
-    label: "Historique des commandes",
-    shortLabel: "Historique",
-    icon: ClipboardList,
-  },
 ];
 
 export function resolveSentOrdersTab(
   tabParam: string | null,
   legacySentValues: string[] = []
 ): SentOrdersTabId {
-  if (tabParam === "history") return "history";
   if (
     tabParam === "sent" ||
     legacySentValues.includes(tabParam || "")

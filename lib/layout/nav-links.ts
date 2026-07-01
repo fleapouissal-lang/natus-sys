@@ -102,7 +102,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       },
       { href: "/hub/writeoffs", label: "Retour en stock", icon: RotateCcw, mobileOrder: 4 },
       { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 5 },
-      { href: "/hub/activity", label: "Historique des commandes", icon: ClipboardList, mobileOrder: 6 },
+      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 6 },
     ];
   }
 

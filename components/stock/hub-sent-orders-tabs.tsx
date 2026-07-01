@@ -4,7 +4,6 @@ import { Suspense, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { HubWarehouseManager } from "@/components/hub/hub-warehouse-manager";
 import { SentTransfersUnifiedView } from "@/components/stock/sent-transfers-unified-view";
-import { SourceOrderHistoryView } from "@/components/stock/source-order-history-view";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { cn } from "@/lib/utils";
 import {
@@ -42,7 +41,6 @@ function HubSentOrdersTabsInner({
   pendingOrderId,
   initialQuantities,
   initialNotes,
-  historyGroups,
 }: {
   hubStores: Store[];
   selectedHubStoreId: string;
@@ -64,11 +62,6 @@ function HubSentOrdersTabsInner({
   pendingOrderId?: string;
   initialQuantities?: Record<string, string>;
   initialNotes?: string | null;
-  historyGroups?: {
-    kind: "store" | "hub";
-    typeLabel: string;
-    hubTransfers?: HubStockTransfer[];
-  }[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -178,18 +171,6 @@ function HubSentOrdersTabsInner({
           emptyMessage={`Aucun transfert envoyé depuis le dépôt — ${hubStore.name}`}
         />
       )}
-
-      {activeTab === "history" && (
-        <SourceOrderHistoryView
-          filter={filter}
-          groups={historyGroups ?? groups}
-          locationConfig={locationConfig}
-          productLookup={productLookup}
-          managedStoreIds={scopeHubIds}
-          livreurs={livreurs}
-          scopeLabel={hubStore.name}
-        />
-      )}
     </div>
   );
 }
@@ -215,11 +196,6 @@ export function HubSentOrdersTabs(props: {
   pendingOrderId?: string;
   initialQuantities?: Record<string, string>;
   initialNotes?: string | null;
-  historyGroups?: {
-    kind: "store" | "hub";
-    typeLabel: string;
-    hubTransfers?: HubStockTransfer[];
-  }[];
 }) {
   return (
     <Suspense fallback={null}>

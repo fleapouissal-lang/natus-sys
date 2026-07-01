@@ -5,8 +5,7 @@ export type TransferWorkflowSplit =
   | "pending-cours"
   | "sent"
   | "sent-source"
-  | "sent-no-pending"
-  | "history";
+  | "sent-no-pending";
 
 /** @deprecated Utiliser pending-attente ou pending-cours */
 export type TransferWorkflowSplitLegacy = "pending";
@@ -45,11 +44,6 @@ export function isTransferSentNoPendingWorkflow(status: TransferStatus): boolean
   return status !== "en_attente" && status !== "en_cours";
 }
 
-/** Historique compte source : journal permanent (hors commandes encore « En attente »). */
-export function isTransferSourceHistoryWorkflow(status: TransferStatus): boolean {
-  return status !== "en_attente";
-}
-
 export function filterTransfersByWorkflowSplit<T extends { status: TransferStatus }>(
   transfers: T[],
   split: TransferWorkflowSplit | "pending"
@@ -59,7 +53,6 @@ export function filterTransfersByWorkflowSplit<T extends { status: TransferStatu
       return isTransferAwaitingConfirmation(transfer.status);
     }
     if (split === "pending-cours") return isTransferPendingPreparation(transfer.status);
-    if (split === "history") return isTransferSourceHistoryWorkflow(transfer.status);
     if (split === "sent-source") return isTransferSentSourceWorkflow(transfer.status);
     if (split === "sent-no-pending") return isTransferSentNoPendingWorkflow(transfer.status);
     return isTransferSentStockWorkflow(transfer.status);

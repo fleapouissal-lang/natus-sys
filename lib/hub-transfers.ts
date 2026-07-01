@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { enrichTransferLivreurNames } from "@/lib/transfer-livreur-assignment";
-import { SOURCE_ORDER_HISTORY_LIMIT } from "@/lib/stock-transfers/source-order-history";
+import { TRANSFER_LIST_EXTENDED_LIMIT } from "@/lib/stock-transfers/source-order-history";
 import type { HubStockTransfer } from "@/lib/types";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
@@ -386,7 +386,7 @@ export async function getManagerOutgoingHubTransfers(
 
 /** Tous les transferts hub visibles par le directeur. */
 export async function getDirectorHubStockTransfers(): Promise<HubStockTransfer[]> {
-  return getHubStockTransfers({ limit: SOURCE_ORDER_HISTORY_LIMIT });
+  return getHubStockTransfers({ limit: TRANSFER_LIST_EXTENDED_LIMIT });
 }
 
 export function filterHubToHubTransfers(transfers: HubStockTransfer[]): HubStockTransfer[] {
@@ -401,26 +401,6 @@ export function filterHubStoreMixedTransfers(transfers: HubStockTransfer[]): Hub
       (transfer.from_store_is_hub && !transfer.to_store_is_hub) ||
       (!transfer.from_store_is_hub && transfer.to_store_is_hub)
   );
-}
-
-/** Transferts magasin → dépôt envoyés par un magasin source (journal). */
-export async function getSourceOrderHistoryStoreToHubTransfers(
-  fromStoreId: string
-): Promise<HubStockTransfer[]> {
-  if (!fromStoreId) return [];
-  return getHubStockTransfers({ fromStoreId, limit: SOURCE_ORDER_HISTORY_LIMIT });
-}
-
-/** Journal permanent — commandes envoyées depuis des dépôts hub. */
-export async function getSourceOrderHistoryHubTransfers(
-  hubStoreIds: string[]
-): Promise<HubStockTransfer[]> {
-  if (hubStoreIds.length === 0) return [];
-  const transfers = await getHubStockTransfers({
-    fromStoreIds: hubStoreIds,
-    limit: SOURCE_ORDER_HISTORY_LIMIT,
-  });
-  return transfers.filter((transfer) => transfer.from_store_is_hub);
 }
 
 /** Transferts dépôt → magasins / dépôts (envois depuis le hub). */

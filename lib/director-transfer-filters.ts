@@ -2,16 +2,9 @@ import type { HubStockTransfer, HubStockTransferStatus, StoreStockTransfer, Stor
 
 type TransferStatus = HubStockTransferStatus | StoreStockTransferStatus;
 
-const DIRECTOR_SENT_STATUSES = new Set<TransferStatus>([
-  "pret",
-  "en_livraison",
-  "livre",
-  "sent",
-]);
-
-/** Directeur — stocks envoyés : prêt → livré (hub : + sent), hors en cours et reçu. */
+/** Directeur — stocks envoyés : tout sauf « En attente » et « Reçu » (inclut « En cours »). */
 export function isDirectorTransferSentStatus(status: TransferStatus): boolean {
-  return DIRECTOR_SENT_STATUSES.has(status);
+  return status !== "received" && status !== "en_attente";
 }
 
 /** Directeur — stocks reçus : uniquement les transferts clôturés (reçu). */

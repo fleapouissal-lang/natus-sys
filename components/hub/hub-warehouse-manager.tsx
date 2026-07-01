@@ -285,7 +285,7 @@ export function HubWarehouseManager({
     } else if (pendingOrderId) {
       router.push("/hub/stock-transfers?tab=sent");
     } else {
-      router.push("/hub/stock-transfers?tab=sent&created=1");
+      router.push("/hub/orders?created=1");
     }
     router.refresh();
   }
@@ -605,14 +605,14 @@ export function HubWarehouseManager({
           description={
             pendingOrderId
               ? "Vérifiez les produits avant de confirmer la préparation. Le stock dépôt sera déduit et la commande passera en « En cours »."
-              : "Vérifiez les produits avant de créer l'envoi. Le stock dépôt sera déduit à la confirmation."
+              : "Vérifiez les produits avant de créer la commande. Le stock dépôt ne sera pas déduit tant qu'elle n'aura pas été préparée depuis Mes commandes."
           }
           processDescription={
             pendingOrderId
               ? "Après confirmation, la commande disparaît de Mes commandes et apparaît dans Stock envoyé."
-              : "Le transfert sera créé en « En cours » et apparaîtra dans Stock envoyé."
+              : "La commande sera créée en « En attente » et apparaîtra dans Mes commandes pour préparation."
           }
-          initialStatus={pendingOrderId ? null : "en_cours"}
+          initialStatus={pendingOrderId ? null : "en_attente"}
           confirmLabel={pendingOrderId ? "Confirmer la préparation" : "Confirmer l'envoi"}
         />
       )}

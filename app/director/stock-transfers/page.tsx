@@ -17,7 +17,6 @@ import {
 import {
   getDirectorStoreStockTransfers,
 } from "@/lib/store-transfers";
-import { buildDirectorSourceHistoryGroups } from "@/lib/stock-transfers/build-source-history-groups";
 import { DirectorSentOrdersTabs } from "@/components/stock/director-sent-orders-tabs";
 import { getProductCatalog } from "@/lib/inventory";
 import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
@@ -146,13 +145,6 @@ export default async function DirectorStockTransfersPage({
     )
   );
 
-  const historyGroups = buildDirectorSourceHistoryGroups(
-    storeTransfers,
-    hubTransfers,
-    retailStoreIds,
-    hubStoreIds
-  );
-
   const successMessage =
     params.created === "1"
       ? "Transfert créé avec succès — consultez l'onglet « Stock envoyé »."
@@ -165,7 +157,8 @@ export default async function DirectorStockTransfersPage({
           Stocks envoyés
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Transferts prêts, en livraison ou livrés — magasins et dépôts hub
+          Toutes les commandes en préparation, prêtes, en livraison ou livrées — hors « En attente »
+          et « Reçu » — magasins et dépôts hub
         </p>
       </div>
 
@@ -189,7 +182,6 @@ export default async function DirectorStockTransfersPage({
           filter={filter}
           productLookup={productLookup}
           successMessage={successMessage}
-          historyGroups={historyGroups}
         />
       </Suspense>
     </div>

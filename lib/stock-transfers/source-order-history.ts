@@ -1,20 +1,8 @@
-import type { HubStockTransferStatus, StoreStockTransferStatus } from "@/lib/types";
-
-/** Limite élevée pour le journal permanent des commandes source. */
-export const SOURCE_ORDER_HISTORY_LIMIT = 500;
+/** Limite élevée pour les listes de transferts étendues. */
+export const TRANSFER_LIST_EXTENDED_LIMIT = 500;
 
 export function formatTransferOrderNumber(transferId: string): string {
   return transferId.replace(/-/g, "").slice(0, 8).toUpperCase();
-}
-
-type SourceOrderStatus = HubStockTransferStatus | StoreStockTransferStatus | string;
-
-/**
- * Journal permanent compte source : toute commande envoyée (hors « En attente »).
- * Inclut en cours, prêt, livré, reçu, etc.
- */
-export function isTransferSourceOrderHistory(status: SourceOrderStatus): boolean {
-  return status !== "en_attente";
 }
 
 export type TransferStatusTimelineStep = {
