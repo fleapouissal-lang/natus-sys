@@ -82,25 +82,23 @@ export async function uploadProductImage(
     return { error: "Catégorie invalide pour le stockage" };
   }
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return { error: "Format d'image non supporté (JPG, PNG, WebP, GIF)" };
-  }
+  const resolved = resolveImageFileType(file);
+  if ("error" in resolved) return { error: resolved.error };
 
   if (file.size > MAX_SIZE) {
     return { error: "Image trop volumineuse (max 5 Mo)" };
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
   const safeName = sanitizeFileName(fileBaseName);
   const usesLegacyBucket = isKnownProductCategoryBucket(category);
   const bucket = usesLegacyBucket ? getCategoryBucketSlug(category) : POS_CATEGORY_CARDS_BUCKET;
   const path = usesLegacyBucket
-    ? `${safeName}.${ext}`
-    : `${getCategoryBucketSlug(category)}/products/${safeName}.${ext}`;
+    ? `${safeName}.${resolved.ext}`
+    : `${getCategoryBucketSlug(category)}/products/${safeName}.${resolved.ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const { error } = await supabase.storage.from(bucket).upload(path, buffer, {
-    contentType: file.type,
+    contentType: resolved.contentType,
     upsert: true,
   });
 

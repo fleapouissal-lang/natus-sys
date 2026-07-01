@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Plus,
   Pencil,
@@ -230,8 +230,11 @@ export function ProductsManager({
   assignableCategories?: readonly string[];
 }) {
   const router = useRouter();
-  const [showForm, setShowForm] = useState(false);
-  const [formBarcode, setFormBarcode] = useState("");
+  const pathname = usePathname();
+  const basePath = pathname.replace(/\/products\/?$/, "");
+  const newProductHref = defaultStoreId
+    ? `${basePath}/products/new?store=${defaultStoreId}`
+    : `${basePath}/products/new`;
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [variantParent, setVariantParent] = useState<Product | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -267,7 +270,6 @@ export function ProductsManager({
   }, [products]);
 
   const modalOpen =
-    showForm ||
     !!editingProduct ||
     !!variantParent ||
     (!!selectedProduct && !scannedPreview) ||
@@ -516,7 +518,6 @@ export function ProductsManager({
 
   function handleExistingProductFound(found: Product) {
     setDuplicatePreview(found);
-    setShowForm(false);
     setVariantParent(null);
     setScannedPreview(found);
     setScanQuery("");
@@ -703,13 +704,7 @@ export function ProductsManager({
                 : `${filteredProducts.length} sur ${products.length} produit(s)`
             }
             action={
-              <Button
-                onClick={() => {
-                  setFormBarcode("");
-                  setDuplicatePreview(null);
-                  setShowForm(true);
-                }}
-              >
+              <Button onClick={() => router.push(newProductHref)}>
                 <Plus className="h-4 w-4" />
                 Ajouter
               </Button>
@@ -780,21 +775,6 @@ export function ProductsManager({
         )}
       </Card>
 
-      {showForm && (
-        <ProductForm
-          stores={allStores}
-          existingProducts={products}
-          initialBarcode={formBarcode}
-          canEditBarcode={canEditBarcode}
-          assignableCategories={assignableCategories}
-          onClose={() => setShowForm(false)}
-          onExistingProduct={handleExistingProductFound}
-          onCreatedParent={(parent) => {
-            setVariantParent(parent);
-            router.refresh();
-          }}
-        />
-      )}
       {editingProduct && (
         <ProductForm
           product={editingProduct}

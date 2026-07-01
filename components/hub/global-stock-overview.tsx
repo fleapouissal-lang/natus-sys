@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { ProductImage } from "@/components/pos/product-image";
+import { ProductLocationBreakdown } from "@/components/stock/product-location-breakdown";
 import { categoryOptions, productPickOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
 import { formatCurrency } from "@/lib/utils";
@@ -127,6 +128,13 @@ export function GlobalStockOverview({
 
   const hasFilters = Boolean(search || category || selectedProductId);
   const showSiteBreakdown = Boolean(selectedProductId && selectedProduct);
+  // Recherche libre → répartition par site pour chaque produit correspondant.
+  const showSearchBreakdown =
+    !showSiteBreakdown &&
+    Boolean(search.trim()) &&
+    Boolean(stockByProductAndStore) &&
+    sortedStores.length > 0;
+  const SEARCH_BREAKDOWN_MAX = 20;
 
   const retailCount = retailStoreCount ?? storeCount;
   const depotCount = hubStoreCount;
@@ -329,6 +337,41 @@ export function GlobalStockOverview({
           <p className="px-6 py-12 text-center text-sm text-muted">
             Aucun produit ne correspond à votre recherche
           </p>
+        ) : showSearchBreakdown ? (
+          <div className="space-y-6 p-6">
+            <p className="text-sm text-muted">
+              Répartition du stock par site pour votre recherche.
+            </p>
+            {filteredProducts.slice(0, SEARCH_BREAKDOWN_MAX).map((product) => (
+              <div key={product.id} className="space-y-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{product.name}</p>
+                    <p className="font-mono text-xs text-muted">
+                      {product.barcode || "—"}
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted">
+                    Stock total réseau :{" "}
+                    <span className="font-semibold text-foreground">{product.stock}</span>
+                  </p>
+                </div>
+                <ProductLocationBreakdown
+                  productId={product.id}
+                  stores={sortedStores}
+                  stockByProductAndStore={stockByProductAndStore!}
+                />
+              </div>
+            ))}
+            {filteredProducts.length > SEARCH_BREAKDOWN_MAX && (
+              <p className="text-center text-xs text-muted">
+                {filteredProducts.length - SEARCH_BREAKDOWN_MAX} autre
+                {filteredProducts.length - SEARCH_BREAKDOWN_MAX !== 1 ? "s" : ""} produit
+                {filteredProducts.length - SEARCH_BREAKDOWN_MAX !== 1 ? "s" : ""} — affinez la
+                recherche pour l&apos;afficher.
+              </p>
+            )}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -389,7 +432,7 @@ export function GlobalStockOverview({
             </table>
           </div>
         )}
-        {!showSiteBreakdown && filteredProducts.length > 0 && (
+        {!showSiteBreakdown && !showSearchBreakdown && filteredProducts.length > 0 && (
           <PaginationBar
             page={page}
             totalPages={totalPages}

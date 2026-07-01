@@ -90,10 +90,16 @@ const nextBin =
     ? resolve(root, "node_modules/next/dist/bin/next")
     : resolve(root, "node_modules/.bin/next");
 
+// Agrandit le tas Node pour éviter les crashs OOM du serveur dev (fuite Turbopack).
+const existingNodeOptions = process.env.NODE_OPTIONS ?? "";
+const nodeOptions = existingNodeOptions.includes("--max-old-space-size")
+  ? existingNodeOptions
+  : `${existingNodeOptions} --max-old-space-size=12288`.trim();
+
 const dev = spawnSync(process.execPath, [nextBin, "dev", "-p", port], {
   cwd: root,
   stdio: "inherit",
-  env: { ...process.env, PORT: port },
+  env: { ...process.env, PORT: port, NODE_OPTIONS: nodeOptions },
 });
 
 process.exit(dev.status ?? 1);

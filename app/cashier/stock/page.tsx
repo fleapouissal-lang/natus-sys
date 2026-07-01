@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
-import { getActiveStores, getProductsWithStoreStock } from "@/lib/inventory";
+import {
+  getActiveStores,
+  getProductsWithStoreStock,
+  getStockMatrixByStore,
+} from "@/lib/inventory";
 import { resolveSelectedStoreId } from "@/lib/management-store";
 import { StockManager } from "@/components/stock/stock-manager";
 
@@ -22,9 +26,10 @@ export default async function CashierStockPage({
     storeParam ?? profile.store_id
   );
 
-  const products = defaultStoreId
-    ? await getProductsWithStoreStock(defaultStoreId)
-    : [];
+  const [products, stockByProductAndStore] = await Promise.all([
+    defaultStoreId ? getProductsWithStoreStock(defaultStoreId) : Promise.resolve([]),
+    getStockMatrixByStore(stores.map((store) => store.id)),
+  ]);
 
   return (
     <StockManager
@@ -33,6 +38,7 @@ export default async function CashierStockPage({
       defaultStoreId={defaultStoreId}
       canModifyStock={false}
       canEditTotal={false}
+      stockByProductAndStore={stockByProductAndStore}
     />
   );
 }

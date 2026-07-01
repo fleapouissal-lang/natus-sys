@@ -11,6 +11,7 @@ import { StoreStockAllocation } from "@/components/products/store-stock-allocati
 import { ProductInfoCard } from "@/components/products/product-info-card";
 import { ImageUploadInput } from "@/components/ui/image-upload-input";
 import { Modal } from "@/components/ui/modal";
+import { Card } from "@/components/ui/card";
 import { createProduct, updateProduct } from "@/lib/actions";
 import { PRODUCT_BRAND } from "@/lib/constants/products";
 import { getProductCategories } from "@/lib/products/product-utils";
@@ -24,6 +25,7 @@ export function ProductForm({
   initialBarcode = "",
   canEditBarcode = false,
   assignableCategories,
+  layout = "modal",
   onClose,
   onExistingProduct,
   onCreatedParent,
@@ -34,6 +36,7 @@ export function ProductForm({
   initialBarcode?: string;
   canEditBarcode?: boolean;
   assignableCategories?: readonly string[];
+  layout?: "modal" | "page";
   onClose: () => void;
   onExistingProduct?: (product: Product) => void;
   onCreatedParent?: (product: Product) => void;
@@ -137,23 +140,25 @@ export function ProductForm({
     onClose();
   }
 
-  return (
-    <Modal onClose={onClose} size="lg">
+  const title = product
+    ? isVariant
+      ? "Modifier la variante"
+      : isParent
+        ? "Modifier le produit parent"
+        : "Modifier le produit"
+    : isParent
+      ? "Nouveau produit parent"
+      : "Nouveau produit";
+
+  const body = (
+    <>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold">
-          {product
-            ? isVariant
-              ? "Modifier la variante"
-              : isParent
-                ? "Modifier le produit parent"
-                : "Modifier le produit"
-            : isParent
-              ? "Nouveau produit parent"
-              : "Nouveau produit"}
-        </h3>
-        <button onClick={onClose} className="text-muted hover:text-foreground cursor-pointer">
-          <X className="h-5 w-5" />
-        </button>
+        <h3 className="text-lg font-semibold">{title}</h3>
+        {layout === "modal" && (
+          <button onClick={onClose} className="text-muted hover:text-foreground cursor-pointer">
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {isVariant && product?.parent_name && (
@@ -298,6 +303,16 @@ export function ProductForm({
           </Button>
         </div>
       </form>
+    </>
+  );
+
+  if (layout === "page") {
+    return <Card className="mx-auto w-full max-w-2xl">{body}</Card>;
+  }
+
+  return (
+    <Modal onClose={onClose} size="lg">
+      {body}
     </Modal>
   );
 }

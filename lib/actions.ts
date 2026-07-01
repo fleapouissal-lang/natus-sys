@@ -300,6 +300,9 @@ export async function createProduct(formData: FormData) {
     return { error: "Type de produit invalide" };
   }
 
+  const name = ((formData.get("name") as string) || "").trim();
+  if (!name) return { error: "Le nom du produit est obligatoire" };
+
   const supabase = await createClient();
   const categories = await parseAssignableCategoriesFromForm(supabase, formData);
   if (!categories) return { error: "Veuillez sélectionner au moins une catégorie valide" };
@@ -320,7 +323,7 @@ export async function createProduct(formData: FormData) {
     const { data: product, error } = await supabase
       .from("products")
       .insert({
-        name: formData.get("name") as string,
+        name,
         barcode: buildParentBarcode(),
         description: (formData.get("description") as string) || null,
         price: 0,
@@ -341,6 +344,11 @@ export async function createProduct(formData: FormData) {
 
   const barcode = ((formData.get("barcode") as string) || "").trim();
   if (!barcode) return { error: "Code-barres requis" };
+
+  const price = parseFloat((formData.get("price") as string) || "");
+  if (!Number.isFinite(price) || price < 0) {
+    return { error: "Le prix est obligatoire et doit être un nombre positif" };
+  }
 
   const { data: existing } = await supabase
     .from("products")
@@ -373,11 +381,11 @@ export async function createProduct(formData: FormData) {
   const { data: product, error } = await supabase
     .from("products")
     .insert({
-      name: formData.get("name") as string,
+      name,
       product_code: productCode,
       barcode,
       description: (formData.get("description") as string) || null,
-      price: parseFloat(formData.get("price") as string),
+      price,
       stock: 0,
       categories,
       product_kind: "simple",

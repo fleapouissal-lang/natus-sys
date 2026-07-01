@@ -87,6 +87,7 @@ export function ManagementStockView({
           defaultStoreId={selectedStoreId}
           canModifyStock={canModifyStock}
           canEditTotal={canEditTotal}
+          stockByProductAndStore={stockByProductAndStore}
         />
       ) : (
         <GlobalStockOverview

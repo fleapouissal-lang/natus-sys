@@ -38,9 +38,7 @@ export default async function StockPage({
     selectedStoreId
       ? getProductsWithStoreStock(selectedStoreId)
       : getProductsWithTotalStock(city),
-    selectedStoreId
-      ? Promise.resolve(undefined)
-      : getStockMatrixByStore(stores.map((store) => store.id)),
+    getStockMatrixByStore(stores.map((store) => store.id)),
   ]);
 
   const selectedStore = selectedStoreId

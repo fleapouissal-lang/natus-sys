@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
+const ACCEPTED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif"];
 const MAX_SIZE = 5 * 1024 * 1024;
 
 interface ImageUploadInputProps {
@@ -36,8 +37,12 @@ export function ImageUploadInput({
   const displayPreview = previewUrl ?? localPreview;
 
   function validateAndSet(file: File) {
-    if (!ACCEPT.split(",").includes(file.type)) {
-      onError?.("Format non supporté — JPG, PNG ou WebP uniquement");
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    const typeOk = ACCEPT.split(",").includes(file.type);
+    const extOk = ACCEPTED_EXTENSIONS.includes(ext);
+    // Sur certains OS/navigateurs, file.type peut être vide : on retombe sur l'extension.
+    if (!typeOk && !extOk) {
+      onError?.("Format non supporté — JPG, PNG, WebP ou GIF uniquement");
       return;
     }
     if (file.size > MAX_SIZE) {

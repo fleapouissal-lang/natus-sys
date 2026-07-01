@@ -39,10 +39,13 @@ export default async function HubStockPage({
     storeParam ?? hubStores[0]?.id ?? null
   );
 
-  const { getProductsWithStoreStock } = await import("@/lib/inventory");
-  const products = defaultStoreId
-    ? await getProductsWithStoreStock(defaultStoreId)
-    : [];
+  const { getProductsWithStoreStock, getStockMatrixByStore } = await import(
+    "@/lib/inventory"
+  );
+  const [products, stockByProductAndStore] = await Promise.all([
+    defaultStoreId ? getProductsWithStoreStock(defaultStoreId) : Promise.resolve([]),
+    getStockMatrixByStore(stores.map((store) => store.id)),
+  ]);
 
   const selectedStore = stores.find((store) => store.id === defaultStoreId);
   const permissions = await resolveStockPermissions(profile, selectedStore ?? null);
@@ -69,6 +72,7 @@ export default async function HubStockPage({
         canEditTotal={
           selectedStore ? permissions.canEditTotal : canEditStockTotal(profile, selectedStore)
         }
+        stockByProductAndStore={stockByProductAndStore}
       />
     </div>
   );

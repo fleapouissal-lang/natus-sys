@@ -10,6 +10,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { StoreSelect } from "@/components/stores/store-select";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { AddStockCard } from "@/components/stock/add-stock-card";
+import { ProductLocationBreakdown } from "@/components/stock/product-location-breakdown";
 import { useStockAdjustment } from "@/components/stock/stock-adjustment-fields";
 import { useBarcodeScanner } from "@/lib/hooks/use-barcode-scanner";
 import { addStock, registerStoreProductStock, setProductStock } from "@/lib/actions";
@@ -43,6 +44,7 @@ export function StockManager({
   canModifyStock,
   canEditTotal,
   embedded = false,
+  stockByProductAndStore,
 }: {
   stores: Store[];
   products: Product[];
@@ -51,6 +53,7 @@ export function StockManager({
   canModifyStock: boolean;
   canEditTotal: boolean;
   embedded?: boolean;
+  stockByProductAndStore?: Record<string, Record<string, number>>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -347,6 +350,13 @@ export function StockManager({
     totalItems,
   } = usePagination(filteredInventory, INVENTORY_PAGE_SIZE, inventoryFilterToken);
 
+  // Lors d'une recherche, on montre la répartition du produit par site (magasin/dépôt).
+  const showLocationBreakdown =
+    Boolean(inventorySearch.trim()) &&
+    Boolean(stockByProductAndStore) &&
+    stores.length > 1;
+  const BREAKDOWN_MAX = 20;
+
   return (
     <div className={embedded ? "space-y-6" : "space-y-6 animate-fade-in"}>
       {!embedded && (
@@ -517,6 +527,49 @@ export function StockManager({
           <p className="px-6 py-12 text-center text-sm text-muted">
             Aucun produit ne correspond à votre recherche
           </p>
+        ) : showLocationBreakdown ? (
+          <div className="space-y-6 p-4 sm:p-6">
+            <p className="text-sm text-muted">
+              Répartition du stock par site pour votre recherche.
+            </p>
+            {filteredInventory.slice(0, BREAKDOWN_MAX).map((product) => {
+              const networkTotal = stockByProductAndStore
+                ? Object.values(stockByProductAndStore[product.id] ?? {}).reduce(
+                    (sum, qty) => sum + qty,
+                    0
+                  )
+                : product.stock;
+              return (
+                <div key={product.id} className="space-y-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <div>
+                      <p className="font-semibold">{product.name}</p>
+                      <p className="font-mono text-xs text-muted">
+                        {product.barcode || "—"}
+                      </p>
+                    </div>
+                    <p className="text-sm text-muted">
+                      Stock total :{" "}
+                      <span className="font-semibold text-foreground">{networkTotal}</span>
+                    </p>
+                  </div>
+                  <ProductLocationBreakdown
+                    productId={product.id}
+                    stores={stores}
+                    stockByProductAndStore={stockByProductAndStore!}
+                  />
+                </div>
+              );
+            })}
+            {filteredInventory.length > BREAKDOWN_MAX && (
+              <p className="text-center text-xs text-muted">
+                {filteredInventory.length - BREAKDOWN_MAX} autre
+                {filteredInventory.length - BREAKDOWN_MAX !== 1 ? "s" : ""} produit
+                {filteredInventory.length - BREAKDOWN_MAX !== 1 ? "s" : ""} — affinez la
+                recherche pour l&apos;afficher.
+              </p>
+            )}
+          </div>
         ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -557,7 +610,7 @@ export function StockManager({
           </table>
         </div>
         )}
-        {totalItems > 0 && (
+        {!showLocationBreakdown && totalItems > 0 && (
           <PaginationBar
             page={page}
             totalPages={totalPages}

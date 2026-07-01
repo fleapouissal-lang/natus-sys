@@ -17,13 +17,12 @@ export default async function DirectorStockPage({
   const selectedStoreId =
     storeParam && stores.some((store) => store.id === storeParam) ? storeParam : null;
 
-  const products = selectedStoreId
-    ? await getProductsWithStoreStock(selectedStoreId)
-    : await getProductsWithTotalStock(null);
-
-  const stockByProductAndStore = selectedStoreId
-    ? undefined
-    : await getStockMatrixByStore(stores.map((store) => store.id));
+  const [products, stockByProductAndStore] = await Promise.all([
+    selectedStoreId
+      ? getProductsWithStoreStock(selectedStoreId)
+      : getProductsWithTotalStock(null),
+    getStockMatrixByStore(stores.map((store) => store.id)),
+  ]);
 
   const selectedStore = selectedStoreId
     ? stores.find((store) => store.id === selectedStoreId)
