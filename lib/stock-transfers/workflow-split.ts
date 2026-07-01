@@ -45,9 +45,9 @@ export function isTransferSentNoPendingWorkflow(status: TransferStatus): boolean
   return status !== "en_attente" && status !== "en_cours";
 }
 
-/** Historique compte source : toute commande expédiée ou clôturée (hors en attente et en cours). */
+/** Historique compte source : journal permanent (hors commandes encore « En attente »). */
 export function isTransferSourceHistoryWorkflow(status: TransferStatus): boolean {
-  return status !== "en_attente" && status !== "en_cours";
+  return status !== "en_attente";
 }
 
 export function filterTransfersByWorkflowSplit<T extends { status: TransferStatus }>(

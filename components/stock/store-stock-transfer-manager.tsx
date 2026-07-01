@@ -173,9 +173,15 @@ export function StoreStockTransferManager({
     if (pendingOrderId) {
       return sentTransfersPath("tab=sent");
     }
-    if (basePath === "/cashier") return "/cashier/orders";
-    return `${basePath}/orders`;
+    if (basePath === "/cashier") {
+      return sentTransfersPath("tab=sent");
+    }
+    return `${basePath}/orders?created=1`;
   }
+
+  const createsManagementOrder =
+    !pendingOrderId && (basePath === "/director" || basePath === "/manager");
+  const createsCashierOrder = !pendingOrderId && basePath === "/cashier";
 
   function sentTransfersPath(query: string) {
     if (basePath === "/cashier") {
@@ -330,13 +336,26 @@ export function StoreStockTransferManager({
     }
 
     resetTransfer();
-    setSuccess(
-      pendingOrderId
-        ? `Commande confirmée — statut « En cours ». Consultez Stock envoyé.`
-        : destinationType === "hub"
-          ? `Commande créée vers ${"hubStoreName" in result ? result.hubStoreName : "dépôt"} — statut « En cours ». Consultez Mes commandes pour la préparer.`
-          : `Commande créée vers ${"toStoreName" in result ? result.toStoreName : "magasin"} — statut « En cours ». Consultez Mes commandes pour la préparer.`
-    );
+    const destinationLabel =
+      destinationType === "hub"
+        ? "hubStoreName" in result
+          ? result.hubStoreName
+          : "dépôt"
+        : "toStoreName" in result
+          ? result.toStoreName
+          : "magasin";
+
+    if (pendingOrderId) {
+      setSuccess(`Commande confirmée — statut « En cours ». Consultez Stock envoyé.`);
+    } else if (createsCashierOrder) {
+      setSuccess(
+        `Transfert créé vers ${destinationLabel} — statut « En cours ». Consultez Stock envoyé.`
+      );
+    } else {
+      setSuccess(
+        `Commande créée vers ${destinationLabel} — statut « En attente ». Elle apparaît dans Mes commandes.`
+      );
+    }
     router.push(pendingOrdersPath());
     router.refresh();
   }
@@ -597,17 +616,32 @@ export function StoreStockTransferManager({
             destinationType === "hub" ? "Confirmer l'envoi" : "Confirmer le transfert"
           }
           description={
-            destinationType === "hub"
-              ? "Vérifiez les produits avant de créer la commande. Le stock magasin sera déduit à l'envoi."
-              : "Vérifiez les produits avant d'envoyer le stock vers l'autre magasin."
+            pendingOrderId
+              ? "Vérifiez les produits avant de confirmer la préparation. Le stock source sera déduit et la commande passera en « En cours »."
+              : createsManagementOrder
+                ? destinationType === "hub"
+                  ? "Vérifiez les produits avant de créer la commande. Le stock magasin ne sera pas déduit tant qu'un hub ou une caisse n'aura pas préparé la commande."
+                  : "Vérifiez les produits avant de créer la commande. Le stock source ne sera pas déduit tant qu'un hub ou une caisse n'aura pas préparé la commande."
+                : destinationType === "hub"
+                  ? "Vérifiez les produits avant de créer la commande. Le stock magasin sera déduit à la confirmation."
+                  : "Vérifiez les produits avant d'envoyer le stock vers l'autre magasin. Le stock source sera déduit à la confirmation."
           }
           actionLabel={destinationType === "hub" ? "Envoi" : "Transfert"}
           processDescription={
-            destinationType === "hub"
-              ? "Vous allez créer une commande entrepôt. Le dépôt prépare, le livreur transporte, le magasin valide la réception."
-              : "Le stock sera déduit du magasin source et crédité au magasin destination après validation."
+            pendingOrderId
+              ? "Après confirmation, la commande disparaît de Mes commandes et apparaît dans Stock envoyé."
+              : createsManagementOrder
+                ? destinationType === "hub"
+                  ? "La commande sera créée en « En attente ». Un hub ou une caisse pourra la préparer ensuite."
+                  : "La commande sera créée en « En attente ». Un hub ou une caisse pourra la préparer ensuite."
+                : destinationType === "hub"
+                  ? "Vous allez créer une commande entrepôt en « En cours ». Le stock magasin sera déduit immédiatement."
+                  : "Le stock sera déduit du magasin source dès la confirmation."
           }
           sourceStockLabel="Stock magasin"
+          initialStatus={
+            pendingOrderId ? null : createsManagementOrder ? "en_attente" : "en_cours"
+          }
           confirmLabel={
             pendingOrderId
               ? "Confirmer la préparation"

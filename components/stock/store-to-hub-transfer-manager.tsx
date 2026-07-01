@@ -209,8 +209,11 @@ export function StoreToHubTransferManager({
 
     resetTransfer();
     setSuccess(
-      `Commande créée vers ${result.hubStoreName} — statut « En cours ». Marquez-la prête puis assignez un livreur.`
+      basePath === "/manager"
+        ? `Commande créée vers ${result.hubStoreName} — statut « En attente ». Elle apparaît dans Mes commandes.`
+        : `Commande créée vers ${result.hubStoreName} — statut « En attente ». Elle apparaît dans Mes commandes.`
     );
+    router.push(`${basePath}/orders?created=1`);
     router.refresh();
   }
 
@@ -388,8 +391,10 @@ export function StoreToHubTransferManager({
           items={confirmSummary.items}
           totalQty={confirmSummary.totalQty}
           eyebrow="Commande entrepôt"
-          description="Vérifiez les produits avant de créer la commande. Le stock magasin sera déduit à l'envoi."
+          description="Vérifiez les produits avant de créer la commande. Le stock magasin ne sera pas déduit tant qu'un hub ou une caisse n'aura pas préparé la commande."
           sourceStockLabel="Stock magasin"
+          initialStatus="en_attente"
+          processDescription="La commande sera créée en « En attente ». Un hub ou une caisse pourra la préparer ensuite."
         />
       )}
 

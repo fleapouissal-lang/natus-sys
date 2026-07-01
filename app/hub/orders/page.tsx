@@ -81,7 +81,7 @@ export default async function HubOrdersPage({
         </p>
         {params.created === "1" && (
           <p className="mt-2 text-sm text-success">
-            Commande créée — elle apparaît ici tant qu&apos;elle est en préparation.
+            Commande préparée — elle apparaît dans Stock envoyé en statut « En cours ».
           </p>
         )}
       </div>
@@ -98,6 +98,7 @@ export default async function HubOrdersPage({
           productLookup={productLookup}
           managedStoreIds={scopeHubIds}
           livreurs={livreurs}
+          workflowSplit="pending-attente"
           mesCommandesActionMode="view-and-prepare"
           commanderRole="hub"
           emptyMessage="Aucune commande en attente depuis le dépôt"

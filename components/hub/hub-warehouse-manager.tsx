@@ -282,10 +282,10 @@ export function HubWarehouseManager({
       params.delete("order");
       params.delete("kind");
       router.push(`${pathname}?${params.toString()}`);
+    } else if (pendingOrderId) {
+      router.push("/hub/stock-transfers?tab=sent");
     } else {
-      const params = new URLSearchParams();
-      params.set("created", "1");
-      router.push(`/hub/orders?${params.toString()}`);
+      router.push("/hub/stock-transfers?tab=sent&created=1");
     }
     router.refresh();
   }
@@ -602,6 +602,18 @@ export function HubWarehouseManager({
           }}
           items={confirmSummary.items}
           totalQty={confirmSummary.totalQty}
+          description={
+            pendingOrderId
+              ? "Vérifiez les produits avant de confirmer la préparation. Le stock dépôt sera déduit et la commande passera en « En cours »."
+              : "Vérifiez les produits avant de créer l'envoi. Le stock dépôt sera déduit à la confirmation."
+          }
+          processDescription={
+            pendingOrderId
+              ? "Après confirmation, la commande disparaît de Mes commandes et apparaît dans Stock envoyé."
+              : "Le transfert sera créé en « En cours » et apparaîtra dans Stock envoyé."
+          }
+          initialStatus={pendingOrderId ? null : "en_cours"}
+          confirmLabel={pendingOrderId ? "Confirmer la préparation" : "Confirmer l'envoi"}
         />
       )}
     </div>

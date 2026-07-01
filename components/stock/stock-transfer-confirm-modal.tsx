@@ -34,9 +34,16 @@ export type StockTransferConfirmModalProps = {
   actionSummary?: string;
   processDescription?: string;
   sourceStockLabel?: string;
+  /** Affiche le badge de statut initial. Défaut : en_cours si showInitialStatus est true. */
+  initialStatus?: "en_attente" | "en_cours" | null;
   showInitialStatus?: boolean;
   confirmLabel?: string;
   modifyLabel?: string;
+};
+
+const INITIAL_STATUS_LABELS: Record<"en_attente" | "en_cours", string> = {
+  en_attente: "En attente",
+  en_cours: "En cours",
 };
 
 function SiteIcon({ siteType }: { siteType: "hub" | "store" }) {
@@ -62,10 +69,15 @@ export function StockTransferConfirmModal({
   actionSummary,
   processDescription = "Vous allez créer une commande entrepôt. Le dépôt prépare, le livreur transporte, le magasin valide la réception.",
   sourceStockLabel = "Stock entrepôt",
+  initialStatus,
   showInitialStatus = true,
   confirmLabel = "Confirmer l'envoi",
   modifyLabel = "Modifier",
 }: StockTransferConfirmModalProps) {
+  const resolvedInitialStatus =
+    initialStatus === null
+      ? null
+      : initialStatus ?? (showInitialStatus ? "en_cours" : null);
   const summaryText =
     actionSummary ?? `${totalQty} unité${totalQty > 1 ? "s" : ""} vers ${to.name}`;
 
@@ -142,9 +154,9 @@ export function StockTransferConfirmModal({
               {totalQty} unité{totalQty > 1 ? "s" : ""} au total
             </p>
           </div>
-          {showInitialStatus ? (
+          {resolvedInitialStatus ? (
             <Badge variant="accent" className="px-3 py-1 text-xs">
-              Statut initial : En cours
+              Statut initial : {INITIAL_STATUS_LABELS[resolvedInitialStatus]}
             </Badge>
           ) : null}
         </div>

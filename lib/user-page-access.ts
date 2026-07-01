@@ -264,6 +264,7 @@ export function resolvePageHref(key: UserPageKey, role: UserRole): string | null
       return base ? `${base}/reclamations` : null;
     case "loyalty":
       if (role === "directeur" || role === "admin") return "/director/clients";
+      if (role === "manager") return "/manager/clients";
       return base ? `${base}/loyalty` : null;
     case "invoices":
       return role === "cashier" ? "/cashier/invoices" : base ? `${base}/invoices` : null;
@@ -382,7 +383,7 @@ export function getAllowedHrefsForProfile(
       hrefs.push("/manager/history");
     }
     if (keys.includes("loyalty")) {
-      hrefs.push("/manager/pro-clients", "/manager/loyalty");
+      hrefs.push("/manager/clients", "/manager/pro-clients", "/manager/loyalty");
     }
   }
 
@@ -488,6 +489,12 @@ export function getPageKeyForNavHref(href: string, role: UserRole): UserPageKey 
     return "loyalty";
   }
   if (href === "/manager/pro-clients" && role === "manager") {
+    return "loyalty";
+  }
+  if (href === "/manager/clients" && role === "manager") {
+    return "loyalty";
+  }
+  if (href === "/manager/loyalty" && role === "manager") {
     return "loyalty";
   }
   if (href === "/cashier/pro-clients" && role === "cashier") {

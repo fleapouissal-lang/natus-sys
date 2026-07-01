@@ -11,9 +11,10 @@ import {
   getAllActiveTransferSites,
   getProductsWithStoreStockForTransfer,
 } from "@/lib/transfer-sites.server";
-import { getCashierOutgoingStoreTransfers, getStoreStockTransferById } from "@/lib/store-transfers";
-import { getCashierOutgoingStoreToHubTransfers, getHubTransferById } from "@/lib/hub-transfers";
+import { getCashierOutgoingStoreTransfers, getStoreStockTransferById, getSourceOrderHistoryStoreTransfers } from "@/lib/store-transfers";
+import { getCashierOutgoingStoreToHubTransfers, getHubTransferById, getSourceOrderHistoryStoreToHubTransfers } from "@/lib/hub-transfers";
 import { transferItemsToQuantities } from "@/lib/stock-transfers/pending-order-prefill";
+import { buildCashierSourceHistoryGroups } from "@/lib/stock-transfers/build-source-history-groups";
 import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
 import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
 import { CashierSentOrdersTabs } from "@/components/stock/cashier-sent-orders-tabs";
@@ -79,12 +80,16 @@ export default async function CashierTransfersSentPage({
   const [
     storeTransfers,
     hubTransfers,
+    historyStoreTransfers,
+    historyHubTransfers,
     livreurs,
     products,
     catalogProducts,
   ] = await Promise.all([
     getCashierOutgoingStoreTransfers(storeId),
     getCashierOutgoingStoreToHubTransfers(storeId),
+    getSourceOrderHistoryStoreTransfers([storeId]),
+    getSourceOrderHistoryStoreToHubTransfers(storeId),
     city ? getHubCityLivreurs(city) : Promise.resolve([]),
     getProductsWithStoreStockForTransfer(storeId),
     getProductCatalog(),
@@ -92,6 +97,10 @@ export default async function CashierTransfersSentPage({
 
   const interStoreTransfers = filterCashierOutgoingInterStore(storeTransfers, storeId);
   const storeToHubTransfers = filterCashierOutgoingStoreToHub(hubTransfers, storeId);
+  const historyGroups = buildCashierSourceHistoryGroups(
+    filterCashierOutgoingInterStore(historyStoreTransfers, storeId),
+    filterCashierOutgoingStoreToHub(historyHubTransfers, storeId)
+  );
   const productLookup = buildReceivedTransferProductLookup(catalogProducts);
 
   const storeSite = store
@@ -180,6 +189,7 @@ export default async function CashierTransfersSentPage({
           pendingOrderKind={pendingOrderKind}
           initialQuantities={initialQuantities}
           initialNotes={initialNotes}
+          historyGroups={historyGroups}
         />
       </Suspense>
     </div>

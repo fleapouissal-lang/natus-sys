@@ -10,7 +10,7 @@ import { StoreDayClosureReportsList } from "@/components/sales/store-day-closure
 import { cn } from "@/lib/utils";
 import type { getManagerSalesHistoryDateBounds } from "@/lib/sales/manager-sales-window";
 import type { StoreDayClosureReportRow } from "@/lib/sales/store-day-closure";
-import { ManagerSourceTransferHistory } from "@/components/stock/manager-source-transfer-history";
+import { ManagerSourceTransferHistory } from "@/components/stock/source-order-history-view";
 import type { ReceivedTransfersFilterScope } from "@/lib/stock-transfers/received-filters";
 import type {
   ReceivedTransferProductLookup,
@@ -29,7 +29,7 @@ const TABS: {
 }[] = [
   {
     id: "activity",
-    label: "Commandes envoyées",
+    label: "Historique des commandes",
     shortLabel: "Commandes",
     icon: ClipboardList,
   },

@@ -17,6 +17,7 @@ import {
 import {
   getDirectorStoreStockTransfers,
 } from "@/lib/store-transfers";
+import { buildDirectorSourceHistoryGroups } from "@/lib/stock-transfers/build-source-history-groups";
 import { DirectorSentOrdersTabs } from "@/components/stock/director-sent-orders-tabs";
 import { getProductCatalog } from "@/lib/inventory";
 import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
@@ -102,6 +103,7 @@ export default async function DirectorStockTransfersPage({
   const retailStores = transferSites.filter((store) => !store.is_hub);
   const hubStores = transferSites.filter((store) => store.is_hub);
   const retailStoreIds = retailStores.map((store) => store.id);
+  const hubStoreIds = hubStores.map((store) => store.id);
   const filter = resolveSentTransfersListScope(profile, transferSites, params);
 
   const srcType = resolveSiteType(params.src, "store");
@@ -144,6 +146,13 @@ export default async function DirectorStockTransfersPage({
     )
   );
 
+  const historyGroups = buildDirectorSourceHistoryGroups(
+    storeTransfers,
+    hubTransfers,
+    retailStoreIds,
+    hubStoreIds
+  );
+
   const successMessage =
     params.created === "1"
       ? "Transfert créé avec succès — consultez l'onglet « Stock envoyé »."
@@ -180,6 +189,7 @@ export default async function DirectorStockTransfersPage({
           filter={filter}
           productLookup={productLookup}
           successMessage={successMessage}
+          historyGroups={historyGroups}
         />
       </Suspense>
     </div>

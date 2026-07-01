@@ -12,7 +12,9 @@ import {
 } from "@/lib/permissions";
 import { resolveSelectedStoreId, getProfileLockedStoreId } from "@/lib/management-store";
 import { getManagerOutgoingHubTransfers } from "@/lib/hub-transfers";
-import { getOutgoingStoreStockTransfers } from "@/lib/store-transfers";
+import { getOutgoingStoreStockTransfers, getSourceOrderHistoryStoreTransfers } from "@/lib/store-transfers";
+import { SOURCE_ORDER_HISTORY_LIMIT } from "@/lib/stock-transfers/source-order-history";
+import { buildManagerSourceHistoryGroups } from "@/lib/stock-transfers/build-source-history-groups";
 import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
 import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
 import { ManagerSentOrdersTabs } from "@/components/stock/manager-sent-orders-tabs";
@@ -97,15 +99,22 @@ export default async function ManagerStockTransfersPage({
   const toHubStoreId = resolveHubStoreId(hubStores, params.hub);
   const initialDestination = params.dest === "hub" ? "hub" : "store";
 
-  const [products, storeTransfers, hubOutgoingTransfers, livreurs, catalogProducts] =
+  const [products, storeTransfers, hubOutgoingTransfers, historyStoreTransfers, historyHubTransfers, livreurs, catalogProducts] =
     await Promise.all([
       fromStoreId ? getProductsWithStoreStockForTransfer(fromStoreId) : Promise.resolve([]),
       getOutgoingStoreStockTransfers(managedStoreIds),
       getManagerOutgoingHubTransfers(managedStoreIds),
+      getSourceOrderHistoryStoreTransfers(managedStoreIds),
+      getManagerOutgoingHubTransfers(managedStoreIds, SOURCE_ORDER_HISTORY_LIMIT),
       getTransferLivreurs(collectTransferLivreurCities(sourceStores, hubStores)),
       getProductCatalog(),
     ]);
   const productLookup = buildReceivedTransferProductLookup(catalogProducts);
+  const historyGroups = buildManagerSourceHistoryGroups(
+    historyStoreTransfers,
+    historyHubTransfers,
+    managedStoreIds
+  );
 
   const scopeLabel = city ? `Vos magasins — ${city}` : "Vos magasins";
 
@@ -140,6 +149,7 @@ export default async function ManagerStockTransfersPage({
           livreurs={livreurs}
           filter={filter}
           productLookup={productLookup}
+          historyGroups={historyGroups}
         />
       </Suspense>
     </div>

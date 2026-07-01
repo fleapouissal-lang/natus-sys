@@ -7,17 +7,23 @@ import { cn } from "@/lib/utils";
 const MIN_VISIBLE_MS = 750;
 const MAX_VISIBLE_MS = 5000;
 
+/** Une seule animation par session (pas à chaque navigation). */
+let preloaderPlayed = false;
+
 export function NatusPreloader() {
   const pathname = usePathname();
   const [phase, setPhase] = useState<"loading" | "exit" | "hidden">("hidden");
 
   useEffect(() => {
     if (pathname === "/login") return;
+    if (preloaderPlayed) return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      preloaderPlayed = true;
       return;
     }
 
+    preloaderPlayed = true;
     setPhase("loading");
     document.documentElement.classList.add("natus-is-loading");
     const startedAt = Date.now();

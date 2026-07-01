@@ -16,6 +16,10 @@ import {
   storeTransferStatusVariant,
 } from "@/lib/store-transfer-status";
 import type { ReceivedTransferRow } from "@/lib/stock-transfers/received-transfer-rows";
+import {
+  buildTransferStatusTimeline,
+  formatTransferOrderNumber,
+} from "@/lib/stock-transfers/source-order-history";
 import { formatDate } from "@/lib/utils";
 import type { HubStockTransfer, Product } from "@/lib/types";
 
@@ -88,27 +92,32 @@ function TransferItemsTable({
 }
 
 function OrderTimeline({ transfer }: { transfer: ReceivedTransferRow["transfer"] }) {
-  const shippedAt = "shipped_at" in transfer ? transfer.shipped_at : null;
-  const steps: { label: string; value: string | null | undefined }[] = [
-    { label: "Commande créée", value: transfer.sent_at },
-    { label: "Marquée prête", value: transfer.ready_at },
-    { label: "Expédiée", value: shippedAt },
-    { label: "Prise en charge livreur", value: transfer.picked_up_at },
-    { label: "Livrée", value: transfer.delivered_at },
-    { label: "Réception validée", value: transfer.received_at },
-  ].filter((step) => step.value);
+  const steps = buildTransferStatusTimeline(transfer);
 
   if (steps.length === 0) return null;
 
   return (
-    <dl className="mb-4 grid gap-2 rounded-xl border border-border bg-page/60 p-4 sm:grid-cols-2">
-      {steps.map((step) => (
-        <div key={step.label}>
-          <dt className="text-xs font-medium text-muted">{step.label}</dt>
-          <dd className="text-sm font-medium">{formatDate(step.value!)}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="mb-4 space-y-3 rounded-xl border border-border bg-page/60 p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+        Chronologie des statuts
+      </p>
+      <ol className="space-y-2">
+        {steps.map((step, index) => (
+          <li key={`${step.status}-${step.at}`} className="flex gap-3 text-sm">
+            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-foreground">{step.label}</p>
+              <p className="text-xs text-muted">{formatDate(step.at)}</p>
+            </div>
+            {index === steps.length - 1 ? (
+              <Badge variant="accent" className="shrink-0 self-start text-xs">
+                Actuel
+              </Badge>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -182,8 +191,25 @@ export function ReceivedTransferDetailModal({
               <span className="truncate">{toName}</span>
             </div>
             <p className="mt-1 text-sm text-muted">
-              {formatDate(transfer.sent_at)}
-              {" · "}
+              {isOrderView ? (
+                <>
+                  N° {formatTransferOrderNumber(transfer.id)}
+                  {" · "}
+                  Créée le {formatDate(transfer.created_at || transfer.sent_at)}
+                  {" · "}
+                  Envoyée le {formatDate(transfer.sent_at)}
+                </>
+              ) : (
+                formatDate(transfer.sent_at)
+              )}
+            </p>
+            {isOrderView && transfer.creator_name && (
+              <p className="mt-1 text-sm text-muted">
+                Envoyée par{" "}
+                <span className="font-medium text-foreground">{transfer.creator_name}</span>
+              </p>
+            )}
+            <p className="mt-1 text-sm text-muted">
               {transfer.items.length} produit
               {transfer.items.length !== 1 ? "s" : ""},{" "}
               {transfer.total_units} unité

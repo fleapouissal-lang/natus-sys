@@ -57,6 +57,7 @@ import {
   type MesCommandesActionMode,
 } from "@/lib/stock-transfers/pending-order-actions";
 import { formatDate } from "@/lib/utils";
+import { formatTransferOrderNumber } from "@/lib/stock-transfers/source-order-history";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, Profile } from "@/lib/types";
 
@@ -197,6 +198,8 @@ export function ReceivedTransfersList({
     cashierHub &&
     hubTransferCashierCanValidate(detailRow.transfer.status);
 
+  const isOrderView = detailVariant === "order";
+
   if (rows.length === 0) {
     return (
       <Card>
@@ -219,10 +222,23 @@ export function ReceivedTransfersList({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-primary-light/30">
-                <th className="px-6 py-3 text-left font-medium text-muted">Date</th>
+                {isOrderView && (
+                  <th className="px-6 py-3 text-left font-medium text-muted">N° commande</th>
+                )}
+                <th className="px-6 py-3 text-left font-medium text-muted">
+                  {isOrderView ? "Envoyée" : "Date"}
+                </th>
+                {isOrderView && (
+                  <th className="px-6 py-3 text-left font-medium text-muted">Créée</th>
+                )}
                 <th className="px-6 py-3 text-left font-medium text-muted">Source</th>
                 <th className="px-6 py-3 text-left font-medium text-muted">Destination</th>
-                <th className="px-6 py-3 text-left font-medium text-muted">Livreur</th>
+                {isOrderView && (
+                  <th className="px-6 py-3 text-left font-medium text-muted">Envoyé par</th>
+                )}
+                {!isOrderView && (
+                  <th className="px-6 py-3 text-left font-medium text-muted">Livreur</th>
+                )}
                 <th className="px-6 py-3 text-left font-medium text-muted">Statut</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">Unités</th>
                 <th className="px-6 py-3 text-right font-medium text-muted">Actions</th>
@@ -282,22 +298,38 @@ export function ReceivedTransfersList({
 
                   return (
                     <tr key={row.id} className="border-b border-border last:border-b-0">
+                      {isOrderView && (
+                        <td className="px-6 py-4 font-mono text-xs font-semibold text-primary">
+                          {formatTransferOrderNumber(transfer.id)}
+                        </td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {formatDate(transfer.sent_at)}
                       </td>
+                      {isOrderView && (
+                        <td className="px-6 py-4 whitespace-nowrap text-muted">
+                          {formatDate(transfer.created_at || transfer.sent_at)}
+                        </td>
+                      )}
                       <td className="px-6 py-4">
                         <p className="font-medium">{transfer.from_store_name || "—"}</p>
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-medium">{transfer.to_store_name || "—"}</p>
                       </td>
-                      <td className="px-6 py-4">
-                        <TransferAssignedLivreur
-                          name={livreurNameFor(transfer)}
-                          compact
-                          className=""
-                        />
-                      </td>
+                      {isOrderView ? (
+                        <td className="px-6 py-4 text-sm text-muted">
+                          {transfer.creator_name || "—"}
+                        </td>
+                      ) : (
+                        <td className="px-6 py-4">
+                          <TransferAssignedLivreur
+                            name={livreurNameFor(transfer)}
+                            compact
+                            className=""
+                          />
+                        </td>
+                      )}
                       <td className="px-6 py-4">
                         <Badge variant={storeTransferStatusVariant(transfer.status)}>
                           {storeTransferStatusLabel(transfer.status)}
@@ -386,9 +418,19 @@ export function ReceivedTransfersList({
 
                 return (
                   <tr key={row.id} className="border-b border-border last:border-b-0">
+                    {isOrderView && (
+                      <td className="px-6 py-4 font-mono text-xs font-semibold text-primary">
+                        {formatTransferOrderNumber(transfer.id)}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       {formatDate(transfer.sent_at)}
                     </td>
+                    {isOrderView && (
+                      <td className="px-6 py-4 whitespace-nowrap text-muted">
+                        {formatDate(transfer.created_at || transfer.sent_at)}
+                      </td>
+                    )}
                     <td className="px-6 py-4">
                       <p className="font-medium">
                         {transfer.from_store_name ||
@@ -406,13 +448,19 @@ export function ReceivedTransfersList({
                         <p className="text-xs text-muted">Reçu par {transfer.receiver_name}</p>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      <TransferAssignedLivreur
-                        name={livreurNameFor(transfer)}
-                        compact
-                        className=""
-                      />
-                    </td>
+                    {isOrderView ? (
+                      <td className="px-6 py-4 text-sm text-muted">
+                        {transfer.creator_name || "—"}
+                      </td>
+                    ) : (
+                      <td className="px-6 py-4">
+                        <TransferAssignedLivreur
+                          name={livreurNameFor(transfer)}
+                          compact
+                          className=""
+                        />
+                      </td>
+                    )}
                     <td className="px-6 py-4">
                       <Badge variant={hubTransferStatusVariant(transfer.status)}>
                         {hubTransferStatusLabel(transfer.status)}

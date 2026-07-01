@@ -35,6 +35,7 @@ export default async function ManagerOrdersPage({
     listDest?: string;
     sentFrom?: string;
     sentTo?: string;
+    created?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -91,6 +92,11 @@ export default async function ManagerOrdersPage({
           Commandes « En attente » — source : vos magasins associés — {scopeLabel}. Consultation
           uniquement (voir les détails).
         </p>
+        {params.created === "1" && (
+          <p className="mt-2 text-sm text-success">
+            Commande créée — elle apparaît ici en statut « En attente ».
+          </p>
+        )}
       </div>
 
       <Suspense fallback={null}>

@@ -9,7 +9,7 @@ import type {
 import type { ReceivedTransferLocationSites } from "@/lib/stock-transfers/received-location-filters";
 import type { Profile } from "@/lib/types";
 
-export function ManagerSourceTransferHistory({
+export function SourceOrderHistoryView({
   filter,
   groups,
   locationConfig,
@@ -17,6 +17,7 @@ export function ManagerSourceTransferHistory({
   managedStoreIds,
   livreurs,
   scopeLabel,
+  description,
 }: {
   filter: ReceivedTransfersFilterScope;
   groups: ReceivedTransferRowGroup[];
@@ -25,17 +26,19 @@ export function ManagerSourceTransferHistory({
     destinationSites: ReceivedTransferLocationSites[];
     strictSourceOptions?: boolean;
     strictDestinationOptions?: boolean;
+    lockSource?: boolean;
   };
   productLookup?: ReceivedTransferProductLookup;
   managedStoreIds: string[];
   livreurs?: Profile[];
-  scopeLabel: string;
+  scopeLabel?: string;
+  description?: string;
 }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">
-        Commandes envoyées depuis vos magasins — {scopeLabel}. Consultez les produits, quantités,
-        destinations, dates et statuts de chaque envoi.
+        {description ||
+          `Journal permanent des commandes envoyées${scopeLabel ? ` — ${scopeLabel}` : ""}. Consultation seule : numéro, dates, produits, quantités, statuts et auteur. Les commandes reçues ou clôturées restent enregistrées ici.`}
       </p>
       <SentTransfersUnifiedView
         filter={filter}
@@ -45,7 +48,7 @@ export function ManagerSourceTransferHistory({
         managedStoreIds={managedStoreIds}
         livreurs={livreurs}
         workflowSplit="history"
-        listTitle="Historique des commandes envoyées"
+        listTitle="Historique des commandes"
         detailVariant="order"
         storeActionMode="none"
         hubReadOnly
@@ -56,3 +59,6 @@ export function ManagerSourceTransferHistory({
     </div>
   );
 }
+
+/** @deprecated Utiliser SourceOrderHistoryView */
+export const ManagerSourceTransferHistory = SourceOrderHistoryView;

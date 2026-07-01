@@ -2,37 +2,24 @@
 
 import { Suspense, useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ArrowRightLeft, PackagePlus } from "lucide-react";
 import { HubWarehouseManager } from "@/components/hub/hub-warehouse-manager";
 import { SentTransfersUnifiedView } from "@/components/stock/sent-transfers-unified-view";
+import { SourceOrderHistoryView } from "@/components/stock/source-order-history-view";
 import { StoreFilterBar } from "@/components/stores/store-filter-bar";
 import { cn } from "@/lib/utils";
+import {
+  resolveSentOrdersTab,
+  SENT_ORDERS_TAB_CONFIG,
+  type SentOrdersTabId,
+} from "@/lib/stock-transfers/sent-orders-tabs";
 import type { ReceivedTransfersFilterScope } from "@/lib/stock-transfers/received-filters";
 import type { ReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
 import type { ReceivedTransferLocationSites } from "@/lib/stock-transfers/received-location-filters";
 import type { HubStockTransfer, Product, Profile, Store } from "@/lib/types";
 
-type SentTab = "new" | "sent";
+type SentTab = SentOrdersTabId;
 
-const TABS: {
-  id: SentTab;
-  label: string;
-  shortLabel: string;
-  icon: React.ComponentType<{ className?: string }>;
-}[] = [
-  {
-    id: "new",
-    label: "Nouveau transfert",
-    shortLabel: "Nouveau",
-    icon: PackagePlus,
-  },
-  {
-    id: "sent",
-    label: "Stock envoyé",
-    shortLabel: "Envoyé",
-    icon: ArrowRightLeft,
-  },
-];
+const TABS = SENT_ORDERS_TAB_CONFIG;
 
 function HubSentOrdersTabsInner({
   hubStores,
@@ -55,6 +42,7 @@ function HubSentOrdersTabsInner({
   pendingOrderId,
   initialQuantities,
   initialNotes,
+  historyGroups,
 }: {
   hubStores: Store[];
   selectedHubStoreId: string;
@@ -76,17 +64,17 @@ function HubSentOrdersTabsInner({
   pendingOrderId?: string;
   initialQuantities?: Record<string, string>;
   initialNotes?: string | null;
+  historyGroups?: {
+    kind: "store" | "hub";
+    typeLabel: string;
+    hubTransfers?: HubStockTransfer[];
+  }[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab: SentTab =
-    tabParam === "sent" || tabParam === "store" || tabParam === "depot"
-      ? "sent"
-      : tabParam === "new"
-        ? "new"
-        : "new";
+  const activeTab = resolveSentOrdersTab(tabParam, ["store", "depot"]);
 
   const outgoingToStores = useMemo(
     () => outgoingTransfers.filter((transfer) => !transfer.to_store_is_hub),
@@ -190,6 +178,18 @@ function HubSentOrdersTabsInner({
           emptyMessage={`Aucun transfert envoyé depuis le dépôt — ${hubStore.name}`}
         />
       )}
+
+      {activeTab === "history" && (
+        <SourceOrderHistoryView
+          filter={filter}
+          groups={historyGroups ?? groups}
+          locationConfig={locationConfig}
+          productLookup={productLookup}
+          managedStoreIds={scopeHubIds}
+          livreurs={livreurs}
+          scopeLabel={hubStore.name}
+        />
+      )}
     </div>
   );
 }
@@ -215,6 +215,11 @@ export function HubSentOrdersTabs(props: {
   pendingOrderId?: string;
   initialQuantities?: Record<string, string>;
   initialNotes?: string | null;
+  historyGroups?: {
+    kind: "store" | "hub";
+    typeLabel: string;
+    hubTransfers?: HubStockTransfer[];
+  }[];
 }) {
   return (
     <Suspense fallback={null}>

@@ -109,6 +109,7 @@ export default async function DirectorOrdersPage({
           productLookup={productLookup}
           managedStoreIds={transferSites.map((store) => store.id)}
           livreurs={livreurs}
+          workflowSplit="pending-attente"
           mesCommandesActionMode="view-only"
           emptyMessage="Aucune commande en attente"
         />

@@ -102,7 +102,7 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
       },
       { href: "/hub/writeoffs", label: "Retour en stock", icon: RotateCcw, mobileOrder: 4 },
       { href: "/hub/actualites", label: "Actus", icon: Newspaper, mobileOrder: 5 },
-      { href: "/hub/activity", label: "Historique", icon: ClipboardList, mobileOrder: 6 },
+      { href: "/hub/activity", label: "Historique des commandes", icon: ClipboardList, mobileOrder: 6 },
     ];
   }
 
@@ -140,8 +140,9 @@ function buildManagementLinks(basePath: "/director" | "/manager" | "/hub"): NavL
         icon: BriefcaseBusiness,
         mobileOrder: 10,
       },
-      { href: "/manager/actualites", label: "Actus", icon: Newspaper, mobileOrder: 11 },
-      { href: "/manager/history", label: "Historique", icon: ClipboardList, mobileOrder: 12 },
+      { href: "/manager/clients", label: "Clients fidélité", icon: Gift, mobileOrder: 11 },
+      { href: "/manager/actualites", label: "Actus", icon: Newspaper, mobileOrder: 12 },
+      { href: "/manager/history", label: "Historique", icon: ClipboardList, mobileOrder: 13 },
     ];
   }
 
@@ -320,6 +321,7 @@ function buildManagerNavSections(role: UserRole): NavSection[] {
       id: "clients",
       label: "Clients",
       links: [
+        { href: "/manager/clients", label: "Clients fidélité", icon: Gift },
         { href: "/manager/pro-clients", label: "Clients Pro", icon: BriefcaseBusiness },
       ],
     },
@@ -608,10 +610,23 @@ export function isNavLinkActive(pathname: string, href: string): boolean {
   }
   if (href === "/manager/pro-clients") {
     if (pathname === href) return true;
-    if (pathname.startsWith("/manager/loyalty/") && pathname !== "/manager/loyalty") {
+    return pathname.startsWith(`${href}/`);
+  }
+  if (href === "/manager/clients") {
+    if (pathname === href) return true;
+    if (pathname === "/manager/loyalty/customers") return true;
+    if (
+      pathname.startsWith("/manager/loyalty/") &&
+      pathname !== "/manager/loyalty" &&
+      pathname !== "/manager/loyalty/customers"
+    ) {
       return true;
     }
     return pathname.startsWith(`${href}/`);
+  }
+  if (href === "/manager/loyalty") {
+    if (pathname === href) return true;
+    return false;
   }
   if (href === "/director/loyalty") {
     if (pathname === href) return true;

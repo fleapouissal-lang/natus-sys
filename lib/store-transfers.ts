@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { enrichTransferLivreurNames } from "@/lib/transfer-livreur-assignment";
+import { SOURCE_ORDER_HISTORY_LIMIT } from "@/lib/stock-transfers/source-order-history";
 import type { StoreStockTransfer } from "@/lib/types";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
@@ -39,6 +40,7 @@ function mapTransferRow(row: Record<string, unknown>): StoreStockTransfer {
     received_by: (row.received_by as string | null) ?? null,
     assigned_livreur_id: (row.assigned_livreur_id as string | null) ?? null,
     sent_at: row.sent_at as string,
+    created_at: (row.created_at as string) || (row.sent_at as string),
     ready_at: (row.ready_at as string | null) ?? null,
     shipped_at: (row.shipped_at as string | null) ?? null,
     picked_up_at: (row.picked_up_at as string | null) ?? null,
@@ -82,6 +84,7 @@ const TRANSFER_SELECT = `
   received_by,
   assigned_livreur_id,
   sent_at,
+  created_at,
   ready_at,
   shipped_at,
   picked_up_at,
@@ -182,6 +185,17 @@ export async function getStoreStockTransfers(options: {
   return finalizeStoreTransfers(transfers);
 }
 
+/** Journal permanent — commandes envoyées depuis des magasins sources. */
+export async function getSourceOrderHistoryStoreTransfers(
+  fromStoreIds: string[]
+): Promise<StoreStockTransfer[]> {
+  if (fromStoreIds.length === 0) return [];
+  return getStoreStockTransfers({
+    fromStoreIds,
+    limit: SOURCE_ORDER_HISTORY_LIMIT,
+  });
+}
+
 /** Commandes inter-magasins envoyées par des magasins sources (lecture dépôt). */
 export async function getOutgoingStoreStockTransfers(
   fromStoreIds: string[]
@@ -191,7 +205,7 @@ export async function getOutgoingStoreStockTransfers(
 }
 
 export async function getDirectorStoreStockTransfers(): Promise<StoreStockTransfer[]> {
-  return getStoreStockTransfers({ limit: 200 });
+  return getStoreStockTransfers({ limit: SOURCE_ORDER_HISTORY_LIMIT });
 }
 
 export function filterInterStoreOutgoingTransfers(

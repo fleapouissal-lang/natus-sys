@@ -12,7 +12,9 @@ import { getPosClosureSettings } from "@/lib/sales/pos-closure-settings.server";
 import { SALE_HISTORY_SELECT } from "@/lib/sales/sale-select";
 import { resolveEffectivePageKeys } from "@/lib/user-page-access";
 import { getManagerOutgoingHubTransfers } from "@/lib/hub-transfers";
-import { getOutgoingStoreStockTransfers } from "@/lib/store-transfers";
+import { getSourceOrderHistoryStoreTransfers } from "@/lib/store-transfers";
+import { SOURCE_ORDER_HISTORY_LIMIT } from "@/lib/stock-transfers/source-order-history";
+import { buildManagerSourceHistoryGroups } from "@/lib/stock-transfers/build-source-history-groups";
 import {
   getAllActiveTransferSites,
   getTransferLivreurs,
@@ -102,25 +104,18 @@ export default async function ManagerHistoryPage() {
       });
       const [storeTransfers, hubOutgoingTransfers, livreurs, catalogProducts] =
         await Promise.all([
-          getOutgoingStoreStockTransfers(storeIds),
-          getManagerOutgoingHubTransfers(storeIds),
+          getSourceOrderHistoryStoreTransfers(storeIds),
+          getManagerOutgoingHubTransfers(storeIds, SOURCE_ORDER_HISTORY_LIMIT),
           getTransferLivreurs(collectTransferLivreurCities(stores, hubStores)),
           getProductCatalog(),
         ]);
       return {
         filter,
-        groups: [
-          {
-            kind: "store" as const,
-            typeLabel: "Vers magasin",
-            storeTransfers,
-          },
-          {
-            kind: "depot" as const,
-            typeLabel: "Vers dépôt",
-            hubTransfers: hubOutgoingTransfers,
-          },
-        ],
+        groups: buildManagerSourceHistoryGroups(
+          storeTransfers,
+          hubOutgoingTransfers,
+          storeIds
+        ),
         locationConfig: {
           sourceSites: stores,
           destinationSites,
@@ -150,7 +145,7 @@ export default async function ManagerHistoryPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Historique</h1>
         <p className="mt-1 text-muted">
-          Commandes envoyées, ventes et clôtures — {scopeLabel.toLowerCase()}
+          Historique des commandes envoyées, ventes et clôtures — {scopeLabel.toLowerCase()}
         </p>
       </div>
 

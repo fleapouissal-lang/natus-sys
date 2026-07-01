@@ -342,6 +342,7 @@ export interface HubStockTransfer {
   assigned_livreur_id: string | null;
   assigned_livreur_name: string | null;
   sent_at: string;
+  created_at: string;
   ready_at: string | null;
   picked_up_at: string | null;
   delivered_at: string | null;
@@ -387,6 +388,7 @@ export interface StoreStockTransfer {
   assigned_livreur_id: string | null;
   assigned_livreur_name?: string | null;
   sent_at: string;
+  created_at: string;
   ready_at: string | null;
   shipped_at: string | null;
   picked_up_at?: string | null;

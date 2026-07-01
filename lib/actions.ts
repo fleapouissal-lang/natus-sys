@@ -1897,6 +1897,7 @@ export async function createLoyaltyCustomer(input: {
   revalidatePath("/cashier/customers");
   revalidatePath("/cashier/pro-clients");
   revalidatePath("/manager/loyalty");
+  revalidatePath("/manager/clients");
   revalidatePath("/director/loyalty");
   revalidatePath("/director/clients");
   return { success: true, customer: data as import("@/lib/types").LoyaltyCustomer };
@@ -4262,7 +4263,7 @@ export async function toggleLoyaltyCustomerActive(
   customerId: string,
   active: boolean
 ): Promise<{ success: true; customer: import("@/lib/types").LoyaltyCustomer } | { error: string }> {
-  const profile = await requireRole(["directeur", "admin"]);
+  const profile = await requireRole(["directeur", "admin", "manager"]);
   if (!profile) return { error: "Non autorisé" };
 
   const supabase = await createClient();
@@ -4276,6 +4277,8 @@ export async function toggleLoyaltyCustomerActive(
   revalidatePath("/director/clients");
   revalidatePath("/director/loyalty/customers");
   revalidatePath("/director/loyalty");
+  revalidatePath("/manager/clients");
+  revalidatePath("/manager/loyalty");
   revalidatePath("/cashier/pos");
   return { success: true, customer: data as import("@/lib/types").LoyaltyCustomer };
 }
@@ -4283,7 +4286,7 @@ export async function toggleLoyaltyCustomerActive(
 export async function deleteLoyaltyCustomer(
   customerId: string
 ): Promise<{ success: true } | { error: string }> {
-  const profile = await requireRole(["directeur", "admin"]);
+  const profile = await requireRole(["directeur", "admin", "manager"]);
   if (!profile) return { error: "Non autorisé" };
 
   const supabase = await createClient();
@@ -4305,6 +4308,8 @@ export async function deleteLoyaltyCustomer(
   revalidatePath("/director/clients");
   revalidatePath("/director/loyalty/customers");
   revalidatePath("/director/loyalty");
+  revalidatePath("/manager/clients");
+  revalidatePath("/manager/loyalty");
   revalidatePath("/cashier/pos");
   return { success: true };
 }

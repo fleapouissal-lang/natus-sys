@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { getHubStoresByCity } from "@/lib/hub";
-import { getHubOutgoingTransfers } from "@/lib/hub-transfers";
+import { getSourceOrderHistoryHubTransfers } from "@/lib/hub-transfers";
 import { getAllActiveTransferSites } from "@/lib/transfer-sites.server";
 import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
 import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
-import { SentTransfersUnifiedView } from "@/components/stock/sent-transfers-unified-view";
+import { buildHubSourceHistoryGroups } from "@/lib/stock-transfers/build-source-history-groups";
+import { SourceOrderHistoryView } from "@/components/stock/source-order-history-view";
 import { getProductCatalog } from "@/lib/inventory";
 
 export default async function HubActivityPage() {
@@ -43,30 +44,24 @@ export default async function HubActivityPage() {
   });
 
   const [outgoingTransfers, catalogProducts] = await Promise.all([
-    getHubOutgoingTransfers(scopeHubIds),
+    getSourceOrderHistoryHubTransfers(scopeHubIds),
     getProductCatalog(),
   ]);
   const productLookup = buildReceivedTransferProductLookup(catalogProducts);
 
-  const groups = [
-    {
-      kind: "hub" as const,
-      typeLabel: "Depuis dépôt",
-      hubTransfers: outgoingTransfers,
-    },
-  ];
+  const groups = buildHubSourceHistoryGroups(outgoingTransfers);
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Historique</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Historique des commandes</h1>
         <p className="mt-1 text-sm text-muted">
-          Commandes envoyées depuis le dépôt — produits, quantités, destination, dates et statut
-          — {scopeLabel}. Les commandes en cours de préparation sont dans Mes commandes.
+          Journal permanent des commandes envoyées depuis le dépôt — {scopeLabel}. Les commandes
+          reçues ou clôturées restent consultables ici.
         </p>
       </div>
 
-      <SentTransfersUnifiedView
+      <SourceOrderHistoryView
         filter={filter}
         groups={groups}
         locationConfig={{
@@ -76,12 +71,6 @@ export default async function HubActivityPage() {
         }}
         productLookup={productLookup}
         managedStoreIds={scopeHubIds}
-        workflowSplit="history"
-        listTitle="Commandes envoyées"
-        detailVariant="order"
-        storeActionMode="none"
-        hubReadOnly
-        emptyMessage="Aucune commande envoyée enregistrée pour ce dépôt"
       />
     </div>
   );

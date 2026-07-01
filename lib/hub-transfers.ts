@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { enrichTransferLivreurNames } from "@/lib/transfer-livreur-assignment";
+import { SOURCE_ORDER_HISTORY_LIMIT } from "@/lib/stock-transfers/source-order-history";
 import type { HubStockTransfer } from "@/lib/types";
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
@@ -36,6 +37,7 @@ function mapTransferRow(row: Record<string, unknown>): HubStockTransfer {
     received_by: (row.received_by as string | null) ?? null,
     assigned_livreur_id: (row.assigned_livreur_id as string | null) ?? null,
     sent_at: row.sent_at as string,
+    created_at: (row.created_at as string) || (row.sent_at as string),
     ready_at: (row.ready_at as string | null) ?? null,
     picked_up_at: (row.picked_up_at as string | null) ?? null,
     delivered_at: (row.delivered_at as string | null) ?? null,
@@ -127,6 +129,7 @@ const TRANSFER_SELECT = `
   received_by,
   assigned_livreur_id,
   sent_at,
+  created_at,
   ready_at,
   picked_up_at,
   delivered_at,
@@ -354,7 +357,8 @@ async function getIncomingHubToStoreTransfers(options: {
 
 /** Commandes magasin → dépôt envoyées par le gérant. */
 export async function getManagerOutgoingHubTransfers(
-  fromStoreIds: string[]
+  fromStoreIds: string[],
+  limit = 100
 ): Promise<HubStockTransfer[]> {
   if (fromStoreIds.length === 0) return [];
 
@@ -368,7 +372,7 @@ export async function getManagerOutgoingHubTransfers(
     .in("from_store_id", fromStoreIds)
     .in("to_store_id", hubStoreIds)
     .order("sent_at", { ascending: false })
-    .limit(100);
+    .limit(limit);
 
   if (error) {
     console.error("getManagerOutgoingHubTransfers:", error.message);
@@ -382,7 +386,7 @@ export async function getManagerOutgoingHubTransfers(
 
 /** Tous les transferts hub visibles par le directeur. */
 export async function getDirectorHubStockTransfers(): Promise<HubStockTransfer[]> {
-  return getHubStockTransfers({ limit: 200 });
+  return getHubStockTransfers({ limit: SOURCE_ORDER_HISTORY_LIMIT });
 }
 
 export function filterHubToHubTransfers(transfers: HubStockTransfer[]): HubStockTransfer[] {
@@ -397,6 +401,26 @@ export function filterHubStoreMixedTransfers(transfers: HubStockTransfer[]): Hub
       (transfer.from_store_is_hub && !transfer.to_store_is_hub) ||
       (!transfer.from_store_is_hub && transfer.to_store_is_hub)
   );
+}
+
+/** Transferts magasin → dépôt envoyés par un magasin source (journal). */
+export async function getSourceOrderHistoryStoreToHubTransfers(
+  fromStoreId: string
+): Promise<HubStockTransfer[]> {
+  if (!fromStoreId) return [];
+  return getHubStockTransfers({ fromStoreId, limit: SOURCE_ORDER_HISTORY_LIMIT });
+}
+
+/** Journal permanent — commandes envoyées depuis des dépôts hub. */
+export async function getSourceOrderHistoryHubTransfers(
+  hubStoreIds: string[]
+): Promise<HubStockTransfer[]> {
+  if (hubStoreIds.length === 0) return [];
+  const transfers = await getHubStockTransfers({
+    fromStoreIds: hubStoreIds,
+    limit: SOURCE_ORDER_HISTORY_LIMIT,
+  });
+  return transfers.filter((transfer) => transfer.from_store_is_hub);
 }
 
 /** Transferts dépôt → magasins / dépôts (envois depuis le hub). */

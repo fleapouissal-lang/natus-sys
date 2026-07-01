@@ -219,54 +219,57 @@ export function DirectorStockTransferManager({
   }, [destType, destinationHubStores, toHubStoreId, destinationRetailStores, toStoreId]);
 
   const confirmCopy = useMemo(() => {
+    const pendingNote =
+      "Le stock source ne sera pas déduit tant qu'un hub ou une caisse n'aura pas préparé la commande.";
     if (sourceType === "hub" && destType === "store") {
       return {
         eyebrow: "Commande entrepôt",
         title: "Confirmer l'envoi",
-        description:
-          "Vérifiez les produits avant de créer la commande. Le stock dépôt sera déduit lorsque le livreur prendra la commande en charge.",
+        description: `Vérifiez les produits avant de créer la commande. ${pendingNote}`,
         actionLabel: "Envoi",
         processDescription:
-          "Vous allez créer une commande entrepôt. Le dépôt prépare, le livreur transporte, le magasin valide la réception.",
+          "La commande sera créée en « En attente ». Un hub ou une caisse pourra la préparer ensuite.",
         sourceStockLabel: "Stock entrepôt",
         confirmLabel: "Confirmer l'envoi",
+        initialStatus: "en_attente" as const,
       };
     }
     if (sourceType === "store" && destType === "hub") {
       return {
         eyebrow: "Retour dépôt",
         title: "Confirmer l'envoi",
-        description:
-          "Vérifiez les produits avant d'envoyer le stock vers le dépôt.",
+        description: `Vérifiez les produits avant d'envoyer le stock vers le dépôt. ${pendingNote}`,
         actionLabel: "Envoi",
         processDescription:
-          "Le stock sera déduit du magasin source et crédité au dépôt après validation.",
+          "La commande sera créée en « En attente ». Un hub ou une caisse pourra la préparer ensuite.",
         sourceStockLabel: "Stock magasin",
         confirmLabel: "Confirmer l'envoi",
+        initialStatus: "en_attente" as const,
       };
     }
     if (sourceType === "hub" && destType === "hub") {
       return {
         eyebrow: "Transfert dépôt",
         title: "Confirmer le transfert",
-        description: "Vérifiez les produits avant d'envoyer le stock vers l'autre dépôt.",
+        description: `Vérifiez les produits avant d'envoyer le stock vers l'autre dépôt. ${pendingNote}`,
         actionLabel: "Transfert",
         processDescription:
-          "Le stock sera déduit du dépôt source et crédité au dépôt destination après validation.",
+          "La commande sera créée en « En attente ». Un hub ou une caisse pourra la préparer ensuite.",
         sourceStockLabel: "Stock entrepôt",
         confirmLabel: "Confirmer le transfert",
+        initialStatus: "en_attente" as const,
       };
     }
     return {
       eyebrow: "Transfert de stock",
       title: "Confirmer le transfert",
-      description:
-        "Vérifiez les produits avant d'envoyer le stock vers l'autre magasin.",
+      description: `Vérifiez les produits avant d'envoyer le stock vers l'autre magasin. ${pendingNote}`,
       actionLabel: "Transfert",
       processDescription:
-        "Le stock sera déduit du magasin source et crédité au magasin destination après validation.",
+        "La commande sera créée en « En attente ». Un hub ou une caisse pourra la préparer ensuite.",
       sourceStockLabel: "Stock magasin",
       confirmLabel: "Confirmer le transfert",
+      initialStatus: "en_attente" as const,
     };
   }, [sourceType, destType]);
 

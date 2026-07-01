@@ -107,6 +107,7 @@ export default async function CashierOrdersPage({
           productLookup={productLookup}
           managedStoreIds={[storeId]}
           livreurs={livreurs}
+          workflowSplit="pending-attente"
           mesCommandesActionMode="view-and-prepare"
           commanderRole="cashier"
           emptyMessage={`Aucune commande en attente depuis ${storeName}`}

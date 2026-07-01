@@ -2,7 +2,8 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { getHubStoresByCity } from "@/lib/hub";
-import { getHubOutgoingTransfers, getHubTransferById } from "@/lib/hub-transfers";
+import { getHubOutgoingTransfers, getHubTransferById, getSourceOrderHistoryHubTransfers } from "@/lib/hub-transfers";
+import { buildHubSourceHistoryGroups } from "@/lib/stock-transfers/build-source-history-groups";
 import { transferItemsToQuantities } from "@/lib/stock-transfers/pending-order-prefill";
 import {
   getAllActiveTransferSites,
@@ -98,13 +99,15 @@ export default async function HubStockTransfersSentPage({
     params.hub
   );
 
-  const [products, outgoingTransfers, livreurs, catalogProducts] = await Promise.all([
+  const [products, outgoingTransfers, historyOutgoingTransfers, livreurs, catalogProducts] = await Promise.all([
     getProductsWithStoreStockForTransfer(selectedHubStoreId),
     getHubOutgoingTransfers(scopeHubIds),
+    getSourceOrderHistoryHubTransfers(scopeHubIds),
     getTransferLivreurs([profile.city, ...allHubStores.map((store) => store.city)]),
     getProductCatalog(),
   ]);
   const productLookup = buildReceivedTransferProductLookup(catalogProducts);
+  const historyGroups = buildHubSourceHistoryGroups(historyOutgoingTransfers);
 
   let pendingOrderId: string | undefined;
   let initialQuantities: Record<string, string> | undefined;
@@ -159,12 +162,13 @@ export default async function HubStockTransfersSentPage({
           productLookup={productLookup}
           successMessage={
             params.created === "1"
-              ? "Commande créée — consultez Mes commandes (statut En attente)."
+              ? "Commande créée — consultez Stock envoyé (statut En cours)."
               : undefined
           }
           pendingOrderId={pendingOrderId}
           initialQuantities={initialQuantities}
           initialNotes={initialNotes}
+          historyGroups={historyGroups}
         />
       </Suspense>
     </div>
