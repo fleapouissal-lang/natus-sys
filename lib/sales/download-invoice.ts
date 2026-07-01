@@ -12,8 +12,9 @@ import {
 } from "@/lib/constants/natus-brand";
 import { computeTvaBreakdown, PAYMENT_METHOD_LABELS, TVA_RATE } from "@/lib/constants/sales";
 import {
+  A4_DOC_PREVIEW_CSS,
   A4_PAGE_CSS,
-  PRINT_A4_MEDIA_CSS,
+  buildDocToolbar,
   PRINT_TABLE_PAGINATION_CSS,
 } from "@/lib/print/document-styles";
 import { formatCurrency } from "@/lib/utils";
@@ -514,30 +515,28 @@ const INVOICE_DOC_STYLES = `
     }
 
     @media print {
-      body {
-        background: #fff !important;
-        color: #000 !important;
-        -webkit-print-color-adjust: economy !important;
-        print-color-adjust: economy !important;
+      @page { size: A4 portrait; margin: 0; }
+
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
 
+      /* On conserve le design (crème, doré, en-tête foncé, filigrane). */
       .natus-invoice,
       .natus-invoice-sheet,
-      .natus-invoice * {
+      .natus-invoice *,
+      .export-summary,
+      .export-summary * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
         box-shadow: none !important;
         text-shadow: none !important;
-        background: #fff !important;
-        color: #000 !important;
-        -webkit-print-color-adjust: economy !important;
-        print-color-adjust: economy !important;
       }
 
-      .natus-invoice-sheet {
-        padding: 0 !important;
-        overflow: visible !important;
-      }
-
-      .natus-invoice-monogram { display: none !important; }
+      .natus-invoice-sheet { padding: 16mm 14mm !important; }
 
       .natus-invoice-print-header {
         break-inside: avoid !important;
@@ -549,40 +548,12 @@ const INVOICE_DOC_STYLES = `
         page-break-inside: auto !important;
       }
 
-      .natus-invoice-header,
-      .natus-invoice-parties,
-      .natus-invoice-footer {
-        border-color: #000 !important;
-      }
-
       .natus-invoice-parties {
         break-after: avoid-page;
         page-break-after: avoid;
       }
 
-      .natus-invoice-party-accent {
-        background: #000 !important;
-        opacity: 0.2 !important;
-      }
-
-      .natus-invoice-table-wrap {
-        border: 1px solid #000 !important;
-        border-bottom: none !important;
-        overflow: visible !important;
-      }
-
-      .natus-invoice-table th {
-        border: 1px solid #2c2418 !important;
-        background: #2c2418 !important;
-        color: #fff !important;
-        font-weight: 700 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-
-      .natus-invoice-table td {
-        border: 1px solid #ccc !important;
-      }
+      .natus-invoice-table thead { display: table-header-group !important; }
 
       .natus-invoice-table tbody tr {
         break-inside: avoid;
@@ -595,35 +566,13 @@ const INVOICE_DOC_STYLES = `
         break-inside: avoid !important;
         page-break-inside: avoid !important;
       }
-
-      .natus-invoice-totals {
-        border: 1px solid #000 !important;
-        border-top: none !important;
-      }
-
-      .totals-row {
-        border-color: #ccc !important;
-      }
-
-      .natus-invoice-total-bar {
-        background: #2c2418 !important;
-        color: #fff !important;
-        border-top: 2px solid #2c2418 !important;
-        font-weight: 700 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-
-      .export-summary {
-        border-color: #000 !important;
-        background: #fff !important;
-      }
     }
 
-    ${PRINT_A4_MEDIA_CSS}`;
+    ${A4_DOC_PREVIEW_CSS}`;
 
 export function buildInvoiceHtml(data: SaleDocumentData): string {
   const invoiceNo = saleDocumentNumber(data.saleId, data.invoiceNumber);
+  const toolbar = buildDocToolbar(`Facture N° ${escapeHtml(invoiceNo)}`);
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -631,7 +580,7 @@ export function buildInvoiceHtml(data: SaleDocumentData): string {
   <title>Facture ${invoiceNo}</title>
   <style>${INVOICE_DOC_STYLES}</style>
 </head>
-<body>${buildInvoiceBody(data)}</body>
+<body>${toolbar}${buildInvoiceBody(data)}</body>
 </html>`;
 }
 
@@ -661,6 +610,9 @@ export function buildInvoicesCombinedHtml(
     .join("");
 
   const dateKey = exportedAt.toISOString().slice(0, 10);
+  const toolbar = buildDocToolbar(
+    `${invoices.length} facture${invoices.length !== 1 ? "s" : ""}`
+  );
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -669,68 +621,50 @@ export function buildInvoicesCombinedHtml(
   <title>Export factures ${dateKey}</title>
   <style>${INVOICE_DOC_STYLES}</style>
 </head>
-<body>${summary}${pages}</body>
+<body>${toolbar}${summary}${pages}</body>
 </html>`;
 }
 
-function downloadHtmlFile(html: string, filename: string) {
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
+const AUTO_PRINT_SCRIPT =
+  '<script>window.addEventListener("load",function(){setTimeout(function(){window.focus();window.print();},350);});</script>';
+
+function openHtmlPrintWindow(html: string, autoPrint = false) {
+  const markup = autoPrint
+    ? html.replace("</body>", `${AUTO_PRINT_SCRIPT}</body>`)
+    : html;
+  const docWindow = window.open("", "_blank");
+  if (!docWindow) return;
+  docWindow.document.write(markup);
+  docWindow.document.close();
+  docWindow.focus();
 }
 
-function openHtmlPrintWindow(html: string) {
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
-  printWindow.document.write(html);
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.onload = () => {
-    printWindow.print();
-  };
-}
-
-/** Impression facture — même rendu que le fichier HTML téléchargé (N&B via @media print). */
-export function printInvoiceHtml(data: SaleDocumentData): void {
+/** Aperçu A4 de la facture (sans lancer l'impression). */
+export function viewInvoiceHtml(data: SaleDocumentData): void {
   openHtmlPrintWindow(buildInvoiceHtml(data));
 }
 
+/** Ouvre la facture et lance directement l'impression / « Enregistrer en PDF ». */
+export function printInvoiceHtml(data: SaleDocumentData): void {
+  openHtmlPrintWindow(buildInvoiceHtml(data), true);
+}
+
+/** « Télécharger » = impression navigateur → « Enregistrer en PDF » (vrai PDF net). */
 export function downloadInvoiceHtml(data: SaleDocumentData): void {
-  const invoiceNo = saleDocumentNumber(data.saleId, data.invoiceNumber);
-  downloadHtmlFile(buildInvoiceHtml(data), `facture-${invoiceNo}.html`);
+  printInvoiceHtml(data);
 }
 
-const BULK_DOWNLOAD_GAP_MS = 350;
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Télécharge chaque facture dans son propre fichier HTML (comme le bouton ligne). */
+/** Impression groupée : un seul document A4 multi-pages → « Enregistrer en PDF ». */
 export async function downloadInvoicesHtml(invoices: SaleDocumentData[]): Promise<void> {
-  for (let index = 0; index < invoices.length; index++) {
-    downloadInvoiceHtml(invoices[index]!);
-    if (index < invoices.length - 1) {
-      await wait(BULK_DOWNLOAD_GAP_MS);
-    }
-  }
+  if (invoices.length === 0) return;
+  printInvoicesCombinedHtml(invoices, { scopeLabel: "" });
 }
 
 export function downloadInvoicesCombinedHtml(
   invoices: SaleDocumentData[],
   meta: { scopeLabel: string }
 ): void {
-  if (invoices.length === 0) return;
-  const dateKey = new Date().toISOString().slice(0, 10);
-  const filename =
-    invoices.length === 1
-      ? `facture-${saleDocumentNumber(invoices[0].saleId)}.html`
-      : `factures-${dateKey}-${invoices.length}.html`;
-  downloadHtmlFile(buildInvoicesCombinedHtml(invoices, meta), filename);
+  printInvoicesCombinedHtml(invoices, meta);
 }
 
 export function printInvoicesCombinedHtml(
@@ -738,5 +672,5 @@ export function printInvoicesCombinedHtml(
   meta: { scopeLabel: string }
 ): void {
   if (invoices.length === 0) return;
-  openHtmlPrintWindow(buildInvoicesCombinedHtml(invoices, meta));
+  openHtmlPrintWindow(buildInvoicesCombinedHtml(invoices, meta), true);
 }

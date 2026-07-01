@@ -5,8 +5,9 @@ import {
   NATUS_BRAND_SERIF,
 } from "@/lib/constants/natus-brand";
 import {
+  A4_DOC_PREVIEW_CSS,
   A4_PAGE_CSS,
-  PRINT_A4_MEDIA_CSS,
+  buildDocToolbar,
   PRINT_TABLE_PAGINATION_CSS,
 } from "@/lib/print/document-styles";
 import type { ReceivedTransferRow } from "@/lib/stock-transfers/received-transfer-rows";
@@ -260,64 +261,6 @@ const BON_COMMANDE_STYLES = `
 
     .natus-invoice-sheet { position: relative; overflow: hidden; padding: 32px; }
 
-    /* Barre d'action (écran uniquement) */
-    .natus-doc-toolbar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 12px 20px;
-      background: rgba(44, 36, 24, 0.96);
-      color: #fff;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
-    }
-
-    .natus-doc-toolbar span {
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 13px;
-      letter-spacing: 0.02em;
-      opacity: 0.9;
-    }
-
-    .natus-doc-toolbar button {
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      border-radius: 8px;
-      padding: 9px 16px;
-      background: ${NATUS_BRAND.gold};
-      color: #fff;
-      transition: background 0.15s ease;
-    }
-
-    .natus-doc-toolbar button:hover { background: ${NATUS_BRAND.goldDeep}; }
-
-    /* Aperçu A4 à l'écran : feuille centrée sur fond gris, comme un PDF */
-    @media screen {
-      body {
-        background: #525659;
-        padding: 0 0 32px;
-      }
-
-      .natus-invoice {
-        width: 210mm;
-        min-height: 297mm;
-        margin: 24px auto;
-        background: #fff;
-        box-shadow: 0 6px 28px rgba(0, 0, 0, 0.4);
-      }
-
-      .natus-invoice-sheet {
-        min-height: 297mm;
-        padding: 18mm 16mm;
-      }
-    }
-
     .natus-invoice-monogram {
       position: absolute;
       bottom: -6%;
@@ -522,100 +465,50 @@ const BON_COMMANDE_STYLES = `
     .natus-invoice-legal { margin: 12px 0 0; font-size: 11px; line-height: 1.6; }
 
     @media print {
-      .natus-doc-toolbar { display: none !important; }
+      @page { size: A4 portrait; margin: 0; }
 
-      body {
-        background: #fff !important;
-        color: #000 !important;
+      html, body {
+        margin: 0 !important;
         padding: 0 !important;
-        -webkit-print-color-adjust: economy !important;
-        print-color-adjust: economy !important;
-      }
-
-      .natus-invoice {
-        width: auto !important;
-        min-height: 0 !important;
-        margin: 0 auto !important;
-        box-shadow: none !important;
-      }
-
-      .natus-invoice,
-      .natus-invoice-sheet,
-      .natus-invoice * {
-        box-shadow: none !important;
-        text-shadow: none !important;
-        background: #fff !important;
-        color: #000 !important;
-        -webkit-print-color-adjust: economy !important;
-        print-color-adjust: economy !important;
-      }
-
-      .natus-invoice-sheet { padding: 0 !important; overflow: visible !important; }
-      .natus-invoice-monogram { display: none !important; }
-
-      .natus-invoice-print-header {
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
-      }
-
-      .natus-invoice-header,
-      .natus-invoice-parties,
-      .natus-invoice-footer { border-color: #000 !important; }
-
-      .natus-invoice-party-accent { background: #000 !important; opacity: 0.2 !important; }
-
-      .natus-invoice-table-wrap {
-        border: 1px solid #000 !important;
-        border-bottom: none !important;
-        overflow: visible !important;
-      }
-
-      .natus-invoice-table th {
-        border: 1px solid #2c2418 !important;
-        background: #2c2418 !important;
-        color: #fff !important;
-        font-weight: 700 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
 
-      .natus-invoice-table td { border: 1px solid #ccc !important; }
-
-      .natus-invoice-table tbody tr {
-        break-inside: avoid;
-        page-break-inside: avoid;
+      /* On conserve le design (crème, doré, en-tête foncé, filigrane). */
+      .natus-invoice,
+      .natus-invoice-sheet,
+      .natus-invoice * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
       }
 
+      .natus-invoice-sheet { padding: 16mm 14mm !important; }
+
+      .natus-invoice-print-header,
       .natus-invoice-totals,
       .natus-invoice-footer {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
       }
 
-      .natus-invoice-totals { border: 1px solid #000 !important; border-top: none !important; }
+      .natus-invoice-table thead { display: table-header-group !important; }
 
-      .natus-invoice-total-bar {
-        background: #2c2418 !important;
-        color: #fff !important;
-        border-top: 2px solid #2c2418 !important;
-        font-weight: 700 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+      .natus-invoice-table tbody tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
       }
     }
 
-    ${PRINT_A4_MEDIA_CSS}`;
+    ${A4_DOC_PREVIEW_CSS}`;
 
 export function buildTransferDocHtml(
   data: BonCommandeData,
   kind: TransferDocumentKind
 ): string {
   const title = kind === "livraison" ? "Bon de livraison" : "Bon de commande";
-  const toolbar = `
-  <div class="natus-doc-toolbar">
-    <span>${title} N° ${escapeHtml(data.orderNumber)} — format A4</span>
-    <button type="button" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
-  </div>`;
+  const toolbar = buildDocToolbar(`${title} N° ${escapeHtml(data.orderNumber)}`);
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -635,38 +528,40 @@ export function buildBonLivraisonHtml(data: BonCommandeData): string {
   return buildTransferDocHtml(data, "livraison");
 }
 
-function openHtmlDocumentWindow(html: string) {
+const AUTO_PRINT_SCRIPT =
+  '<script>window.addEventListener("load",function(){setTimeout(function(){window.focus();window.print();},350);});</script>';
+
+function openHtmlDocumentWindow(html: string, autoPrint = false) {
+  const markup = autoPrint
+    ? html.replace("</body>", `${AUTO_PRINT_SCRIPT}</body>`)
+    : html;
   const docWindow = window.open("", "_blank");
   if (!docWindow) return;
-  docWindow.document.write(html);
+  docWindow.document.write(markup);
   docWindow.document.close();
   docWindow.focus();
 }
 
-function downloadHtml(html: string, filename: string) {
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
-/** Ouvre le bon de commande dans un onglet, en aperçu A4 (bouton « Imprimer / PDF »). */
-export function printBonCommandeHtml(data: BonCommandeData): void {
+/** Aperçu A4 du bon de commande (œil « voir »), sans lancer l'impression. */
+export function viewBonCommandeHtml(data: BonCommandeData): void {
   openHtmlDocumentWindow(buildBonCommandeHtml(data));
 }
 
-export function downloadBonCommandeHtml(data: BonCommandeData): void {
-  downloadHtml(buildBonCommandeHtml(data), `bon-commande-${data.orderNumber}.html`);
-}
-
-/** Ouvre le bon de livraison dans un onglet, en aperçu A4 (bouton « Imprimer / PDF »). */
-export function printBonLivraisonHtml(data: BonCommandeData): void {
+/** Aperçu A4 du bon de livraison (œil « voir »), sans lancer l'impression. */
+export function viewBonLivraisonHtml(data: BonCommandeData): void {
   openHtmlDocumentWindow(buildBonLivraisonHtml(data));
 }
 
-export function downloadBonLivraisonHtml(data: BonCommandeData): void {
-  downloadHtml(buildBonLivraisonHtml(data), `bon-livraison-${data.orderNumber}.html`);
+/** Ouvre le bon de commande et lance directement l'impression / « Enregistrer en PDF ». */
+export function printBonCommandeHtml(data: BonCommandeData): void {
+  openHtmlDocumentWindow(buildBonCommandeHtml(data), true);
 }
+
+/** Ouvre le bon de livraison et lance directement l'impression / « Enregistrer en PDF ». */
+export function printBonLivraisonHtml(data: BonCommandeData): void {
+  openHtmlDocumentWindow(buildBonLivraisonHtml(data), true);
+}
+
+/** « Télécharger » = impression navigateur → « Enregistrer en PDF » (vrai PDF net). */
+export const downloadBonCommandeHtml = printBonCommandeHtml;
+export const downloadBonLivraisonHtml = printBonLivraisonHtml;

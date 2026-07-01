@@ -1,3 +1,95 @@
+import { NATUS_BRAND } from "@/lib/constants/natus-brand";
+
+/**
+ * Aperçu A4 partagé (facture, bon de commande, bon de livraison) :
+ * feuille A4 centrée sur fond gris à l'écran + barre d'action, masquée à l'impression.
+ * S'adapte automatiquement à 1 ou plusieurs pages (min-height A4, pagination via @page).
+ */
+export const A4_DOC_PREVIEW_CSS = `
+  .natus-doc-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 20px;
+    background: rgba(44, 36, 24, 0.96);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  .natus-doc-toolbar span {
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    opacity: 0.9;
+  }
+
+  .natus-doc-toolbar button {
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    background: ${NATUS_BRAND.gold};
+    color: #fff;
+    transition: background 0.15s ease;
+  }
+
+  .natus-doc-toolbar button:hover { background: ${NATUS_BRAND.goldDeep}; }
+
+  @media screen {
+    body {
+      margin: 0;
+      background: #525659;
+      padding: 0 0 32px;
+    }
+
+    .natus-invoice,
+    .export-summary {
+      width: 210mm;
+      margin: 24px auto;
+      background: #fff;
+      box-shadow: 0 6px 28px rgba(0, 0, 0, 0.4);
+    }
+
+    .natus-invoice { min-height: 297mm; }
+
+    .natus-invoice-sheet {
+      min-height: 297mm;
+      padding: 18mm 16mm;
+    }
+
+    .invoice-page { margin: 0 auto; }
+  }
+
+  @media print {
+    .natus-doc-toolbar { display: none !important; }
+
+    body { padding: 0 !important; }
+
+    .natus-invoice,
+    .export-summary {
+      width: auto !important;
+      min-height: 0 !important;
+      margin: 0 auto !important;
+      box-shadow: none !important;
+    }
+  }
+`;
+
+/** Barre d'action affichée à l'écran (masquée à l'impression). `title` doit déjà être échappé. */
+export function buildDocToolbar(title: string): string {
+  return `
+  <div class="natus-doc-toolbar">
+    <span>${title} — format A4</span>
+    <button type="button" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+  </div>`;
+}
+
 /** Règles @page A4 — marges + numéros de page (source unique). */
 export const A4_PAGE_CSS = `
   @page {

@@ -58,8 +58,8 @@ import {
 } from "@/lib/stock-transfers/pending-order-actions";
 import {
   buildBonCommandeData,
-  printBonCommandeHtml,
-  printBonLivraisonHtml,
+  viewBonCommandeHtml,
+  viewBonLivraisonHtml,
   type TransferDocumentKind,
 } from "@/lib/stock-transfers/download-bon-commande";
 import { TransferEditItemsModal } from "@/components/stock/transfer-edit-items-modal";
@@ -274,10 +274,10 @@ export function ReceivedTransfersList({
                 const openCommandePdf = documentOnView === "commande";
                 const onViewDetail = openLivraisonPdf
                   ? () =>
-                      printBonLivraisonHtml(buildBonCommandeData(row, rowStatusLabel))
+                      viewBonLivraisonHtml(buildBonCommandeData(row, rowStatusLabel))
                   : openCommandePdf
                     ? () =>
-                        printBonCommandeHtml(buildBonCommandeData(row, rowStatusLabel))
+                        viewBonCommandeHtml(buildBonCommandeData(row, rowStatusLabel))
                     : () => setDetailRow(row);
 
                 if (row.source === "store") {
