@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/db-migrate.mjs --if-configured && next dev",
+    "dev": "node scripts/dev.mjs",
     "build": "node scripts/generate-pwa-icons.mjs && next build",
     "start": "next start",
     "deploy": "bash deploy/deploy.sh",

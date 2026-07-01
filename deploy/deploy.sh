@@ -31,8 +31,8 @@ fi
 echo "→ npm install"
 npm install
 
-echo "→ npm run db:migrate"
-npm run db:migrate
+echo "→ npm run db:migrate:optional"
+npm run db:migrate:optional
 
 echo "→ npm run build"
 npm run build
