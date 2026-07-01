@@ -1,6 +1,7 @@
 import type { HubStockTransferStatus } from "@/lib/types";
 
 const STATUS_LABELS: Record<HubStockTransferStatus, string> = {
+  en_attente: "En attente",
   en_cours: "En cours",
   pret: "Prête",
   en_livraison: "En livraison",
@@ -13,6 +14,7 @@ const STATUS_VARIANTS: Record<
   HubStockTransferStatus,
   "default" | "warning" | "success" | "danger"
 > = {
+  en_attente: "warning",
   en_cours: "default",
   pret: "warning",
   en_livraison: "warning",
@@ -59,6 +61,8 @@ export function hubTransferDepotStockReserved(status: HubStockTransferStatus): b
 
 export function hubTransferStoreStatusHint(status: HubStockTransferStatus): string {
   switch (status) {
+    case "en_attente":
+      return "Commande créée — stock source non déduit tant qu'elle n'est pas confirmée";
     case "en_cours":
       return "Commande confirmée — stock déduit à la source";
     case "pret":

@@ -1,6 +1,7 @@
 import type { StoreStockTransferStatus } from "@/lib/types";
 
 const STATUS_LABELS: Record<StoreStockTransferStatus, string> = {
+  en_attente: "En attente",
   en_cours: "En cours",
   pret: "Prête",
   en_livraison: "En livraison",
@@ -12,6 +13,7 @@ const STATUS_VARIANTS: Record<
   StoreStockTransferStatus,
   "default" | "warning" | "success" | "danger"
 > = {
+  en_attente: "warning",
   en_cours: "default",
   pret: "warning",
   en_livraison: "warning",
@@ -31,6 +33,8 @@ export function storeTransferStatusVariant(
 
 export function storeTransferSourceHint(status: StoreStockTransferStatus): string {
   switch (status) {
+    case "en_attente":
+      return "Commande créée — stock source non déduit tant qu'elle n'est pas confirmée";
     case "en_cours":
       return "Commande confirmée — stock déduit au magasin source";
     case "pret":
@@ -48,6 +52,8 @@ export function storeTransferSourceHint(status: StoreStockTransferStatus): strin
 
 export function storeTransferDestinationHint(status: StoreStockTransferStatus): string {
   switch (status) {
+    case "en_attente":
+      return "Commande créée — stock source non déduit tant qu'elle n'est pas confirmée";
     case "en_cours":
       return "Commande confirmée — stock source déduit, en préparation";
     case "pret":

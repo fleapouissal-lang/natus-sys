@@ -1,6 +1,12 @@
 import type { ReceivedTransferRow } from "@/lib/stock-transfers/received-transfer-rows";
 
-export type MesCommandesActionMode = "default" | "view-only" | "view-and-commander";
+export type MesCommandesActionMode =
+  | "default"
+  | "view-only"
+  | "view-and-ready"
+  | "view-and-prepare"
+  /** @deprecated Utiliser view-and-prepare */
+  | "view-and-commander";
 export type CommanderRole = "cashier" | "hub";
 
 export type MesCommandesRowActions = {
@@ -32,16 +38,18 @@ function sentBasePath(role: CommanderRole): string {
   return role === "cashier" ? "/cashier/transfers/sent" : "/hub/stock-transfers";
 }
 
-/** URL « Nouveau transfert » préremplie à partir d'une commande en cours. */
-export function buildCommanderTransferUrl(
+/** URL « Nouveau transfert » préremplie à partir d'une commande en attente. */
+export function buildPrepareOrderTransferUrl(
   role: CommanderRole,
   row: ReceivedTransferRow
 ): string {
   const transfer = row.transfer;
   const params = new URLSearchParams();
   params.set("tab", "new");
+  params.set("order", transfer.id);
 
   if (row.source === "store") {
+    params.set("kind", "store");
     params.set("from", transfer.from_store_id);
     params.set("to", transfer.to_store_id);
     params.set("dest", "store");
@@ -52,6 +60,7 @@ export function buildCommanderTransferUrl(
   const toHub = hubTransfer.to_store_is_hub;
 
   if (role === "hub") {
+    params.set("kind", "hub");
     params.set("store", hubTransfer.from_store_id);
     params.set("dest", toHub ? "hub" : "store");
     if (toHub) {
@@ -62,6 +71,7 @@ export function buildCommanderTransferUrl(
     return `${sentBasePath(role)}?${params.toString()}`;
   }
 
+  params.set("kind", "hub");
   params.set("from", hubTransfer.from_store_id);
   params.set("dest", toHub ? "hub" : "store");
   if (toHub) {
@@ -92,15 +102,31 @@ export function applyMesCommandesRowActions(
     return base;
   }
 
-  if (mode === "view-and-commander" && commanderRole) {
+  if (mode === "view-and-ready") {
+    const ready =
+      defaultActions.primaryAction?.label === "Marquer prête"
+        ? defaultActions.primaryAction
+        : null;
     return {
       ...base,
-      commanderAction: {
-        label: "Commander",
-        onClick: () => onCommander(buildCommanderTransferUrl(commanderRole, row)),
-      },
+      primaryAction: ready,
     };
+  }
+
+  if (mode === "view-and-prepare" || mode === "view-and-commander") {
+    if (commanderRole) {
+      return {
+        ...base,
+        commanderAction: {
+          label: "Préparer la commande",
+          onClick: () => onCommander(buildPrepareOrderTransferUrl(commanderRole, row)),
+        },
+      };
+    }
   }
 
   return base;
 }
+
+/** @deprecated Utiliser buildPrepareOrderTransferUrl */
+export const buildCommanderTransferUrl = buildPrepareOrderTransferUrl;

@@ -1085,6 +1085,104 @@ export async function transferStoreStock(
   };
 }
 
+export async function confirmPendingStoreStockTransfer(
+  transferId: string,
+  items: HubStockTransferItem[]
+): Promise<
+  { success: true; transferId: string; toStoreName: string } | { error: string }
+> {
+  const profile = await requireRole(["cashier", "hub", "manager"]);
+  if (!profile) return { error: "Non autorisé" };
+  if (!transferId) return { error: "Commande introuvable" };
+
+  const cleaned = items
+    .map((item) => ({
+      product_id: item.productId,
+      quantity: Math.floor(item.quantity),
+    }))
+    .filter((item) => item.product_id && item.quantity > 0);
+
+  if (cleaned.length === 0) {
+    return { error: "Indiquez au moins une quantité à transférer" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("confirm_pending_store_stock_transfer", {
+    p_transfer_id: transferId,
+    p_items: cleaned,
+  });
+
+  if (error) {
+    const msg = error.message;
+    if (msg.includes("Stock insuffisant")) {
+      return { error: "Stock insuffisant au magasin source pour un ou plusieurs produits" };
+    }
+    return { error: msg };
+  }
+
+  revalidateManagement();
+
+  const payload =
+    typeof data === "object" && data !== null
+      ? (data as { transfer_id?: string; to_store?: string })
+      : {};
+
+  return {
+    success: true,
+    transferId: String(payload.transfer_id || transferId),
+    toStoreName: String(payload.to_store || ""),
+  };
+}
+
+export async function confirmPendingHubStockTransfer(
+  transferId: string,
+  items: HubStockTransferItem[]
+): Promise<
+  { success: true; transferId: string; hubStoreName: string } | { error: string }
+> {
+  const profile = await requireRole(["cashier", "hub", "manager"]);
+  if (!profile) return { error: "Non autorisé" };
+  if (!transferId) return { error: "Commande introuvable" };
+
+  const cleaned = items
+    .map((item) => ({
+      product_id: item.productId,
+      quantity: Math.floor(item.quantity),
+    }))
+    .filter((item) => item.product_id && item.quantity > 0);
+
+  if (cleaned.length === 0) {
+    return { error: "Indiquez au moins une quantité à transférer" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("confirm_pending_hub_stock_transfer", {
+    p_transfer_id: transferId,
+    p_items: cleaned,
+  });
+
+  if (error) {
+    const msg = error.message;
+    if (msg.includes("Stock insuffisant")) {
+      return { error: "Stock insuffisant à la source pour un ou plusieurs produits" };
+    }
+    return { error: msg };
+  }
+
+  revalidateManagement();
+
+  const payload =
+    typeof data === "object" && data !== null
+      ? (data as { transfer_id?: string; store?: string })
+      : {};
+
+  return {
+    success: true,
+    transferId: String(payload.transfer_id || transferId),
+    hubStoreName: String(payload.store || ""),
+  };
+}
+
 export async function transferStoreStockToHub(
   fromStoreId: string,
   items: HubStockTransferItem[],

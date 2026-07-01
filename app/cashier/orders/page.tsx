@@ -90,8 +90,8 @@ export default async function CashierOrdersPage({
           Mes commandes
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Transferts en cours de préparation depuis {storeName} — statut « En cours » uniquement.
-          Une fois prête, la commande passe dans Stocks envoyés.
+          Commandes « En attente » depuis {storeName}. Préparez via l&apos;icône dédiée : transfert
+          prérempli (produits, quantités, remarques), puis « En cours » à la confirmation.
         </p>
       </div>
 
@@ -107,9 +107,9 @@ export default async function CashierOrdersPage({
           productLookup={productLookup}
           managedStoreIds={[storeId]}
           livreurs={livreurs}
-          mesCommandesActionMode="view-and-commander"
+          mesCommandesActionMode="view-and-prepare"
           commanderRole="cashier"
-          emptyMessage={`Aucune commande en cours depuis ${storeName}`}
+          emptyMessage={`Aucune commande en attente depuis ${storeName}`}
         />
       </Suspense>
     </div>

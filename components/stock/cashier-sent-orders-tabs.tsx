@@ -51,6 +51,10 @@ function CashierSentOrdersTabsInner({
   livreurs,
   filter,
   productLookup,
+  pendingOrderId,
+  pendingOrderKind,
+  initialQuantities,
+  initialNotes,
 }: {
   storeId: string;
   storeName: string;
@@ -69,6 +73,10 @@ function CashierSentOrdersTabsInner({
   livreurs: Profile[];
   filter: ReceivedTransfersFilterScope;
   productLookup?: ReceivedTransferProductLookup;
+  pendingOrderId?: string;
+  pendingOrderKind?: "store" | "hub";
+  initialQuantities?: Record<string, string>;
+  initialNotes?: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -148,6 +156,10 @@ function CashierSentOrdersTabsInner({
           enableHubDestination
           initialDestination={initialDestination}
           showAllDestinations
+          pendingOrderId={pendingOrderId}
+          pendingOrderKind={pendingOrderKind}
+          initialQuantities={initialQuantities}
+          initialNotes={initialNotes}
         />
       )}
 
@@ -188,6 +200,10 @@ export function CashierSentOrdersTabs(props: {
   livreurs: Profile[];
   filter: ReceivedTransfersFilterScope;
   productLookup?: ReceivedTransferProductLookup;
+  pendingOrderId?: string;
+  pendingOrderKind?: "store" | "hub";
+  initialQuantities?: Record<string, string>;
+  initialNotes?: string | null;
 }) {
   return (
     <Suspense fallback={null}>

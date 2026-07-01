@@ -57,7 +57,7 @@ export function SentTransfersUnifiedView({
   hubManageAsStoreSource?: boolean;
   hubManageOutgoing?: boolean;
   showProductImages?: boolean;
-  workflowSplit?: TransferWorkflowSplit;
+  workflowSplit?: TransferWorkflowSplit | "pending";
   listTitle?: string;
   mesCommandesActionMode?: MesCommandesActionMode;
   commanderRole?: CommanderRole;
@@ -92,14 +92,18 @@ export function SentTransfersUnifiedView({
     <div className="space-y-6">
       <ReceivedTransfersFilterBar
         variant={
-          workflowSplit === "pending"
+          workflowSplit === "pending-attente" || workflowSplit === "pending-cours" || workflowSplit === "pending"
             ? "pending"
             : workflowSplit === "history"
               ? "sent"
               : "sent"
         }
         preserveTab={
-          workflowSplit === "sent" || workflowSplit === "sent-source" ? "sent" : undefined
+          workflowSplit === "sent" ||
+          workflowSplit === "sent-source" ||
+          workflowSplit === "sent-no-pending"
+            ? "sent"
+            : undefined
         }
         filter={filter}
         resultCount={rows.length}

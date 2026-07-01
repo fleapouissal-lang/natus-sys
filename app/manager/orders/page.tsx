@@ -88,8 +88,8 @@ export default async function ManagerOrdersPage({
           Mes commandes
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Commandes « En cours » depuis vos magasins — consultation uniquement — {scopeLabel}. La
-          préparation se fait dans Stocks envoyés.
+          Commandes « En attente » — source : vos magasins associés — {scopeLabel}. Consultation
+          uniquement (voir les détails).
         </p>
       </div>
 
@@ -106,8 +106,9 @@ export default async function ManagerOrdersPage({
           productLookup={productLookup}
           managedStoreIds={managedStoreIds}
           livreurs={livreurs}
+          workflowSplit="pending-attente"
           mesCommandesActionMode="view-only"
-          emptyMessage="Aucune commande en cours de préparation"
+          emptyMessage="Aucune commande en attente"
         />
       </Suspense>
     </div>

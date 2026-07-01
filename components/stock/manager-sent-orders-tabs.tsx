@@ -169,11 +169,10 @@ function ManagerSentOrdersTabsInner({
           productLookup={productLookup}
           managedStoreIds={managedStoreIds}
           livreurs={livreurs}
-          workflowSplit="sent-source"
-          storeActionMode="full"
-          hubReadOnly={false}
-          hubManageAsStoreSource
-          emptyMessage="Aucun transfert envoyé en cours"
+          workflowSplit="sent-no-pending"
+          storeActionMode="none"
+          hubReadOnly
+          emptyMessage="Aucun transfert envoyé (hors statut En cours)"
         />
       )}
     </div>

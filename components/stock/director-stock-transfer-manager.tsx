@@ -418,8 +418,6 @@ export function DirectorStockTransferManager({
 
     setQuantities({});
 
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("created", "1");
     router.push("/director/orders?created=1");
     router.refresh();
   }

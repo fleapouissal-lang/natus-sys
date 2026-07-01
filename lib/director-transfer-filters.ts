@@ -21,7 +21,7 @@ export function isDirectorTransferReceivedStatus(status: TransferStatus): boolea
 
 /** Stocks envoyés (autres rôles) : hors en cours et reçu. */
 export function isTransferSentStatus(status: TransferStatus): boolean {
-  return status !== "received" && status !== "en_cours";
+  return status !== "received" && status !== "en_cours" && status !== "en_attente";
 }
 
 /** Stocks reçus (autres rôles) : visible dès la création jusqu'à clôture. */

@@ -2,7 +2,8 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { getHubStoresByCity } from "@/lib/hub";
-import { getHubOutgoingTransfers } from "@/lib/hub-transfers";
+import { getHubOutgoingTransfers, getHubTransferById } from "@/lib/hub-transfers";
+import { transferItemsToQuantities } from "@/lib/stock-transfers/pending-order-prefill";
 import {
   getAllActiveTransferSites,
   getProductsWithStoreStockForTransfer,
@@ -52,6 +53,8 @@ export default async function HubStockTransfersSentPage({
     listDest?: string;
     sentFrom?: string;
     sentTo?: string;
+    order?: string;
+    kind?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -103,6 +106,27 @@ export default async function HubStockTransfersSentPage({
   ]);
   const productLookup = buildReceivedTransferProductLookup(catalogProducts);
 
+  let pendingOrderId: string | undefined;
+  let initialQuantities: Record<string, string> | undefined;
+  let initialNotes: string | null | undefined;
+
+  if (params.order && params.kind === "hub" && params.tab === "new") {
+    const pending = await getHubTransferById(params.order);
+    if (
+      pending?.status === "en_attente" &&
+      scopeHubIds.includes(pending.from_store_id)
+    ) {
+      pendingOrderId = pending.id;
+      initialNotes = pending.notes;
+      initialQuantities = transferItemsToQuantities(
+        pending.items.map((item) => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+        }))
+      );
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -135,9 +159,12 @@ export default async function HubStockTransfersSentPage({
           productLookup={productLookup}
           successMessage={
             params.created === "1"
-              ? "Transfert créé — consultez Mes commandes tant qu'il est en préparation."
+              ? "Commande créée — consultez Mes commandes (statut En attente)."
               : undefined
           }
+          pendingOrderId={pendingOrderId}
+          initialQuantities={initialQuantities}
+          initialNotes={initialNotes}
         />
       </Suspense>
     </div>

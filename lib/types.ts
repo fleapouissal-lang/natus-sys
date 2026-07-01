@@ -314,6 +314,7 @@ export interface StoreRecentStock {
 }
 
 export type HubStockTransferStatus =
+  | "en_attente"
   | "en_cours"
   | "pret"
   | "en_livraison"
@@ -358,6 +359,7 @@ export interface HubStockTransfer {
 }
 
 export type StoreStockTransferStatus =
+  | "en_attente"
   | "en_cours"
   | "pret"
   | "en_livraison"

@@ -116,8 +116,8 @@ export default async function ManagerStockTransfersPage({
           Commandes envoyées
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Transferts envoyés depuis vos magasins associés — préparation, livraison et suivi —{" "}
-          {scopeLabel}
+          Transferts envoyés depuis vos magasins — hors statut « En cours » — consultation
+          uniquement — {scopeLabel}
         </p>
       </div>
 

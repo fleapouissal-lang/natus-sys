@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   CheckCircle2,
+  ClipboardList,
   Eye,
   PackageCheck,
   PackagePlus,
@@ -132,7 +133,7 @@ export function ReceivedTransferRowActions({
             loading={loading}
             variant="primary"
           >
-            <PackagePlus className="h-4 w-4" />
+            <ClipboardList className="h-4 w-4" />
           </ActionIconButton>
         )}
 

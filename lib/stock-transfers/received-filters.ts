@@ -26,6 +26,7 @@ export type ReceivedTransfersSearchParams = {
 
 export type ReceivedTransferStatusFilter =
   | "all"
+  | "en_attente"
   | "en_cours"
   | "pret"
   | "en_livraison"
@@ -55,6 +56,7 @@ export const RECEIVED_TRANSFER_STATUS_OPTIONS: {
   label: string;
 }[] = [
   { id: "all", label: "Tout" },
+  { id: "en_attente", label: "En attente" },
   { id: "en_cours", label: "En cours" },
   { id: "pret", label: "Prête" },
   { id: "en_livraison", label: "En livraison" },
@@ -64,6 +66,7 @@ export const RECEIVED_TRANSFER_STATUS_OPTIONS: {
 
 const VALID_STATUSES = new Set<ReceivedTransferStatusFilter>([
   "all",
+  "en_attente",
   "en_cours",
   "pret",
   "en_livraison",

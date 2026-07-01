@@ -11,8 +11,9 @@ import {
   getAllActiveTransferSites,
   getProductsWithStoreStockForTransfer,
 } from "@/lib/transfer-sites.server";
-import { getCashierOutgoingStoreToHubTransfers } from "@/lib/hub-transfers";
-import { getCashierOutgoingStoreTransfers } from "@/lib/store-transfers";
+import { getCashierOutgoingStoreTransfers, getStoreStockTransferById } from "@/lib/store-transfers";
+import { getCashierOutgoingStoreToHubTransfers, getHubTransferById } from "@/lib/hub-transfers";
+import { transferItemsToQuantities } from "@/lib/stock-transfers/pending-order-prefill";
 import { resolveSentTransfersListScope } from "@/lib/stock-transfers/received-filters";
 import { buildReceivedTransferProductLookup } from "@/lib/stock-transfers/received-transfer-rows";
 import { CashierSentOrdersTabs } from "@/components/stock/cashier-sent-orders-tabs";
@@ -42,6 +43,8 @@ export default async function CashierTransfersSentPage({
     listDest?: string;
     sentFrom?: string;
     sentTo?: string;
+    order?: string;
+    kind?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -107,6 +110,41 @@ export default async function CashierTransfersSentPage({
 
   const sourceStores = store ? [store] : [];
 
+  let pendingOrderId: string | undefined;
+  let pendingOrderKind: "store" | "hub" | undefined;
+  let initialQuantities: Record<string, string> | undefined;
+  let initialNotes: string | null | undefined;
+
+  if (params.order && params.tab === "new") {
+    if (params.kind === "hub") {
+      const pending = await getHubTransferById(params.order);
+      if (pending?.status === "en_attente" && pending.from_store_id === storeId) {
+        pendingOrderId = pending.id;
+        pendingOrderKind = "hub";
+        initialNotes = pending.notes;
+        initialQuantities = transferItemsToQuantities(
+          pending.items.map((item) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+          }))
+        );
+      }
+    } else {
+      const pending = await getStoreStockTransferById(params.order);
+      if (pending?.status === "en_attente" && pending.from_store_id === storeId) {
+        pendingOrderId = pending.id;
+        pendingOrderKind = "store";
+        initialNotes = pending.notes;
+        initialQuantities = transferItemsToQuantities(
+          pending.items.map((item) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+          }))
+        );
+      }
+    }
+  }
+
   return (
     <div className="animate-fade-in space-y-6">
       <div>
@@ -138,6 +176,10 @@ export default async function CashierTransfersSentPage({
           livreurs={livreurs}
           filter={filter}
           productLookup={productLookup}
+          pendingOrderId={pendingOrderId}
+          pendingOrderKind={pendingOrderKind}
+          initialQuantities={initialQuantities}
+          initialNotes={initialNotes}
         />
       </Suspense>
     </div>

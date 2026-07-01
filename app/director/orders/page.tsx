@@ -87,12 +87,13 @@ export default async function DirectorOrdersPage({
           Mes commandes
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Transferts en cours de préparation — statut « En cours » — réseau complet. Une fois
-          prête, consultez Stocks envoyés ; les transferts clôturés sont dans Stocks reçus.
+          Commandes « En attente » — réseau complet. Consultation uniquement (voir les détails). Le
+          stock source n&apos;est pas déduit tant qu&apos;un hub ou une caisse n&apos;a pas préparé
+          la commande.
         </p>
         {params.created === "1" && (
           <p className="mt-2 text-sm text-success">
-            Commande créée — elle apparaît ici tant qu&apos;elle est en préparation.
+            Commande créée — elle apparaît ici en statut « En attente ».
           </p>
         )}
       </div>
@@ -109,7 +110,7 @@ export default async function DirectorOrdersPage({
           managedStoreIds={transferSites.map((store) => store.id)}
           livreurs={livreurs}
           mesCommandesActionMode="view-only"
-          emptyMessage="Aucune commande en cours de préparation"
+          emptyMessage="Aucune commande en attente"
         />
       </Suspense>
     </div>

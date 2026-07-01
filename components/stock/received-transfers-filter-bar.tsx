@@ -121,7 +121,9 @@ function ReceivedTransfersFilterBarInner({
   const statusSelectOptions = useMemo(
     () =>
       RECEIVED_TRANSFER_STATUS_OPTIONS.filter(
-        (option) => variant !== "sent" || option.id !== "en_cours"
+        (option) =>
+          variant !== "sent" ||
+          (option.id !== "en_cours" && option.id !== "en_attente")
       ).map(({ id, label }) => ({
         value: id,
         label,

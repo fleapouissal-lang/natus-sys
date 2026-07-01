@@ -15,10 +15,14 @@ import type {
 import type { Profile } from "@/lib/types";
 
 export function PendingTransfersUnifiedView({
-  emptyMessage = "Aucune commande en cours de préparation",
+  emptyMessage = "Aucune commande en attente",
   mesCommandesActionMode = "view-only",
   commanderRole,
   detailVariant = "order",
+  storeActionMode = "none",
+  hubReadOnly = true,
+  hubManageAsStoreSource = false,
+  workflowSplit = "pending-attente",
   ...props
 }: {
   filter: ReceivedTransfersFilterScope;
@@ -36,15 +40,17 @@ export function PendingTransfersUnifiedView({
   mesCommandesActionMode?: MesCommandesActionMode;
   commanderRole?: CommanderRole;
   detailVariant?: TransferDetailVariant;
+  workflowSplit?: import("@/lib/stock-transfers/workflow-split").TransferWorkflowSplit | "pending";
 }) {
   return (
     <SentTransfersUnifiedView
       {...props}
-      workflowSplit="pending"
+      workflowSplit={workflowSplit}
       listTitle="Mes commandes"
       emptyMessage={emptyMessage}
-      storeActionMode="none"
-      hubReadOnly
+      storeActionMode={storeActionMode}
+      hubReadOnly={hubReadOnly}
+      hubManageAsStoreSource={hubManageAsStoreSource}
       mesCommandesActionMode={mesCommandesActionMode}
       commanderRole={commanderRole}
       detailVariant={detailVariant}

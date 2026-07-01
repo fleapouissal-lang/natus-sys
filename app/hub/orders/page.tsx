@@ -76,8 +76,8 @@ export default async function HubOrdersPage({
           Mes commandes
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Transferts en cours de préparation depuis le dépôt — statut « En cours » — {scopeLabel}.
-          Une fois prête, consultez Stocks envoyés.
+          Commandes « En attente » depuis le dépôt — {scopeLabel}. Préparez via l&apos;icône dédiée
+          : le transfert est prérempli, puis passe en « En cours » à la confirmation.
         </p>
         {params.created === "1" && (
           <p className="mt-2 text-sm text-success">
@@ -98,9 +98,9 @@ export default async function HubOrdersPage({
           productLookup={productLookup}
           managedStoreIds={scopeHubIds}
           livreurs={livreurs}
-          mesCommandesActionMode="view-and-commander"
+          mesCommandesActionMode="view-and-prepare"
           commanderRole="hub"
-          emptyMessage="Aucune commande en cours depuis le dépôt"
+          emptyMessage="Aucune commande en attente depuis le dépôt"
         />
       </Suspense>
     </div>

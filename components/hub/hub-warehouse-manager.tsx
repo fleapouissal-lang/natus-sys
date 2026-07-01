@@ -15,7 +15,7 @@ import { ProductImage } from "@/components/pos/product-image";
 import { StockTransferConfirmModal } from "@/components/stock/stock-transfer-confirm-modal";
 import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
-import { transferHubStock } from "@/lib/actions";
+import { transferHubStock, confirmPendingHubStockTransfer } from "@/lib/actions";
 import { formatCurrency } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, Store } from "@/lib/types";
@@ -38,6 +38,9 @@ export function HubWarehouseManager({
   toStoreId: initialToStoreId = "",
   toHubStoreId: initialToHubStoreId = "",
   embedded = false,
+  pendingOrderId,
+  initialQuantities,
+  initialNotes,
 }: {
   hubStore: Store;
   products: Product[];
@@ -47,6 +50,9 @@ export function HubWarehouseManager({
   toStoreId?: string;
   toHubStoreId?: string;
   embedded?: boolean;
+  pendingOrderId?: string;
+  initialQuantities?: Record<string, string>;
+  initialNotes?: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -134,6 +140,12 @@ export function HubWarehouseManager({
     setToStoreId(initialToStoreId);
     setToHubStoreId(initialToHubStoreId);
   }, [initialToStoreId, initialToHubStoreId, hubStore.id]);
+
+  useEffect(() => {
+    if (initialQuantities && Object.keys(initialQuantities).length > 0) {
+      setQuantities(initialQuantities);
+    }
+  }, [initialQuantities, pendingOrderId]);
 
   function navigateTransfer(
     nextTo: string,
@@ -244,12 +256,14 @@ export function HubWarehouseManager({
 
   async function handleTransferConfirm() {
     setLoading(true);
-    const result = await transferHubStock(
-      destinationId,
-      transferPayload.payload,
-      undefined,
-      hubStore.id
-    );
+    const result = pendingOrderId
+      ? await confirmPendingHubStockTransfer(pendingOrderId, transferPayload.payload)
+      : await transferHubStock(
+          destinationId,
+          transferPayload.payload,
+          undefined,
+          hubStore.id
+        );
     setLoading(false);
     setConfirmOpen(false);
 
@@ -262,9 +276,17 @@ export function HubWarehouseManager({
     }
 
     resetTransfer();
-    const params = new URLSearchParams();
-    params.set("created", "1");
-    router.push(`/hub/orders?${params.toString()}`);
+    if (embedded) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", "sent");
+      params.delete("order");
+      params.delete("kind");
+      router.push(`${pathname}?${params.toString()}`);
+    } else {
+      const params = new URLSearchParams();
+      params.set("created", "1");
+      router.push(`/hub/orders?${params.toString()}`);
+    }
     router.refresh();
   }
 
@@ -287,6 +309,22 @@ export function HubWarehouseManager({
         <p className="text-sm text-muted">
           Source : <strong>{hubStore.name}</strong> — envoi vers tout magasin ou dépôt actif.
         </p>
+      )}
+
+      {pendingOrderId && (
+        <Card className="border-primary/30 bg-primary-light/20">
+          <p className="text-sm font-medium text-primary-dark">
+            Préparation commande — réf. {pendingOrderId.slice(0, 8).toUpperCase()}
+          </p>
+          {initialNotes?.trim() && (
+            <p className="mt-2 text-sm text-muted">
+              <span className="font-medium text-foreground">Remarques :</span> {initialNotes.trim()}
+            </p>
+          )}
+          <p className="mt-2 text-xs text-muted">
+            Vérifiez destination, produits et quantités avant de confirmer le transfert.
+          </p>
+        </Card>
       )}
 
       {destinationType === "store" && !canTransferStore && (

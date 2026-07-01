@@ -295,3 +295,25 @@ export async function getLivreurStoreTransferHistory(
   const transfers = (data || []).map((row) => mapTransferRow(row as Record<string, unknown>));
   return finalizeStoreTransfers(transfers);
 }
+
+export async function getStoreStockTransferById(
+  transferId: string
+): Promise<StoreStockTransfer | null> {
+  if (!transferId) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("store_stock_transfers")
+    .select(TRANSFER_SELECT)
+    .eq("id", transferId)
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.error("getStoreStockTransferById:", error.message);
+    return null;
+  }
+
+  const [transfer] = await finalizeStoreTransfers([
+    mapTransferRow(data as Record<string, unknown>),
+  ]);
+  return transfer ?? null;
+}

@@ -21,7 +21,7 @@ import { ProductImage } from "@/components/pos/product-image";
 import { StockTransferConfirmModal } from "@/components/stock/stock-transfer-confirm-modal";
 import { categoryOptions } from "@/lib/select-options";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/products";
-import { transferStoreStock, transferStoreStockToHub } from "@/lib/actions";
+import { transferStoreStock, transferStoreStockToHub, confirmPendingStoreStockTransfer, confirmPendingHubStockTransfer } from "@/lib/actions";
 import { formatCurrency } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/use-pagination";
 import type { Product, Store } from "@/lib/types";
@@ -48,6 +48,10 @@ export function StoreStockTransferManager({
   enableHubDestination = false,
   initialDestination = "store",
   showAllDestinations = false,
+  pendingOrderId,
+  pendingOrderKind,
+  initialQuantities,
+  initialNotes,
 }: {
   stores: Store[];
   sourceStores?: Store[];
@@ -61,6 +65,10 @@ export function StoreStockTransferManager({
   enableHubDestination?: boolean;
   initialDestination?: TransferDestination;
   showAllDestinations?: boolean;
+  pendingOrderId?: string;
+  pendingOrderKind?: "store" | "hub";
+  initialQuantities?: Record<string, string>;
+  initialNotes?: string | null;
 }) {
   const router = useRouter();
   const [destinationType, setDestinationType] = useState<TransferDestination>(
@@ -72,6 +80,12 @@ export function StoreStockTransferManager({
       enableHubDestination && initialDestination === "hub" ? "hub" : "store"
     );
   }, [enableHubDestination, initialDestination, fromStoreId]);
+
+  useEffect(() => {
+    if (initialQuantities && Object.keys(initialQuantities).length > 0) {
+      setQuantities(initialQuantities);
+    }
+  }, [initialQuantities, pendingOrderId]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [quantities, setQuantities] = useState<Record<string, string>>({});
@@ -156,6 +170,9 @@ export function StoreStockTransferManager({
   }, [transferPayload.payload, products]);
 
   function pendingOrdersPath() {
+    if (pendingOrderId) {
+      return sentTransfersPath("tab=sent");
+    }
     if (basePath === "/cashier") return "/cashier/orders";
     return `${basePath}/orders`;
   }
@@ -279,18 +296,28 @@ export function StoreStockTransferManager({
   async function handleTransferConfirm() {
     setLoading(true);
     const result =
-      destinationType === "hub"
-        ? await transferStoreStockToHub(
-            fromStoreId,
-            transferPayload.payload,
-            undefined,
-            toHubStoreId
-          )
-        : await transferStoreStock(
-            fromStoreId,
-            toStoreId,
+      pendingOrderId && pendingOrderKind === "hub"
+        ? await confirmPendingHubStockTransfer(
+            pendingOrderId,
             transferPayload.payload
-          );
+          )
+        : pendingOrderId && pendingOrderKind === "store"
+          ? await confirmPendingStoreStockTransfer(
+              pendingOrderId,
+              transferPayload.payload
+            )
+          : destinationType === "hub"
+            ? await transferStoreStockToHub(
+                fromStoreId,
+                transferPayload.payload,
+                undefined,
+                toHubStoreId
+              )
+            : await transferStoreStock(
+                fromStoreId,
+                toStoreId,
+                transferPayload.payload
+              );
     setLoading(false);
     setConfirmOpen(false);
 
@@ -304,9 +331,11 @@ export function StoreStockTransferManager({
 
     resetTransfer();
     setSuccess(
-      destinationType === "hub"
-        ? `Commande créée vers ${"hubStoreName" in result ? result.hubStoreName : "dépôt"} — statut « En cours ». Consultez Mes commandes pour la préparer.`
-        : `Commande créée vers ${"toStoreName" in result ? result.toStoreName : "magasin"} — statut « En cours ». Consultez Mes commandes pour la préparer.`
+      pendingOrderId
+        ? `Commande confirmée — statut « En cours ». Consultez Stock envoyé.`
+        : destinationType === "hub"
+          ? `Commande créée vers ${"hubStoreName" in result ? result.hubStoreName : "dépôt"} — statut « En cours ». Consultez Mes commandes pour la préparer.`
+          : `Commande créée vers ${"toStoreName" in result ? result.toStoreName : "magasin"} — statut « En cours ». Consultez Mes commandes pour la préparer.`
     );
     router.push(pendingOrdersPath());
     router.refresh();
@@ -334,6 +363,23 @@ export function StoreStockTransferManager({
             : "Déplacez du stock d'un magasin vers un autre magasin de vente."}
         </p>
       </div>
+
+      {pendingOrderId && (
+        <Card className="border-primary/30 bg-primary-light/20">
+          <p className="text-sm font-medium text-primary-dark">
+            Préparation commande — réf. {pendingOrderId.slice(0, 8).toUpperCase()}
+          </p>
+          {initialNotes?.trim() && (
+            <p className="mt-2 text-sm text-muted">
+              <span className="font-medium text-foreground">Remarques :</span>{" "}
+              {initialNotes.trim()}
+            </p>
+          )}
+          <p className="mt-2 text-xs text-muted">
+            Vérifiez source, destination, produits et quantités avant de confirmer le transfert.
+          </p>
+        </Card>
+      )}
 
       {destinationType === "store" && !canTransferStore && (
         <Card className="border-warning/40 bg-warning/5">
@@ -563,7 +609,11 @@ export function StoreStockTransferManager({
           }
           sourceStockLabel="Stock magasin"
           confirmLabel={
-            destinationType === "hub" ? "Confirmer l'envoi" : "Confirmer le transfert"
+            pendingOrderId
+              ? "Confirmer la préparation"
+              : destinationType === "hub"
+                ? "Confirmer l'envoi"
+                : "Confirmer le transfert"
           }
         />
       )}

@@ -52,6 +52,9 @@ function HubSentOrdersTabsInner({
   filter,
   productLookup,
   successMessage,
+  pendingOrderId,
+  initialQuantities,
+  initialNotes,
 }: {
   hubStores: Store[];
   selectedHubStoreId: string;
@@ -70,6 +73,9 @@ function HubSentOrdersTabsInner({
   filter: ReceivedTransfersFilterScope;
   productLookup?: ReceivedTransferProductLookup;
   successMessage?: string;
+  pendingOrderId?: string;
+  initialQuantities?: Record<string, string>;
+  initialNotes?: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -164,6 +170,9 @@ function HubSentOrdersTabsInner({
           toStoreId={toStoreId}
           toHubStoreId={toHubStoreId}
           embedded
+          pendingOrderId={pendingOrderId}
+          initialQuantities={initialQuantities}
+          initialNotes={initialNotes}
         />
       )}
 
@@ -203,6 +212,9 @@ export function HubSentOrdersTabs(props: {
   filter: ReceivedTransfersFilterScope;
   productLookup?: ReceivedTransferProductLookup;
   successMessage?: string;
+  pendingOrderId?: string;
+  initialQuantities?: Record<string, string>;
+  initialNotes?: string | null;
 }) {
   return (
     <Suspense fallback={null}>
